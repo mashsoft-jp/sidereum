@@ -403,7 +403,8 @@
   button.on { color: var(--accent); border-color: var(--accent-dim); }
 
   #play { min-width: 74px; white-space: nowrap; }
-  #playIcon { margin-right: 5px; }
+  /* ▶︎/⏸︎ はグリフごとに縦横メトリクスが異なるため、箱を固定してレイアウトのブレを防ぐ */
+  #playIcon { margin-right: 5px; display: inline-block; width: 1.2em; height: 1.2em; line-height: 1.2em; text-align: center; vertical-align: middle; }
 
   .slider {
     font-size: 11px;
