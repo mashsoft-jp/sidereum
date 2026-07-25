@@ -3403,12 +3403,20 @@
   function endPointer(e) {
     if (pointers.has(e.pointerId) && dragMoved < 5 && pointers.size === 1 && e.button === 0) {
       if (groundView) {
+        // 選択 + その方向へカメラを向けて追尾 (以後のズームでも中央に保つ)
         const hit = hitTestGround(e.clientX, e.clientY);
-        if (hit) select(hit, false);
+        if (hit) select(hit, true);
       } else {
         const hit = hitTest(e.clientX, e.clientY);
-        if (hit) select(hit, true);
-        else select(null, false);
+        if (hit === selected && hit) {
+          // 選択中の天体を再タップ: リストの再タップと同じトグル挙動
+          if (infoPanel.classList.contains("open")) select(null, false);
+          else openInfo(hit);
+        } else if (hit) {
+          select(hit, true);
+        } else {
+          select(null, false);
+        }
       }
     }
     pointers.delete(e.pointerId);
