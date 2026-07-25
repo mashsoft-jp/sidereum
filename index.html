@@ -3,7 +3,9 @@
 <meta name="theme-color" content="#04060e">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- black-translucent は不可: iOS のバグでセッションによって WebView が
+     「画面高 − ステータスバー」サイズで生成され、下部 59pt が描画不能になる -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Galaxeum">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icon-192.png">
@@ -24,8 +26,6 @@
     --sat: env(safe-area-inset-top, 0px);
     --sal: env(safe-area-inset-left, 0px);
     --sar: env(safe-area-inset-right, 0px);
-    /* iOS standalone でレイアウトビューポートが画面より短い場合の不足分 (JS が実測して設定) */
-    --pwa-gap: 0px;
   }
   /* standalone (PWA) でビューポート外の余白が白く見えないよう背景を塗る */
   html, body { background: var(--bg); margin: 0; overscroll-behavior: none; }
@@ -691,24 +691,6 @@
     #info.open { transform: none; }
   }
 
-  /* ---- PWA (standalone) 専用の下部補正 ----
-     iOS の standalone ではセッションによってレイアウトビューポートが画面より
-     ステータスバー高さぶん短くなることがある。ビューポート下端より下も
-     WebView の描画領域だが、#app (overflow:hidden) がそこでクリップするため、
-     下部 UI をオフセットで押し下げる方式は機能しない。代わりに不足分
-     (--pwa-gap, JS が実測) だけ #app 自体を下へ延長し、下部 UI が実画面の
-     下端基準で配置されるようにする (正常時は 0 = ブラウザと同じ)。
-     通常ブラウザでは display-mode が standalone にならないため影響しない */
-  @media (display-mode: standalone) {
-    #app { bottom: calc(-1 * var(--pwa-gap, 0px)); }
-    #app.ctrlHidden #controls { transform: translate(-50%, calc(100% + 40px + env(safe-area-inset-bottom, 0px) + var(--pwa-gap, 0px))); }
-  }
-  @media (display-mode: standalone) and (max-width: 720px) {
-    #app.ctrlHidden #controls { transform: translateY(calc(100% + 40px + env(safe-area-inset-bottom, 0px) + var(--pwa-gap, 0px))); }
-  }
-  @media (display-mode: standalone) and (max-height: 480px) {
-    #app.ctrlHidden #controls { transform: translateY(calc(100% + 40px + env(safe-area-inset-bottom, 0px) + var(--pwa-gap, 0px))); }
-  }
 </style>
 
 <div id="app">
@@ -1853,7 +1835,6 @@
   // ---------- リサイズ ----------
   function resize() {
     DPR = Math.min(window.devicePixelRatio || 1, 2);
-    // #app 基準 (iOS PWA では --pwa-gap ぶんビューポートより下へ延長されるため)
     const appEl = document.getElementById("app");
     W = appEl.clientWidth || window.innerWidth || 1;
     H = appEl.clientHeight || window.innerHeight || 1;
@@ -2923,33 +2904,6 @@
     }
   }
   window.addEventListener("resize", positionInfoPanel);
-
-  // iOS standalone (PWA) では起動セッションによってレイアウトビューポートが
-  // 画面よりステータスバー高さぶん短くなることがある。不足分を実測して
-  // --pwa-gap に反映し、CSS 側で #app を実画面の下端まで延長する
-  // (正常時は 0。Android は対象外)
-  if (navigator.standalone === true) {
-    let lastGap = -1;
-    const updatePwaGap = () => {
-      const portrait = matchMedia("(orientation: portrait)").matches;
-      const sh = portrait ? Math.max(screen.width, screen.height)
-                          : Math.min(screen.width, screen.height);
-      const gap = sh - window.innerHeight;
-      // ソフトキーボード表示などによる大きな縮みは補正対象にしない
-      if (gap >= 0 && gap <= 100 && gap !== lastGap) {
-        lastGap = gap;
-        document.documentElement.style.setProperty("--pwa-gap", gap + "px");
-        resize();               // #app の延長に合わせてキャンバスも実寸へ
-        positionInfoPanel();
-      }
-    };
-    updatePwaGap();
-    window.addEventListener("resize", updatePwaGap);
-    window.addEventListener("orientationchange", () => setTimeout(updatePwaGap, 300));
-    // iOS はビューポート高さを起動直後に遅れて補正することがあるため再計測
-    setTimeout(updatePwaGap, 500);
-    setTimeout(updatePwaGap, 2000);
-  }
 
   // 操作パネルの折りたたみ (⌄ で画面下へ格納、⌃ で復帰)
   const ctrlCollapseBtn = document.getElementById("ctrlCollapse");
