@@ -784,7 +784,7 @@
 
   <footer id="controls" class="hud">
     <button id="ctrlCollapse" aria-label="操作パネルを隠す">⌄</button>
-    <button id="play" class="primary"><span id="playIcon">⏸</span><span id="playLabel">停止</span></button>
+    <button id="play" class="primary"><span id="playIcon">⏸&#xFE0E;</span><span id="playLabel">停止</span></button>
     <label class="slider" id="speedLabel" for="speed">速度</label>
     <button id="speedDown" class="step" aria-label="遅くする">−</button>
     <input type="range" id="speed" min="0" max="100" value="0" aria-label="時間の速さ">
@@ -3424,7 +3424,7 @@
   const playLabelEl = document.getElementById("playLabel");
   function setPlaying(v) {
     playing = v;
-    playIconEl.textContent = v ? "⏸" : "▶";
+    playIconEl.textContent = v ? "⏸︎" : "▶︎";
     playLabelEl.textContent = v ? T().pause : T().play;
   }
   playBtn.addEventListener("click", () => setPlaying(!playing));
