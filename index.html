@@ -988,7 +988,7 @@
       nowBtn: "現在時刻に合わせる", paused: "SIMULATION PAUSED", ratePrefix: "1秒 = ",
       viewTop: "真上", viewDef: "デフォルト", viewSide: "真横", camera: "カメラ",
       viewSpace: "宇宙", viewGround: "地上", gFovLabel: "ズーム", gAzLabel: "方位", gAltLabel: "高度",
-      hint: "ドラッグで回転 ・ ホイール / ピンチでズーム ・ 天体クリックで接近",
+      hint: "ドラッグで回転 ・ 右ドラッグ / 2本指で移動 ・ ホイール / ピンチでズーム ・ 天体クリックで接近",
       noGL: "お使いの環境では WebGL が利用できないため、<br>3D 表示を開始できませんでした。",
       imgPrefix: "画像: ", procTex: "テクスチャ: シェーダによる生成 (実写ではありません)",
       u: { yr: " 年", d: " 日", h: " 時間", min: " 分", s: " 秒" },
@@ -1024,7 +1024,7 @@
       nowBtn: "Set to current time", paused: "SIMULATION PAUSED", ratePrefix: "1s = ",
       viewTop: "Top", viewDef: "Default", viewSide: "Side", camera: "Camera",
       viewSpace: "Space", viewGround: "Ground", gFovLabel: "Zoom", gAzLabel: "Azimuth", gAltLabel: "Alt",
-      hint: "Drag to rotate · Wheel / pinch to zoom · Click a body to approach",
+      hint: "Drag to rotate · Right-drag / two fingers to pan · Wheel / pinch to zoom · Click a body to approach",
       noGL: "WebGL is not available in this environment,<br>so the 3D view could not be started.",
       imgPrefix: "Imagery: ", procTex: "Texture: procedurally generated (not actual imagery)",
       u: { yr: " yr", d: " days", h: " hr", min: " min", s: " sec" },
@@ -1778,6 +1778,7 @@
     yawTgt: 0.9, pitchTgt: 0.35,
     dist: 1150, distTgt: 1150,
     focus: [0, 0, 0], focusTgt: [0, 0, 0],
+    panOff: [0, 0, 0], panOffTgt: [0, 0, 0],   // 注視点からの平行移動 (パン)
     pos: [0, 0, 0],
   };
 
@@ -2266,11 +2267,14 @@
 
   function render(nowSec) {
     if (groundView) { renderGround(nowSec); return; }
-    // --- カメラ ---
+    // --- カメラ (注視点 = focus + パンの平行移動分) ---
+    const fx = cam.focus[0] + cam.panOff[0],
+          fy = cam.focus[1] + cam.panOff[1],
+          fz = cam.focus[2] + cam.panOff[2];
     const eye = [
-      cam.focus[0] + cam.dist * Math.cos(cam.pitch) * Math.cos(cam.yaw),
-      cam.focus[1] + cam.dist * Math.sin(cam.pitch),
-      cam.focus[2] + cam.dist * Math.cos(cam.pitch) * Math.sin(cam.yaw),
+      fx + cam.dist * Math.cos(cam.pitch) * Math.cos(cam.yaw),
+      fy + cam.dist * Math.sin(cam.pitch),
+      fz + cam.dist * Math.cos(cam.pitch) * Math.sin(cam.yaw),
     ];
     cam.pos = eye;
     EYE = eye;
@@ -2278,9 +2282,9 @@
     const near = Math.min(Math.max(cam.dist * 0.02, 2e-7), 5);
     const P = mPersp(FOV, W / H, near, 6000, SCR.P);
     // カメラ相対座標で描画 (大きな平行移動を f32 行列に載せない)
-    SCR.tgt[0] = cam.focus[0] - eye[0];
-    SCR.tgt[1] = cam.focus[1] - eye[1];
-    SCR.tgt[2] = cam.focus[2] - eye[2];
+    SCR.tgt[0] = fx - eye[0];
+    SCR.tgt[1] = fy - eye[1];
+    SCR.tgt[2] = fz - eye[2];
     mLookAt(ZERO3, SCR.tgt, UP3, Vm);
     mMul(P, Vm, VP);
     // 軌道線アンカー: カメラが離れすぎると頂点の f32 誤差が画面に出るため焼き直す
@@ -2288,7 +2292,7 @@
       const dx = eye[0] - ORB_ANCHOR[0], dy = eye[1] - ORB_ANCHOR[1], dz = eye[2] - ORB_ANCHOR[2];
       const lim = cam.dist * 1000;
       if (dx * dx + dy * dy + dz * dz > lim * lim) {
-        rebuildOrbits(cam.focus[0], cam.focus[1], cam.focus[2]);
+        rebuildOrbits(fx, fy, fz);
       }
     }
 
@@ -2772,6 +2776,9 @@
     cam.focus[0] += (cam.focusTgt[0] - cam.focus[0]) * k;
     cam.focus[1] += (cam.focusTgt[1] - cam.focus[1]) * k;
     cam.focus[2] += (cam.focusTgt[2] - cam.focus[2]) * k;
+    cam.panOff[0] += (cam.panOffTgt[0] - cam.panOff[0]) * k;
+    cam.panOff[1] += (cam.panOffTgt[1] - cam.panOff[1]) * k;
+    cam.panOff[2] += (cam.panOffTgt[2] - cam.panOff[2]) * k;
     cam.distTgt = Math.max(minDist(), Math.min(1400, cam.distTgt));
     cam.dist += (cam.distTgt - cam.dist) * k;
     let dyaw = (cam.yawTgt - cam.yaw) % (2 * Math.PI);
@@ -2873,6 +2880,7 @@
       }
     }
     if (body === SUN) { cam.focusTgt[0] = 0; cam.focusTgt[1] = 0; cam.focusTgt[2] = 0; }
+    resetPan();   // 天体を選んだら平行移動をリセットして中心に据える
     hideHint();
   }
 
@@ -3310,15 +3318,39 @@
 
   // ---------- 入力 ----------
   const pointers = new Map();
-  let dragMoved = 0, pinchDist = 0;
+  let dragMoved = 0, pinchDist = 0, pinchMidX = 0, pinchMidY = 0;
 
+  // 平行移動 (パン): 注視点を画面平行にずらす。宇宙ビューのみ。
+  // PC: 右ドラッグ or Shift+ドラッグ、スマホ: 2本指スワイプ
+  function panCamera(dx, dy) {
+    const wpp = 2 * cam.dist * Math.tan(FOV / 2) / (H || 1);   // 注視点距離での 1px あたりのワールド長
+    const sy = Math.sin(cam.yaw), cy = Math.cos(cam.yaw);
+    const sp = Math.sin(cam.pitch), cp = Math.cos(cam.pitch);
+    // 画面の右方向・上方向のワールドベクトル (視線に直交)
+    const rx = sy, rz = -cy;
+    const ux = -sp * cy, uy = cp, uz = -sp * sy;
+    // 内容が指に付いてくる向き: 右ドラッグで注視点は左へ
+    cam.panOff[0] += (-dx * rx + dy * ux) * wpp;
+    cam.panOff[1] += (dy * uy) * wpp;
+    cam.panOff[2] += (-dx * rz + dy * uz) * wpp;
+    cam.panOffTgt[0] = cam.panOff[0];
+    cam.panOffTgt[1] = cam.panOff[1];
+    cam.panOffTgt[2] = cam.panOff[2];
+  }
+  function resetPan() {
+    cam.panOffTgt[0] = 0; cam.panOffTgt[1] = 0; cam.panOffTgt[2] = 0;
+  }
+
+  glc.addEventListener("contextmenu", (e) => e.preventDefault());   // 右ドラッグパン用
   glc.addEventListener("pointerdown", (e) => {
-    glc.setPointerCapture(e.pointerId);
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try { glc.setPointerCapture(e.pointerId); } catch (_) {}   // 解放済みポインタ等で失敗しても続行
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, pan: e.button === 2 || e.shiftKey });
     dragMoved = 0;
     if (pointers.size === 2) {
       const [a, b] = [...pointers.values()];
       pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+      pinchMidX = (a.x + b.x) / 2;
+      pinchMidY = (a.y + b.y) / 2;
     }
     glc.classList.add("dragging");
   });
@@ -3330,7 +3362,7 @@
     }
     const prev = pointers.get(e.pointerId);
     const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, pan: prev.pan });
     dragMoved += Math.abs(dx) + Math.abs(dy);
 
     if (pointers.size === 1) {
@@ -3341,6 +3373,8 @@
         gAlt = Math.max(-1.4, Math.min(1.4, gAlt - dy * s));
         gAzTgt = gAz;
         gAltTgt = gAlt;
+      } else if (prev.pan) {
+        panCamera(dx, dy);
       } else {
         cam.yaw += dx * 0.005;
         cam.pitch = Math.max(-1.45, Math.min(1.45, cam.pitch + dy * 0.005));
@@ -3350,18 +3384,22 @@
     } else if (pointers.size === 2) {
       const [a, b] = [...pointers.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
       if (groundView) {
         if (pinchDist > 0) gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, gFovTgt * pinchDist / d));
       } else if (pinchDist > 0) {
         cam.distTgt = Math.max(minDist(), Math.min(1400, cam.distTgt * pinchDist / d));
+        panCamera(mx - pinchMidX, my - pinchMidY);   // 2本指スワイプで平行移動
       }
       pinchDist = d;
+      pinchMidX = mx;
+      pinchMidY = my;
     }
     if (dragMoved > 3) hideHint();
   });
 
   function endPointer(e) {
-    if (pointers.has(e.pointerId) && dragMoved < 5 && pointers.size === 1) {
+    if (pointers.has(e.pointerId) && dragMoved < 5 && pointers.size === 1 && e.button === 0) {
       if (groundView) {
         const hit = hitTestGround(e.clientX, e.clientY);
         if (hit) select(hit, false);
@@ -3668,9 +3706,10 @@
     syncToggleUI();
   });
 
-  // 視点アングル (ピッチのみ変更。ズーム・注視対象は保持)
+  // 視点アングル (ピッチのみ変更。ズーム・注視対象は保持、平行移動はリセット)
   function setPitch(p) {
     cam.pitchTgt = p;
+    resetPan();
     hideHint();
   }
   // 他のカメラ視点を選んだら地上ビューを抜けて宇宙ビューへ
@@ -3698,6 +3737,7 @@
     cam.focusTgt[0] = 0; cam.focusTgt[1] = 0; cam.focusTgt[2] = 0;
     cam.distTgt = 1150;
     cam.yawTgt = 0.9; cam.pitchTgt = 0.35;
+    resetPan();
   });
 
   window.addEventListener("keydown", (e) => {
