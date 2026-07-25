@@ -476,33 +476,14 @@
   }
   #infoTabs button.on { color: var(--accent); border-color: var(--accent-dim); }
   #infoTabs button:hover { color: var(--text); }
-  /* ---- 観測地 (地上ビューのチップ + ポップオーバー) ---- */
-  #obsSiteWrap {
-    position: absolute; top: calc(52px + var(--sat)); left: 50%; transform: translateX(-50%);
-    z-index: 15; display: none; flex-direction: column; align-items: center;
-  }
-  #app.groundMode #obsSiteWrap { display: flex; }
-  #obsSiteChip {
-    padding: 3px 14px; font-size: 11px; letter-spacing: 0.04em;
-    color: var(--dim); background: rgba(16, 22, 42, 0.72);
-    border: 1px solid var(--line); border-radius: 12px; backdrop-filter: blur(4px);
-    white-space: nowrap;
-  }
-  #obsSiteChip:hover { color: var(--text); }
+  /* ---- 観測地 (ハンバーガーメニュー内の項目 + 展開エディタ) ---- */
   #obsSitePop {
-    margin-top: 6px; padding: 10px 12px; width: 236px;
-    background: rgba(16, 22, 42, 0.9); border: 1px solid var(--line);
-    border-radius: 10px; backdrop-filter: blur(6px);
+    margin: 0 6px 6px; padding: 8px 10px;
+    background: rgba(150, 178, 224, 0.05); border: 1px solid var(--line);
+    border-radius: 8px;
   }
   #obsSitePop[hidden] { display: none; }
   #obsLoc { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; font-size: 11px; color: var(--dim); }
-  /* チップ位置のレイアウト別調整 (基本ルールより後に置いて優先させる) */
-  @media (max-width: 720px) {
-    #obsSiteWrap { top: calc(100px + var(--sat)); }
-  }
-  @media (max-height: 480px) {
-    #obsSiteWrap { top: calc(42px + var(--sat)); }
-  }
   #obsCity {
     flex: 1 1 100%; padding: 4px 6px; font-size: 11px; font-family: var(--font-ui);
     color: var(--text); background: rgba(150, 178, 224, 0.08);
@@ -711,8 +692,10 @@
     <button id="vmGround">地上</button>
   </div>
 
-  <div id="obsSiteWrap">
-    <button id="obsSiteChip" aria-haspopup="true" aria-expanded="false">📍</button>
+  <div id="menu" class="hud" role="menu">
+    <button id="menuLang" role="menuitem"></button>
+    <button id="menuUnit" role="menuitem"></button>
+    <button id="obsSiteChip" role="menuitem" aria-haspopup="true" aria-expanded="false"></button>
     <div id="obsSitePop" hidden>
       <div id="obsLoc">
         <select id="obsCity" aria-label="都市"></select>
@@ -727,11 +710,6 @@
         <button id="obsGeo"></button>
       </div>
     </div>
-  </div>
-
-  <div id="menu" class="hud" role="menu">
-    <button id="menuLang" role="menuitem"></button>
-    <button id="menuUnit" role="menuitem"></button>
     <button id="menuFullscreen" role="menuitem"></button>
     <button id="menuShare" role="menuitem"></button>
     <button id="menuAbout" role="menuitem"></button>
@@ -3149,8 +3127,7 @@
     );
   });
 
-  // ---------- 観測地チップ (地上ビュー上部。タップでエディタをポップオーバー表示) ----------
-  const obsSiteWrap = document.getElementById("obsSiteWrap");
+  // ---------- 観測地 (ハンバーガーメニュー内。タップでエディタを展開) ----------
   const obsSiteChip = document.getElementById("obsSiteChip");
   const obsSitePop = document.getElementById("obsSitePop");
   function siteLabel() {
@@ -3163,8 +3140,7 @@
   }
   function refreshObsSiteUI() {
     const t = T();
-    obsSiteChip.textContent = "📍 " + siteLabel();
-    obsSiteChip.title = t.obs.loc;
+    obsSiteChip.textContent = "📍 " + t.obs.loc + ": " + siteLabel();
     obsGeoBtn.textContent = t.obs.geo;
     obsLatInput.value = Math.abs(obsLat).toFixed(2);
     obsLonInput.value = Math.abs(obsLon).toFixed(2);
@@ -3180,9 +3156,6 @@
     if (open) refreshObsSiteUI();
   }
   obsSiteChip.addEventListener("click", (e) => { e.stopPropagation(); setSitePop(obsSitePop.hidden); });
-  document.addEventListener("pointerdown", (e) => {
-    if (!obsSitePop.hidden && !obsSiteWrap.contains(e.target)) setSitePop(false);
-  });
   // ✕ はパネルを閉じるだけで、選択 (カメラ追尾) は維持する
   document.getElementById("closeInfo").addEventListener("click", () => {
     infoPanel.classList.remove("open");
@@ -3864,6 +3837,7 @@
   function setMenu(open) {
     menuEl.classList.toggle("open", open);
     menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    if (!open) setSitePop(false);   // 観測地エディタも畳む
   }
   menuBtn.addEventListener("click", (e) => {
     e.stopPropagation();
