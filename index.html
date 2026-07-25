@@ -167,7 +167,8 @@
     transition: transform 0.25s ease;
   }
   #app.navHidden #navPanel {
-    transform: translateX(calc(-100% - 24px));
+    /* 横持ちはセーフエリア (--sal) ぶん左位置が深いため、その分も押し出す */
+    transform: translateX(calc(-100% - 24px - var(--sal)));
     pointer-events: none;
   }
   #navCollapse {
@@ -661,8 +662,6 @@
     #navExpand { top: calc(54px + var(--sat)); }
     #nav button { padding: 3px 9px; font-size: 10px; }
     #controls {
-      left: calc(8px + var(--sal));
-      transform: none;
       bottom: calc(8px + env(safe-area-inset-bottom, 0px));
       gap: 3px 6px;
       padding: 6px 10px;
@@ -672,9 +671,6 @@
     #play { min-width: 0; }
     #playLabel { display: none; }
     #playIcon { margin-right: 0; }
-    /* 横持ちはパネルが左寄せ (transform なし) のため、隠すときは縦方向のみ */
-    #app.ctrlHidden #controls { transform: translateY(calc(100% + 40px + env(safe-area-inset-bottom, 0px))); }
-    #ctrlExpand { left: calc(8px + var(--sal)); transform: none; }
     /* 情報パネルは右側に縦利用 (時計の下から)。100dvh で実際の可視領域に収める */
     #info {
       top: calc(58px + var(--sat));
@@ -2888,19 +2884,27 @@
     hideHint();
   }
 
-  // モバイル: 情報パネルを操作パネルのすぐ上に配置 (実高さを測って追従)
+  // モバイル: 情報パネルを操作パネルのすぐ上に配置 (実高さを測って追従)。
+  // 横持ちは右側の情報パネルが中央寄せの操作パネルと重ならないよう高さを制限
   function positionInfoPanel() {
+    const ctrlHidden = document.getElementById("app").classList.contains("ctrlHidden");
     if (window.matchMedia("(max-width: 720px)").matches) {
-      if (document.getElementById("app").classList.contains("ctrlHidden")) {
+      infoPanel.style.maxHeight = "";
+      if (ctrlHidden) {
         infoPanel.style.bottom = "12px";   // パネル格納中は画面下端まで使う
         return;
       }
       const top = document.getElementById("controls").getBoundingClientRect().top;
-      // bottom は #app 下端基準 (iOS PWA では #app がビューポートより下へ延長される)
-      const appBottom = document.getElementById("app").getBoundingClientRect().bottom;
-      infoPanel.style.bottom = Math.round(appBottom - top + 8) + "px";
+      infoPanel.style.bottom = Math.round(window.innerHeight - top + 8) + "px";
+    } else if (window.matchMedia("(max-height: 480px)").matches) {
+      infoPanel.style.bottom = "";
+      if (ctrlHidden) { infoPanel.style.maxHeight = ""; return; }
+      const ctlTop = document.getElementById("controls").getBoundingClientRect().top;
+      const infoTop = infoPanel.getBoundingClientRect().top;
+      infoPanel.style.maxHeight = Math.max(120, Math.round(ctlTop - infoTop - 8)) + "px";
     } else {
       infoPanel.style.bottom = "";
+      infoPanel.style.maxHeight = "";
     }
   }
   window.addEventListener("resize", positionInfoPanel);
