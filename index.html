@@ -368,9 +368,11 @@
   #gAltCell .step { padding: 2px 8px; font-size: 9px; line-height: 1.4; }
   /* ---- 操作パネルの折りたたみ (下へ引っ込む) ---- */
   #controls { transition: transform 0.25s ease; }
-  #ctrlCollapse {
-    position: absolute; top: -23px; left: 50%; transform: translateX(-50%);
-    padding: 1px 16px; font-size: 12px; line-height: 1.5;
+  /* 2重 ID なのは、各モードの #controls button の padding 上書きに勝つため。
+     復帰用の ⌃ ピルと同じ幅・高さになるよう padding を揃えている */
+  #controls #ctrlCollapse {
+    position: absolute; top: -25px; left: 50%; transform: translateX(-50%);
+    padding: 2px 20px; font-size: 12px; line-height: 1.5;
     color: var(--dim); background: rgba(16, 22, 42, 0.72);
     border: 1px solid var(--line); border-bottom: none;
     border-radius: 8px 8px 0 0; backdrop-filter: blur(4px);
@@ -644,10 +646,12 @@
 
   /* ---- 横向きスマホ / 高さの低い画面 (Landscape) ---- */
   @media (max-height: 480px) {
-    #title { padding: 6px 10px 6px 6px; gap: 6px; }
+    /* 左端のノッチのセーフエリアは半分だけ尊重して余白を詰める
+       (上端付近の HUD はノッチと垂直位置が重ならないため) */
+    #title { padding: 6px 10px 6px 6px; gap: 6px; left: calc(16px + var(--sal) / 2); }
     #title h1 { font-size: 11px; letter-spacing: 0.14em; }
     #menuBtn { padding: 4px 6px; font-size: 15px; }
-    #menu { top: calc(54px + var(--sat)); }
+    #menu { top: calc(54px + var(--sat)); left: calc(16px + var(--sal) / 2); }
     #clock { padding: 5px 10px; }
     #dateInput { font-size: 13px; }
     #timeText { font-size: 13px; }
@@ -656,17 +660,20 @@
     #hint { display: none; }
     #navPanel {
       top: calc(54px + var(--sat));
+      left: calc(16px + var(--sal) / 2);
       max-height: calc(100vh - 185px);
       max-height: calc(100dvh - 185px - var(--sat));
     }
-    #navExpand { top: calc(54px + var(--sat)); }
+    #navExpand { top: calc(54px + var(--sat)); left: calc(var(--sal) / 2); }
     #nav button { padding: 3px 9px; font-size: 10px; }
     #controls {
-      bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+      /* ホームバーのセーフエリアも半分だけ尊重して画面下端に寄せる */
+      bottom: calc(4px + env(safe-area-inset-bottom, 0px) / 2);
       gap: 3px 6px;
       padding: 6px 10px;
       grid-template-columns: auto auto auto minmax(70px, 130px) auto auto;
     }
+    #ctrlExpand { bottom: calc(4px + env(safe-area-inset-bottom, 0px) / 2); }
     #controls button { padding: 3px 8px; font-size: 10.5px; }
     #play { min-width: 0; }
     #playLabel { display: none; }
@@ -1839,6 +1846,13 @@
     gl.viewport(0, 0, W * DPR, H * DPR);
   }
   window.addEventListener("resize", resize);
+  // iOS の PWA (standalone) は回転時に resize イベントが発火しない (または
+  // 寸法確定前に発火する) ことがあり、キャンバスのバッファ寸法と表示寸法が
+  // ずれて描画が縦に伸縮する。#app の実寸変化を直接監視して追従させる
+  if (window.ResizeObserver) {
+    new ResizeObserver(() => { resize(); positionInfoPanel(); })
+      .observe(document.getElementById("app"));
+  }
   resize();
 
   // ---------- 描画 ----------
