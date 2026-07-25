@@ -24,6 +24,8 @@
     --sat: env(safe-area-inset-top, 0px);
     --sal: env(safe-area-inset-left, 0px);
     --sar: env(safe-area-inset-right, 0px);
+    /* iOS standalone でレイアウトビューポートが画面より短い場合の不足分 (JS が実測して設定) */
+    --pwa-gap: 0px;
   }
   /* standalone (PWA) でビューポート外の余白が白く見えないよう背景を塗る */
   html, body { background: var(--bg); margin: 0; overscroll-behavior: none; }
@@ -688,20 +690,21 @@
   }
 
   /* ---- PWA (standalone) 専用の下部補正 ----
-     iOS の black-translucent ではレイアウトビューポートの下端がステータス
-     バー高さ (--sat) ぶん画面下端より上に来るため、下部固定 UI を下げる。
+     iOS の standalone ではセッションによってレイアウトビューポートが画面より
+     ステータスバー高さぶん短くなることがある (下端が画面下端より上に来る)。
+     不足分は JS が実測して --pwa-gap に設定する (正常時は 0 = ブラウザと同じ)。
      通常ブラウザでは display-mode が standalone にならないため影響しない */
   @media (display-mode: standalone) {
-    #controls { bottom: calc(18px + env(safe-area-inset-bottom, 0px) - var(--sat)); }
-    #ctrlExpand { bottom: calc(6px + env(safe-area-inset-bottom, 0px) - var(--sat)); }
-    #app.ctrlHidden #controls { transform: translate(-50%, calc(100% + 40px + var(--sat))); }
+    #controls { bottom: calc(18px + env(safe-area-inset-bottom, 0px) - var(--pwa-gap, 0px)); }
+    #ctrlExpand { bottom: calc(6px + env(safe-area-inset-bottom, 0px) - var(--pwa-gap, 0px)); }
+    #app.ctrlHidden #controls { transform: translate(-50%, calc(100% + 40px + var(--pwa-gap, 0px))); }
   }
   @media (display-mode: standalone) and (max-width: 720px) {
-    #app.ctrlHidden #controls { transform: translateY(calc(100% + 40px + var(--sat))); }
+    #app.ctrlHidden #controls { transform: translateY(calc(100% + 40px + var(--pwa-gap, 0px))); }
   }
   @media (display-mode: standalone) and (max-height: 480px) {
-    #controls { bottom: calc(8px + env(safe-area-inset-bottom, 0px) - var(--sat)); }
-    #app.ctrlHidden #controls { transform: translateY(calc(100% + 40px + var(--sat))); }
+    #controls { bottom: calc(8px + env(safe-area-inset-bottom, 0px) - var(--pwa-gap, 0px)); }
+    #app.ctrlHidden #controls { transform: translateY(calc(100% + 40px + var(--pwa-gap, 0px))); }
   }
 </style>
 
@@ -2912,6 +2915,29 @@
     }
   }
   window.addEventListener("resize", positionInfoPanel);
+
+  // iOS standalone (PWA) では起動セッションによってレイアウトビューポートが
+  // 画面よりステータスバー高さぶん短くなることがあり、下部固定 UI が浮く。
+  // 不足分を実測して --pwa-gap に反映する (正常時は 0。Android は対象外)
+  if (navigator.standalone === true) {
+    const updatePwaGap = () => {
+      const portrait = matchMedia("(orientation: portrait)").matches;
+      const sh = portrait ? Math.max(screen.width, screen.height)
+                          : Math.min(screen.width, screen.height);
+      const gap = sh - window.innerHeight;
+      // ソフトキーボード表示などによる大きな縮みは補正対象にしない
+      if (gap >= 0 && gap <= 100) {
+        document.documentElement.style.setProperty("--pwa-gap", gap + "px");
+        positionInfoPanel();
+      }
+    };
+    updatePwaGap();
+    window.addEventListener("resize", updatePwaGap);
+    window.addEventListener("orientationchange", () => setTimeout(updatePwaGap, 300));
+    // iOS はビューポート高さを起動直後に遅れて補正することがあるため再計測
+    setTimeout(updatePwaGap, 500);
+    setTimeout(updatePwaGap, 2000);
+  }
 
   // 操作パネルの折りたたみ (⌄ で画面下へ格納、⌃ で復帰)
   const ctrlCollapseBtn = document.getElementById("ctrlCollapse");
