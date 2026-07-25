@@ -410,8 +410,10 @@
   button.on { color: var(--accent); border-color: var(--accent-dim); }
 
   #play { min-width: 74px; white-space: nowrap; }
-  /* ▶︎/⏸︎ はグリフごとに縦横メトリクスが異なるため、箱を固定してレイアウトのブレを防ぐ */
-  #playIcon { margin-right: 5px; display: inline-block; width: 1.2em; height: 1.2em; line-height: 1.2em; text-align: center; vertical-align: middle; }
+  /* 再生/停止アイコンは SVG (文字グリフだと Android が ⏸ を絵文字描画するため)。
+     箱を固定してトグル時のレイアウトのブレも防ぐ */
+  #playIcon { margin-right: 5px; display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -0.18em; }
+  #playIcon svg { display: block; width: 100%; height: 100%; }
 
   .slider {
     font-size: 11px;
@@ -755,7 +757,7 @@
 
   <footer id="controls" class="hud">
     <button id="ctrlCollapse" aria-label="操作パネルを隠す">⌄</button>
-    <button id="play" class="primary"><span id="playIcon">⏸&#xFE0E;</span><span id="playLabel">停止</span></button>
+    <button id="play" class="primary"><span id="playIcon"><svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="2.4" y="1.8" width="2.6" height="8.4" rx="0.7"/><rect x="7" y="1.8" width="2.6" height="8.4" rx="0.7"/></svg></span><span id="playLabel">停止</span></button>
     <label class="slider" id="speedLabel" for="speed">速度</label>
     <button id="speedDown" class="step" aria-label="遅くする">−</button>
     <input type="range" id="speed" min="0" max="100" value="0" aria-label="時間の速さ">
@@ -3444,9 +3446,13 @@
 
   const playIconEl = document.getElementById("playIcon");
   const playLabelEl = document.getElementById("playLabel");
+  // 文字グリフ (▶/⏸) は Android が異体字セレクタを無視して絵文字描画する
+  // ことがあるため、アイコンは SVG で描く
+  const ICON_PAUSE = '<svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="2.4" y="1.8" width="2.6" height="8.4" rx="0.7"/><rect x="7" y="1.8" width="2.6" height="8.4" rx="0.7"/></svg>';
+  const ICON_PLAY = '<svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M3.2 1.6 L10.8 6 L3.2 10.4 Z"/></svg>';
   function setPlaying(v) {
     playing = v;
-    playIconEl.textContent = v ? "⏸︎" : "▶︎";
+    playIconEl.innerHTML = v ? ICON_PAUSE : ICON_PLAY;
     playLabelEl.textContent = v ? T().pause : T().play;
   }
   playBtn.addEventListener("click", () => setPlaying(!playing));
