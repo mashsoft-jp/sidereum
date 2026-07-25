@@ -94,6 +94,8 @@
     letter-spacing: 0.06em;
   }
   #menu button:hover { background: rgba(150, 178, 224, 0.12); }
+  /* 配信中ビルドの識別用 (キャッシュで旧ビルドを見ていないかの確認) */
+  #menuBuild { padding: 4px 12px 2px; font-size: 9.5px; color: var(--dim); font-family: var(--font-num); border-top: 1px solid var(--line); margin-top: 4px; }
 
   /* ---- about (ライセンス・クレジット) ---- */
   #about {
@@ -747,6 +749,7 @@
     <button id="menuFullscreen" role="menuitem"></button>
     <button id="menuShare" role="menuitem"></button>
     <button id="menuAbout" role="menuitem"></button>
+    <div id="menuBuild"></div>
   </div>
 
   <aside id="about" class="hud" aria-modal="true"></aside>
@@ -3789,6 +3792,16 @@
   });
   document.addEventListener("fullscreenchange", updateFsLabel);
   document.addEventListener("webkitfullscreenchange", updateFsLabel);
+
+  // 配信中ビルドの識別 (Last-Modified ヘッダ由来)。キャッシュで旧ビルドを
+  // 見ていないかを実機で確認できるようにする
+  (() => {
+    const d = new Date(document.lastModified);
+    if (isNaN(d)) return;
+    const p2 = n => String(n).padStart(2, "0");
+    document.getElementById("menuBuild").textContent =
+      `build ${d.getFullYear()}/${p2(d.getMonth() + 1)}/${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+  })();
 
   // 天体リストの表示/非表示 (« で左へ引っ込み、左端の » で出てくる。モバイルは初期非表示)
   let navVisible = !window.matchMedia("(max-width: 720px)").matches;
