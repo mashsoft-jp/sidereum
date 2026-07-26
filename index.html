@@ -690,7 +690,7 @@
 
   <header id="title" class="hud">
     <button id="menuBtn" aria-label="メニュー" aria-haspopup="true">☰</button>
-    <h1>COSMOSEUM<span class="beta">β</span></h1>
+    <h1>COSMOSEUM<span class="beta">(β版)</span></h1>
   </header>
 
   <div id="viewMode" role="group" aria-label="ビュー切替">
@@ -987,7 +987,8 @@
   let lang = localStorage.getItem("ssLang") === "en" ? "en" : "ja";
   const UI = {
     ja: {
-      title: "Cosmoseum β — バーチャル宇宙博物館",
+      title: "Cosmoseum (β版) — バーチャル宇宙博物館",
+      betaTag: "(β版)",
       pause: "停止", play: "再生", speed: "速度", zoom: "ズーム", angle: "角度",
       ctrlHide: "操作パネルを隠す", ctrlShow: "操作パネルを表示",
       orbits: "軌道", labels: "名前", reset: "全体表示",
@@ -1023,7 +1024,8 @@
       },
     },
     en: {
-      title: "Cosmoseum β — Virtual Space Museum",
+      title: "Cosmoseum (Beta) — Virtual Space Museum",
+      betaTag: "(Beta)",
       pause: "Pause", play: "Play", speed: "Speed", zoom: "Zoom", angle: "Angle",
       ctrlHide: "Hide controls", ctrlShow: "Show controls",
       orbits: "Orbits", labels: "Labels", reset: "Overview",
@@ -4096,6 +4098,7 @@
     refreshObsSiteUI();
     lastGAz = "";   // 方位テープの方角ラベルを言語に合わせて再描画
     document.getElementById("nowBtn").textContent = t.nowBtn;
+    document.querySelector("#title h1 .beta").textContent = t.betaTag;
     menuLangBtn.textContent = t.menuLang;
     menuShareBtn.textContent = t.menuShare;
     updateFsLabel();
