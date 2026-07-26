@@ -913,7 +913,7 @@
   const MOON = {
     key:"moon", name:"月", en:"MOON", type:1, tilt:6.7, rot:27.322, rkm:1737,
     colA:[0.72,0.71,0.69], colB:[0.5,0.5,0.5], colC:[0,0,0], rim:[0,0,0], params:[0,0,0,0],
-    rows:[["直径","3,475 km"],["質量","7.35×10²² kg"],["地球からの距離","38.4万 km"],["公転周期","27.3 日"],["自転周期","27.3 日 (同期)"],["平均温度","−23 ℃"]],
+    rows:[["直径","3,475 km"],["質量","7.35×10²² kg"],["平均距離","38.4万 km"],["公転周期","27.3 日"],["自転周期","27.3 日 (同期)"],["平均温度","−23 ℃"]],
     fact:"地球の唯一の衛星。自転と公転が同期しているため、地球からは常に同じ面だけが見えます。"
   };
 
@@ -922,7 +922,7 @@
   //   parent 母天体 aKm 軌道半径[km] T 公転周期[日] retro 逆行
   //   軌道面は母惑星の赤道面 (月のみ黄道基準)。自転は全て潮汐固定
   // ============================================================
-  //   ph: 公転位相 (2000-01-06 18:14 UTC の新月で校正)
+  //   ph: 公転位相 (月は短縮 ELP 理論で位置決めするため ph/T/plane は未使用)
   //   spin0: 自転位相 (表側 = テクスチャ経度0° が常に地球を向くよう校正)
   Object.assign(MOON, { parent:"earth", aKm:384400, T:27.322, plane:"ecliptic", ph:2.506, spin0:0.6354 });
   const SATELLITES = [
@@ -1774,6 +1774,64 @@
   for (const b of [SUN, ...PLANETS, ...SATELLITES]) { posAU.set(b.key, [0,0,0]); posW.set(b.key, [0,0,0]); }
   const COMETS = PLANETS.filter((p) => p.comet);
 
+  // ---------- 月の位置 (ELP-2000 の主要項による短縮理論, Meeus 第47章由来) ----------
+  // 黄経・黄緯・距離の主要周期項のみ採用 (黄経誤差 ~0.01°、位相時刻 ~数分)。
+  // 各項は [係数, D, M, M', F] (D=平均離角, M=太陽平均近点角, M'=月平均近点角, F=緯度引数)
+  const MOON_LON = [   // 黄経 [度]
+    [6.288774,0,0,1,0],[1.274027,2,0,-1,0],[0.658314,2,0,0,0],[0.213618,0,0,2,0],
+    [-0.185116,0,1,0,0],[-0.114332,0,0,0,2],[0.058793,2,0,-2,0],[0.057066,2,-1,-1,0],
+    [0.053322,2,0,1,0],[0.045758,2,-1,0,0],[-0.040923,0,1,-1,0],[-0.034720,1,0,0,0],
+    [-0.030383,0,1,1,0],[0.015327,2,0,0,-2],[-0.012528,0,0,1,2],[0.010980,0,0,1,-2],
+    [0.010675,4,0,-1,0],[0.010034,0,0,3,0],[0.008548,4,0,-2,0],[-0.007888,2,1,-1,0],
+    [-0.006766,2,1,0,0],[-0.005163,1,0,-1,0],[0.004987,1,1,0,0],[0.004036,2,-1,1,0],
+    [0.003994,2,0,2,0],[0.003861,4,0,0,0],[0.003665,2,0,-3,0],[-0.002689,0,1,-2,0],
+    [-0.002602,2,0,-1,2],[0.002390,2,-1,-2,0],[-0.002348,1,0,1,0],[0.002236,2,-2,0,0],
+  ];
+  const MOON_LAT = [   // 黄緯 [度]
+    [5.128122,0,0,0,1],[0.280602,0,0,1,1],[0.277693,0,0,1,-1],[0.173237,2,0,0,-1],
+    [0.055413,2,0,-1,1],[0.046271,2,0,-1,-1],[0.032573,2,0,0,1],[0.017198,0,0,2,1],
+    [0.009266,2,0,1,-1],[0.008822,0,0,2,-1],[0.008216,2,-1,0,-1],[0.004324,2,0,-2,-1],
+    [0.004200,2,0,1,1],[-0.003359,2,1,0,-1],[0.002463,2,-1,-1,1],[0.002211,2,-1,0,1],
+    [0.002065,2,-1,-1,-1],[-0.001870,0,1,-1,-1],[0.001828,4,0,-1,-1],[-0.001794,0,1,0,1],
+  ];
+  const MOON_DIST = [  // 距離 [km]
+    [-20905.355,0,0,1,0],[-3699.111,2,0,-1,0],[-2955.968,2,0,0,0],[-569.925,0,0,2,0],
+    [48.888,0,1,0,0],[-3.149,0,0,0,2],[246.158,2,0,-2,0],[-152.138,2,-1,-1,0],
+    [-170.733,2,0,1,0],[-204.586,2,-1,0,0],[-129.620,0,1,-1,0],[108.743,1,0,0,0],
+    [104.755,0,1,1,0],[10.321,2,0,0,-2],[79.661,0,0,1,-2],[-34.782,4,0,-1,0],
+    [-23.210,0,0,3,0],[-21.636,4,0,-2,0],[24.208,2,1,-1,0],[30.824,2,1,0,0],
+    [-8.379,1,0,-1,0],[-16.675,1,1,0,0],[-12.831,2,-1,1,0],[-10.445,2,0,2,0],[-11.650,4,0,0,0],
+  ];
+  function moonSeries(terms, D, M, Mp, F, E, fn) {
+    let s = 0;
+    for (const t of terms) {
+      let c = t[0];
+      if (t[2]) c *= (t[2] === 2 || t[2] === -2) ? E * E : E;   // M を含む項は離心率補正
+      s += c * fn(t[1] * D + t[2] * M + t[3] * Mp + t[4] * F);
+    }
+    return s;
+  }
+  function moonGeoEclKm(d, out) {
+    const T = d / 36525;
+    const D  = (297.8501921 + 445267.1114034 * T - 0.0018819 * T * T + T * T * T / 545868) * DEG;
+    const M  = (357.5291092 + 35999.0502909 * T - 0.0001536 * T * T) * DEG;
+    const Mp = (134.9633964 + 477198.8675055 * T + 0.0087414 * T * T + T * T * T / 69699) * DEG;
+    const F  = (93.2720950 + 483202.0175233 * T - 0.0036539 * T * T - T * T * T / 3526000) * DEG;
+    const Lp = 218.3164477 + 481267.88123421 * T - 0.0015786 * T * T + T * T * T / 538841;
+    const E  = 1 - 0.002516 * T - 0.0000074 * T * T;
+    const lon = moonSeries(MOON_LON, D, M, Mp, F, E, Math.sin);
+    const lat = moonSeries(MOON_LAT, D, M, Mp, F, E, Math.sin) * DEG;
+    const r = 385000.56 + moonSeries(MOON_DIST, D, M, Mp, F, E, Math.cos);
+    // 平均要素は「その日の分点」基準。アプリの座標系 (J2000 黄道) に合わせて
+    // 一般歳差の黄経成分を引く
+    const lam = (Lp + lon - 1.3969713 * T - 0.0003086 * T * T) * DEG;
+    const cb = Math.cos(lat);
+    out[0] = r * cb * Math.cos(lam);
+    out[1] = r * cb * Math.sin(lam);
+    out[2] = r * Math.sin(lat);
+    return out;   // 地心黄道 J2000 [km]
+  }
+
   function updatePositions() {
     const tmp = [0, 0, 0];
     for (const p of PLANETS) {
@@ -1781,13 +1839,20 @@
       posAU.get(p.key)[0] = tmp[0]; posAU.get(p.key)[1] = tmp[1]; posAU.get(p.key)[2] = tmp[2];
       toWorld(tmp, posW.get(p.key));
     }
-    // 衛星 (母天体中心の円軌道, 実距離)
+    // 衛星 (母天体中心, 実距離)。月のみ短縮 ELP 理論、他は円軌道近似
     for (const s of SATELLITES) {
       const par = posW.get(s.parent);
+      const w = posW.get(s.key);
+      if (s === MOON) {
+        moonGeoEclKm(simDays, tmp);
+        w[0] = par[0] + tmp[0] * KM2W;      // 黄道 → ワールド (toWorld と同じ軸対応)
+        w[1] = par[1] + tmp[2] * KM2W;
+        w[2] = par[2] - tmp[1] * KM2W;
+        continue;
+      }
       const r = s.aKm * KM2W;
       const th = s.dir * 2 * Math.PI * simDays / s.T + s.ph;
       const lx = Math.cos(th) * r, lz = Math.sin(th) * r;
-      const w = posW.get(s.key);
       w[0] = par[0] + s.M[0] * lx + s.M[8] * lz;
       w[1] = par[1] + s.M[1] * lx + s.M[9] * lz;
       w[2] = par[2] + s.M[2] * lx + s.M[10] * lz;
@@ -2134,9 +2199,11 @@
       const sunGx = _fwd[0] * SKYR, sunGy = _fwd[1] * SKYR, sunGz = _fwd[2] * SKYR;
       gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.clear(gl.DEPTH_BUFFER_BIT);
       // 距離100に対して半径が極小のため深度精度が足りず、裏側の半球が
-      // Zファイティングで突き抜ける。裏面カリングで自己交差を防ぐ
+      // Zファイティングで突き抜ける。片面カリングで自己交差を防ぐ。
+      // この球の巻き方向では FRONT を落とすと観測者側の半球が残る
+      // (BACK だと裏側の半球が見えてしまい、満ち欠けが反転する)
       gl.enable(gl.CULL_FACE);
-      gl.cullFace(gl.BACK);
+      gl.cullFace(gl.FRONT);
       gl.useProgram(bodyP.pr);
       gl.bindBuffer(gl.ARRAY_BUFFER, sphereVB);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIB);
@@ -3019,11 +3086,21 @@
     const b = posW.get(body.key), e = posW.get("earth");
     _gw[0] = b[0]-e[0]; _gw[1] = b[1]-e[1]; _gw[2] = b[2]-e[2];
     wEcl(_gw, _ge);                                         // 地心黄道
+    // 測心視差補正: 観測者は地心ではなく地表にいる (月では最大約1°の差)。
+    // 観測者の地心位置 (赤道座標) を黄道へ回して引く
+    const lst = (gmstDeg(simDays) + obsLon) * DEG, latR = obsLat * DEG;
+    {
+      const RE = 6378.14 / AU_KM;
+      const ox = Math.cos(latR) * Math.cos(lst), oy = Math.cos(latR) * Math.sin(lst), oz = Math.sin(latR);
+      _ge[0] -= RE * ox;
+      _ge[1] -= RE * (oy * Math.cos(ECL) + oz * Math.sin(ECL));    // 赤道 → 黄道
+      _ge[2] -= RE * (-oy * Math.sin(ECL) + oz * Math.cos(ECL));
+    }
     const D = Math.hypot(_ge[0], _ge[1], _ge[2]);
     // 黄道 → 赤道 → 赤経・赤緯
     const xe = _ge[0], ye = _ge[1]*Math.cos(ECL) - _ge[2]*Math.sin(ECL), ze = _ge[1]*Math.sin(ECL) + _ge[2]*Math.cos(ECL);
     const ra = Math.atan2(ye, xe), dec = Math.asin(ze / Math.hypot(xe, ye, ze));
-    const lat = obsLat * DEG, H = (gmstDeg(simDays) + obsLon)*DEG - ra;
+    const lat = obsLat * DEG, H = lst - ra;
     const alt = Math.asin(Math.max(-1, Math.min(1, Math.sin(dec)*Math.sin(lat) + Math.cos(dec)*Math.cos(lat)*Math.cos(H))));
     const A = Math.atan2(Math.sin(H), Math.cos(H)*Math.sin(lat) - Math.tan(dec)*Math.cos(lat));
     let az = (A/DEG + 180) % 360; if (az < 0) az += 360;
