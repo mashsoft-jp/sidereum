@@ -2144,7 +2144,7 @@
       gl.vertexAttribPointer(bodyP.a.aPos, 3, gl.FLOAT, false, 0, 0);
       gl.uniform1f(bodyP.u.uTime, nowSec);
       gl.uniform3f(bodyP.u.uCam, 0, 0, 0);
-      gl.uniform3f(bodyP.u.uSun, sunGx, sunGy, sunGz);
+      let satLx = 0, satLy = 0, satLz = 0;   // 土星の環の照射方向 (ループ内で確定)
       for (const bb of bigBodies) {
         const b = bb.b, R = bb.wr;
         // 観測者(原点)を向く姿勢・北を上に。テクスチャ中心が手前を向く (月は表側が見える)
@@ -2168,6 +2168,18 @@
         m[4]=yx*R; m[5]=yy*R; m[6]=yz*R; m[7]=0;
         m[8]=zx*R; m[9]=zy*R; m[10]=zz*R; m[11]=0;
         m[12]=bb.px; m[13]=bb.py; m[14]=bb.pz; m[15]=1;
+        // 満ち欠けの照射方向: ドーム上の見かけの太陽位置ではなく「天体 → 実際の
+        // 太陽」(ワールドで太陽は原点 = -posW) を遠方光源として使う。ドーム上の
+        // 2点間で照らすと位相角が 90°-離角/2 に潰れ、常に満ち気味になるため
+        if (b === SUN) {
+          gl.uniform3f(bodyP.u.uSun, sunGx, sunGy, sunGz);
+        } else {
+          const w = posW.get(b.key);
+          _gp[0] = -w[0]; _gp[1] = -w[1]; _gp[2] = -w[2];
+          const Ld = worldDirToGround(_gp, _fwd);
+          if (b.key === "saturn") { satLx = Ld[0]; satLy = Ld[1]; satLz = Ld[2]; }
+          gl.uniform3f(bodyP.u.uSun, Ld[0] * 1e6, Ld[1] * 1e6, Ld[2] * 1e6);
+        }
         const tx = texByKey.get(b.key);
         gl.bindTexture(gl.TEXTURE_2D, tx || noTex);
         gl.uniform1f(bodyP.u.uHasTex, tx ? 1 : 0);
@@ -2206,7 +2218,8 @@
         SCR.model.set(m);
         gl.uniformMatrix4fv(ringP.u.uModel, false, SCR.model);
         gl.uniform3f(ringP.u.uAxis, Ag[0], Ag[1], Ag[2]);
-        gl.uniform3f(ringP.u.uSun, sunGx, sunGy, sunGz);
+        // 環も本体と同じ「土星 → 実際の太陽」方向の遠方光源で照らす
+        gl.uniform3f(ringP.u.uSun, satLx * 1e6, satLy * 1e6, satLz * 1e6);
         gl.bindBuffer(gl.ARRAY_BUFFER, ringVB);
         gl.enableVertexAttribArray(ringP.a.aPos);
         gl.enableVertexAttribArray(ringP.a.aR);
