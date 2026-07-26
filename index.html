@@ -1654,27 +1654,12 @@
   gl.uniform1i(bodyP.u.uTex, 0);
 
   // ---------- 星空 ----------
+  // 宇宙ビューの背景恒星。以前は乱数配置の装飾だったが、現在はヨール輝星
+  // 星表の実位置を使う (バッファ生成は恒星カタログ定義の直後で行う)
   let seed = 7;
   const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
-  const N_STAR = 1600;
-  {
-    var starBuf = new Float32Array(N_STAR * 7);
-    for (let i = 0; i < N_STAR; i++) {
-      const th = Math.acos(2 * rnd() - 1), ph = rnd() * 2 * Math.PI, R = 1900;
-      const o = i * 7;
-      starBuf[o] = R * Math.sin(th) * Math.cos(ph);
-      starBuf[o+1] = R * Math.cos(th);
-      starBuf[o+2] = R * Math.sin(th) * Math.sin(ph);
-      starBuf[o+3] = rnd() > 0.96 ? 2.6 : rnd() > 0.8 ? 1.8 : 1.1;
-      const t = rnd(), br = 0.35 + rnd() * 0.65;
-      if (t > 0.92) { starBuf[o+4] = br; starBuf[o+5] = br*0.83; starBuf[o+6] = br*0.65; }
-      else if (t > 0.82) { starBuf[o+4] = br*0.7; starBuf[o+5] = br*0.8; starBuf[o+6] = br; }
-      else { starBuf[o+4] = br*0.88; starBuf[o+5] = br*0.92; starBuf[o+6] = br; }
-    }
-  }
-  const starVB = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, starVB);
-  gl.bufferData(gl.ARRAY_BUFFER, starBuf, gl.STATIC_DRAW);
+  let N_STAR = 0;
+  let starVB = null;
 
   // ---------- 小惑星帯 ----------
   const N_AST = 1600;
@@ -1907,6 +1892,31 @@
   const N_CAT = STAR_MAG.length;
   const starGArr = new Float32Array(Math.max(1, N_CAT) * 7);
   let starGVB = null;
+
+  // 宇宙ビュー背景の恒星バッファ (実カタログ: 赤道座標 → 黄道 → ワールド方位)。
+  // 星空はカメラ中心の天球として描かれるため、位置 = 方向ベクトル×半径でよい
+  {
+    const eps = 23.4393 * DEG, ce = Math.cos(eps), se = Math.sin(eps);
+    N_STAR = N_CAT;
+    const buf = new Float32Array(N_STAR * 7);
+    for (let i = 0; i < N_STAR; i++) {
+      const xq = STAR_CD[i] * Math.cos(STAR_RA[i]), yq = STAR_CD[i] * Math.sin(STAR_RA[i]), zq = STAR_SD[i];
+      const ye = yq * ce + zq * se, ze = -yq * se + zq * ce;   // 赤道 → 黄道
+      const o = i * 7, R = 1900, mag = STAR_MAG[i];
+      buf[o] = xq * R;              // 黄道 → ワールド (toWorld と同じ軸対応: x, z, -y)
+      buf[o + 1] = ze * R;
+      buf[o + 2] = -ye * R;
+      buf[o + 3] = mag < 1.2 ? 2.8 : mag < 2.8 ? 1.9 : mag < 4.0 ? 1.35 : 1.0;
+      const br = Math.min(1, Math.pow(10, -0.11 * mag));       // 等級 → 明るさ
+      const t = rnd();               // 色味はカタログに色指数が無いため擬似ランダム
+      if (t > 0.92) { buf[o+4] = br; buf[o+5] = br*0.83; buf[o+6] = br*0.65; }
+      else if (t > 0.82) { buf[o+4] = br*0.7; buf[o+5] = br*0.8; buf[o+6] = br; }
+      else { buf[o+4] = br*0.88; buf[o+5] = br*0.92; buf[o+6] = br; }
+    }
+    starVB = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, starVB);
+    gl.bufferData(gl.ARRAY_BUFFER, buf, gl.STATIC_DRAW);
+  }
 
   // ---------- 地上ビュー (地球から空を見上げる) ----------
   let groundView = false;
@@ -3914,7 +3924,7 @@
       imgBody: "以下の天体の表面には、NASA / USGS のパブリックドメイン画像を使用しています。",
       proc: "太陽・土星 (環を含む)・天王星・海王星・パラス・ジュノーは、シェーダによる生成テクスチャです (実写ではありません)。",
       data: "データと精度",
-      dataBody: "軌道間隔・天体の大きさとも実寸比で表示しています。天体位置は J2000 平均軌道要素 (NASA JPL 公表値) にもとづくケプラー軌道の近似計算です。教育・可視化目的であり、天文計算・観測用途の精度はありません。小惑星の軌道上の位相は概略です。地上ビューの恒星は Yale Bright Star Catalog (パブリックドメイン) を使用しています。",
+      dataBody: "軌道間隔・天体の大きさとも実寸比で表示しています。天体位置は J2000 平均軌道要素 (NASA JPL 公表値) にもとづくケプラー軌道の近似計算です。教育・可視化目的であり、天文計算・観測用途の精度はありません。小惑星の軌道上の位相は概略です。恒星 (宇宙ビューの背景・地上ビューとも) は Yale Bright Star Catalogue 第5改訂版 (Hoffleit & Warren 1991, パブリックドメイン) の実位置 (5.0等まで) を使用しています。",
       disc: "本アプリは NASA・USGS とは無関係であり、両機関による承認・推奨を意味するものではありません。",
     } : {
       lic: "License",
@@ -3923,7 +3933,7 @@
       imgBody: "The surfaces of the following bodies use public-domain imagery from NASA / USGS.",
       proc: "The Sun, Saturn (incl. rings), Uranus, Neptune, Pallas and Juno use procedurally generated textures (not actual imagery).",
       data: "Data & accuracy",
-      dataBody: "Orbital spacing and body sizes are displayed to actual scale. Positions are approximated with Keplerian orbits based on J2000 mean orbital elements published by NASA JPL. This app is for education and visualization; it is not suitable for astronomical or observational use. Orbital phases of the asteroids are approximate. Stars in the ground view use the Yale Bright Star Catalog (public domain).",
+      dataBody: "Orbital spacing and body sizes are displayed to actual scale. Positions are approximated with Keplerian orbits based on J2000 mean orbital elements published by NASA JPL. This app is for education and visualization; it is not suitable for astronomical or observational use. Orbital phases of the asteroids are approximate. Stars (both the space-view background and the ground view) use real positions (mag ≤ 5.0) from the Yale Bright Star Catalogue, 5th Revised Ed. (Hoffleit & Warren 1991, public domain).",
       disc: "This app is not affiliated with, nor endorsed by, NASA or USGS.",
     };
     aboutEl.innerHTML =
