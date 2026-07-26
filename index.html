@@ -118,6 +118,7 @@
     letter-spacing: 0.2em;
     color: var(--accent);
   }
+  #about h2 .yomi { font-size: 0.72em; letter-spacing: 0.1em; margin-left: 4px; }
   #about h3 {
     margin: 16px 0 6px;
     font-size: 10px;
@@ -152,9 +153,10 @@
     letter-spacing: 0.24em;
     color: var(--accent);
   }
+  /* β版であることを強調するため、ロゴと同じフォント・色 (アクセント) で表示 */
   #title h1 .beta {
-    font-size: 0.65em; letter-spacing: 0.06em; color: var(--dim);
-    margin-left: 6px; vertical-align: 0.2em;
+    font-size: 0.65em; letter-spacing: 0.06em; color: var(--accent);
+    margin-left: 4px; vertical-align: 0.2em;
   }
 
   /* ---- 天体リストパネル (軌道/名前 + リストを囲う半透明の角丸板) ---- */
@@ -4049,7 +4051,7 @@
     };
     aboutEl.innerHTML =
       `<button id="aboutClose" aria-label="close">✕</button>` +
-      `<h2>SIDEREUM</h2>` +
+      `<h2>SIDEREUM${lang === "ja" ? '<span class="yomi">(シデレウム)</span>' : ""}</h2>` +
       `<h3>${c.lic}</h3><p>${c.licBody}</p>` +
       `<h3>${c.img}</h3><p>${c.imgBody}</p>` +
       `<table><tbody>${rows}</tbody></table>` +
