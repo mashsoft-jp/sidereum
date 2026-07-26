@@ -61,6 +61,7 @@
 - 小惑星・冥王星の軌道要素: JPL Small-Body Database の公表値(位相は概略)
 - 恒星: Yale Bright Star Catalogue, 5th Revised Edition (Hoffleit & Warren 1991、CDS V/50)。事実データの編纂物でありパブリックドメインとして扱われる
 - 月の理論: ELP-2000 の主要周期項 (J. Meeus, "Astronomical Algorithms" 2nd ed., Ch.47 の短縮版)
+- 星座線: [d3-celestial](https://github.com/ofrohn/d3-celestial) (Olaf Frohn, BSD-2-Clause) の constellations.lines を座標ベースで再編集
 
 ## ライセンス
 
