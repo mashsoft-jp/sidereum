@@ -6,11 +6,11 @@
 <!-- black-translucent は不可: iOS のバグでセッションによって WebView が
      「画面高 − ステータスバー」サイズで生成され、下部 59pt が描画不能になる -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Cosmoseum">
+<meta name="apple-mobile-web-app-title" content="Sidereum">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>Cosmoseum (β版) — 見上げる空から、太陽系の果てまで</title>
+<title>Sidereum (β版) — 見上げる空から、太陽系の果てまで</title>
 <style>
   :root {
     --bg: #04060e;
@@ -690,7 +690,7 @@
 
   <header id="title" class="hud">
     <button id="menuBtn" aria-label="メニュー" aria-haspopup="true">☰</button>
-    <h1>COSMOSEUM<span class="beta">(β版)</span></h1>
+    <h1>SIDEREUM<span class="beta">(β版)</span></h1>
   </header>
 
   <div id="viewMode" role="group" aria-label="ビュー切替">
@@ -987,7 +987,7 @@
   let lang = localStorage.getItem("ssLang") === "en" ? "en" : "ja";
   const UI = {
     ja: {
-      title: "Cosmoseum (β版) — 見上げる空から、太陽系の果てまで",
+      title: "Sidereum (β版) — 見上げる空から、太陽系の果てまで",
       betaTag: "(β版)",
       pause: "停止", play: "再生", speed: "速度", zoom: "ズーム", angle: "角度",
       ctrlHide: "操作パネルを隠す", ctrlShow: "操作パネルを表示",
@@ -1024,7 +1024,7 @@
       },
     },
     en: {
-      title: "Cosmoseum (Beta) — From tonight's sky to the edge of the Solar System",
+      title: "Sidereum (Beta) — From tonight's sky to the edge of the Solar System",
       betaTag: "(Beta)",
       pause: "Pause", play: "Play", speed: "Speed", zoom: "Zoom", angle: "Angle",
       ctrlHide: "Hide controls", ctrlShow: "Show controls",
@@ -4049,7 +4049,7 @@
     };
     aboutEl.innerHTML =
       `<button id="aboutClose" aria-label="close">✕</button>` +
-      `<h2>COSMOSEUM</h2>` +
+      `<h2>SIDEREUM</h2>` +
       `<h3>${c.lic}</h3><p>${c.licBody}</p>` +
       `<h3>${c.img}</h3><p>${c.imgBody}</p>` +
       `<table><tbody>${rows}</tbody></table>` +
