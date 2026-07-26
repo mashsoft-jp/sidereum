@@ -1,6 +1,6 @@
 {
-  "name": "Galaxeum — バーチャル宇宙博物館",
-  "short_name": "Galaxeum",
+  "name": "Cosmoseum — バーチャル宇宙博物館",
+  "short_name": "Cosmoseum",
   "description": "実寸比の太陽系を探索できるバーチャル宇宙博物館",
   "start_url": ".",
   "display": "standalone",
