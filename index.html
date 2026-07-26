@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>Cosmoseum</title>
+<title>Cosmoseum β</title>
 <style>
   :root {
     --bg: #04060e;
@@ -151,6 +151,10 @@
     font-weight: 600;
     letter-spacing: 0.24em;
     color: var(--accent);
+  }
+  #title h1 .beta {
+    font-size: 0.65em; letter-spacing: 0.06em; color: var(--dim);
+    margin-left: 6px; vertical-align: 0.2em;
   }
 
   /* ---- 天体リストパネル (軌道/名前 + リストを囲う半透明の角丸板) ---- */
@@ -686,7 +690,7 @@
 
   <header id="title" class="hud">
     <button id="menuBtn" aria-label="メニュー" aria-haspopup="true">☰</button>
-    <h1>COSMOSEUM</h1>
+    <h1>COSMOSEUM<span class="beta">β</span></h1>
   </header>
 
   <div id="viewMode" role="group" aria-label="ビュー切替">
@@ -983,7 +987,7 @@
   let lang = localStorage.getItem("ssLang") === "en" ? "en" : "ja";
   const UI = {
     ja: {
-      title: "Cosmoseum — バーチャル宇宙博物館",
+      title: "Cosmoseum β — バーチャル宇宙博物館",
       pause: "停止", play: "再生", speed: "速度", zoom: "ズーム", angle: "角度",
       ctrlHide: "操作パネルを隠す", ctrlShow: "操作パネルを表示",
       orbits: "軌道", labels: "名前", reset: "全体表示",
@@ -1019,7 +1023,7 @@
       },
     },
     en: {
-      title: "Cosmoseum — Virtual Space Museum",
+      title: "Cosmoseum β — Virtual Space Museum",
       pause: "Pause", play: "Play", speed: "Speed", zoom: "Zoom", angle: "Angle",
       ctrlHide: "Hide controls", ctrlShow: "Show controls",
       orbits: "Orbits", labels: "Labels", reset: "Overview",
