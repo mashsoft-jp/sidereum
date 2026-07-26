@@ -1,7 +1,7 @@
 {
-  "name": "Cosmoseum (β版) — バーチャル宇宙博物館",
+  "name": "Cosmoseum (β版) — Webプラネタリウム",
   "short_name": "Cosmoseum",
-  "description": "実寸比の太陽系を探索できるバーチャル宇宙博物館",
+  "description": "Webプラネタリウム。実際の星空・月の満ち欠けと、実寸比の太陽系探索",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#04060e",
