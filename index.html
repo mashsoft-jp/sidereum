@@ -780,7 +780,7 @@
     <span class="spaceOnly"></span>
     <span class="slider spaceOnly" id="angleLabel">角度</span>
     <button id="angleDown" class="step spaceOnly" aria-label="角度を下げる">−</button>
-    <input type="range" id="angle" class="spaceOnly" min="-87" max="87" value="20" aria-label="カメラ角度">
+    <input type="range" id="angle" class="spaceOnly" min="-90" max="90" value="20" aria-label="カメラ角度">
     <button id="angleUp" class="step spaceOnly" aria-label="角度を上げる">＋</button>
     <span id="angleVal" class="spaceOnly"></span>
 
@@ -1768,6 +1768,9 @@
   const FOV = 45 * DEG;
 
   // カメラ (注視点 + 距離 + 角度)
+  // 仰角の上限。90°ちょうどは視線が上方向ベクトル (0,1,0) と平行になり
+  // lookAt が破綻するため、表示上 90° に丸まる僅か手前で止める
+  const PITCH_MAX = 89.99 * DEG;
   const cam = {
     yaw: 0.9, pitch: 0.35,
     yawTgt: 0.9, pitchTgt: 0.35,
@@ -3502,7 +3505,7 @@
         panCamera(dx, dy);
       } else {
         cam.yaw += dx * 0.005;
-        cam.pitch = Math.max(-1.45, Math.min(1.45, cam.pitch + dy * 0.005));
+        cam.pitch = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, cam.pitch + dy * 0.005));
         cam.yawTgt = cam.yaw;
         cam.pitchTgt = cam.pitch;
       }
@@ -3676,11 +3679,11 @@
   // ---------- カメラ角度 (仰角。ドラッグと双方向同期) ----------
   const angleInput = document.getElementById("angle");
   const angleVal = document.getElementById("angleVal");
-  const ANGLE_STEPS = [-87, -75, -60, -45, -30, -15, 0, 15, 30, 45, 60, 75, 87];
+  const ANGLE_STEPS = [-89.99, -75, -60, -45, -30, -15, 0, 15, 30, 45, 60, 75, 89.99];
   let angleActive = false;
   let lastAngleStr = "", lastAngleSlider = "";
   function angleFromSlider() {
-    cam.pitchTgt = angleInput.value * DEG;
+    cam.pitchTgt = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, angleInput.value * DEG));
     hideHint();
   }
   angleInput.addEventListener("input", angleFromSlider);
@@ -3799,7 +3802,7 @@
   function updateAngleUI() {
     const deg = cam.pitch / DEG;
     if (!angleActive) {
-      const v = String(Math.round(Math.max(-87, Math.min(87, deg))));
+      const v = String(Math.round(Math.max(-90, Math.min(90, deg))));
       if (v !== lastAngleSlider) {
         angleInput.value = v;
         lastAngleSlider = v;
@@ -3850,8 +3853,8 @@
     hideHint();
   }
   // 他のカメラ視点を選んだら地上ビューを抜けて宇宙ビューへ
-  document.getElementById("viewTopBtn").addEventListener("click", () => { exitGround(); setPitch(1.52); });   // 真上
-  document.getElementById("viewSideBtn").addEventListener("click", () => { exitGround(); setPitch(0.02); });  // 真横
+  document.getElementById("viewTopBtn").addEventListener("click", () => { exitGround(); setPitch(PITCH_MAX); });   // 真上 (表示上 90°)
+  document.getElementById("viewSideBtn").addEventListener("click", () => { exitGround(); setPitch(0); });          // 真横 (0°)
 
   // デフォルト: 太陽中心に内惑星 (火星軌道まで) がちょうど収まる俯瞰
   function goDefaultView() {
@@ -3992,7 +3995,7 @@
     }
     const z = parseFloat(q.get("z")), a = parseFloat(q.get("a")), y = parseFloat(q.get("y"));
     if (isFinite(z)) { cam.distTgt = Math.min(1400, z); cam.dist = cam.distTgt; }
-    if (isFinite(a)) { cam.pitchTgt = Math.max(-1.52, Math.min(1.52, a)); cam.pitch = cam.pitchTgt; }
+    if (isFinite(a)) { cam.pitchTgt = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, a)); cam.pitch = cam.pitchTgt; }
     if (isFinite(y)) { cam.yawTgt = y; cam.yaw = y; }
     return true;
   }
