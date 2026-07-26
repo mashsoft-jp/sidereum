@@ -2865,9 +2865,11 @@
   function frame(now) {
     const raw = (now - last) / 1000;
     last = now;
-    const dt = Math.min(0.1, raw);        // シミュレーション時間用
     const dtc = Math.min(0.5, raw);       // カメラ緩和用 (低 fps でも追従)
-    if (playing) simDays += daysPerSec * dt;
+    // シミュレーション時刻は「実経過時間 × 再生速度」の連続関数にする。
+    // タブ非表示中は rAF が止まるが、復帰フレームで隠れていた時間ぶんを
+    // 一括で進める (クランプすると 1秒=1秒 でも時計が現実から遅れていく)
+    if (playing) simDays += daysPerSec * raw;
 
     if (selected && followKey === selected.key) {
       const t = posW.get(selected.key);
