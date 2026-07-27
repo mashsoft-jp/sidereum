@@ -792,9 +792,9 @@
     <span id="speedVal"></span>
 
     <span class="spaceOnly"></span>
-    <span class="slider spaceOnly" id="zoomLabel">ズーム</span>
+    <span class="slider spaceOnly" id="zoomLabel">距離</span>
     <button id="zoomOut" class="step spaceOnly" aria-label="遠ざける">−</button>
-    <input type="range" id="zoom" class="spaceOnly" min="0" max="100" value="40" aria-label="ズーム">
+    <input type="range" id="zoom" class="spaceOnly" min="0" max="100" value="40" aria-label="注視点との距離">
     <button id="zoomIn" class="step spaceOnly" aria-label="近づける">＋</button>
     <span id="zoomVal" class="spaceOnly"></span>
 
@@ -1012,7 +1012,7 @@
     ja: {
       title: "Sidereum (シデレウム β版) — 見上げる空から、太陽系の果てまで",
       betaTag: "(β版)",
-      pause: "停止", play: "再生", speed: "速度", zoom: "ズーム", angle: "角度",
+      pause: "停止", play: "再生", speed: "速度", distance: "距離", angle: "角度",
       ctrlHide: "操作パネルを隠す", ctrlShow: "操作パネルを表示",
       orbits: "軌道", labels: "名前", constellations: "星座", reset: "全体表示",
       nowBtn: "現在時刻に合わせる", ratePrefix: "1秒 = ",
@@ -1049,7 +1049,7 @@
     en: {
       title: "Sidereum (Beta) — From tonight's sky to the edge of the Solar System",
       betaTag: "(Beta)",
-      pause: "Pause", play: "Play", speed: "Speed", zoom: "Zoom", angle: "Angle",
+      pause: "Pause", play: "Play", speed: "Speed", distance: "Distance", angle: "Angle",
       ctrlHide: "Hide controls", ctrlShow: "Show controls",
       orbits: "Orbits", labels: "Labels", constellations: "Consts", reset: "Overview",
       nowBtn: "Set to current time", ratePrefix: "1s = ",
@@ -4498,7 +4498,7 @@
     document.getElementById("hint").textContent = t.hint;
     document.getElementById("noGL").innerHTML = t.noGL;
     document.getElementById("speedLabel").textContent = t.speed;
-    document.getElementById("zoomLabel").textContent = t.zoom;
+    document.getElementById("zoomLabel").textContent = t.distance;
     document.getElementById("angleLabel").textContent = t.angle;
     orbitsBtn.textContent = t.orbits;
     labelsBtn.textContent = t.labels;
