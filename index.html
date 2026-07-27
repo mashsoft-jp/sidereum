@@ -123,8 +123,8 @@
   #moonSite { flex: 1; padding: 4px 6px; font-size: 12px; font-family: var(--font-ui);
     color: var(--text); background: rgba(150, 178, 224, 0.08); border: 1px solid var(--line); border-radius: 3px; cursor: pointer; }
 
-  /* ---- about (ライセンス・クレジット) ---- */
-  #about {
+  /* ---- モーダル (操作方法 / ライセンス・クレジット) ---- */
+  #about, #howto {
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     width: min(540px, calc(100vw - 32px));
@@ -136,33 +136,34 @@
     display: none;
     z-index: 20;
   }
-  #about.open { display: block; }
-  #about h2 {
+  #about.open, #howto.open { display: block; }
+  #about h2, #howto h2 {
     margin: 0 0 10px;
     font-size: 15px;
     font-weight: 600;
     letter-spacing: 0.2em;
     color: var(--accent);
   }
-  #about h2 .yomi { font-size: 0.72em; letter-spacing: 0.1em; margin-left: 4px; }
-  #about h3 {
+  #about h2 .yomi, #howto h2 .yomi { font-size: 0.72em; letter-spacing: 0.1em; margin-left: 4px; }
+  #about h3, #howto h3 {
     margin: 16px 0 6px;
     font-size: 10px;
     letter-spacing: 0.22em;
     color: var(--dim);
   }
-  #about p { margin: 6px 0; font-size: 11.5px; line-height: 1.8; }
-  #about a { color: var(--accent); text-decoration: none; }
-  #about a:hover { text-decoration: underline; }
-  #about table { width: 100%; border-collapse: collapse; }
-  #about td {
+  #about p, #howto p { margin: 6px 0; font-size: 11.5px; line-height: 1.8; }
+  #about a, #howto a { color: var(--accent); text-decoration: none; }
+  #about a:hover, #howto a:hover { text-decoration: underline; }
+  #about table, #howto table { width: 100%; border-collapse: collapse; }
+  #about td, #howto td {
     padding: 4px 0;
     font-size: 11px;
     border-top: 1px solid var(--line);
     vertical-align: top;
   }
-  #about td:first-child { color: var(--dim); white-space: nowrap; padding-right: 14px; }
-  #aboutClose {
+  #about td:first-child, #howto td:first-child { color: var(--dim); white-space: nowrap; padding-right: 14px; }
+  #howto td:first-child { width: 7.5em; white-space: normal; }
+  #aboutClose, #howtoClose {
     position: absolute;
     top: 10px; right: 10px;
     padding: 2px 8px;
@@ -171,7 +172,31 @@
     border: none;
     color: var(--dim);
   }
-  #aboutClose:hover { color: var(--text); background: none; }
+  #aboutClose:hover, #howtoClose:hover { color: var(--text); background: none; }
+  /* ---- 初回ガイド (welcome overlay) ---- */
+  #welcome {
+    position: absolute; inset: 0; z-index: 40;
+    display: none; align-items: center; justify-content: center;
+    padding: 20px; box-sizing: border-box;
+    background: rgba(4, 6, 14, 0.72);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  }
+  #welcome.open { display: flex; }
+  #welcomeCard {
+    width: min(420px, 100%); box-sizing: border-box;
+    padding: 22px 24px 18px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  #welcomeCard h2 { margin: 0 0 4px; font-size: 16px; font-weight: 600; letter-spacing: 0.16em; color: var(--accent); }
+  #welcomeCard h2 .yomi { font-size: 0.68em; letter-spacing: 0.08em; margin-left: 4px; color: var(--dim); }
+  #welcomeCard .lead { margin: 0 0 10px; font-size: 11.5px; line-height: 1.7; color: var(--dim); }
+  #welcomeCard ul { margin: 4px 0 16px; padding-left: 1.2em; }
+  #welcomeCard li { font-size: 12px; line-height: 1.7; margin: 4px 0; }
+  #welcomeBtns { display: flex; gap: 8px; justify-content: flex-end; }
+  #welcomeBtns button { padding: 8px 16px; font-size: 12px; }
+  #welcomeStart { color: #0a0d16; background: var(--accent); border-color: var(--accent); font-weight: 600; }
+  #welcomeStart:hover { background: var(--accent); }
   #title h1 {
     margin: 0;
     font-size: 15px;
@@ -717,6 +742,7 @@
 
   <!-- 並び順: よく使う操作 (全画面・共有) → 環境設定 (単位・言語) → 情報。観測地は別枠 -->
   <div id="menu" class="hud" role="menu">
+    <button id="menuHelp" role="menuitem"></button>
     <button id="menuFullscreen" role="menuitem"></button>
     <button id="menuShare" role="menuitem"></button>
     <button id="menuUnit" role="menuitem"></button>
@@ -749,6 +775,8 @@
   </div>
 
   <aside id="about" class="hud" aria-modal="true"></aside>
+  <aside id="howto" class="hud" aria-modal="true"></aside>
+  <div id="welcome"></div>
 
   <div id="navPanel" class="hud">
     <button id="navCollapse" aria-label="リストを隠す">«</button>
@@ -1029,10 +1057,12 @@
       viewTop: "真上", viewDef: "デフォルト", viewSide: "真横", camera: "カメラ",
       viewSpace: "宇宙", viewGround: "地上", viewMoon: "月面", gFovLabel: "ズーム", gAzLabel: "方位", gAltLabel: "高度",
       hint: "ドラッグで回転 ・ 右ドラッグ / 2本指で移動 ・ ホイール / ピンチでズーム (Shift+で距離) ・ 天体クリックで接近",
+      hintGround: "ドラッグで見回す ・ ホイール / ピンチでズーム ・ 天体タップで選択・追尾",
       noGL: "お使いの環境では WebGL が利用できないため、<br>3D 表示を開始できませんでした。",
       imgPrefix: "画像: ", procTex: "テクスチャ: シェーダによる生成 (実写ではありません)",
       u: { yr: " 年", d: " 日", h: " 時間", min: " 分", s: " 秒" },
       menuLang: "English",
+      menuHelp: "操作方法",
       menuAbout: "ライセンス・クレジット",
       menuUnitToMi: "距離をマイル表示",
       menuUnitToKm: "距離を km 表示",
@@ -1066,10 +1096,12 @@
       viewTop: "Top", viewDef: "Default", viewSide: "Side", camera: "Camera",
       viewSpace: "Space", viewGround: "Ground", viewMoon: "Moon", gFovLabel: "Zoom", gAzLabel: "Azimuth", gAltLabel: "Alt",
       hint: "Drag to rotate · Right-drag / two fingers to pan · Wheel / pinch to zoom (Shift for distance) · Click a body to approach",
+      hintGround: "Drag to look around · Wheel / pinch to zoom · Tap a body to select & track",
       noGL: "WebGL is not available in this environment,<br>so the 3D view could not be started.",
       imgPrefix: "Imagery: ", procTex: "Texture: procedurally generated (not actual imagery)",
       u: { yr: " yr", d: " days", h: " hr", min: " min", s: " sec" },
       menuLang: "日本語",
+      menuHelp: "Controls",
       menuAbout: "License & Credits",
       menuUnitToMi: "Distances in miles",
       menuUnitToKm: "Distances in km",
@@ -2664,6 +2696,7 @@
     vmSpaceBtn.classList.toggle("on", !groundView);
     vmGroundBtn.classList.toggle("on", groundView && surfaceBody === "earth");
     vmMoonBtn.classList.toggle("on", groundView && surfaceBody === "moon");
+    updateHint();   // ビューに応じてヒントを差し替え・再表示
   }
   // 地球/月の地表ビューへ。body = "earth" | "moon"
   function enterSurface(body) {
@@ -4556,9 +4589,114 @@
   aboutEl.addEventListener("click", (e) => {
     if (e.target.id === "aboutClose") aboutEl.classList.remove("open");
   });
+
+  // ---------- 操作方法 (モーダル) ----------
+  const menuHelpBtn = document.getElementById("menuHelp");
+  const howtoEl = document.getElementById("howto");
+  function buildHowto() {
+    const c = lang === "ja" ? {
+      title: "操作方法", space: "宇宙ビュー", ground: "地上・月面ビュー", common: "共通",
+      space_rows: [
+        ["回転", "ドラッグ (1本指ドラッグ)"],
+        ["ズーム", "ホイール / ピンチ"],
+        ["距離", "Shift+ホイール、または「距離」スライダー"],
+        ["平行移動", "右ドラッグ / 2本指ドラッグ"],
+        ["天体", "クリック / タップで選択・接近 (再度で解除)"],
+        ["視点", "パネルの「カメラ」プルダウン・「角度」スライダー"],
+      ],
+      ground_rows: [
+        ["見回し", "ドラッグ"],
+        ["ズーム", "ホイール / ピンチ"],
+        ["方位・高度", "パネルのスライダー"],
+        ["天体", "タップで選択・追尾"],
+        ["観測地", "メニュー「観測地」(地上) / パネルの地点選択 (月面)"],
+      ],
+      common_rows: [
+        ["ビュー切替", "上部の 宇宙 / 地上 / 月面"],
+        ["日時", "右上の日付をタップ・「現在時刻に合わせる」"],
+        ["再生・速度", "下部パネル"],
+        ["表示切替", "左上の 軌道 / 名前 / 星座 (黄道も連動)"],
+        ["共有・設定", "メニュー (共有リンク・単位・言語)"],
+      ],
+    } : {
+      title: "Controls", space: "Space view", ground: "Ground / Moon view", common: "General",
+      space_rows: [
+        ["Rotate", "Drag (one-finger drag)"],
+        ["Zoom", "Wheel / pinch"],
+        ["Distance", "Shift+wheel, or the “Distance” slider"],
+        ["Pan", "Right-drag / two-finger drag"],
+        ["Bodies", "Click / tap to select & approach (again to deselect)"],
+        ["Viewpoint", "“Camera” dropdown & “Angle” slider in the panel"],
+      ],
+      ground_rows: [
+        ["Look around", "Drag"],
+        ["Zoom", "Wheel / pinch"],
+        ["Azimuth / Alt.", "Sliders in the panel"],
+        ["Bodies", "Tap to select & track"],
+        ["Location", "Menu “Location” (ground) / site picker (Moon)"],
+      ],
+      common_rows: [
+        ["Switch view", "Space / Ground / Moon at the top"],
+        ["Date & time", "Tap the date top-right · “Set to current time”"],
+        ["Play & speed", "Bottom panel"],
+        ["Toggles", "Orbits / Labels / Constellations (top-left)"],
+        ["Share & settings", "Menu (share link · units · language)"],
+      ],
+    };
+    const tbl = (rows) => `<table><tbody>` +
+      rows.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("") + `</tbody></table>`;
+    howtoEl.innerHTML =
+      `<button id="howtoClose" aria-label="close">✕</button>` +
+      `<h2>${c.title}</h2>` +
+      `<h3>${c.space}</h3>${tbl(c.space_rows)}` +
+      `<h3>${c.ground}</h3>${tbl(c.ground_rows)}` +
+      `<h3>${c.common}</h3>${tbl(c.common_rows)}`;
+  }
+  function openHowto() { buildHowto(); howtoEl.classList.add("open"); }
+  menuHelpBtn.addEventListener("click", () => { setMenu(false); openHowto(); });
+  howtoEl.addEventListener("click", (e) => {
+    if (e.target.id === "howtoClose") howtoEl.classList.remove("open");
+  });
+
+  // ---------- 初回ガイド (welcome overlay) ----------
+  const welcomeEl = document.getElementById("welcome");
+  function buildWelcome() {
+    const c = lang === "ja" ? {
+      yomi: "(シデレウム)",
+      lead: "太陽系を自由に見てまわれる Web プラネタリウムです。",
+      rows: ["ドラッグで回転", "ホイール / ピンチでズーム", "天体をタップで選択・接近", "上部タブで 宇宙 / 地上 / 月面 を切替"],
+      more: "操作方法を見る", start: "はじめる",
+    } : {
+      yomi: "",
+      lead: "A web planetarium for exploring the Solar System.",
+      rows: ["Drag to rotate", "Wheel / pinch to zoom", "Tap a body to select & approach", "Top tabs switch Space / Ground / Moon"],
+      more: "View controls", start: "Get started",
+    };
+    welcomeEl.innerHTML =
+      `<div id="welcomeCard">` +
+        `<h2>SIDEREUM<span class="yomi">${c.yomi}</span></h2>` +
+        `<p class="lead">${c.lead}</p>` +
+        `<ul>${c.rows.map((r) => `<li>${r}</li>`).join("")}</ul>` +
+        `<div id="welcomeBtns">` +
+          `<button id="welcomeMore">${c.more}</button>` +
+          `<button id="welcomeStart">${c.start}</button>` +
+        `</div>` +
+      `</div>`;
+  }
+  function closeWelcome() {
+    welcomeEl.classList.remove("open");
+    try { localStorage.setItem("ssGuideSeen", "1"); } catch (e) { /* プライベートモード等 */ }
+  }
+  welcomeEl.addEventListener("click", (e) => {
+    if (e.target.id === "welcomeStart" || e.target === welcomeEl) closeWelcome();
+    else if (e.target.id === "welcomeMore") { closeWelcome(); openHowto(); }
+  });
+
   window.addEventListener("keydown", (e) => {
     if (e.code === "Escape") {
       aboutEl.classList.remove("open");
+      howtoEl.classList.remove("open");
+      if (welcomeEl.classList.contains("open")) closeWelcome();
       setMenu(false);
     }
   });
@@ -4568,7 +4706,7 @@
     const t = T();
     document.documentElement.lang = lang;
     document.title = t.title;
-    document.getElementById("hint").textContent = t.hint;
+    document.getElementById("hint").textContent = hintText();
     document.getElementById("noGL").innerHTML = t.noGL;
     document.getElementById("speedLabel").textContent = t.speed;
     document.getElementById("zoomLabel").textContent = t.distance;
@@ -4599,6 +4737,7 @@
     menuLangBtn.textContent = t.menuLang;
     menuShareBtn.textContent = t.menuShare;
     updateFsLabel();
+    menuHelpBtn.textContent = t.menuHelp;
     menuAboutBtn.textContent = t.menuAbout;
     updateUnitLabel();
     applyNavVisible();
@@ -4616,6 +4755,8 @@
     positionInfoPanel();
     if (selected) openInfo(selected);
     if (aboutEl.classList.contains("open")) buildAbout();
+    if (howtoEl.classList.contains("open")) buildHowto();
+    if (welcomeEl.classList.contains("open")) buildWelcome();
   }
   menuLangBtn.addEventListener("click", () => {
     lang = lang === "ja" ? "en" : "ja";
@@ -4624,12 +4765,19 @@
     setMenu(false);
   });
 
-  // ---------- ヒント ----------
+  // ---------- ヒント (ビューに応じて出し分け・切替時に再表示) ----------
   const hint = document.getElementById("hint");
   let hintTimer = setTimeout(hideHint, 9000);
   function hideHint() {
     clearTimeout(hintTimer);
     hint.classList.add("fade");
+  }
+  function hintText() { return groundView ? T().hintGround : T().hint; }
+  function updateHint() {
+    hint.textContent = hintText();
+    hint.classList.remove("fade");
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(hideHint, 9000);
   }
 
   // ---------- 起動 ----------
@@ -4665,7 +4813,9 @@
     }
   }
   // 共有URLのパラメータがあれば localStorage 復元より優先して適用
-  applyShareURL();
+  const fromShare = applyShareURL();
+  // 初回のみ操作ガイドを表示 (共有リンクで開いた場合はそのまま見せる)
+  if (!fromShare && !localStorage.getItem("ssGuideSeen")) { buildWelcome(); welcomeEl.classList.add("open"); }
   requestAnimationFrame(frame);
 })();
 </script>
