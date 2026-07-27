@@ -293,13 +293,6 @@
     pointer-events: auto;
   }
   #nowBtn:hover { color: var(--text); }
-  #clock .rate {
-    margin-top: 2px;
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
-    color: var(--dim);
-  }
-
   /* ---- controls (ラベル・−・スライダー・＋・値を全行で縦に揃えるグリッド) ---- */
   #controls {
     left: 50%;
@@ -592,7 +585,6 @@
     #title h1 { font-size: 11px; letter-spacing: 0.14em; }
     #menuBtn { padding: 4px 6px; font-size: 15px; }
     #clock { padding: 6px 10px; }
-    #clock .rate { display: none; }
     #dateInput { font-size: 13px; }
     #timeText { font-size: 13px; }
     #nowBtn { font-size: 9px; padding: 2px 8px; margin-top: 4px; }
@@ -645,7 +637,6 @@
     #dateInput { font-size: 13px; }
     #timeText { font-size: 13px; }
     #nowBtn { font-size: 9px; padding: 2px 8px; margin-top: 3px; }
-    #clock .rate { display: none; }
     #hint { display: none; }
     #navPanel {
       top: calc(54px + var(--sat));
@@ -744,7 +735,6 @@
       <span id="timeText">--:--</span>
       <span id="tzText"></span>
     </div>
-    <div class="rate" id="rateText">SIMULATION PAUSED</div>
     <button id="nowBtn">現在時刻に合わせる</button>
   </div>
 
@@ -996,7 +986,7 @@
       pause: "停止", play: "再生", speed: "速度", zoom: "ズーム", angle: "角度",
       ctrlHide: "操作パネルを隠す", ctrlShow: "操作パネルを表示",
       orbits: "軌道", labels: "名前", reset: "全体表示",
-      nowBtn: "現在時刻に合わせる", paused: "SIMULATION PAUSED", ratePrefix: "1秒 = ",
+      nowBtn: "現在時刻に合わせる", ratePrefix: "1秒 = ",
       viewTop: "真上", viewDef: "デフォルト", viewSide: "真横", camera: "カメラ",
       viewSpace: "宇宙", viewGround: "地上", gFovLabel: "ズーム", gAzLabel: "方位", gAltLabel: "高度",
       hint: "ドラッグで回転 ・ 右ドラッグ / 2本指で移動 ・ ホイール / ピンチでズーム ・ 天体クリックで接近",
@@ -1033,7 +1023,7 @@
       pause: "Pause", play: "Play", speed: "Speed", zoom: "Zoom", angle: "Angle",
       ctrlHide: "Hide controls", ctrlShow: "Show controls",
       orbits: "Orbits", labels: "Labels", reset: "Overview",
-      nowBtn: "Set to current time", paused: "SIMULATION PAUSED", ratePrefix: "1s = ",
+      nowBtn: "Set to current time", ratePrefix: "1s = ",
       viewTop: "Top", viewDef: "Default", viewSide: "Side", camera: "Camera",
       viewSpace: "Space", viewGround: "Ground", gFovLabel: "Zoom", gAzLabel: "Azimuth", gAltLabel: "Alt",
       hint: "Drag to rotate · Right-drag / two fingers to pan · Wheel / pinch to zoom · Click a body to approach",
@@ -2954,7 +2944,6 @@
   const dateInput = document.getElementById("dateInput");
   const timeText = document.getElementById("timeText");
   const tzText = document.getElementById("tzText");
-  const rateText = document.getElementById("rateText");
   const pad2 = (n) => String(n).padStart(2, "0");
   // タイムゾーン略称 (JST / GMT / BST など)。日付・言語ごとにキャッシュ (夏時間対応)
   let tzKey = "", tzVal = "";
@@ -2972,7 +2961,7 @@
     return tzVal;
   }
   // DOM への書き込みは値が変わった時だけ行う (毎フレームのレイアウト誘発を防ぐ)
-  let lastDateStr = "", lastTimeStr = "", lastTzStr = "", lastRateStr = "";
+  let lastDateStr = "", lastTimeStr = "", lastTzStr = "";
   function updateClock() {
     const d = new Date(J2000 + simDays * DAY_MS);
     const ds = String(d.getFullYear()).padStart(4, "0") +
@@ -2991,11 +2980,6 @@
     if (tz !== lastTzStr) {
       tzText.textContent = tz;
       lastTzStr = tz;
-    }
-    const rs = playing ? T().ratePrefix + fmtDays(daysPerSec) : T().paused;
-    if (rs !== lastRateStr) {
-      rateText.textContent = rs;
-      lastRateStr = rs;
     }
   }
   dateInput.addEventListener("change", () => {
