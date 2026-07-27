@@ -1089,8 +1089,8 @@
       u: { yr: " 年", d: " 日", h: " 時間", min: " 分", s: " 秒" },
       menuLang: "English",
       menuHelp: "操作方法",
-      menuTerrainOn: "地形・大気を表示",
-      menuTerrainOff: "地形・大気を隠す",
+      menuTerrainOn: "風景を表示",
+      menuTerrainOff: "風景を隠す",
       menuAbout: "ライセンス・クレジット",
       menuUnitToMi: "距離をマイル表示",
       menuUnitToKm: "距離を km 表示",
@@ -1130,8 +1130,8 @@
       u: { yr: " yr", d: " days", h: " hr", min: " min", s: " sec" },
       menuLang: "日本語",
       menuHelp: "Controls",
-      menuTerrainOn: "Show terrain & sky",
-      menuTerrainOff: "Hide terrain & sky",
+      menuTerrainOn: "Show scenery",
+      menuTerrainOff: "Hide scenery",
       menuAbout: "License & Credits",
       menuUnitToMi: "Distances in miles",
       menuUnitToKm: "Distances in km",
@@ -1530,7 +1530,7 @@
     uniform vec4 uColor;
     void main() { gl_FragColor = uColor; }`;
 
-  // ---- 地形 / 空 (地上・月面ビューの雰囲気表現。すべてプロシージャル生成) ----
+  // ---- 風景 (地面の質感 / 空の色。地上・月面ビュー用。すべてプロシージャル生成) ----
   const terrainVS = `
     attribute vec3 aPos;
     uniform mat4 uVP;
@@ -2360,9 +2360,9 @@
   const gVP = mIdent(new Float64Array(16)), gVP32 = new Float32Array(16);
   const gP64 = new Float64Array(16), gV64 = new Float64Array(16), gM64 = new Float64Array(16);
   let groundVB = null, groundPtVB = null, horizonVB = null, horizonN = 0, groundDomeN = 0;
-  // 地形表現 (稜線つきドーム + 空ドーム)。showTerrain が OFF なら従来の平坦ドームを使う
+  // 風景表現 (稜線つきドーム + 空ドーム)。showTerrain が OFF なら従来の平坦ドームを使う
   let ridgeVB = { earth: null, moon: null }, ridgeN = 0, skyVB = null, skyN = 0;
-  let showTerrain = localStorage.getItem("ssTerrain") !== "0";   // 既定 ON
+  let showTerrain = localStorage.getItem("ssTerrain") === "1";   // 既定 OFF
   let starVis = 1;   // 昼の空での星・星座の可視度 (0=昼で見えない)。オーバーレイ文字にも使う
   // 地上ビューに出す天体: 太陽・月・全惑星 (準惑星・小惑星・彗星含む) と全衛星。
   // 地球以外の衛星は、画面上で母惑星から分離できる倍率になったら現れる
@@ -2820,7 +2820,7 @@
     // 天体・星・星座より後に描くので、地平線下の要素は確実に隠れる
     gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.depthMask(false);
     if (showTerrain) {
-      // 地形表現 ON: 稜線つきドームをプロシージャル質感で描く
+      // 風景 ON: 稜線つきドームをプロシージャル質感で描く
       gl.useProgram(terrainP.pr);
       gl.uniformMatrix4fv(terrainP.u.uVP, false, gVP32);
       gl.uniform3f(terrainP.u.uSun, _sunG[0], _sunG[1], _sunG[2]);
@@ -4691,7 +4691,7 @@
     setMenu(false);
   });
 
-  // 地形・大気の表示切替 (地上・月面ビューの雰囲気表現)
+  // 風景 (地面の質感・地平の稜線・空の色) の表示切替。地上・月面ビューのみ効く
   const menuTerrainBtn = document.getElementById("menuTerrain");
   function updateTerrainLabel() {
     menuTerrainBtn.textContent = showTerrain ? T().menuTerrainOff : T().menuTerrainOn;
@@ -4904,6 +4904,7 @@
         ["日時", "右上の日付をタップ・「現在時刻に合わせる」"],
         ["再生・速度", "下部パネル"],
         ["表示切替", "左上の 軌道 / 名前 / 星座 (黄道も連動)"],
+        ["風景", "メニュー「風景を表示」(地面の質感・地平の稜線・空の色)"],
         ["共有・設定", "メニュー (共有リンク・単位・言語)"],
       ],
     } : {
@@ -4928,6 +4929,7 @@
         ["Date & time", "Tap the date top-right · “Set to current time”"],
         ["Play & speed", "Bottom panel"],
         ["Toggles", "Orbits / Labels / Constellations (top-left)"],
+        ["Scenery", "Menu “Show scenery” (ground texture, ridgeline, sky color)"],
         ["Share & settings", "Menu (share link · units · language)"],
       ],
     };
