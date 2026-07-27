@@ -949,7 +949,7 @@
       rows:[["直径","139,820 km"],["質量","1.90×10²⁷ kg"],["平均距離","5.20 au"],["公転周期","11.86 年"],["自転周期","9.9 時間"],["平均温度","−108 ℃"],["衛星","95+"]],
       fact:"太陽系最大の惑星。他の全惑星を合わせた2倍以上の質量を持ち、大赤斑は300年以上続く巨大な嵐です。" },
     { key:"saturn", name:"土星", en:"SATURN", a:9.5549, e:0.0542, T:10759.22, i:2.489, node:113.666, peri:92.43, L0:49.94,
-      tilt:26.73, rot:0.446, rkm:58232, type:5, ring:true,
+      tilt:26.73, rot:0.446, rkm:58232, type:5,   // 環の諸元は RING_INFO 側で定義
       colA:[0.89,0.82,0.63], colB:[0.72,0.63,0.46], colC:[0.95,0.92,0.80], rim:[0.9,0.82,0.6], params:[7.0,0.35,0.0,0],
       rows:[["直径","116,460 km"],["質量","5.68×10²⁶ kg"],["平均距離","9.55 au"],["公転周期","29.4 年"],["自転周期","10.7 時間"],["平均温度","−139 ℃"],["衛星","270+"]],
       fact:"氷の粒でできた壮大な環を持つ惑星。平均密度は水よりも小さく、理論上は水に浮きます。" },
@@ -1750,26 +1750,31 @@
     attribute vec3 aPos;
     attribute float aR;
     uniform mat4 uMVP, uModel;
-    varying float vR;
+    uniform float uRin, uRout;
+    varying float vR, vT;
     varying vec3 vW;
     void main() {
-      vR = aR;
-      vW = (uModel * vec4(aPos, 1.0)).xyz;
-      gl_Position = uMVP * vec4(aPos, 1.0);
+      float r = mix(uRin, uRout, aR);      // 惑星半径単位の実半径
+      vec3 p = aPos * r;
+      vR = r; vT = aR;
+      vW = (uModel * vec4(p, 1.0)).xyz;
+      gl_Position = uMVP * vec4(p, 1.0);
     }`;
   const ringFS = PRE + `
-    varying float vR;
+    varying float vR, vT;
     varying vec3 vW;
-    uniform vec3 uAxis, uSun;
+    uniform vec3 uAxis, uSun, uTint;
+    uniform float uAlpha, uSat;            // uSat: 1 = 土星風 (細かい濃淡 + カッシーニの空隙)
     void main() {
-      float t = (vR - 1.35) / 1.15;
-      float bands = 0.55 + 0.45 * sin(vR * 68.0) * sin(vR * 23.0 + 1.7);
-      float gap = smoothstep(0.02, 0.075, abs(t - 0.56));
+      float fine = 0.55 + 0.45 * sin(vR * 68.0) * sin(vR * 23.0 + 1.7);
+      float bands = mix(0.72, fine, uSat);
+      float gap = mix(1.0, smoothstep(0.02, 0.075, abs(vT - 0.56)), uSat);
       float a = (0.30 + 0.55 * bands) * gap;
-      a *= smoothstep(0.0, 0.08, t) * smoothstep(1.0, 0.9, t);
+      a *= smoothstep(0.0, 0.08, vT) * smoothstep(1.0, 0.9, vT);
+      a *= uAlpha;
       vec3 L = normalize(uSun - vW);
       float lit = 0.35 + 0.65 * abs(dot(uAxis, L));
-      vec3 c = mix(vec3(0.62, 0.55, 0.42), vec3(0.93, 0.87, 0.72), bands) * lit;
+      vec3 c = mix(uTint * 0.66, uTint, bands) * lit;
       gl_FragColor = vec4(c * a, a);
     }`;
 
@@ -1814,14 +1819,16 @@
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, sphere.idx, gl.STATIC_DRAW);
 
   // 環 (単位半径の平円環, aR = 半径)
-  const RING_SEG = 160, RING_IN = 1.35, RING_OUT = 2.5;
+  // 環は単位円 + 正規化半径 (0=内縁, 1=外縁) で持ち、実半径は uRin/uRout で
+  // 与える。これで1つのバッファを木星〜海王星の全ての環で使い回せる
+  const RING_SEG = 160;
   {
     var ringData = new Float32Array((RING_SEG + 1) * 2 * 4);
     let o = 0;
     for (let s = 0; s <= RING_SEG; s++) {
       const a = s / RING_SEG * 2 * Math.PI, c = Math.cos(a), sn = Math.sin(a);
-      ringData[o++] = c * RING_IN; ringData[o++] = 0; ringData[o++] = sn * RING_IN; ringData[o++] = RING_IN;
-      ringData[o++] = c * RING_OUT; ringData[o++] = 0; ringData[o++] = sn * RING_OUT; ringData[o++] = RING_OUT;
+      ringData[o++] = c; ringData[o++] = 0; ringData[o++] = sn; ringData[o++] = 0;
+      ringData[o++] = c; ringData[o++] = 0; ringData[o++] = sn; ringData[o++] = 1;
     }
   }
   const ringVB = gl.createBuffer();
@@ -2137,11 +2144,12 @@
 
   function bodyModel(b, r) {
     const spin = b.rot ? 2 * Math.PI * simDays / b.rot + (b.spin0 || 0) : 0;
-    // 土星は環との整合のため実際の極方向 (SATURN_POLE_W) を使う。他は
+    // 環を持つ惑星は環との整合のため実際の極方向を使う。他は
     // ワールドX軸まわりの傾斜で近似 (傾斜角のみ正確、軸の方位は簡略)
-    if (b.key === "saturn") {
+    const rg = RING_INFO[b.key];
+    if (rg) {
       mRotY(spin, SCR.ry);
-      mMul(SAT_ROT, SCR.ry, SCR.rot);
+      mMul(rg.rot, SCR.ry, SCR.rot);
     } else {
       mRotX(-(b.tilt || 0) * DEG, SCR.rx);
       mRotY(spin, SCR.ry);
@@ -2357,7 +2365,8 @@
     if (!b || b.key === "earth") return GMIN_DEFAULT;
     const c = computeObs(b);
     let angDiam = 2 * Math.asin(Math.min(0.9, b.rkm / (c.distAU * AU_KM)));
-    if (b.key === "saturn") angDiam *= 2.5;   // 環の外径まで視野に収める
+    const rg = RING_INFO[b.key];
+    if (rg) angDiam *= rg.out;                // 環の外径まで視野に収める
     return Math.max(2e-9, Math.min(GMIN_DEFAULT, angDiam * 1.1));
   }
   const _fwd = [0, 0, 0], _gp = [0, 0, 0], _sunG = [0, 0, 0];
@@ -2738,14 +2747,15 @@
       gl.vertexAttribPointer(bodyP.a.aPos, 3, gl.FLOAT, false, 0, 0);
       gl.uniform1f(bodyP.u.uTime, nowSec);
       gl.uniform3f(bodyP.u.uCam, 0, 0, 0);
-      let satLx = 0, satLy = 0, satLz = 0;   // 土星の環の照射方向 (ループ内で確定)
+      const ringLight = {};   // 環の照射方向 (惑星キー → [x,y,z]。ループ内で確定)
       for (const bb of bigBodies) {
         const b = bb.b, R = bb.wr;
         // 天体の実際の自転姿勢 (宇宙ビューと同じ回転) をローカル観測者フレームへ
         // 変換して描く。これにより地球なら「その日時に月へ向いている面」が出る
         const spin = b.rot ? 2 * Math.PI * simDays / b.rot + (b.spin0 || 0) : 0;
         mRotY(spin, SCR.ry);
-        if (b.key === "saturn") mMul(SAT_ROT, SCR.ry, SCR.rot);
+        const rgb_ = RING_INFO[b.key];
+        if (rgb_) mMul(rgb_.rot, SCR.ry, SCR.rot);
         else { mRotX(-(b.tilt || 0) * DEG, SCR.rx); mMul(SCR.rx, SCR.ry, SCR.rot); }
         const rw = SCR.rot;   // 列0,1,2 = 天体軸のワールド方向
         SCR.v2[0]=rw[0]; SCR.v2[1]=rw[1]; SCR.v2[2]=rw[2]; worldDirToGround(SCR.v2, SCR.v);
@@ -2768,7 +2778,7 @@
           const w = posW.get(b.key);
           _gp[0] = -w[0]; _gp[1] = -w[1]; _gp[2] = -w[2];
           const Ld = worldDirToGround(_gp, _fwd);
-          if (b.key === "saturn") { satLx = Ld[0]; satLy = Ld[1]; satLz = Ld[2]; }
+          if (RING_INFO[b.key]) ringLight[b.key] = [Ld[0], Ld[1], Ld[2]];
           gl.uniform3f(bodyP.u.uSun, Ld[0] * 1e6, Ld[1] * 1e6, Ld[2] * 1e6);
         }
         const tx = texByKey.get(b.key);
@@ -2786,37 +2796,42 @@
         gl.drawElements(gl.TRIANGLES, sphere.idx.length, gl.UNSIGNED_SHORT, 0);
       }
       gl.disable(gl.CULL_FACE);
-      // 土星の環 (球として描かれる倍率のときのみ。軸の向きを地上フレームへ変換)
-      const satBB = bigBodies.find((x) => x.b.key === "saturn");
-      if (satBB) {
-        const Ag = worldDirToGround(SATURN_POLE_W, _gp);
-        // y = 環の法線 とする正規直交基底 (環は軸対称なので面内回転は任意)
-        let xx = -Ag[2], xy = 0, xz = Ag[0];
-        let xl = Math.hypot(xx, xy, xz);
-        if (xl < 1e-6) { xx = 1; xy = 0; xz = 0; xl = 1; }
-        xx /= xl; xz /= xl;
-        const zx = xy * Ag[2] - xz * Ag[1], zy = xz * Ag[0] - xx * Ag[2], zz = xx * Ag[1] - xy * Ag[0];
-        const s = satBB.wr, m = gM64;
-        m[0] = xx * s; m[1] = xy * s; m[2] = xz * s; m[3] = 0;
-        m[4] = Ag[0] * s; m[5] = Ag[1] * s; m[6] = Ag[2] * s; m[7] = 0;
-        m[8] = zx * s; m[9] = zy * s; m[10] = zz * s; m[11] = 0;
-        m[12] = satBB.px; m[13] = satBB.py; m[14] = satBB.pz; m[15] = 1;
+      // 環 (球として描かれる倍率のときのみ。軸の向きを地上フレームへ変換)
+      const ringBBs = bigBodies.filter((x) => RING_INFO[x.b.key]);
+      if (ringBBs.length) {
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         gl.depthMask(false);
         gl.useProgram(ringP.pr);
-        gl.uniformMatrix4fv(ringP.u.uMVP, false, mMul(gVP, m, SCR.mvp));
-        SCR.model.set(m);
-        gl.uniformMatrix4fv(ringP.u.uModel, false, SCR.model);
-        gl.uniform3f(ringP.u.uAxis, Ag[0], Ag[1], Ag[2]);
-        // 環も本体と同じ「土星 → 実際の太陽」方向の遠方光源で照らす
-        gl.uniform3f(ringP.u.uSun, satLx * 1e6, satLy * 1e6, satLz * 1e6);
         gl.bindBuffer(gl.ARRAY_BUFFER, ringVB);
         gl.enableVertexAttribArray(ringP.a.aPos);
         gl.enableVertexAttribArray(ringP.a.aR);
         gl.vertexAttribPointer(ringP.a.aPos, 3, gl.FLOAT, false, 16, 0);
         gl.vertexAttribPointer(ringP.a.aR, 1, gl.FLOAT, false, 16, 12);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, (RING_SEG + 1) * 2);
+        for (const bb of ringBBs) {
+          const g = RING_INFO[bb.b.key];
+          const Ag = worldDirToGround(g.poleW, _gp);
+          // y = 環の法線 とする正規直交基底 (環は軸対称なので面内回転は任意)
+          let xx = -Ag[2], xy = 0, xz = Ag[0];
+          let xl = Math.hypot(xx, xy, xz);
+          if (xl < 1e-6) { xx = 1; xy = 0; xz = 0; xl = 1; }
+          xx /= xl; xz /= xl;
+          const zx = xy * Ag[2] - xz * Ag[1], zy = xz * Ag[0] - xx * Ag[2], zz = xx * Ag[1] - xy * Ag[0];
+          const s = bb.wr, m = gM64;
+          m[0] = xx * s; m[1] = xy * s; m[2] = xz * s; m[3] = 0;
+          m[4] = Ag[0] * s; m[5] = Ag[1] * s; m[6] = Ag[2] * s; m[7] = 0;
+          m[8] = zx * s; m[9] = zy * s; m[10] = zz * s; m[11] = 0;
+          m[12] = bb.px; m[13] = bb.py; m[14] = bb.pz; m[15] = 1;
+          gl.uniformMatrix4fv(ringP.u.uMVP, false, mMul(gVP, m, SCR.mvp));
+          SCR.model.set(m);
+          gl.uniformMatrix4fv(ringP.u.uModel, false, SCR.model);
+          gl.uniform3f(ringP.u.uAxis, Ag[0], Ag[1], Ag[2]);
+          // 環も本体と同じ「惑星 → 実際の太陽」方向の遠方光源で照らす
+          const L = ringLight[bb.b.key] || [0, 1, 0];
+          gl.uniform3f(ringP.u.uSun, L[0] * 1e6, L[1] * 1e6, L[2] * 1e6);
+          setRingUniforms(g);
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, (RING_SEG + 1) * 2);
+        }
         gl.disable(gl.BLEND);
         gl.depthMask(true);
       }
@@ -3404,27 +3419,31 @@
       gl.disable(gl.BLEND);
     }
 
-    // --- 土星の環 ---
+    // --- 巨大惑星の環 (木星・土星・天王星・海王星) ---
     {
-      const sat = PLANETS[5];
-      const r = bodyR(sat);
-      const sp = posW.get(sat.key);
-      SCR.t[0] = sp[0] - eye[0]; SCR.t[1] = sp[1] - eye[1]; SCR.t[2] = sp[2] - eye[2];
-      const model = mTRS(SCR.t, SAT_ROT, r, SCR.model);   // 実際の極方向で環を配置
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.depthMask(false);
       gl.useProgram(ringP.pr);
-      gl.uniformMatrix4fv(ringP.u.uMVP, false, mMul(VP, model, SCR.mvp));
-      gl.uniformMatrix4fv(ringP.u.uModel, false, model);
-      gl.uniform3f(ringP.u.uAxis, SATURN_POLE_W[0], SATURN_POLE_W[1], SATURN_POLE_W[2]);
-      gl.uniform3f(ringP.u.uSun, -eye[0], -eye[1], -eye[2]);
       gl.bindBuffer(gl.ARRAY_BUFFER, ringVB);
       gl.enableVertexAttribArray(ringP.a.aPos);
       gl.enableVertexAttribArray(ringP.a.aR);
       gl.vertexAttribPointer(ringP.a.aPos, 3, gl.FLOAT, false, 16, 0);
       gl.vertexAttribPointer(ringP.a.aR, 1, gl.FLOAT, false, 16, 12);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, (RING_SEG + 1) * 2);
+      for (const p of PLANETS) {
+        const g = RING_INFO[p.key];
+        if (!g) continue;
+        const r = bodyR(p);
+        const sp = posW.get(p.key);
+        SCR.t[0] = sp[0] - eye[0]; SCR.t[1] = sp[1] - eye[1]; SCR.t[2] = sp[2] - eye[2];
+        const model = mTRS(SCR.t, g.rot, r, SCR.model);   // 実際の極方向で環を配置
+        gl.uniformMatrix4fv(ringP.u.uMVP, false, mMul(VP, model, SCR.mvp));
+        gl.uniformMatrix4fv(ringP.u.uModel, false, model);
+        gl.uniform3f(ringP.u.uAxis, g.poleW[0], g.poleW[1], g.poleW[2]);
+        gl.uniform3f(ringP.u.uSun, -eye[0], -eye[1], -eye[2]);
+        setRingUniforms(g);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, (RING_SEG + 1) * 2);
+      }
     }
 
     // --- 太陽コロナ (加算) ---
@@ -3851,16 +3870,24 @@
   const ECL = 23.4393 * DEG, RS_RATE = 15.041;   // 黄道傾斜, 時角の進み (度/時)
   // 土星の自転軸 (環の法線) の実方向: 赤経40.589°・赤緯83.537° (ICRF)。
   // 環の見かけの開閉 (約15年周期で真横⇄最大±27°) を正しく再現するために使う
-  const SATURN_POLE_W = (() => {
-    const ra = 40.589 * DEG, dec = 83.537 * DEG;
+  // ---------- 環 (巨大惑星4つすべてが持つ) ----------
+  // 半径は惑星半径単位の実測値。土星以外は暗い塵・岩なので実際もごく淡く、
+  // alpha でその明るさの差を表す。極方向は IAU の自転極 (J2000)
+  const RING_INFO = {
+    jupiter: { ra: 268.057, dec: 64.495, in: 1.70, out: 1.90, alpha: 0.30, sat: 0, tint: [0.62, 0.50, 0.40] },
+    saturn:  { ra: 40.589,  dec: 83.537, in: 1.35, out: 2.50, alpha: 1.00, sat: 1, tint: [0.93, 0.87, 0.72] },
+    uranus:  { ra: 257.311, dec: -15.175, in: 1.64, out: 2.01, alpha: 0.32, sat: 0, tint: [0.56, 0.60, 0.64] },
+    neptune: { ra: 299.36,  dec: 43.46,  in: 1.69, out: 2.55, alpha: 0.22, sat: 0, tint: [0.50, 0.56, 0.66] },
+  };
+  for (const k in RING_INFO) {
+    const g = RING_INFO[k];
+    const ra = g.ra * DEG, dec = g.dec * DEG;
     const xq = Math.cos(dec) * Math.cos(ra), yq = Math.cos(dec) * Math.sin(ra), zq = Math.sin(dec);
     const ye = yq * Math.cos(ECL) + zq * Math.sin(ECL);    // 赤道 → 黄道
     const ze = -yq * Math.sin(ECL) + zq * Math.cos(ECL);
-    return [xq, ze, -ye];                                   // 黄道 → ワールド (toWorld と同じ軸対応)
-  })();
-  // 極方向を y 軸とする回転行列 (土星の本体・環のモデル用。x/z は軸対称なので任意)
-  const SAT_ROT = (() => {
-    const A = SATURN_POLE_W;
+    const A = [xq, ze, -ye];                               // 黄道 → ワールド (toWorld と同じ軸対応)
+    g.poleW = A;
+    // 極方向を y 軸とする回転行列 (本体・環のモデル用。x/z は軸対称なので任意)
     let xx = -A[2], xz = A[0];
     const xl = Math.hypot(xx, xz) || 1; xx /= xl; xz /= xl;
     const o = new Float32Array(16);
@@ -3868,8 +3895,16 @@
     o[4] = A[0]; o[5] = A[1]; o[6] = A[2];
     o[8] = -xz * A[1]; o[9] = xz * A[0] - xx * A[2]; o[10] = xx * A[1];
     o[15] = 1;
-    return o;
-  })();
+    g.rot = o;
+  }
+  // 環の描画に共通で使うユニフォーム設定
+  function setRingUniforms(g) {
+    gl.uniform1f(ringP.u.uRin, g.in);
+    gl.uniform1f(ringP.u.uRout, g.out);
+    gl.uniform1f(ringP.u.uAlpha, g.alpha);
+    gl.uniform1f(ringP.u.uSat, g.sat);
+    gl.uniform3f(ringP.u.uTint, g.tint[0], g.tint[1], g.tint[2]);
+  }
   let obsLat = parseFloat(localStorage.getItem("ssLat"));
   let obsLon = parseFloat(localStorage.getItem("ssLon"));
   if (!isFinite(obsLat) || !isFinite(obsLon)) { obsLat = 35.68; obsLon = 139.69; }   // 既定: 東京
