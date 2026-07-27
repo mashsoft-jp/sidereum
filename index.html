@@ -3941,7 +3941,7 @@
       if (groundView) {
         if (pinchDist > 0) gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, gFovTgt * pinchDist / d));
       } else if (pinchDist > 0) {
-        cam.distTgt = Math.max(minDist(), Math.min(1400, cam.distTgt * pinchDist / d));
+        camZoomTgt = Math.max(1, Math.min(MAG_MAX, camZoomTgt * d / pinchDist));   // ピンチで拡大率
         panCamera(mx - pinchMidX, my - pinchMidY);   // 2本指スワイプで平行移動
       }
       pinchDist = d;
@@ -3982,7 +3982,7 @@
     if (groundView) {
       gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, gFovTgt * Math.exp(e.deltaY * 0.0012)));
     } else {
-      cam.distTgt = Math.max(minDist(), Math.min(1400, cam.distTgt * Math.exp(e.deltaY * 0.0016)));
+      camZoomTgt = Math.max(1, Math.min(MAG_MAX, camZoomTgt * Math.exp(-e.deltaY * 0.0015)));   // ホイールで拡大率
     }
     hideHint();
   }, { passive: false });
