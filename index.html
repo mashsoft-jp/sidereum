@@ -2439,26 +2439,23 @@
       let satLx = 0, satLy = 0, satLz = 0;   // 土星の環の照射方向 (ループ内で確定)
       for (const bb of bigBodies) {
         const b = bb.b, R = bb.wr;
-        // 観測者(原点)を向く姿勢・北を上に。テクスチャ中心が手前を向く (月は表側が見える)
-        let nx = -bb.dx, ny = -bb.dy, nz = -bb.dz;
-        let yx, yy, yz;
-        if (b.key === "saturn") {
-          // 土星は縞を環と揃えるため、上方向 = 実際の極方向 (地上フレーム)
-          const P = worldDirToGround(SATURN_POLE_W, SCR.v);
-          yx = P[0]; yy = P[1]; yz = P[2];
-          const d = nx * yx + ny * yy + nz * yz;
-          nx -= d * yx; ny -= d * yy; nz -= d * yz;
-          const nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
-        } else {
-          const upd = ny;
-          yx = -upd * nx; yy = 1 - upd * ny; yz = -upd * nz;
-          const yl = Math.hypot(yx, yy, yz) || 1; yx /= yl; yy /= yl; yz /= yl;
-        }
-        const zx = ny*yz - nz*yy, zy = nz*yx - nx*yz, zz = nx*yy - ny*yx;
+        // 天体の実際の自転姿勢 (宇宙ビューと同じ回転) をローカル観測者フレームへ
+        // 変換して描く。これにより地球なら「その日時に月へ向いている面」が出る
+        const spin = b.rot ? 2 * Math.PI * simDays / b.rot + (b.spin0 || 0) : 0;
+        mRotY(spin, SCR.ry);
+        if (b.key === "saturn") mMul(SAT_ROT, SCR.ry, SCR.rot);
+        else { mRotX(-(b.tilt || 0) * DEG, SCR.rx); mMul(SCR.rx, SCR.ry, SCR.rot); }
+        const rw = SCR.rot;   // 列0,1,2 = 天体軸のワールド方向
+        SCR.v2[0]=rw[0]; SCR.v2[1]=rw[1]; SCR.v2[2]=rw[2]; worldDirToGround(SCR.v2, SCR.v);
+        const axx=SCR.v[0], axy=SCR.v[1], axz=SCR.v[2];
+        SCR.v2[0]=rw[4]; SCR.v2[1]=rw[5]; SCR.v2[2]=rw[6]; worldDirToGround(SCR.v2, SCR.v);
+        const ayx=SCR.v[0], ayy=SCR.v[1], ayz=SCR.v[2];
+        SCR.v2[0]=rw[8]; SCR.v2[1]=rw[9]; SCR.v2[2]=rw[10]; worldDirToGround(SCR.v2, SCR.v);
+        const azx=SCR.v[0], azy=SCR.v[1], azz=SCR.v[2];
         const m = gM64;   // f64 のまま合成し、mMul の出力 (f32) だけを GPU へ
-        m[0]=nx*R; m[1]=ny*R; m[2]=nz*R; m[3]=0;
-        m[4]=yx*R; m[5]=yy*R; m[6]=yz*R; m[7]=0;
-        m[8]=zx*R; m[9]=zy*R; m[10]=zz*R; m[11]=0;
+        m[0]=axx*R; m[1]=axy*R; m[2]=axz*R; m[3]=0;
+        m[4]=ayx*R; m[5]=ayy*R; m[6]=ayz*R; m[7]=0;
+        m[8]=azx*R; m[9]=azy*R; m[10]=azz*R; m[11]=0;
         m[12]=bb.px; m[13]=bb.py; m[14]=bb.pz; m[15]=1;
         // 満ち欠けの照射方向: ドーム上の見かけの太陽位置ではなく「天体 → 実際の
         // 太陽」(ワールドで太陽は原点 = -posW) を遠方光源として使う。ドーム上の
