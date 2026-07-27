@@ -1756,6 +1756,11 @@
     gl.bindBuffer(gl.ARRAY_BUFFER, satOrbVB);
     gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW);
   }
+  // 月の軌道線は ELP 理論から現在時刻の前後1周期ぶんをサンプリングして描く
+  // (単純な円だと ELP による実位置と食い違うため。地心ワールドオフセットで格納)
+  const MOON_ORB_N = 160;
+  const moonOrbBuf = new Float32Array((MOON_ORB_N + 1) * 3);
+  let moonOrbVB = null;
 
   // 自転軸線 (単位球基準, モデル行列で天体半径にスケール)
   const AXIS_LEN = 1.55;
@@ -2835,18 +2840,35 @@
         gl.drawArrays(gl.LINE_STRIP, 0, PATCH_N + 1);
       }
       // 衛星の軌道 (母天体に追従)
-      gl.bindBuffer(gl.ARRAY_BUFFER, satOrbVB);
       gl.enableVertexAttribArray(lineP.a.aPos);
-      gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
       for (const s of SATELLITES) {
         if (!s.showOrbit) continue;
         const par = posW.get(s.parent);
-        SCR.t[0] = par[0] - eye[0]; SCR.t[1] = par[1] - eye[1]; SCR.t[2] = par[2] - eye[2];
-        mTRS(SCR.t, s.M, s.aKm * KM2W, SCR.model);
-        gl.uniformMatrix4fv(lineP.u.uVP, false, mMul(VP, SCR.model, SCR.mvp));
         const sel = selected === s;
         gl.uniform4f(lineP.u.uColor, sel ? 0.95 : 0.42, sel ? 0.70 : 0.50, sel ? 0.24 : 0.63, sel ? 0.55 : 0.16);
-        gl.drawArrays(gl.LINE_STRIP, 0, SAT_ORB_N + 1);
+        if (s === MOON) {
+          // ELP 理論で現在時刻±半周期をサンプリング (実位置と一致する軌道線)
+          const tmp = SCR.v2, T = 27.321661;
+          for (let i = 0; i <= MOON_ORB_N; i++) {
+            moonGeoEclKm(simDays + (i / MOON_ORB_N - 0.5) * T, tmp);
+            moonOrbBuf[i*3] = tmp[0] * KM2W; moonOrbBuf[i*3+1] = tmp[2] * KM2W; moonOrbBuf[i*3+2] = -tmp[1] * KM2W;
+          }
+          if (!moonOrbVB) moonOrbVB = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, moonOrbVB);
+          gl.bufferData(gl.ARRAY_BUFFER, moonOrbBuf, gl.DYNAMIC_DRAW);
+          SCR.t[0] = par[0] - eye[0]; SCR.t[1] = par[1] - eye[1]; SCR.t[2] = par[2] - eye[2];
+          mTRS(SCR.t, null, 1, SCR.model);
+          gl.uniformMatrix4fv(lineP.u.uVP, false, mMul(VP, SCR.model, SCR.mvp));
+          gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+          gl.drawArrays(gl.LINE_STRIP, 0, MOON_ORB_N + 1);
+        } else {
+          gl.bindBuffer(gl.ARRAY_BUFFER, satOrbVB);
+          SCR.t[0] = par[0] - eye[0]; SCR.t[1] = par[1] - eye[1]; SCR.t[2] = par[2] - eye[2];
+          mTRS(SCR.t, s.M, s.aKm * KM2W, SCR.model);
+          gl.uniformMatrix4fv(lineP.u.uVP, false, mMul(VP, SCR.model, SCR.mvp));
+          gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+          gl.drawArrays(gl.LINE_STRIP, 0, SAT_ORB_N + 1);
+        }
       }
     }
 
