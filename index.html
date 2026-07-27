@@ -333,12 +333,13 @@
   }
   #controls .slider { text-align: right; }
   #controls input[type="range"] { width: 100%; }
-  .camRow {
-    grid-column: 2 / -1;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
+  /* カメラ視点プルダウン (距離・ズームの左横、col1 を2行ぶん占有) */
+  #camSelect {
+    grid-column: 1; grid-row: 2 / span 2; align-self: center; justify-self: stretch;
+    font-family: var(--font-ui); font-size: 11px; letter-spacing: 0.03em;
+    color: var(--text); background: rgba(150, 178, 224, 0.08);
+    border: 1px solid var(--line); border-radius: 4px;
+    padding: 6px 4px; cursor: pointer; max-width: 100%;
   }
   /* ---- 地上ビュー用コントロールの出し分け ---- */
   .groundOnly { display: none; }
@@ -793,27 +794,25 @@
     <button id="speedUp" class="step" aria-label="速くする">＋</button>
     <span id="speedVal"></span>
 
-    <span class="spaceOnly"></span>
+    <!-- カメラ視点プルダウン (距離・ズームの左横、col1 を2行ぶん占有) -->
+    <select id="camSelect" class="spaceOnly" aria-label="カメラ視点">
+      <option value="" selected>カメラ</option>
+      <option value="top">真上</option>
+      <option value="def">デフォルト</option>
+      <option value="side">真横</option>
+      <option value="reset">全体表示</option>
+    </select>
     <span class="slider spaceOnly" id="zoomLabel">距離</span>
     <button id="zoomOut" class="step spaceOnly" aria-label="遠ざける">−</button>
     <input type="range" id="zoom" class="spaceOnly" min="0" max="100" value="40" aria-label="注視点との距離">
     <button id="zoomIn" class="step spaceOnly" aria-label="近づける">＋</button>
     <span id="zoomVal" class="spaceOnly"></span>
 
-    <span class="spaceOnly"></span>
     <span class="slider spaceOnly" id="magLabel">ズーム</span>
     <button id="magOut" class="step spaceOnly" aria-label="ズームアウト">−</button>
     <input type="range" id="mag" class="spaceOnly" min="0" max="100" value="0" aria-label="拡大率">
     <button id="magIn" class="step spaceOnly" aria-label="ズームイン">＋</button>
     <span id="magVal" class="spaceOnly"></span>
-
-    <span class="slider spaceOnly" id="cameraLabel">カメラ</span>
-    <div class="camRow spaceOnly">
-      <button id="viewTopBtn">真上</button>
-      <button id="viewDefBtn">デフォルト</button>
-      <button id="viewSideBtn">真横</button>
-      <button id="resetBtn">全体表示</button>
-    </div>
 
     <!-- カメラ俯角の縦スライダー (地上ビューの「高度」と同じ右端カラム) -->
     <div id="angleCell" class="spaceOnly">
@@ -4324,8 +4323,8 @@
     hideHint();
   }
   // 他のカメラ視点を選んだら地上ビューを抜けて宇宙ビューへ
-  document.getElementById("viewTopBtn").addEventListener("click", () => { exitGround(); setPitch(PITCH_MAX); });   // 真上 (表示上 90°)
-  document.getElementById("viewSideBtn").addEventListener("click", () => { exitGround(); setPitch(0); });          // 真横 (0°)
+  function goTopView() { exitGround(); setPitch(PITCH_MAX); }   // 真上 (表示上 90°)
+  function goSideView() { exitGround(); setPitch(0); }          // 真横 (0°)
 
   // デフォルト: 太陽中心に内惑星 (火星軌道まで) がちょうど収まる俯瞰
   function goDefaultView() {
@@ -4340,9 +4339,8 @@
     camZoomTgt = 1;
     setPitch(0.35);
   }
-  document.getElementById("viewDefBtn").addEventListener("click", goDefaultView);
-
-  document.getElementById("resetBtn").addEventListener("click", () => {
+  // 全体表示: 太陽系を俯瞰する初期状態へ
+  function goOverview() {
     exitGround();
     select(null, false);
     lastCenter = null;
@@ -4351,6 +4349,17 @@
     cam.yawTgt = 0.9; cam.pitchTgt = 0.35;
     camZoomTgt = 1;
     resetPan();
+  }
+
+  // カメラ視点プルダウン。アクション実行後はラベル「カメラ」表示に戻す
+  const camSelect = document.getElementById("camSelect");
+  camSelect.addEventListener("change", () => {
+    const v = camSelect.value;
+    camSelect.selectedIndex = 0;
+    if (v === "top") goTopView();
+    else if (v === "def") goDefaultView();
+    else if (v === "side") goSideView();
+    else if (v === "reset") goOverview();
   });
 
   window.addEventListener("keydown", (e) => {
@@ -4565,11 +4574,12 @@
     orbitsBtn.textContent = t.orbits;
     labelsBtn.textContent = t.labels;
     constBtn.textContent = t.constellations;
-    document.getElementById("resetBtn").textContent = t.reset;
-    document.getElementById("cameraLabel").textContent = t.camera;
-    document.getElementById("viewTopBtn").textContent = t.viewTop;
-    document.getElementById("viewDefBtn").textContent = t.viewDef;
-    document.getElementById("viewSideBtn").textContent = t.viewSide;
+    const camOpts = camSelect.options;
+    camOpts[0].textContent = t.camera;
+    camOpts[1].textContent = t.viewTop;
+    camOpts[2].textContent = t.viewDef;
+    camOpts[3].textContent = t.viewSide;
+    camOpts[4].textContent = t.reset;
     vmSpaceBtn.textContent = t.viewSpace;
     vmGroundBtn.textContent = t.viewGround;
     vmMoonBtn.textContent = t.viewMoon;
