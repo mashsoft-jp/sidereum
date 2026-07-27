@@ -96,6 +96,14 @@
   #menu button:hover { background: rgba(150, 178, 224, 0.12); }
   /* 配信中ビルドの識別用 (キャッシュで旧ビルドを見ていないかの確認) */
   #menuBuild { padding: 4px 12px 2px; font-size: 9.5px; color: var(--dim); font-family: var(--font-num); border-top: 1px solid var(--line); margin-top: 4px; }
+  /* 月面ビュー: 月面地点セレクタは月面時のみ、地球の観測地は月面時のみ非表示 */
+  .moonOnly { display: none; }
+  #app.moonMode .moonOnly { display: flex; }
+  #app.moonMode #obsSiteChip, #app.moonMode #obsSitePop { display: none; }
+  #app.moonMode #tabObs { display: none; }
+  #moonSiteRow { align-items: center; gap: 6px; padding: 9px 12px; }
+  #moonSite { flex: 1; padding: 4px 6px; font-size: 12px; font-family: var(--font-ui);
+    color: var(--text); background: rgba(150, 178, 224, 0.08); border: 1px solid var(--line); border-radius: 3px; cursor: pointer; }
 
   /* ---- about (ライセンス・クレジット) ---- */
   #about {
@@ -689,6 +697,7 @@
   <div id="viewMode" role="group" aria-label="ビュー切替">
     <button id="vmSpace" class="on">宇宙</button>
     <button id="vmGround">地上</button>
+    <button id="vmMoon">月面</button>
   </div>
 
   <!-- 並び順: よく使う操作 (観測地・全画面・共有) → 環境設定 (単位・言語) → 情報 -->
@@ -707,6 +716,10 @@
         </span>
         <button id="obsGeo"></button>
       </div>
+    </div>
+    <div id="moonSiteRow" class="moonOnly">
+      <span class="moonSiteIcon">🌙</span>
+      <select id="moonSite" aria-label="月面の観測地点"></select>
     </div>
     <button id="menuFullscreen" role="menuitem"></button>
     <button id="menuShare" role="menuitem"></button>
@@ -988,7 +1001,7 @@
       orbits: "軌道", labels: "名前", constellations: "星座", reset: "全体表示",
       nowBtn: "現在時刻に合わせる", ratePrefix: "1秒 = ",
       viewTop: "真上", viewDef: "デフォルト", viewSide: "真横", camera: "カメラ",
-      viewSpace: "宇宙", viewGround: "地上", gFovLabel: "ズーム", gAzLabel: "方位", gAltLabel: "高度",
+      viewSpace: "宇宙", viewGround: "地上", viewMoon: "月面", gFovLabel: "ズーム", gAzLabel: "方位", gAltLabel: "高度",
       hint: "ドラッグで回転 ・ 右ドラッグ / 2本指で移動 ・ ホイール / ピンチでズーム ・ 天体クリックで接近",
       noGL: "お使いの環境では WebGL が利用できないため、<br>3D 表示を開始できませんでした。",
       imgPrefix: "画像: ", procTex: "テクスチャ: シェーダによる生成 (実写ではありません)",
@@ -1025,7 +1038,7 @@
       orbits: "Orbits", labels: "Labels", constellations: "Consts", reset: "Overview",
       nowBtn: "Set to current time", ratePrefix: "1s = ",
       viewTop: "Top", viewDef: "Default", viewSide: "Side", camera: "Camera",
-      viewSpace: "Space", viewGround: "Ground", gFovLabel: "Zoom", gAzLabel: "Azimuth", gAltLabel: "Alt",
+      viewSpace: "Space", viewGround: "Ground", viewMoon: "Moon", gFovLabel: "Zoom", gAzLabel: "Azimuth", gAltLabel: "Alt",
       hint: "Drag to rotate · Right-drag / two fingers to pan · Wheel / pinch to zoom · Click a body to approach",
       noGL: "WebGL is not available in this environment,<br>so the 3D view could not be started.",
       imgPrefix: "Imagery: ", procTex: "Texture: procedurally generated (not actual imagery)",
@@ -1660,6 +1673,7 @@
   const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
   let N_STAR = 0;
   let starVB = null;
+  let STAR_W = null;   // 恒星のワールド単位方向 (観測者フレーム投影用, N_STAR×3)
 
   // ---------- 小惑星帯 ----------
   const N_AST = 1600;
@@ -1983,6 +1997,7 @@
     const eps = 23.4393 * DEG, ce = Math.cos(eps), se = Math.sin(eps);
     N_STAR = N_CAT;
     const buf = new Float32Array(N_STAR * 7);
+    STAR_W = new Float32Array(N_STAR * 3);
     for (let i = 0; i < N_STAR; i++) {
       const xq = STAR_CD[i] * Math.cos(STAR_RA[i]), yq = STAR_CD[i] * Math.sin(STAR_RA[i]), zq = STAR_SD[i];
       const ye = yq * ce + zq * se, ze = -yq * se + zq * ce;   // 赤道 → 黄道
@@ -1990,6 +2005,7 @@
       buf[o] = xq * R;              // 黄道 → ワールド (toWorld と同じ軸対応: x, z, -y)
       buf[o + 1] = ze * R;
       buf[o + 2] = -ye * R;
+      STAR_W[i*3] = xq; STAR_W[i*3+1] = ze; STAR_W[i*3+2] = -ye;   // ワールド単位方向
       buf[o + 3] = mag < 1.2 ? 2.8 : mag < 2.8 ? 1.9 : mag < 4.0 ? 1.35 : mag < 5.2 ? 1.0 : 0.8;
       const br = Math.min(1, Math.pow(10, -0.11 * mag));       // 等級 → 明るさ
       const col = STAR_COL[i];                                 // B-V 色指数による実際の色味
@@ -2050,18 +2066,17 @@
     };
     for (const ab in lines) {
       let sx = 0, sy = 0, sz = 0, nv = 0;           // ラベル位置: 赤道単位ベクトルの平均
-      const verts = [];                             // 地上ラベル用: [ra, sinDec, cosDec] ×頂点
+      const verts = [];                             // 地上ラベル用: ワールド単位方向 [wx,wy,wz]×頂点
       for (const pl of lines[ab]) {
         for (let i = 0; i + 3 < pl.length; i += 2) {
           dirW(pl[i], pl[i + 1], a); dirW(pl[i + 2], pl[i + 3], b);
           space.push(a[0], a[1], a[2], b[0], b[1], b[2]);
-          const r0 = pl[i] * DEG, d0 = pl[i + 1] * DEG, r1 = pl[i + 2] * DEG, d1 = pl[i + 3] * DEG;
-          CONST_SEG.push(r0, Math.sin(d0), Math.cos(d0), r1, Math.sin(d1), Math.cos(d1));
+          CONST_SEG.push(a[0]/R, a[1]/R, a[2]/R, b[0]/R, b[1]/R, b[2]/R);   // ワールド単位方向×2
         }
         for (let i = 0; i + 1 < pl.length; i += 2) {
           const r = pl[i] * DEG, d = pl[i + 1] * DEG, cd = Math.cos(d);
           sx += cd * Math.cos(r); sy += cd * Math.sin(r); sz += Math.sin(d); nv++;
-          verts.push(r, Math.sin(d), cd);
+          dirW(pl[i], pl[i + 1], a); verts.push(a[0]/R, a[1]/R, a[2]/R);
         }
       }
       if (nv) {
@@ -2134,25 +2149,70 @@
   const SKY_BODIES = [SUN, MOON]
     .concat(PLANETS.filter((p) => p.key !== "earth"))
     .concat(SATELLITES.filter((s) => s.key !== "moon"));
-  const groundPtArr = new Float32Array(SKY_BODIES.length * 7);
+  // 月面ビューで見える天体: 太陽 + 惑星 (PLANETS に地球を含む。月自身は除く)
+  const MOON_SKY_BODIES = [SUN].concat(PLANETS);
+  const groundPtArr = new Float32Array(Math.max(SKY_BODIES.length, MOON_SKY_BODIES.length) * 7);
   function azAltDir(azDeg, altDeg, out) {
     const a = azDeg * DEG, e = altDeg * DEG, ca = Math.cos(e);
     out[0] = ca * Math.sin(a); out[1] = Math.sin(e); out[2] = -ca * Math.cos(a);
     return out;
   }
-  // ワールド座標の「方向ベクトル」を地上フレーム (東・天頂・南) へ回転
-  // (computeObs と同じ回転列: 黄道 → 赤道 → 地平座標。平行移動は掛けない)
+
+  // ---------- 観測者フレーム (地球/月の地表。ワールド空間の東・天頂・北 単位ベクトル) ----------
+  // これを介して「宇宙(ワールド)方向 → 地平座標」を統一的に扱う。地球でも月でも同じ描画経路を使える
+  let surfaceBody = "earth";              // "earth" | "moon"
+  let moonLat = 0, moonLon = 0;           // 月面 (selenographic) 観測地点
+  const obsE = [0, 0, 0], obsU = [0, 0, 0], obsN = [0, 0, 0], obsPosW = [0, 0, 0];
+  function eqToWorld(xq, yq, zq, out) {   // 赤道単位ベクトル → 黄道 → ワールド
+    const ce = Math.cos(ECL), se = Math.sin(ECL);
+    const ey = yq * ce + zq * se, ez = -yq * se + zq * ce;
+    out[0] = xq; out[1] = ez; out[2] = -ey;
+    return out;
+  }
+  function buildObsFrame() {
+    if (surfaceBody === "moon") {
+      const mC = posW.get("moon"), eC = posW.get("earth");
+      const px = 0, py = 1, pz = 0;       // 月の極 ≈ 黄道北 (潮汐ロック近似, 傾き1.5°は無視)
+      let ex = eC[0]-mC[0], ey = eC[1]-mC[1], ez = eC[2]-mC[2];
+      const el = Math.hypot(ex, ey, ez) || 1; ex/=el; ey/=el; ez/=el;   // 地球方向 (sub-Earth)
+      const dp = ex*px + ey*py + ez*pz;
+      let x0x = ex-dp*px, x0y = ey-dp*py, x0z = ez-dp*pz;               // 赤道面へ射影 = 経度0
+      const x0l = Math.hypot(x0x, x0y, x0z) || 1; x0x/=x0l; x0y/=x0l; x0z/=x0l;
+      const y0x = py*x0z-pz*x0y, y0y = pz*x0x-px*x0z, y0z = px*x0y-py*x0x;  // p × x0 = 経度+90
+      const la = moonLat*DEG, lo = moonLon*DEG, cla = Math.cos(la), sla = Math.sin(la), clo = Math.cos(lo), slo = Math.sin(lo);
+      const bx = clo*x0x+slo*y0x, by = clo*x0y+slo*y0y, bz = clo*x0z+slo*y0z;
+      obsU[0]=cla*bx+sla*px; obsU[1]=cla*by+sla*py; obsU[2]=cla*bz+sla*pz;
+      obsN[0]=-sla*bx+cla*px; obsN[1]=-sla*by+cla*py; obsN[2]=-sla*bz+cla*pz;
+      obsE[0]=-slo*x0x+clo*y0x; obsE[1]=-slo*x0y+clo*y0y; obsE[2]=-slo*x0z+clo*y0z;
+      const rW = 1737.4 * KM2W;
+      obsPosW[0]=mC[0]+rW*obsU[0]; obsPosW[1]=mC[1]+rW*obsU[1]; obsPosW[2]=mC[2]+rW*obsU[2];
+    } else {
+      const eC = posW.get("earth");
+      const lst = (gmstDeg(simDays)+obsLon)*DEG, la = obsLat*DEG;
+      const cla = Math.cos(la), sla = Math.sin(la), cst = Math.cos(lst), sst = Math.sin(lst);
+      eqToWorld(cla*cst, cla*sst, sla, obsU);      // 天頂
+      eqToWorld(-sla*cst, -sla*sst, cla, obsN);    // 北
+      eqToWorld(-sst, cst, 0, obsE);               // 東
+      const rW = 6378.14 * KM2W;
+      obsPosW[0]=eC[0]+rW*obsU[0]; obsPosW[1]=eC[1]+rW*obsU[1]; obsPosW[2]=eC[2]+rW*obsU[2];
+    }
+  }
+  // ワールドの「方向ベクトル」を地平フレーム [東, 天頂, -北] (azAltDir と同じ規約) へ
   function worldDirToGround(d, out) {
-    const ex = d[0], ey = -d[2], ez = d[1];                     // world → 黄道
-    const xq = ex;
-    const yq = ey * Math.cos(ECL) - ez * Math.sin(ECL);
-    const zq = ey * Math.sin(ECL) + ez * Math.cos(ECL);
-    const ra = Math.atan2(yq, xq);
-    const dec = Math.asin(zq / (Math.hypot(xq, yq, zq) || 1));
-    const lat = obsLat * DEG, H = (gmstDeg(simDays) + obsLon) * DEG - ra;
-    const alt = Math.asin(Math.max(-1, Math.min(1, Math.sin(dec) * Math.sin(lat) + Math.cos(dec) * Math.cos(lat) * Math.cos(H))));
-    const A = Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(lat) - Math.tan(dec) * Math.cos(lat));
-    return azAltDir(A / DEG + 180, alt / DEG, out);
+    const e = d[0]*obsE[0]+d[1]*obsE[1]+d[2]*obsE[2];
+    const u = d[0]*obsU[0]+d[1]*obsU[1]+d[2]*obsU[2];
+    const nn = d[0]*obsN[0]+d[1]*obsN[1]+d[2]*obsN[2];
+    out[0]=e; out[1]=u; out[2]=-nn; return out;
+  }
+  // 観測地からの天体方向 (視差込み) → 地平フレーム単位ベクトル + 距離[AU]。az/alt はこれから求める
+  function bodySky(body, out) {
+    const b = posW.get(body.key);
+    let dx = b[0]-obsPosW[0], dy = b[1]-obsPosW[1], dz = b[2]-obsPosW[2];
+    const dist = Math.hypot(dx, dy, dz) || 1; dx/=dist; dy/=dist; dz/=dist;
+    out[0] = dx*obsE[0]+dy*obsE[1]+dz*obsE[2];
+    out[1] = dx*obsU[0]+dy*obsU[1]+dz*obsU[2];
+    out[2] = -(dx*obsN[0]+dy*obsN[1]+dz*obsN[2]);
+    return dist / K_REAL;                          // AU
   }
   function projGround(p) {
     const w = gVP[3]*p[0] + gVP[7]*p[1] + gVP[11]*p[2] + gVP[15];
@@ -2165,6 +2225,7 @@
   const SKYR = 100;
   const groundVis = [];
   function renderGround(nowSec) {
+    buildObsFrame();   // 観測者フレーム (地球/月) を確定
     if (!groundVB) {
       // 地面 = 下半球ドーム。視点は原点なので y=0 の平面では下半分を塗れない
       // (平面が視点を通ると地平線の線にしかならない)。天頂下の全方向を覆う
@@ -2208,21 +2269,19 @@
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-    // 星座線 (地平線より上のセグメントのみ。恒星より先に引いて星を上に重ねる)
+    // 星座線 (観測者フレームへ投影。地平線より上のセグメントのみ)。恒星より先に描く
     if (showConst && CONST_SEG.length) {
-      const clat = obsLat * DEG, csinLat = Math.sin(clat), ccosLat = Math.cos(clat);
-      const clst = (gmstDeg(simDays) + obsLon) * DEG;
       let cn = 0;
       for (let i = 0; i + 5 < CONST_SEG.length; i += 6) {
-        const H0 = clst - CONST_SEG[i], sd0 = CONST_SEG[i + 1], cd0 = CONST_SEG[i + 2];
-        const H1 = clst - CONST_SEG[i + 3], sd1 = CONST_SEG[i + 4], cd1 = CONST_SEG[i + 5];
-        const up0 = sd0 * csinLat + cd0 * Math.cos(H0) * ccosLat;
-        const up1 = sd1 * csinLat + cd1 * Math.cos(H1) * ccosLat;
-        if (up0 < -0.03 && up1 < -0.03) continue;    // 両端とも地平線下ならスキップ
-        const e0 = -cd0 * Math.sin(H0), no0 = sd0 * ccosLat - cd0 * Math.cos(H0) * csinLat;
-        const e1 = -cd1 * Math.sin(H1), no1 = sd1 * ccosLat - cd1 * Math.cos(H1) * csinLat;
-        constGroundBuf[cn++] = e0 * SKYR; constGroundBuf[cn++] = up0 * SKYR; constGroundBuf[cn++] = -no0 * SKYR;
-        constGroundBuf[cn++] = e1 * SKYR; constGroundBuf[cn++] = up1 * SKYR; constGroundBuf[cn++] = -no1 * SKYR;
+        const e0 = CONST_SEG[i]*obsE[0]+CONST_SEG[i+1]*obsE[1]+CONST_SEG[i+2]*obsE[2];
+        const u0 = CONST_SEG[i]*obsU[0]+CONST_SEG[i+1]*obsU[1]+CONST_SEG[i+2]*obsU[2];
+        const n0 = CONST_SEG[i]*obsN[0]+CONST_SEG[i+1]*obsN[1]+CONST_SEG[i+2]*obsN[2];
+        const e1 = CONST_SEG[i+3]*obsE[0]+CONST_SEG[i+4]*obsE[1]+CONST_SEG[i+5]*obsE[2];
+        const u1 = CONST_SEG[i+3]*obsU[0]+CONST_SEG[i+4]*obsU[1]+CONST_SEG[i+5]*obsU[2];
+        const n1 = CONST_SEG[i+3]*obsN[0]+CONST_SEG[i+4]*obsN[1]+CONST_SEG[i+5]*obsN[2];
+        if (u0 < -0.03 && u1 < -0.03) continue;      // 両端とも地平線下ならスキップ
+        constGroundBuf[cn++] = e0 * SKYR; constGroundBuf[cn++] = u0 * SKYR; constGroundBuf[cn++] = -n0 * SKYR;
+        constGroundBuf[cn++] = e1 * SKYR; constGroundBuf[cn++] = u1 * SKYR; constGroundBuf[cn++] = -n1 * SKYR;
       }
       if (cn) {
         gl.useProgram(lineP.pr);
@@ -2235,22 +2294,19 @@
         gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
         gl.drawArrays(gl.LINES, 0, cn / 3);
       }
-      // 黄道 (金色。閉ループを地平線でセグメント間引き)
+      // 黄道 (金色。ワールド単位 = ECL_WORLD/1895 を投影)
       {
-        const clat = obsLat * DEG, csinLat = Math.sin(clat), ccosLat = Math.cos(clat);
-        const clst = (gmstDeg(simDays) + obsLon) * DEG;
+        const ER = 1895;
         let en = 0;
         for (let k = 0; k < ECL_N; k++) {
-          const a0 = k * 3, a1 = ((k + 1) % ECL_N) * 3;
-          const H0 = clst - ECL_PTS[a0], sd0 = ECL_PTS[a0 + 1], cd0 = ECL_PTS[a0 + 2];
-          const H1 = clst - ECL_PTS[a1], sd1 = ECL_PTS[a1 + 1], cd1 = ECL_PTS[a1 + 2];
-          const up0 = sd0 * csinLat + cd0 * Math.cos(H0) * ccosLat;
-          const up1 = sd1 * csinLat + cd1 * Math.cos(H1) * ccosLat;
-          if (up0 < -0.03 && up1 < -0.03) continue;
-          const e0 = -cd0 * Math.sin(H0), no0 = sd0 * ccosLat - cd0 * Math.cos(H0) * csinLat;
-          const e1 = -cd1 * Math.sin(H1), no1 = sd1 * ccosLat - cd1 * Math.cos(H1) * csinLat;
-          eclGroundBuf[en++] = e0 * SKYR; eclGroundBuf[en++] = up0 * SKYR; eclGroundBuf[en++] = -no0 * SKYR;
-          eclGroundBuf[en++] = e1 * SKYR; eclGroundBuf[en++] = up1 * SKYR; eclGroundBuf[en++] = -no1 * SKYR;
+          const a = k * 3, b = ((k + 1) % ECL_N) * 3;
+          const ax = ECL_WORLD[a]/ER, ay = ECL_WORLD[a+1]/ER, az = ECL_WORLD[a+2]/ER;
+          const bx = ECL_WORLD[b]/ER, by = ECL_WORLD[b+1]/ER, bz = ECL_WORLD[b+2]/ER;
+          const e0 = ax*obsE[0]+ay*obsE[1]+az*obsE[2], u0 = ax*obsU[0]+ay*obsU[1]+az*obsU[2], n0 = ax*obsN[0]+ay*obsN[1]+az*obsN[2];
+          const e1 = bx*obsE[0]+by*obsE[1]+bz*obsE[2], u1 = bx*obsU[0]+by*obsU[1]+bz*obsU[2], n1 = bx*obsN[0]+by*obsN[1]+bz*obsN[2];
+          if (u0 < -0.03 && u1 < -0.03) continue;
+          eclGroundBuf[en++] = e0 * SKYR; eclGroundBuf[en++] = u0 * SKYR; eclGroundBuf[en++] = -n0 * SKYR;
+          eclGroundBuf[en++] = e1 * SKYR; eclGroundBuf[en++] = u1 * SKYR; eclGroundBuf[en++] = -n1 * SKYR;
         }
         if (en) {
           gl.useProgram(lineP.pr);
@@ -2266,19 +2322,16 @@
       }
     }
 
-    // 恒星 (実カタログ, 地平線より上のみ)
+    // 恒星 (実カタログ, 地平線より上のみ)。ワールド単位方向を観測者フレームへ投影
     if (N_CAT) {
       if (!starGVB) starGVB = gl.createBuffer();
-      const lat = obsLat * DEG, sinLat = Math.sin(lat), cosLat = Math.cos(lat);
-      const lst = (gmstDeg(simDays) + obsLon) * DEG;
       let ns = 0;
       for (let i = 0; i < N_CAT; i++) {
-        const H = lst - STAR_RA[i], sd = STAR_SD[i], cd = STAR_CD[i];
-        const cosH = Math.cos(H);
-        const up = sd * sinLat + cd * cosH * cosLat;      // sinAlt
+        const wx = STAR_W[i*3], wy = STAR_W[i*3+1], wz = STAR_W[i*3+2];
+        const up = wx*obsU[0]+wy*obsU[1]+wz*obsU[2];      // sinAlt
         if (up < 0.02) continue;
-        const east = -cd * Math.sin(H);
-        const north = sd * cosLat - cd * cosH * sinLat;
+        const east = wx*obsE[0]+wy*obsE[1]+wz*obsE[2];
+        const north = wx*obsN[0]+wy*obsN[1]+wz*obsN[2];
         const o = ns * 7;
         starGArr[o] = east * SKYR; starGArr[o+1] = up * SKYR; starGArr[o+2] = -north * SKYR;
         const m = STAR_MAG[i];
@@ -2310,20 +2363,29 @@
     let n = 0;
     const bigBodies = [];
     const halfFov = gFov * 0.5, halfH = H * 0.5;
-    for (const b of SKY_BODIES) {
-      const c = computeObs(b);
-      if (c.alt < -1 && b !== selected) continue;   // 選択天体は地平線下でも描画
-      const angR = Math.asin(Math.min(0.9, b.rkm / (c.distAU * AU_KM)));
+    const bodies = surfaceBody === "moon" ? MOON_SKY_BODIES : SKY_BODIES;
+    for (const b of bodies) {
+      let altDeg, azDeg, distAU, magV;
+      if (surfaceBody === "moon") {
+        distAU = bodySky(b, _gp);                      // _gp = [east, up, -north]
+        altDeg = Math.asin(Math.max(-1, Math.min(1, _gp[1]))) / DEG;
+        azDeg = (Math.atan2(_gp[0], -_gp[2]) / DEG + 360) % 360;
+        magV = null;
+      } else {
+        const c = computeObs(b);
+        altDeg = c.alt; azDeg = c.az; distAU = c.distAU; magV = c.mag;
+      }
+      if (altDeg < -1 && b !== selected) continue;   // 選択天体は地平線下でも描画
+      const angR = Math.asin(Math.min(0.9, b.rkm / (distAU * AU_KM)));
       const spherePx = angR / halfFov * halfH;
-      // 地球以外の衛星は、画面上で母惑星の点に埋もれている間は省略
-      // (拡大して分離できる倍率になると現れる = 双眼鏡でガリレオ衛星が見える感覚)
-      if (b.parent && b.parent !== "earth" && b !== selected && spherePx < 5) {
+      // 地球以外の衛星は、画面上で母惑星の点に埋もれている間は省略 (地上ビューのみ)
+      if (surfaceBody !== "moon" && b.parent && b.parent !== "earth" && b !== selected && spherePx < 5) {
         const pc = computeObs(BODY_BY_KEY.get(b.parent));
-        const dAz = ((c.az - pc.az + 540) % 360) - 180;
-        const sepPx = Math.hypot(dAz * Math.cos(c.alt * DEG), c.alt - pc.alt) * DEG / gFov * H;
+        const dAz = ((azDeg - pc.az + 540) % 360) - 180;
+        const sepPx = Math.hypot(dAz * Math.cos(altDeg * DEG), altDeg - pc.alt) * DEG / gFov * H;
         if (sepPx < 12) continue;
       }
-      azAltDir(c.az, c.alt, _gp);
+      azAltDir(azDeg, altDeg, _gp);
       const px = _gp[0]*SKYR, py = _gp[1]*SKYR, pz = _gp[2]*SKYR;
       groundVis.push({ b, px, py, pz });
       if (spherePx >= 5) {                          // 画面上で十分大きい → 球
@@ -2333,7 +2395,7 @@
       let size, r, g, bl;
       if (b === SUN) { size = 18; r = 1.0; g = 0.9; bl = 0.6; }
       else if (b.key === "moon") { size = 11; r = 0.9; g = 0.92; bl = 0.96; }
-      else { size = magSize(c.mag == null ? 3 : c.mag); r = b.colA[0]*0.5+0.5; g = b.colA[1]*0.5+0.5; bl = b.colA[2]*0.5+0.5; }
+      else { size = magSize(magV == null ? 3.5 : magV); r = b.colA[0]*0.5+0.5; g = b.colA[1]*0.5+0.5; bl = b.colA[2]*0.5+0.5; }
       const o = n * 7;
       groundPtArr[o]=px; groundPtArr[o+1]=py; groundPtArr[o+2]=pz;
       groundPtArr[o+3]=size; groundPtArr[o+4]=r; groundPtArr[o+5]=g; groundPtArr[o+6]=bl;
@@ -2357,8 +2419,8 @@
     gl.disable(gl.BLEND);
     // 拡大された天体はテクスチャ球で描画。太陽方向から照らすので満ち欠けも再現される
     if (bigBodies.length) {
-      const sc = computeObs(SUN);
-      azAltDir(sc.az, sc.alt, _fwd);
+      if (surfaceBody === "moon") { bodySky(SUN, _fwd); }
+      else { const sc = computeObs(SUN); azAltDir(sc.az, sc.alt, _fwd); }
       const sunGx = _fwd[0] * SKYR, sunGy = _fwd[1] * SKYR, sunGz = _fwd[2] * SKYR;
       gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.clear(gl.DEPTH_BUFFER_BIT);
       // 距離100に対して半径が極小のため深度精度が足りず、裏側の半球が
@@ -2491,22 +2553,19 @@
       const s = projGround([_gp[0]*SKYR, _gp[1]*SKYR, _gp[2]*SKYR]);
       if (s && s.x >= 0 && s.x <= W && s.y >= 0 && s.y <= H) octx.fillText(lab, s.x, s.y - 4);
     }
-    // 星座名 (地平線より上のもの)
+    // 星座名 (観測者フレームへ投影。地平線より上のもの)
     if (showConst) {
-      const clat = obsLat * DEG, csinLat = Math.sin(clat), ccosLat = Math.cos(clat);
-      const clst = (gmstDeg(simDays) + obsLon) * DEG;
       octx.fillStyle = "rgba(150,178,224,0.5)";
       for (const c of CONST_LABELS) {
         // 画面内に見えている頂点の平均位置に名前を置く (中心点が画角外でも
         // 星座の一部が見えていれば、その見えている部分の中央に表示される)
         let sumx = 0, sumy = 0, cnt = 0;
-        const v = c.verts;
+        const v = c.verts;   // ワールド単位方向 [wx,wy,wz]×頂点
         for (let i = 0; i + 2 < v.length; i += 3) {
-          const ha = clst - v[i], sd = v[i + 1], cd = v[i + 2];   // ha=時角 (H はキャンバス高)
-          const up = sd * csinLat + cd * Math.cos(ha) * ccosLat;
+          const wx = v[i], wy = v[i+1], wz = v[i+2];
+          const up = wx*obsU[0]+wy*obsU[1]+wz*obsU[2];
           if (up < 0.03) continue;
-          const east = -cd * Math.sin(ha);
-          const north = sd * ccosLat - cd * Math.cos(ha) * csinLat;
+          const east = wx*obsE[0]+wy*obsE[1]+wz*obsE[2], north = wx*obsN[0]+wy*obsN[1]+wz*obsN[2];
           const s = projGround([east * SKYR, up * SKYR, -north * SKYR]);
           if (!s || s.x < 0 || s.x > W || s.y < 0 || s.y > H) continue;
           sumx += s.x; sumy += s.y; cnt++;
@@ -2514,13 +2573,13 @@
         if (cnt >= 2) octx.fillText(lang === "ja" ? c.ja : c.en, sumx / cnt, sumy / cnt);
       }
       // 黄道ラベル: 画面中央に最も近い可視点に1つ
+      const ER = 1895;
       let bx = 0, by = 0, bd = Infinity;
-      for (let i = 0; i + 2 < ECL_PTS.length; i += 3) {
-        const ha = clst - ECL_PTS[i], sd = ECL_PTS[i + 1], cd = ECL_PTS[i + 2];
-        const up = sd * csinLat + cd * Math.cos(ha) * ccosLat;
+      for (let i = 0; i + 2 < ECL_WORLD.length; i += 3) {
+        const wx = ECL_WORLD[i]/ER, wy = ECL_WORLD[i+1]/ER, wz = ECL_WORLD[i+2]/ER;
+        const up = wx*obsU[0]+wy*obsU[1]+wz*obsU[2];
         if (up < 0.03) continue;
-        const east = -cd * Math.sin(ha);
-        const north = sd * ccosLat - cd * Math.cos(ha) * csinLat;
+        const east = wx*obsE[0]+wy*obsE[1]+wz*obsE[2], north = wx*obsN[0]+wy*obsN[1]+wz*obsN[2];
         const s = projGround([east * SKYR, up * SKYR, -north * SKYR]);
         if (!s || s.x < 0 || s.x > W || s.y < 0 || s.y > H) continue;
         const d = (s.x - W / 2) ** 2 + (s.y - H / 2) ** 2;
@@ -2542,12 +2601,24 @@
   // 宇宙/地上のビュー切替 (画面上部のトグル)
   const vmSpaceBtn = document.getElementById("vmSpace");
   const vmGroundBtn = document.getElementById("vmGround");
+  const vmMoonBtn = document.getElementById("vmMoon");
   // 指定天体の方向へ地上カメラを向ける (地平線下なら下向きにして必ず視野へ)。
   // 通常は目標値だけ更新して緩和で滑らかに回す。instant=true で即時ジャンプ
-  function aimGroundAt(body, instant) {
-    if (!body || body.key === "earth") return false;
-    gTrack = true;
+  const _aa = [0, 0, 0];
+  // 現在の観測地 (地球/月) から見た天体の方位・高度 [度]
+  function surfaceAltAz(body) {
+    if (surfaceBody === "moon") {
+      bodySky(body, _aa);
+      return { az: (Math.atan2(_aa[0], -_aa[2]) / DEG + 360) % 360,
+               alt: Math.asin(Math.max(-1, Math.min(1, _aa[1]))) / DEG };
+    }
     const c = computeObs(body);
+    return { az: c.az, alt: c.alt };
+  }
+  function aimGroundAt(body, instant) {
+    if (!body || body.key === surfaceBody) return false;   // 立っている天体自身は見られない
+    gTrack = true;
+    const c = surfaceAltAz(body);
     // 現在の向きから最短方向で回るよう、目標方位は現在値の近傍に取る
     let d = (c.az * DEG - gAz) % (2 * Math.PI);
     if (d > Math.PI) d -= 2 * Math.PI;
@@ -2559,26 +2630,69 @@
   }
   function syncViewModeUI() {
     vmSpaceBtn.classList.toggle("on", !groundView);
-    vmGroundBtn.classList.toggle("on", groundView);
+    vmGroundBtn.classList.toggle("on", groundView && surfaceBody === "earth");
+    vmMoonBtn.classList.toggle("on", groundView && surfaceBody === "moon");
   }
-  function enterGround() {
-    if (groundView) return;
-    if (!aimGroundAt(selected || currentInfoBody, true)) {
-      gAz = gAzTgt = Math.PI;
-      gAlt = gAltTgt = 0.4;
-    }
+  // 地球/月の地表ビューへ。body = "earth" | "moon"
+  function enterSurface(body) {
+    const changed = !groundView || surfaceBody !== body;
+    surfaceBody = body;
     groundView = true;
-    document.getElementById("app").classList.add("groundMode");
+    const app = document.getElementById("app");
+    app.classList.add("groundMode");
+    app.classList.toggle("moonMode", body === "moon");
+    if (changed) {
+      buildObsFrame();   // 新しい観測者基底を確定してから照準を合わせる
+      // 月面では既定で地球へ、地上では選択天体 (なければ南) を向く
+      const aim = body === "moon" ? BODY_BY_KEY.get("earth") : (selected || currentInfoBody);
+      if (!aimGroundAt(aim, true)) { gAz = gAzTgt = Math.PI; gAlt = gAltTgt = 0.4; }
+    }
     syncViewModeUI();
     infoPanel.classList.remove("open");
   }
+  function enterGround() { enterSurface("earth"); }
+  function enterMoon() { enterSurface("moon"); }
   function exitGround() {
     groundView = false;
-    document.getElementById("app").classList.remove("groundMode");
+    const app = document.getElementById("app");
+    app.classList.remove("groundMode", "moonMode");
     syncViewModeUI();
   }
   vmGroundBtn.addEventListener("click", enterGround);
+  vmMoonBtn.addEventListener("click", enterMoon);
   vmSpaceBtn.addEventListener("click", exitGround);
+
+  // 月面の観測地点プリセット (selenographic lat, lon)
+  const MOON_SITES = [
+    { ja: "表側の中央 (地球直下)", en: "Sub-Earth point", lat: 0, lon: 0 },
+    { ja: "アポロ11号 (静かの海)", en: "Apollo 11 (Tranquillitatis)", lat: 0.67, lon: 23.47 },
+    { ja: "アポロ15号 (ハドリー)", en: "Apollo 15 (Hadley)", lat: 26.13, lon: 3.63 },
+    { ja: "雨の海", en: "Mare Imbrium", lat: 35, lon: -16 },
+    { ja: "危難の海", en: "Mare Crisium", lat: 17, lon: 59 },
+    { ja: "北極", en: "North pole", lat: 85, lon: 0 },
+    { ja: "南極", en: "South pole", lat: -85, lon: 0 },
+  ];
+  const moonSiteEl = document.getElementById("moonSite");
+  function rebuildMoonSites() {
+    const cur = moonSiteEl.value || "0";
+    moonSiteEl.innerHTML = MOON_SITES.map((s, i) =>
+      '<option value="' + i + '">' + (lang === "ja" ? s.ja : s.en) + "</option>").join("");
+    moonSiteEl.value = cur;
+  }
+  {
+    const mi = parseInt(localStorage.getItem("ssMoonSite"), 10);
+    const idx = (mi >= 0 && mi < MOON_SITES.length) ? mi : 0;
+    moonLat = MOON_SITES[idx].lat; moonLon = MOON_SITES[idx].lon;
+    rebuildMoonSites();
+    moonSiteEl.value = String(idx);
+  }
+  moonSiteEl.addEventListener("change", () => {
+    const s = MOON_SITES[+moonSiteEl.value] || MOON_SITES[0];
+    moonLat = s.lat; moonLon = s.lon;
+    localStorage.setItem("ssMoonSite", moonSiteEl.value);
+    if (surfaceBody === "moon") { buildObsFrame(); aimGroundAt(BODY_BY_KEY.get("earth"), true); }
+  });
+
   function hitTestGround(px, py) {
     let best = null, bd = 30 * 30;
     for (const v of groundVis) {
@@ -3159,6 +3273,7 @@
     cam.pitch += (cam.pitchTgt - cam.pitch) * k;
     // 地上ビューのカメラ緩和 (目標方位は aimGroundAt で現在値の近傍に正規化済み)
     if (groundView) {
+      buildObsFrame();   // 追尾計算 (surfaceAltAz) が現在フレームの観測者基底を使えるように
       // 選択が変わって天体別の画角下限が上がった場合は目標を追従させる
       const mf = gMinFov();
       if (gFovTgt < mf) gFovTgt = mf;
@@ -3166,8 +3281,8 @@
       // (緩和だけだと定常遅れが高倍率の視野幅を超え、天体が視野外に留まるため)
       if (gTrack) {
         const b = selected || lastCenter;
-        if (b && b.key !== "earth") {
-          const c = computeObs(b);
+        if (b && b.key !== surfaceBody) {
+          const c = surfaceAltAz(b);
           const az = c.az * DEG, alt = c.alt * DEG;
           if (gTrkKey === b.key) {
             // 前フレームからの移動分は即時追従
@@ -4301,7 +4416,7 @@
       imgBody: "以下の天体の表面には、NASA / USGS のパブリックドメイン画像を使用しています。",
       proc: "太陽・土星 (環を含む)・天王星・海王星・パラス・ジュノーは、シェーダによる生成テクスチャです (実写ではありません)。",
       data: "データと精度",
-      dataBody: "軌道間隔・天体の大きさとも実寸比で表示しています。天体位置は J2000 平均軌道要素 (NASA JPL 公表値) にもとづくケプラー軌道の近似計算です。教育・可視化目的であり、天文計算・観測用途の精度はありません。小惑星の軌道上の位相は概略です。恒星 (宇宙ビューの背景・地上ビューとも) は Yale Bright Star Catalogue 第5改訂版 (Hoffleit & Warren 1991, パブリックドメイン) の実位置・実等級 (6.5等まで・約8,400星)、色は B-V 色指数にもとづく近似です。星座線は d3-celestial (Olaf Frohn, BSD-2-Clause) を使用しています。",
+      dataBody: "軌道間隔・天体の大きさとも実寸比で表示しています。天体位置は J2000 平均軌道要素 (NASA JPL 公表値) にもとづくケプラー軌道の近似計算です。教育・可視化目的であり、天文計算・観測用途の精度はありません。小惑星の軌道上の位相は概略です。恒星 (宇宙ビューの背景・地上ビューとも) は Yale Bright Star Catalogue 第5改訂版 (Hoffleit & Warren 1991, パブリックドメイン) の実位置・実等級 (6.5等まで・約8,400星)、色は B-V 色指数にもとづく近似です。星座線は d3-celestial (Olaf Frohn, BSD-2-Clause) を使用しています。月面ビューは潮汐ロック近似 (表側が地球を向く・月の極 ≈ 黄道北) によるもので、秤動などは省略しています。",
       disc: "本アプリは NASA・USGS とは無関係であり、両機関による承認・推奨を意味するものではありません。",
     } : {
       lic: "License",
@@ -4310,7 +4425,7 @@
       imgBody: "The surfaces of the following bodies use public-domain imagery from NASA / USGS.",
       proc: "The Sun, Saturn (incl. rings), Uranus, Neptune, Pallas and Juno use procedurally generated textures (not actual imagery).",
       data: "Data & accuracy",
-      dataBody: "Orbital spacing and body sizes are displayed to actual scale. Positions are approximated with Keplerian orbits based on J2000 mean orbital elements published by NASA JPL. This app is for education and visualization; it is not suitable for astronomical or observational use. Orbital phases of the asteroids are approximate. Stars (both the space-view background and the ground view) use real positions and magnitudes (mag ≤ 6.5, ~8,400 stars) from the Yale Bright Star Catalogue, 5th Revised Ed. (Hoffleit & Warren 1991, public domain); colors are approximated from the B-V index. Constellation lines are from d3-celestial (Olaf Frohn, BSD-2-Clause).",
+      dataBody: "Orbital spacing and body sizes are displayed to actual scale. Positions are approximated with Keplerian orbits based on J2000 mean orbital elements published by NASA JPL. This app is for education and visualization; it is not suitable for astronomical or observational use. Orbital phases of the asteroids are approximate. Stars (both the space-view background and the ground view) use real positions and magnitudes (mag ≤ 6.5, ~8,400 stars) from the Yale Bright Star Catalogue, 5th Revised Ed. (Hoffleit & Warren 1991, public domain); colors are approximated from the B-V index. Constellation lines are from d3-celestial (Olaf Frohn, BSD-2-Clause). The Moon-surface view uses a tidal-lock approximation (near side faces Earth; lunar pole ≈ ecliptic north) and omits libration.",
       disc: "This app is not affiliated with, nor endorsed by, NASA or USGS.",
     };
     aboutEl.innerHTML =
@@ -4357,6 +4472,8 @@
     document.getElementById("viewSideBtn").textContent = t.viewSide;
     vmSpaceBtn.textContent = t.viewSpace;
     vmGroundBtn.textContent = t.viewGround;
+    vmMoonBtn.textContent = t.viewMoon;
+    rebuildMoonSites();
     document.getElementById("gFovLabel").textContent = t.gFovLabel;
     document.getElementById("gAzLabel").textContent = t.gAzLabel;
     document.getElementById("gAltLabelTop").textContent = t.gAltLabel;
