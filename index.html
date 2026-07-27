@@ -2084,6 +2084,27 @@
   const constGroundBuf = new Float32Array(CONST_SEG.length);   // 地上ビュー用の可視セグメント端点
   let showConst = localStorage.getItem("ssConst") !== "0";     // 星座表示 (既定 ON)
 
+  // ---------- 黄道 (太陽の見かけの通り道 = 地球の公転面。星座表示に連動) ----------
+  // 黄経 λ を一周させた円。宇宙ビューでは黄道面 = ワールド XZ 平面 (y=0) の円。
+  // 地上ビューでは各点を赤道座標へ変換して毎フレーム地平座標へ。
+  let eclVB = null, eclGVB = null;
+  const ECL_N = 180;
+  const ECL_PTS = [];                       // 地上用: [ra, sinDec, cosDec] × 点
+  const ECL_WORLD = [];                     // 宇宙ラベル用: [x, y, z] × 点
+  const eclGroundBuf = new Float32Array(ECL_N * 6);   // 地上用の可視セグメント端点 (閉ループ)
+  {
+    const eps = 23.4393 * DEG, ce = Math.cos(eps), se = Math.sin(eps), R = 1895;
+    for (let k = 0; k < ECL_N; k++) {
+      const lam = k / ECL_N * 2 * Math.PI, cl = Math.cos(lam), sl = Math.sin(lam);
+      ECL_WORLD.push(cl * R, 0, -sl * R);   // 黄道面 = ワールド XZ 平面
+      const xq = cl, yq = sl * ce, zq = sl * se;   // 黄道 → 赤道
+      ECL_PTS.push(Math.atan2(yq, xq), zq, Math.hypot(xq, yq));
+    }
+    eclVB = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, eclVB);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(ECL_WORLD), gl.STATIC_DRAW);
+  }
+
   // ---------- 地上ビュー (地球から空を見上げる) ----------
   let groundView = false;
   let gAz = 0, gAlt = 0.45, gFov = 60 * DEG;            // 視線方位・高度 (rad)・画角
@@ -2216,6 +2237,35 @@
         gl.enableVertexAttribArray(lineP.a.aPos);
         gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
         gl.drawArrays(gl.LINES, 0, cn / 3);
+      }
+      // 黄道 (金色。閉ループを地平線でセグメント間引き)
+      {
+        const clat = obsLat * DEG, csinLat = Math.sin(clat), ccosLat = Math.cos(clat);
+        const clst = (gmstDeg(simDays) + obsLon) * DEG;
+        let en = 0;
+        for (let k = 0; k < ECL_N; k++) {
+          const a0 = k * 3, a1 = ((k + 1) % ECL_N) * 3;
+          const H0 = clst - ECL_PTS[a0], sd0 = ECL_PTS[a0 + 1], cd0 = ECL_PTS[a0 + 2];
+          const H1 = clst - ECL_PTS[a1], sd1 = ECL_PTS[a1 + 1], cd1 = ECL_PTS[a1 + 2];
+          const up0 = sd0 * csinLat + cd0 * Math.cos(H0) * ccosLat;
+          const up1 = sd1 * csinLat + cd1 * Math.cos(H1) * ccosLat;
+          if (up0 < -0.03 && up1 < -0.03) continue;
+          const e0 = -cd0 * Math.sin(H0), no0 = sd0 * ccosLat - cd0 * Math.cos(H0) * csinLat;
+          const e1 = -cd1 * Math.sin(H1), no1 = sd1 * ccosLat - cd1 * Math.cos(H1) * csinLat;
+          eclGroundBuf[en++] = e0 * SKYR; eclGroundBuf[en++] = up0 * SKYR; eclGroundBuf[en++] = -no0 * SKYR;
+          eclGroundBuf[en++] = e1 * SKYR; eclGroundBuf[en++] = up1 * SKYR; eclGroundBuf[en++] = -no1 * SKYR;
+        }
+        if (en) {
+          gl.useProgram(lineP.pr);
+          gl.uniformMatrix4fv(lineP.u.uVP, false, gVP32);
+          gl.uniform4f(lineP.u.uColor, 0.45, 0.35, 0.14, 0.65);
+          if (!eclGVB) eclGVB = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, eclGVB);
+          gl.bufferData(gl.ARRAY_BUFFER, eclGroundBuf.subarray(0, en), gl.DYNAMIC_DRAW);
+          gl.enableVertexAttribArray(lineP.a.aPos);
+          gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+          gl.drawArrays(gl.LINES, 0, en / 3);
+        }
       }
     }
 
@@ -2451,6 +2501,23 @@
         }
         if (cnt >= 2) octx.fillText(lang === "ja" ? c.ja : c.en, sumx / cnt, sumy / cnt);
       }
+      // 黄道ラベル: 画面中央に最も近い可視点に1つ
+      let bx = 0, by = 0, bd = Infinity;
+      for (let i = 0; i + 2 < ECL_PTS.length; i += 3) {
+        const ha = clst - ECL_PTS[i], sd = ECL_PTS[i + 1], cd = ECL_PTS[i + 2];
+        const up = sd * csinLat + cd * Math.cos(ha) * ccosLat;
+        if (up < 0.03) continue;
+        const east = -cd * Math.sin(ha);
+        const north = sd * ccosLat - cd * Math.cos(ha) * csinLat;
+        const s = projGround([east * SKYR, up * SKYR, -north * SKYR]);
+        if (!s || s.x < 0 || s.x > W || s.y < 0 || s.y > H) continue;
+        const d = (s.x - W / 2) ** 2 + (s.y - H / 2) ** 2;
+        if (d < bd) { bd = d; bx = s.x; by = s.y; }
+      }
+      if (bd < Infinity) {
+        octx.fillStyle = "rgba(226,178,110,0.75)";
+        octx.fillText(lang === "ja" ? "黄道" : "Ecliptic", bx, by - 6);
+      }
     }
     octx.font = '11px "Avenir Next","Hiragino Sans",sans-serif';
     for (const v of groundVis) {
@@ -2565,15 +2632,20 @@
     gl.vertexAttribPointer(pointP.a.aCol, 3, gl.FLOAT, false, 28, 16);
     gl.drawArrays(gl.POINTS, 0, N_STAR);
 
-    // --- 星座線 (背景の天球上。恒星と同じ固定ワールド座標) ---
+    // --- 星座線 + 黄道 (背景の天球上。恒星と同じ固定ワールド座標) ---
     if (showConst && constN) {
       gl.useProgram(lineP.pr);
       gl.uniformMatrix4fv(lineP.u.uVP, false, VP);
+      gl.enableVertexAttribArray(lineP.a.aPos);
       gl.uniform4f(lineP.u.uColor, 0.17, 0.23, 0.36, 0.5);
       gl.bindBuffer(gl.ARRAY_BUFFER, constVB);
-      gl.enableVertexAttribArray(lineP.a.aPos);
       gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
       gl.drawArrays(gl.LINES, 0, constN);
+      // 黄道 (金色の閉ループ)
+      gl.uniform4f(lineP.u.uColor, 0.42, 0.33, 0.13, 0.6);
+      gl.bindBuffer(gl.ARRAY_BUFFER, eclVB);
+      gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.LINE_LOOP, 0, ECL_N);
     }
 
     // --- 軌道線 (天体ごとの表示フラグ) ---
@@ -2936,6 +3008,22 @@
         const px = (x * 0.5 + 0.5) * W, py = (1 - (y * 0.5 + 0.5)) * H;
         if (px < 0 || px > W || py < 0 || py > H) continue;
         octx.fillText(lang === "ja" ? c.ja : c.en, px, py);
+      }
+      // 黄道ラベル: 画面中央に最も近い可視点に1つ
+      let bx = 0, by = 0, bd = Infinity;
+      for (let i = 0; i + 2 < ECL_WORLD.length; i += 3) {
+        const X = ECL_WORLD[i], Y = ECL_WORLD[i + 1], Z = ECL_WORLD[i + 2];
+        const w = VP[3] * X + VP[7] * Y + VP[11] * Z + VP[15];
+        if (w <= 0.001) continue;
+        const px = ((VP[0] * X + VP[4] * Y + VP[8] * Z + VP[12]) / w * 0.5 + 0.5) * W;
+        const py = (1 - ((VP[1] * X + VP[5] * Y + VP[9] * Z + VP[13]) / w * 0.5 + 0.5)) * H;
+        if (px < 0 || px > W || py < 0 || py > H) continue;
+        const d = (px - W / 2) ** 2 + (py - H / 2) ** 2;
+        if (d < bd) { bd = d; bx = px; by = py; }
+      }
+      if (bd < Infinity) {
+        octx.fillStyle = "rgba(226,178,110,0.75)";
+        octx.fillText(lang === "ja" ? "黄道" : "Ecliptic", bx, by - 6);
       }
     }
   }
