@@ -3059,7 +3059,10 @@
       dateInput.value = ds;
       lastDateStr = ds;
     }
-    const ts = pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+    // 再生中はコロンを実時間1秒周期で点滅 (前半0.5秒は表示、後半は半角空白)。
+    // font-num は等幅なので ":" ↔ " " で桁位置はずれない。停止中は常に表示
+    const colon = (playing && Math.floor(Date.now() / 500) % 2 === 1) ? " " : ":";
+    const ts = pad2(d.getHours()) + colon + pad2(d.getMinutes());
     if (ts !== lastTimeStr) {
       timeText.textContent = ts;
       lastTimeStr = ts;
