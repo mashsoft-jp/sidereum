@@ -2241,8 +2241,10 @@
   const SKY_BODIES = [SUN, MOON]
     .concat(PLANETS.filter((p) => p.key !== "earth"))
     .concat(SATELLITES.filter((s) => s.key !== "moon"));
-  // 月面ビューで見える天体: 太陽 + 惑星 (PLANETS に地球を含む。月自身は除く)
-  const MOON_SKY_BODIES = [SUN].concat(PLANETS);
+  // 月面ビューで見える天体: 太陽 + 惑星 (地球を含む) + 衛星 (観測地である月自身は除く)
+  const MOON_SKY_BODIES = [SUN]
+    .concat(PLANETS)
+    .concat(SATELLITES.filter((s) => s.key !== "moon"));
   const groundPtArr = new Float32Array(Math.max(SKY_BODIES.length, MOON_SKY_BODIES.length) * 7);
   function azAltDir(azDeg, altDeg, out) {
     const a = azDeg * DEG, e = altDeg * DEG, ca = Math.cos(e);
