@@ -96,12 +96,30 @@
   #menu button:hover { background: rgba(150, 178, 224, 0.12); }
   /* 配信中ビルドの識別用 (キャッシュで旧ビルドを見ていないかの確認) */
   #menuBuild { padding: 4px 12px 2px; font-size: 9.5px; color: var(--dim); font-family: var(--font-num); border-top: 1px solid var(--line); margin-top: 4px; }
+
+  /* ---- 観測地バー (ハンバーガーと天体リストの間。地上/月面ビュー時のみ) ---- */
+  #obsSiteBar {
+    position: absolute; top: calc(66px + var(--sat)); left: calc(16px + var(--sal));
+    z-index: 12; display: none; flex-direction: column; align-items: flex-start;
+  }
+  #app.groundMode #obsSiteBar, #app.moonMode #obsSiteBar { display: flex; }
+  /* 観測地/月面時は天体リストと展開ボタンを1段下げて重なりを防ぐ */
+  #app.groundMode #navPanel, #app.moonMode #navPanel,
+  #app.groundMode #navExpand, #app.moonMode #navExpand { top: calc(108px + var(--sat)); }
+  #obsSiteChip {
+    padding: 5px 12px; font-size: 11px; letter-spacing: 0.04em; white-space: nowrap;
+    color: var(--dim); border: 1px solid var(--line); border-radius: 13px; cursor: pointer;
+  }
+  #obsSiteChip:hover { color: var(--text); }
+  #obsSitePop { position: absolute; top: calc(100% + 4px); left: 0; z-index: 20;
+    padding: 10px 12px; width: 236px; border-radius: 10px; }
+  #obsSitePop[hidden] { display: none; }
   /* 月面ビュー: 月面地点セレクタは月面時のみ、地球の観測地は月面時のみ非表示 */
   .moonOnly { display: none; }
   #app.moonMode .moonOnly { display: flex; }
   #app.moonMode #obsSiteChip, #app.moonMode #obsSitePop { display: none; }
   #app.moonMode #tabObs { display: none; }
-  #moonSiteRow { align-items: center; gap: 6px; padding: 9px 12px; }
+  #moonSiteRow { align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; }
   #moonSite { flex: 1; padding: 4px 6px; font-size: 12px; font-family: var(--font-ui);
     color: var(--text); background: rgba(150, 178, 224, 0.08); border: 1px solid var(--line); border-radius: 3px; cursor: pointer; }
 
@@ -485,13 +503,7 @@
   }
   #infoTabs button.on { color: var(--accent); border-color: var(--accent-dim); }
   #infoTabs button:hover { color: var(--text); }
-  /* ---- 観測地 (ハンバーガーメニュー内の項目 + 展開エディタ) ---- */
-  #obsSitePop {
-    margin: 0 6px 6px; padding: 8px 10px;
-    background: rgba(150, 178, 224, 0.05); border: 1px solid var(--line);
-    border-radius: 8px;
-  }
-  #obsSitePop[hidden] { display: none; }
+  /* ---- 観測地エディタ (中身。枠は #obsSitePop の観測地バー用ルールで指定) ---- */
   #obsLoc { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; font-size: 11px; color: var(--dim); }
   #obsCity {
     flex: 1 1 100%; padding: 4px 6px; font-size: 11px; font-family: var(--font-ui);
@@ -700,10 +712,20 @@
     <button id="vmMoon">月面</button>
   </div>
 
-  <!-- 並び順: よく使う操作 (観測地・全画面・共有) → 環境設定 (単位・言語) → 情報 -->
+  <!-- 並び順: よく使う操作 (全画面・共有) → 環境設定 (単位・言語) → 情報。観測地は別枠 -->
   <div id="menu" class="hud" role="menu">
-    <button id="obsSiteChip" role="menuitem" aria-haspopup="true" aria-expanded="false"></button>
-    <div id="obsSitePop" hidden>
+    <button id="menuFullscreen" role="menuitem"></button>
+    <button id="menuShare" role="menuitem"></button>
+    <button id="menuUnit" role="menuitem"></button>
+    <button id="menuLang" role="menuitem"></button>
+    <button id="menuAbout" role="menuitem"></button>
+    <div id="menuBuild"></div>
+  </div>
+
+  <!-- 観測地 (地上=地球の観測地 / 月面=月面地点)。ハンバーガーと天体リストの間に配置 -->
+  <div id="obsSiteBar">
+    <button id="obsSiteChip" class="hud" aria-haspopup="true" aria-expanded="false"></button>
+    <div id="obsSitePop" class="hud" hidden>
       <div id="obsLoc">
         <select id="obsCity" aria-label="都市"></select>
         <span class="obsField">
@@ -717,16 +739,10 @@
         <button id="obsGeo"></button>
       </div>
     </div>
-    <div id="moonSiteRow" class="moonOnly">
+    <div id="moonSiteRow" class="moonOnly hud">
       <span class="moonSiteIcon">🌙</span>
       <select id="moonSite" aria-label="月面の観測地点"></select>
     </div>
-    <button id="menuFullscreen" role="menuitem"></button>
-    <button id="menuShare" role="menuitem"></button>
-    <button id="menuUnit" role="menuitem"></button>
-    <button id="menuLang" role="menuitem"></button>
-    <button id="menuAbout" role="menuitem"></button>
-    <div id="menuBuild"></div>
   </div>
 
   <aside id="about" class="hud" aria-modal="true"></aside>
@@ -3679,6 +3695,10 @@
     if (open) refreshObsSiteUI();
   }
   obsSiteChip.addEventListener("click", (e) => { e.stopPropagation(); setSitePop(obsSitePop.hidden); });
+  // 観測地バーの外をクリックしたらエディタを閉じる
+  document.addEventListener("pointerdown", (e) => {
+    if (!obsSitePop.hidden && !document.getElementById("obsSiteBar").contains(e.target)) setSitePop(false);
+  });
   // ✕ はパネルを閉じるだけで、選択 (カメラ追尾) は維持する
   document.getElementById("closeInfo").addEventListener("click", () => {
     infoPanel.classList.remove("open");
@@ -4412,7 +4432,6 @@
   function setMenu(open) {
     menuEl.classList.toggle("open", open);
     menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
-    if (!open) setSitePop(false);   // 観測地エディタも畳む
   }
   menuBtn.addEventListener("click", (e) => {
     e.stopPropagation();
