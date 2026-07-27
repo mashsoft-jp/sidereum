@@ -2192,22 +2192,7 @@
 
     gl.clearColor(0.015, 0.02, 0.045, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.disable(gl.BLEND);
-
-    // 地面 (y=0 平面。カメラは原点なので下半分を覆う)
-    gl.useProgram(lineP.pr);
-    gl.uniformMatrix4fv(lineP.u.uVP, false, gVP32);
-    gl.uniform4f(lineP.u.uColor, 0.07, 0.075, 0.085, 1);
-    gl.bindBuffer(gl.ARRAY_BUFFER, groundVB);
-    gl.enableVertexAttribArray(lineP.a.aPos);
-    gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    // 水平線
-    gl.uniform4f(lineP.u.uColor, 0.30, 0.38, 0.52, 1);
-    gl.bindBuffer(gl.ARRAY_BUFFER, horizonVB);
-    gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
-    gl.drawArrays(gl.LINE_STRIP, 0, horizonN);
-
+    gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
@@ -2464,6 +2449,21 @@
       }
       gl.disable(gl.DEPTH_TEST);
     }
+    // 地面 (y=0 平面) を最後に不透明で描き、地平線より下 (下半分) を覆い隠す。
+    // 天体・星・星座より後に描くので、地平線下の要素は確実に隠れる
+    gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.depthMask(false);
+    gl.useProgram(lineP.pr);
+    gl.uniformMatrix4fv(lineP.u.uVP, false, gVP32);
+    gl.enableVertexAttribArray(lineP.a.aPos);
+    gl.uniform4f(lineP.u.uColor, 0.07, 0.075, 0.085, 1);
+    gl.bindBuffer(gl.ARRAY_BUFFER, groundVB);
+    gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    // 水平線 (地面の上端に重ねて縁を鮮明に)
+    gl.uniform4f(lineP.u.uColor, 0.30, 0.38, 0.52, 1);
+    gl.bindBuffer(gl.ARRAY_BUFFER, horizonVB);
+    gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.LINE_STRIP, 0, horizonN);
     gl.depthMask(true);
     drawGroundOverlay();
   }
