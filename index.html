@@ -767,6 +767,7 @@
   <!-- 並び順: よく使う操作 (全画面・共有) → 環境設定 (単位・言語) → 情報。観測地は別枠 -->
   <div id="menu" class="hud" role="menu">
     <button id="menuHelp" role="menuitem"></button>
+    <button id="menuTerrain" role="menuitem"></button>
     <button id="menuFullscreen" role="menuitem"></button>
     <button id="menuShare" role="menuitem"></button>
     <button id="menuUnit" role="menuitem"></button>
@@ -1088,6 +1089,8 @@
       u: { yr: " 年", d: " 日", h: " 時間", min: " 分", s: " 秒" },
       menuLang: "English",
       menuHelp: "操作方法",
+      menuTerrainOn: "地形・大気を表示",
+      menuTerrainOff: "地形・大気を隠す",
       menuAbout: "ライセンス・クレジット",
       menuUnitToMi: "距離をマイル表示",
       menuUnitToKm: "距離を km 表示",
@@ -1127,6 +1130,8 @@
       u: { yr: " yr", d: " days", h: " hr", min: " min", s: " sec" },
       menuLang: "日本語",
       menuHelp: "Controls",
+      menuTerrainOn: "Show terrain & sky",
+      menuTerrainOff: "Hide terrain & sky",
       menuAbout: "License & Credits",
       menuUnitToMi: "Distances in miles",
       menuUnitToKm: "Distances in km",
@@ -1525,6 +1530,121 @@
     uniform vec4 uColor;
     void main() { gl_FragColor = uColor; }`;
 
+  // ---- 地形 / 空 (地上・月面ビューの雰囲気表現。すべてプロシージャル生成) ----
+  const terrainVS = `
+    attribute vec3 aPos;
+    uniform mat4 uVP;
+    varying vec3 vD;
+    void main() { vD = aPos; gl_Position = uVP * vec4(aPos, 1.0); }`;
+
+  const terrainFS = PRE + `
+    varying vec3 vD;
+    uniform vec3 uSun;      // 太陽方向 (地平フレーム [東, 天頂, -北])
+    uniform float uMoon;    // 1 = 月面, 0 = 地上
+    uniform float uDay;     // 昼夜係数 (0 = 夜, 1 = 昼)
+    uniform float uSky;     // 1 = 空ドーム, 0 = 地面ドーム
+
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float noise(vec2 x) {
+      vec2 i = floor(x), f = fract(x);
+      f = f * f * (3.0 - 2.0 * f);
+      return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+                 mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+    }
+    float fbm(vec2 p) {
+      float v = 0.0, a = 0.5;
+      for (int k = 0; k < 5; k++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
+      return v;
+    }
+    // ボロノイ。x = 最近セル中心までの距離, y = そのセルの乱数 (クレーターの大小・有無に使う)
+    vec2 vor(vec2 p) {
+      vec2 i = floor(p), f = fract(p);
+      float best = 8.0, bid = 0.0;
+      for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+          vec2 o = vec2(float(x), float(y));
+          vec2 cc = i + o;
+          vec2 c = o + vec2(hash(cc), hash(cc + vec2(17.3, 31.7)));
+          float d = length(f - c);
+          if (d < best) { best = d; bid = hash(cc + vec2(5.2, 9.1)); }
+        }
+      }
+      return vec2(best, bid);
+    }
+    // クレーター1つぶんの陰影。セルごとに直径を変え、一部のセルには作らない
+    float crater(vec2 v, float sun) {
+      float rad = mix(0.13, 0.34, v.y);                  // セルごとの半径
+      float on = smoothstep(0.18, 0.34, v.y);            // 小さすぎるセルは平地のまま
+      float d = v.x / max(rad, 0.02);
+      float rim = smoothstep(0.78, 1.0, d) * (1.0 - smoothstep(1.0, 1.35, d));
+      float bowl = 1.0 - smoothstep(0.0, 0.85, d);
+      return on * (0.95 * rim - 1.15 * bowl);
+    }
+
+    void main() {
+      vec3 d = normalize(vD);
+
+      if (uSky > 0.5) {
+        // ---- 大気 (地球のみ)。天頂〜地平のグラデーション + 太陽近傍の朝夕焼け ----
+        float h = clamp(d.y, 0.0, 1.0);
+        vec3 night = vec3(0.015, 0.02, 0.045);
+        vec3 zen = vec3(0.16, 0.34, 0.68);
+        vec3 hor = vec3(0.55, 0.70, 0.88);
+        vec3 dayC = mix(hor, zen, pow(h, 0.55));
+        // 太陽の方位・高度に近いほど暖色 (低い太陽ほど強く広がる)
+        float sd = max(dot(d, normalize(uSun)), 0.0);
+        float low = 1.0 - smoothstep(0.0, 0.35, uSun.y);          // 太陽が低いほど 1
+        vec3 warm = mix(vec3(0.95, 0.55, 0.25), vec3(0.85, 0.35, 0.18), low);
+        dayC = mix(dayC, warm, low * pow(sd, 3.0) * 0.85);
+        // 地平近くはうっすら霞む
+        dayC = mix(dayC, mix(dayC, vec3(0.72, 0.76, 0.82), 0.35), 1.0 - smoothstep(0.0, 0.18, h));
+        gl_FragColor = vec4(mix(night, dayC, uDay), 1.0);
+        return;
+      }
+
+      // ---- 地面。視線を観測者の目線高さの地平面へ投影して遠近感を出す ----
+      float dy = max(-d.y, 0.0007);
+      float r = 1.7 / dy;                       // 交点までの水平距離 [m 相当]
+      vec2 g = d.xz * r;                        // 地面座標
+      float fade = 1.0 / (1.0 + r * 0.004);     // 遠いほど細部を潰す (エイリアス防止)
+
+      vec3 col;
+      if (uMoon > 0.5) {
+        // 月面: レゴリスの粒状感 + 大小のクレーター
+        float base = fbm(g * 0.13);
+        float grain = fbm(g * 2.2) * fade;
+        // 大小2層のクレーター (直径 約8m / 約2m。立った視点で形が分かるスケール)。
+        // 遠方ほど fade で弱め、地平線付近のちらつき (エイリアス) を抑える
+        float k1 = crater(vor(g * 0.12), uSun.y) * min(1.0, fade * 2.2);
+        float k2 = crater(vor(g * 0.5), uSun.y) * fade;
+        // 太陽が低いほどクレーターの陰影が強く出る (実際の月面写真と同じ)
+        float relief = mix(1.5, 0.75, smoothstep(0.0, 0.5, uSun.y));
+        float sh = 0.62 + 0.15 * base + 0.18 * grain + (0.30 * k1 + 0.16 * k2) * relief;
+        col = vec3(0.56, 0.545, 0.52) * clamp(sh, 0.04, 1.5);
+        // 大気が無いので影は漆黒、日向はコントラストが強い
+        float lit = smoothstep(-0.03, 0.06, uSun.y);
+        col *= mix(0.04, 1.0, lit);
+        col += vec3(0.03, 0.05, 0.09) * (1.0 - lit);      // 地球照のうっすらした青み
+      } else {
+        // 地上: 土と草地のまだら
+        float base = fbm(g * 0.05);
+        float patch = fbm(g * 0.22 + 13.0);
+        float grain = fbm(g * 1.1) * fade;
+        vec3 soil = vec3(0.20, 0.17, 0.13);
+        vec3 gras = vec3(0.13, 0.19, 0.11);
+        col = mix(soil, gras, smoothstep(0.35, 0.65, patch));
+        col *= 0.72 + 0.34 * base + 0.20 * grain;
+        col *= mix(0.12, 1.0, uDay);                       // 夜は暗く、昼は明るく
+        col = mix(col, col * vec3(1.25, 0.95, 0.78), (1.0 - smoothstep(0.0, 0.3, uSun.y)) * uDay * 0.7);
+      }
+      // 地上は大気で地平線へ向かって霞む。月面は大気が無いので霞ませず輪郭を鋭いままにする
+      if (uMoon < 0.5) {
+        vec3 haze = mix(vec3(0.03, 0.035, 0.06), vec3(0.42, 0.47, 0.56), uDay);
+        col = mix(col, haze, 1.0 - smoothstep(0.0, 0.030, dy));
+      }
+      gl_FragColor = vec4(col, 1.0);
+    }`;
+
   // ---- 点 (星・小惑星・惑星マーカー) ----
   const pointVS = `
     attribute vec3 aPos;
@@ -1650,7 +1770,7 @@
       gl_FragColor = vec4(c * a, a);
     }`;
 
-  let bodyP, lineP, pointP, billP, ringP, tailP, comaP;
+  let bodyP, lineP, pointP, billP, ringP, tailP, comaP, terrainP;
   try {
     bodyP = program(bodyVS, bodyFS);
     lineP = program(lineVS, lineFS);
@@ -1659,6 +1779,7 @@
     ringP = program(ringVS, ringFS);
     tailP = program(tailVS, tailFS);
     comaP = program(comaVS, comaFS);
+    terrainP = program(terrainVS, terrainFS);
   } catch (err) {
     console.error(err);
     document.getElementById("noGL").style.display = "grid";
@@ -2233,12 +2354,16 @@
     if (b.key === "saturn") angDiam *= 2.5;   // 環の外径まで視野に収める
     return Math.max(2e-9, Math.min(GMIN_DEFAULT, angDiam * 1.1));
   }
-  const _fwd = [0, 0, 0], _gp = [0, 0, 0];
+  const _fwd = [0, 0, 0], _gp = [0, 0, 0], _sunG = [0, 0, 0];
   // 極小画角 (超高倍率) では f32 行列の量子化で照準・描画が破綻するため、
   // 地上ビューの行列は f64 で合成し、GPU へ渡す直前に f32 化する
   const gVP = mIdent(new Float64Array(16)), gVP32 = new Float32Array(16);
   const gP64 = new Float64Array(16), gV64 = new Float64Array(16), gM64 = new Float64Array(16);
   let groundVB = null, groundPtVB = null, horizonVB = null, horizonN = 0, groundDomeN = 0;
+  // 地形表現 (稜線つきドーム + 空ドーム)。showTerrain が OFF なら従来の平坦ドームを使う
+  let ridgeVB = { earth: null, moon: null }, ridgeN = 0, skyVB = null, skyN = 0;
+  let showTerrain = localStorage.getItem("ssTerrain") !== "0";   // 既定 ON
+  let starVis = 1;   // 昼の空での星・星座の可視度 (0=昼で見えない)。オーバーレイ文字にも使う
   // 地上ビューに出す天体: 太陽・月・全惑星 (準惑星・小惑星・彗星含む) と全衛星。
   // 地球以外の衛星は、画面上で母惑星から分離できる倍率になったら現れる
   const SKY_BODIES = [SUN, MOON]
@@ -2349,6 +2474,57 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, horizonVB);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(hr), gl.STATIC_DRAW);
       horizonN = HN + 1;
+
+      // 稜線つきドーム: 上端の高度を方位ごとに変えて山並み/クレーター縁のシルエットを作る。
+      // 稜線は必ず地平線以上に出す (下げると地平線下の天体が覗いてしまうため)
+      const RN = 192;
+      const ridgeProfile = (amp) => {
+        const p = new Float32Array(RN + 1);
+        for (let i = 0; i <= RN; i++) {
+          const a = i / RN * 2 * Math.PI;   // 整数倍音のみ = 継ぎ目が滑らかに閉じる
+          const v = 0.55 * Math.sin(a * 3 + 0.7) + 0.32 * Math.sin(a * 7 + 2.1)
+                  + 0.20 * Math.sin(a * 13 + 4.3) + 0.12 * Math.sin(a * 23 + 1.2)
+                  + 0.07 * Math.sin(a * 37 + 5.6);
+          p[i] = amp * Math.max(0, Math.min(1, (v + 1.26) / 2.52));
+        }
+        return p;
+      };
+      const buildRidgeDome = (prof) => {
+        const RA2 = 200, NALT2 = 8, v = [];
+        const P = (alt, az) => { const c = Math.cos(alt); return [c*Math.sin(az)*RA2, Math.sin(alt)*RA2, -c*Math.cos(az)*RA2]; };
+        for (let i = 0; i < RN; i++) {
+          const z0 = i / RN * 2 * Math.PI, z1 = (i + 1) / RN * 2 * Math.PI;
+          const t0 = prof[i], t1 = prof[i + 1], bot = -Math.PI / 2;
+          for (let j = 0; j < NALT2; j++) {
+            const f0 = j / NALT2, f1 = (j + 1) / NALT2;
+            const p00 = P(t0 + (bot - t0) * f0, z0), p01 = P(t1 + (bot - t1) * f0, z1);
+            const p10 = P(t0 + (bot - t0) * f1, z0), p11 = P(t1 + (bot - t1) * f1, z1);
+            v.push(...p00, ...p10, ...p11, ...p00, ...p11, ...p01);
+          }
+        }
+        ridgeN = v.length / 3;
+        const b = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, b);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
+        return b;
+      };
+      ridgeVB.earth = buildRidgeDome(ridgeProfile(0.045));   // 山並み (約2.6°)
+      ridgeVB.moon = buildRidgeDome(ridgeProfile(0.016));    // なだらかなクレーター縁 (約0.9°)
+
+      // 空ドーム (上半球。地上の大気表現用。地平線の少し下から天頂まで覆う)
+      const SR = 150, SAZ = 48, SALT = 10, sky = [];
+      const S = (alt, az) => { const c = Math.cos(alt); return [c*Math.sin(az)*SR, Math.sin(alt)*SR, -c*Math.cos(az)*SR]; };
+      for (let j = 0; j < SALT; j++) {
+        const a0 = -0.12 + (Math.PI / 2 + 0.12) * (j / SALT), a1 = -0.12 + (Math.PI / 2 + 0.12) * ((j + 1) / SALT);
+        for (let i = 0; i < SAZ; i++) {
+          const z0 = i / SAZ * 2 * Math.PI, z1 = (i + 1) / SAZ * 2 * Math.PI;
+          sky.push(...S(a0, z0), ...S(a1, z0), ...S(a1, z1), ...S(a0, z0), ...S(a1, z1), ...S(a0, z1));
+        }
+      }
+      skyN = sky.length / 3;
+      skyVB = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, skyVB);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sky), gl.STATIC_DRAW);
     }
     const ca = Math.cos(gAlt);
     _fwd[0] = ca*Math.sin(gAz); _fwd[1] = Math.sin(gAlt); _fwd[2] = -ca*Math.cos(gAz);
@@ -2360,9 +2536,32 @@
     mMul(gP64, gV64, gVP);
     gVP32.set(gVP);
 
+    // 太陽の方向 (地平フレーム) と昼夜係数。地形の陰影・大気・星の減光に使う
+    bodySky(SUN, _sunG);
+    const isMoonSurf = surfaceBody === "moon";
+    // 月面は大気が無いので昼でも空は暗いまま (星も見える)
+    const dayF = (showTerrain && !isMoonSurf)
+      ? Math.max(0, Math.min(1, (_sunG[1] + 0.12) / 0.22)) : 0;
+    starVis = 1 - dayF * 0.98;   // 昼は星をほぼ消す
+
     gl.clearColor(0.015, 0.02, 0.045, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
+
+    // 大気 (地上ビューのみ)。星より先に、背景として不透明で描く
+    if (showTerrain && !isMoonSurf && dayF > 0.001 && skyVB) {
+      gl.disable(gl.BLEND);
+      gl.useProgram(terrainP.pr);
+      gl.uniformMatrix4fv(terrainP.u.uVP, false, gVP32);
+      gl.uniform3f(terrainP.u.uSun, _sunG[0], _sunG[1], _sunG[2]);
+      gl.uniform1f(terrainP.u.uMoon, 0);
+      gl.uniform1f(terrainP.u.uDay, dayF);
+      gl.uniform1f(terrainP.u.uSky, 1);
+      gl.bindBuffer(gl.ARRAY_BUFFER, skyVB);
+      gl.enableVertexAttribArray(terrainP.a.aPos);
+      gl.vertexAttribPointer(terrainP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, skyN);
+    }
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
@@ -2383,7 +2582,7 @@
       if (cn) {
         gl.useProgram(lineP.pr);
         gl.uniformMatrix4fv(lineP.u.uVP, false, gVP32);
-        gl.uniform4f(lineP.u.uColor, 0.19, 0.25, 0.4, 0.55);
+        gl.uniform4f(lineP.u.uColor, 0.19 * starVis, 0.25 * starVis, 0.4 * starVis, 0.55 * starVis);
         if (!constGVB) constGVB = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, constGVB);
         gl.bufferData(gl.ARRAY_BUFFER, constGroundBuf.subarray(0, cn), gl.DYNAMIC_DRAW);
@@ -2408,7 +2607,7 @@
         if (en) {
           gl.useProgram(lineP.pr);
           gl.uniformMatrix4fv(lineP.u.uVP, false, gVP32);
-          gl.uniform4f(lineP.u.uColor, 0.45, 0.35, 0.14, 0.65);
+          gl.uniform4f(lineP.u.uColor, 0.45 * starVis, 0.35 * starVis, 0.14 * starVis, 0.65 * starVis);
           if (!eclGVB) eclGVB = gl.createBuffer();
           gl.bindBuffer(gl.ARRAY_BUFFER, eclGVB);
           gl.bufferData(gl.ARRAY_BUFFER, eclGroundBuf.subarray(0, en), gl.DYNAMIC_DRAW);
@@ -2442,7 +2641,7 @@
         gl.useProgram(pointP.pr);
         gl.uniformMatrix4fv(pointP.u.uVP, false, gVP32);
         gl.uniform1f(pointP.u.uScale, DPR);
-        gl.uniform1f(pointP.u.uAlpha, 0.95);
+        gl.uniform1f(pointP.u.uAlpha, 0.95 * starVis);
         gl.bindBuffer(gl.ARRAY_BUFFER, starGVB);
         gl.bufferData(gl.ARRAY_BUFFER, starGArr, gl.DYNAMIC_DRAW);
         gl.enableVertexAttribArray(pointP.a.aPos);
@@ -2620,18 +2819,32 @@
     // 地面 (下半球ドーム) を最後に不透明で描き、地平線より下を覆い隠す。
     // 天体・星・星座より後に描くので、地平線下の要素は確実に隠れる
     gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.depthMask(false);
-    gl.useProgram(lineP.pr);
-    gl.uniformMatrix4fv(lineP.u.uVP, false, gVP32);
-    gl.enableVertexAttribArray(lineP.a.aPos);
-    gl.uniform4f(lineP.u.uColor, 0.07, 0.075, 0.085, 1);
-    gl.bindBuffer(gl.ARRAY_BUFFER, groundVB);
-    gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
-    gl.drawArrays(gl.TRIANGLES, 0, groundDomeN);
-    // 水平線 (地面の上端に重ねて縁を鮮明に)
-    gl.uniform4f(lineP.u.uColor, 0.30, 0.38, 0.52, 1);
-    gl.bindBuffer(gl.ARRAY_BUFFER, horizonVB);
-    gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
-    gl.drawArrays(gl.LINE_STRIP, 0, horizonN);
+    if (showTerrain) {
+      // 地形表現 ON: 稜線つきドームをプロシージャル質感で描く
+      gl.useProgram(terrainP.pr);
+      gl.uniformMatrix4fv(terrainP.u.uVP, false, gVP32);
+      gl.uniform3f(terrainP.u.uSun, _sunG[0], _sunG[1], _sunG[2]);
+      gl.uniform1f(terrainP.u.uMoon, isMoonSurf ? 1 : 0);
+      gl.uniform1f(terrainP.u.uDay, dayF);
+      gl.uniform1f(terrainP.u.uSky, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, isMoonSurf ? ridgeVB.moon : ridgeVB.earth);
+      gl.enableVertexAttribArray(terrainP.a.aPos);
+      gl.vertexAttribPointer(terrainP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, ridgeN);
+    } else {
+      gl.useProgram(lineP.pr);
+      gl.uniformMatrix4fv(lineP.u.uVP, false, gVP32);
+      gl.enableVertexAttribArray(lineP.a.aPos);
+      gl.uniform4f(lineP.u.uColor, 0.07, 0.075, 0.085, 1);
+      gl.bindBuffer(gl.ARRAY_BUFFER, groundVB);
+      gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, groundDomeN);
+      // 水平線 (地面の上端に重ねて縁を鮮明に)
+      gl.uniform4f(lineP.u.uColor, 0.30, 0.38, 0.52, 1);
+      gl.bindBuffer(gl.ARRAY_BUFFER, horizonVB);
+      gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.LINE_STRIP, 0, horizonN);
+    }
     gl.depthMask(true);
     drawGroundOverlay();
   }
@@ -2648,8 +2861,8 @@
       if (s && s.x >= 0 && s.x <= W && s.y >= 0 && s.y <= H) octx.fillText(lab, s.x, s.y - 4);
     }
     // 星座名 (観測者フレームへ投影。地平線より上のもの)
-    if (showConst) {
-      octx.fillStyle = "rgba(150,178,224,0.5)";
+    if (showConst && starVis > 0.04) {
+      octx.fillStyle = "rgba(150,178,224," + (0.5 * starVis).toFixed(3) + ")";
       for (const c of CONST_LABELS) {
         // 画面内に見えている頂点の平均位置に名前を置く (中心点が画角外でも
         // 星座の一部が見えていれば、その見えている部分の中央に表示される)
@@ -2680,7 +2893,7 @@
         if (d < bd) { bd = d; bx = s.x; by = s.y; }
       }
       if (bd < Infinity) {
-        octx.fillStyle = "rgba(226,178,110,0.75)";
+        octx.fillStyle = "rgba(226,178,110," + (0.75 * starVis).toFixed(3) + ")";
         octx.fillText(lang === "ja" ? "黄道" : "Ecliptic", bx, by - 6);
       }
     }
@@ -4478,6 +4691,18 @@
     setMenu(false);
   });
 
+  // 地形・大気の表示切替 (地上・月面ビューの雰囲気表現)
+  const menuTerrainBtn = document.getElementById("menuTerrain");
+  function updateTerrainLabel() {
+    menuTerrainBtn.textContent = showTerrain ? T().menuTerrainOff : T().menuTerrainOn;
+  }
+  menuTerrainBtn.addEventListener("click", () => {
+    showTerrain = !showTerrain;
+    try { localStorage.setItem("ssTerrain", showTerrain ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
+    updateTerrainLabel();
+    setMenu(false);
+  });
+
   // 全画面表示 (Fullscreen API)。iPhone の Safari は非対応のためボタン自体を隠す
   const menuFsBtn = document.getElementById("menuFullscreen");
   const docEl = document.documentElement;
@@ -4801,6 +5026,7 @@
     updateFsLabel();
     menuHelpBtn.textContent = t.menuHelp;
     menuAboutBtn.textContent = t.menuAbout;
+    updateTerrainLabel();
     updateUnitLabel();
     applyNavVisible();
     for (const el of navEl.querySelectorAll("button.body")) {
