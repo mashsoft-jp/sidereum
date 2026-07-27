@@ -985,7 +985,7 @@
       betaTag: "(β版)",
       pause: "停止", play: "再生", speed: "速度", zoom: "ズーム", angle: "角度",
       ctrlHide: "操作パネルを隠す", ctrlShow: "操作パネルを表示",
-      orbits: "軌道", labels: "名前", reset: "全体表示",
+      orbits: "軌道", labels: "名前", constellations: "星座", reset: "全体表示",
       nowBtn: "現在時刻に合わせる", ratePrefix: "1秒 = ",
       viewTop: "真上", viewDef: "デフォルト", viewSide: "真横", camera: "カメラ",
       viewSpace: "宇宙", viewGround: "地上", gFovLabel: "ズーム", gAzLabel: "方位", gAltLabel: "高度",
@@ -1022,7 +1022,7 @@
       betaTag: "(Beta)",
       pause: "Pause", play: "Play", speed: "Speed", zoom: "Zoom", angle: "Angle",
       ctrlHide: "Hide controls", ctrlShow: "Show controls",
-      orbits: "Orbits", labels: "Labels", reset: "Overview",
+      orbits: "Orbits", labels: "Labels", constellations: "Consts", reset: "Overview",
       nowBtn: "Set to current time", ratePrefix: "1s = ",
       viewTop: "Top", viewDef: "Default", viewSide: "Side", camera: "Camera",
       viewSpace: "Space", viewGround: "Ground", gFovLabel: "Zoom", gAzLabel: "Azimuth", gAltLabel: "Alt",
@@ -4334,6 +4334,7 @@
     document.getElementById("angleLabel").textContent = t.angle;
     orbitsBtn.textContent = t.orbits;
     labelsBtn.textContent = t.labels;
+    constBtn.textContent = t.constellations;
     document.getElementById("resetBtn").textContent = t.reset;
     document.getElementById("cameraLabel").textContent = t.camera;
     document.getElementById("viewTopBtn").textContent = t.viewTop;
