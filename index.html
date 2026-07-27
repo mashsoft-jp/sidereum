@@ -2299,9 +2299,12 @@
         const n = Math.hypot(sx, sy, sz) || 1;
         const xq = sx / n, yq = sy / n, zq = sz / n;
         const nm = CONST_NAME[ab] || [ab, ab];
+        // dirW と同じ変換 (赤道 → 黄道 → ワールド)。ye/ze を取り違えると
+        // 黄道上の星座名が黄道から外れてしまうので、必ず dirW と揃える
+        const ye = yq * ce + zq * se, ze = -yq * se + zq * ce;
         CONST_LABELS.push({
           ja: nm[0], en: nm[1],
-          wx: xq * R, wy: (yq * ce + zq * se) * R, wz: -(-yq * se + zq * ce) * R,
+          wx: xq * R, wy: ze * R, wz: -ye * R,
           verts,   // 地上ビューは「画面内に見えている頂点の平均位置」に名前を出す
         });
       }
