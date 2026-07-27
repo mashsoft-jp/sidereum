@@ -2128,7 +2128,7 @@
   // 地上ビューの行列は f64 で合成し、GPU へ渡す直前に f32 化する
   const gVP = mIdent(new Float64Array(16)), gVP32 = new Float32Array(16);
   const gP64 = new Float64Array(16), gV64 = new Float64Array(16), gM64 = new Float64Array(16);
-  let groundVB = null, groundPtVB = null, horizonVB = null, horizonN = 0;
+  let groundVB = null, groundPtVB = null, horizonVB = null, horizonN = 0, groundDomeN = 0;
   // 地上ビューに出す天体: 太陽・月・全惑星 (準惑星・小惑星・彗星含む) と全衛星。
   // 地球以外の衛星は、画面上で母惑星から分離できる倍率になったら現れる
   const SKY_BODIES = [SUN, MOON]
@@ -2166,11 +2166,23 @@
   const groundVis = [];
   function renderGround(nowSec) {
     if (!groundVB) {
-      const GR = 600;
+      // 地面 = 下半球ドーム。視点は原点なので y=0 の平面では下半分を塗れない
+      // (平面が視点を通ると地平線の線にしかならない)。天頂下の全方向を覆う
+      // 半球メッシュにして地平線より下を確実に隠す
+      const RA = 200, NAZ = 48, NALT = 6, dome = [];
+      const V = (alt, az) => { const ca = Math.cos(alt); return [ca * Math.sin(az) * RA, Math.sin(alt) * RA, -ca * Math.cos(az) * RA]; };
+      for (let j = 0; j < NALT; j++) {
+        const a0 = -(j / NALT) * Math.PI / 2, a1 = -((j + 1) / NALT) * Math.PI / 2;
+        for (let i = 0; i < NAZ; i++) {
+          const z0 = i / NAZ * 2 * Math.PI, z1 = (i + 1) / NAZ * 2 * Math.PI;
+          const p00 = V(a0, z0), p01 = V(a0, z1), p10 = V(a1, z0), p11 = V(a1, z1);
+          dome.push(...p00, ...p10, ...p11, ...p00, ...p11, ...p01);
+        }
+      }
+      groundDomeN = dome.length / 3;
       groundVB = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, groundVB);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-        -GR,0,-GR, GR,0,-GR, GR,0,GR, -GR,0,-GR, GR,0,GR, -GR,0,GR]), gl.STATIC_DRAW);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dome), gl.STATIC_DRAW);
       groundPtVB = gl.createBuffer();
       // 水平線リング (alt=0 の大円)
       const HN = 128, hr = [];
@@ -2449,7 +2461,7 @@
       }
       gl.disable(gl.DEPTH_TEST);
     }
-    // 地面 (y=0 平面) を最後に不透明で描き、地平線より下 (下半分) を覆い隠す。
+    // 地面 (下半球ドーム) を最後に不透明で描き、地平線より下を覆い隠す。
     // 天体・星・星座より後に描くので、地平線下の要素は確実に隠れる
     gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.depthMask(false);
     gl.useProgram(lineP.pr);
@@ -2458,7 +2470,7 @@
     gl.uniform4f(lineP.u.uColor, 0.07, 0.075, 0.085, 1);
     gl.bindBuffer(gl.ARRAY_BUFFER, groundVB);
     gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.drawArrays(gl.TRIANGLES, 0, groundDomeN);
     // 水平線 (地面の上端に重ねて縁を鮮明に)
     gl.uniform4f(lineP.u.uColor, 0.30, 0.38, 0.52, 1);
     gl.bindBuffer(gl.ARRAY_BUFFER, horizonVB);
