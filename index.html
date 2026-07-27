@@ -325,6 +325,7 @@
     justify-content: flex-end;
     gap: 9px;
   }
+  #clock .timeRow { display: inline-flex; align-items: baseline; gap: 9px; }
   #timeText {
     font-family: var(--font-num);
     font-variant-numeric: tabular-nums;
@@ -367,6 +368,8 @@
     border: 1px solid var(--line); border-radius: 4px;
     padding: 6px 4px; cursor: pointer; max-width: 100%;
   }
+  /* col1 のプレースホルダ: PC はカメラが col1 を占有するため不要 (縦持ちのみ距離/ズーム行の col1 を確保) */
+  #controls .camGap { display: none; }
   /* ---- 地上ビュー用コントロールの出し分け ---- */
   .groundOnly { display: none; }
   #app.groundMode .spaceOnly { display: none; }
@@ -402,6 +405,14 @@
   @media (max-height: 480px) {
     #viewMode { top: calc(8px + var(--sat)); }
   }
+  /* モバイル: ビュー切替をハンバーガーメニュー内へ収める (JS で移動) */
+  #menu #viewMode {
+    position: static; transform: none; top: auto; left: auto; z-index: auto;
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    background: rgba(9, 14, 28, 0.6); border: 1px solid var(--line); border-radius: 8px;
+    padding: 3px; margin-bottom: 4px; gap: 2px;
+  }
+  #menu #viewMode button { flex: 1; padding: 7px 6px; font-size: 12px; text-align: center; border-radius: 6px; }
   /* 高度(地上・月面)/角度(宇宙) の縦スライダー: 操作パネル右端のカラムとして全行にまたがる */
   #app.groundMode #controls #gAltCell,
   #app:not(.groundMode) #controls #angleCell {
@@ -636,6 +647,8 @@
     #dateInput { font-size: 13px; }
     #timeText { font-size: 13px; }
     #nowBtn { font-size: 9px; padding: 2px 8px; margin-top: 4px; }
+    /* 縦持ち: 日付を上、時刻を下の2行にしてタイトルと重ならないよう幅を詰める */
+    #clock .dtrow { flex-direction: column; align-items: flex-end; gap: 1px; }
     /* 情報パネル: 操作パネルの直上に、同程度の高さで内部スクロール */
     #info {
       top: auto;
@@ -672,6 +685,9 @@
     #speedVal, #zoomVal, #magVal, #gFovVal, #gAzDir { min-width: 0; font-size: 10px; }
     #app.groundMode #controls #gAltCell,
     #app:not(.groundMode) #controls #angleCell { margin-left: 2px; padding-left: 8px; }
+    /* 縦持ち: カメラを4行目へ移し、col1 を空けてスライダー列を広く使う */
+    #camSelect { grid-column: 1 / -1; grid-row: 4; justify-self: stretch; align-self: center; }
+    #app:not(.groundMode) #controls .camGap { display: block; }   /* 距離/ズーム行の col1 を確保して整列 */
   }
 
   /* ---- 横向きスマホ / 高さの低い画面 (Landscape) ---- */
@@ -792,8 +808,7 @@
   <div id="clock" class="hud">
     <div class="dtrow">
       <input type="date" id="dateInput" min="1900-01-01" max="2199-12-31" aria-label="日付を指定">
-      <span id="timeText">--:--</span>
-      <span id="tzText"></span>
+      <span class="timeRow"><span id="timeText">--:--</span><span id="tzText"></span></span>
     </div>
     <button id="nowBtn">現在時刻に合わせる</button>
   </div>
@@ -830,12 +845,14 @@
       <option value="side">真横</option>
       <option value="reset">全体表示</option>
     </select>
+    <span class="camGap"></span>
     <span class="slider spaceOnly" id="magLabel">ズーム</span>
     <button id="magOut" class="step spaceOnly" aria-label="ズームアウト">−</button>
     <input type="range" id="mag" class="spaceOnly" min="0" max="100" value="0" aria-label="拡大率">
     <button id="magIn" class="step spaceOnly" aria-label="ズームイン">＋</button>
     <span id="magVal" class="spaceOnly"></span>
 
+    <span class="camGap"></span>
     <span class="slider spaceOnly" id="zoomLabel">距離</span>
     <button id="zoomOut" class="step spaceOnly" aria-label="遠ざける">−</button>
     <input type="range" id="zoom" class="spaceOnly" min="0" max="100" value="40" aria-label="注視点との距離">
@@ -2724,9 +2741,25 @@
     app.classList.remove("groundMode", "moonMode");
     syncViewModeUI();
   }
-  vmGroundBtn.addEventListener("click", enterGround);
-  vmMoonBtn.addEventListener("click", enterMoon);
-  vmSpaceBtn.addEventListener("click", exitGround);
+  vmGroundBtn.addEventListener("click", () => { enterGround(); setMenu(false); });
+  vmMoonBtn.addEventListener("click", () => { enterMoon(); setMenu(false); });
+  vmSpaceBtn.addEventListener("click", () => { exitGround(); setMenu(false); });
+  // モバイル (狭い/低い画面) ではビュー切替をハンバーガーメニュー内へ移動
+  {
+    const viewModeEl = document.getElementById("viewMode");
+    const menuEl = document.getElementById("menu");
+    const appEl = document.getElementById("app");
+    const mqCompact = matchMedia("(max-width: 720px), (max-height: 480px)");
+    const placeViewMode = () => {
+      if (mqCompact.matches) {
+        if (viewModeEl.parentElement !== menuEl) menuEl.insertBefore(viewModeEl, menuEl.firstChild);
+      } else if (viewModeEl.parentElement !== appEl) {
+        appEl.insertBefore(viewModeEl, menuEl);
+      }
+    };
+    mqCompact.addEventListener("change", placeViewMode);
+    placeViewMode();
+  }
 
   // 月面の観測地点プリセット (selenographic lat, lon)
   const MOON_SITES = [
