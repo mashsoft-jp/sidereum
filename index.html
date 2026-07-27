@@ -2060,6 +2060,7 @@
     };
     for (const ab in lines) {
       let sx = 0, sy = 0, sz = 0, nv = 0;           // ラベル位置: 赤道単位ベクトルの平均
+      const verts = [];                             // 地上ラベル用: [ra, sinDec, cosDec] ×頂点
       for (const pl of lines[ab]) {
         for (let i = 0; i + 3 < pl.length; i += 2) {
           dirW(pl[i], pl[i + 1], a); dirW(pl[i + 2], pl[i + 3], b);
@@ -2070,6 +2071,7 @@
         for (let i = 0; i + 1 < pl.length; i += 2) {
           const r = pl[i] * DEG, d = pl[i + 1] * DEG, cd = Math.cos(d);
           sx += cd * Math.cos(r); sy += cd * Math.sin(r); sz += Math.sin(d); nv++;
+          verts.push(r, Math.sin(d), cd);
         }
       }
       if (nv) {
@@ -2079,7 +2081,7 @@
         CONST_LABELS.push({
           ja: nm[0], en: nm[1],
           wx: xq * R, wy: (yq * ce + zq * se) * R, wz: -(-yq * se + zq * ce) * R,
-          ra: Math.atan2(yq, xq), sd: zq, cd: Math.hypot(xq, yq),
+          verts,   // 地上ビューは「画面内に見えている頂点の平均位置」に名前を出す
         });
       }
     }
@@ -2443,14 +2445,21 @@
       const clst = (gmstDeg(simDays) + obsLon) * DEG;
       octx.fillStyle = "rgba(150,178,224,0.5)";
       for (const c of CONST_LABELS) {
-        const H = clst - c.ra;
-        const up = c.sd * csinLat + c.cd * Math.cos(H) * ccosLat;
-        if (up < 0.03) continue;
-        const east = -c.cd * Math.sin(H);
-        const north = c.sd * ccosLat - c.cd * Math.cos(H) * csinLat;
-        const s = projGround([east * SKYR, up * SKYR, -north * SKYR]);
-        if (!s || s.x < 0 || s.x > W || s.y < 0 || s.y > H) continue;
-        octx.fillText(lang === "ja" ? c.ja : c.en, s.x, s.y);
+        // 画面内に見えている頂点の平均位置に名前を置く (中心点が画角外でも
+        // 星座の一部が見えていれば、その見えている部分の中央に表示される)
+        let sumx = 0, sumy = 0, cnt = 0;
+        const v = c.verts;
+        for (let i = 0; i + 2 < v.length; i += 3) {
+          const ha = clst - v[i], sd = v[i + 1], cd = v[i + 2];   // ha=時角 (H はキャンバス高)
+          const up = sd * csinLat + cd * Math.cos(ha) * ccosLat;
+          if (up < 0.03) continue;
+          const east = -cd * Math.sin(ha);
+          const north = sd * ccosLat - cd * Math.cos(ha) * csinLat;
+          const s = projGround([east * SKYR, up * SKYR, -north * SKYR]);
+          if (!s || s.x < 0 || s.x > W || s.y < 0 || s.y > H) continue;
+          sumx += s.x; sumy += s.y; cnt++;
+        }
+        if (cnt >= 2) octx.fillText(lang === "ja" ? c.ja : c.en, sumx / cnt, sumy / cnt);
       }
     }
     octx.font = '11px "Avenir Next","Hiragino Sans",sans-serif';
