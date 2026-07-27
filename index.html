@@ -103,10 +103,11 @@
     z-index: 12; display: none; flex-direction: column; align-items: flex-start;
   }
   #app.groundMode #obsSiteBar, #app.moonMode #obsSiteBar { display: flex; }
-  /* 観測地/月面時は天体リストと展開ボタンを1段下げて重なりを防ぐ */
-  #app.groundMode #navPanel, #app.moonMode #navPanel,
-  #app.groundMode #navExpand, #app.moonMode #navExpand { top: calc(108px + var(--sat)); }
+  /* 観測地バーぶんの余白を常に確保し、宇宙/地上/月面で天体リストの位置を統一
+     (宇宙ビューは観測地が無いが、位置を揃えるため同じ高さにする) */
+  #app #navPanel, #app #navExpand { top: calc(108px + var(--sat)); }
   #obsSiteChip {
+    max-width: min(66vw, 260px); overflow: hidden; text-overflow: ellipsis;
     padding: 5px 12px; font-size: 11px; letter-spacing: 0.04em; white-space: nowrap;
     color: var(--dim); border: 1px solid var(--line); border-radius: 13px; cursor: pointer;
   }
@@ -114,13 +115,13 @@
   #obsSitePop { position: absolute; top: calc(100% + 4px); left: 0; z-index: 20;
     padding: 10px 12px; width: 236px; border-radius: 10px; }
   #obsSitePop[hidden] { display: none; }
-  /* 月面ビュー: 月面地点セレクタは月面時のみ、地球の観測地は月面時のみ非表示 */
+  /* 月面ビュー: ポップアップ内の月面地点セレクタは月面時のみ、地球の観測地エディタは非表示 */
   .moonOnly { display: none; }
   #app.moonMode .moonOnly { display: flex; }
-  #app.moonMode #obsSiteChip, #app.moonMode #obsSitePop { display: none; }
+  #app.moonMode #obsLoc { display: none; }
   #app.moonMode #tabObs { display: none; }
-  #moonSiteRow { align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; }
-  #moonSite { flex: 1; padding: 4px 6px; font-size: 12px; font-family: var(--font-ui);
+  #moonSiteRow { width: 100%; }
+  #moonSite { width: 100%; padding: 5px 6px; font-size: 12px; font-family: var(--font-ui);
     color: var(--text); background: rgba(150, 178, 224, 0.08); border: 1px solid var(--line); border-radius: 3px; cursor: pointer; }
 
   /* ---- モーダル (操作方法 / ライセンス・クレジット) ---- */
@@ -767,10 +768,9 @@
         </span>
         <button id="obsGeo"></button>
       </div>
-    </div>
-    <div id="moonSiteRow" class="moonOnly hud">
-      <span class="moonSiteIcon">🌙</span>
-      <select id="moonSite" aria-label="月面の観測地点"></select>
+      <div id="moonSiteRow" class="moonOnly">
+        <select id="moonSite" aria-label="月面の観測地点"></select>
+      </div>
     </div>
   </div>
 
@@ -2696,7 +2696,8 @@
     vmSpaceBtn.classList.toggle("on", !groundView);
     vmGroundBtn.classList.toggle("on", groundView && surfaceBody === "earth");
     vmMoonBtn.classList.toggle("on", groundView && surfaceBody === "moon");
-    updateHint();   // ビューに応じてヒントを差し替え・再表示
+    updateHint();          // ビューに応じてヒントを差し替え・再表示
+    refreshObsSiteUI();    // 観測地チップを地球/月で切り替え
   }
   // 地球/月の地表ビューへ。body = "earth" | "moon"
   function enterSurface(body) {
@@ -2756,6 +2757,7 @@
     moonLat = s.lat; moonLon = s.lon;
     localStorage.setItem("ssMoonSite", moonSiteEl.value);
     if (surfaceBody === "moon") { buildObsFrame(); aimGroundAt(BODY_BY_KEY.get("earth"), true); }
+    refreshObsSiteUI();   // チップ表示を新しい地点名に更新
   });
 
   function hitTestGround(px, py) {
@@ -3727,9 +3729,15 @@
     return Math.abs(obsLat).toFixed(1) + "°" + (obsLat >= 0 ? o.N : o.S) + " " +
            Math.abs(obsLon).toFixed(1) + "°" + (obsLon >= 0 ? o.E : o.W);
   }
+  function moonSiteLabel() {
+    const s = MOON_SITES[+moonSiteEl.value] || MOON_SITES[0];
+    return lang === "ja" ? s.ja : s.en;
+  }
   function refreshObsSiteUI() {
     const t = T();
-    obsSiteChip.textContent = "📍 " + t.obs.loc + ": " + siteLabel();
+    obsSiteChip.textContent = surfaceBody === "moon"
+      ? "🌙 " + t.obs.loc + ": " + moonSiteLabel()
+      : "📍 " + t.obs.loc + ": " + siteLabel();
     obsGeoBtn.textContent = t.obs.geo;
     obsLatInput.value = Math.abs(obsLat).toFixed(2);
     obsLonInput.value = Math.abs(obsLon).toFixed(2);
