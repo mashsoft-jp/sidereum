@@ -783,7 +783,7 @@
     <p class="credit" id="infoCredit"></p>
   </aside>
 
-  <div id="hint">ドラッグで回転 ・ ホイール / ピンチでズーム ・ 天体クリックで接近</div>
+  <div id="hint">ドラッグで回転 ・ ホイール / ピンチでズーム (Shift+で距離) ・ 天体クリックで接近</div>
 
   <footer id="controls" class="hud">
     <button id="ctrlCollapse" aria-label="操作パネルを隠す">⌄</button>
@@ -1028,7 +1028,7 @@
       nowBtn: "現在時刻に合わせる", ratePrefix: "1秒 = ",
       viewTop: "真上", viewDef: "デフォルト", viewSide: "真横", camera: "カメラ",
       viewSpace: "宇宙", viewGround: "地上", viewMoon: "月面", gFovLabel: "ズーム", gAzLabel: "方位", gAltLabel: "高度",
-      hint: "ドラッグで回転 ・ 右ドラッグ / 2本指で移動 ・ ホイール / ピンチでズーム ・ 天体クリックで接近",
+      hint: "ドラッグで回転 ・ 右ドラッグ / 2本指で移動 ・ ホイール / ピンチでズーム (Shift+で距離) ・ 天体クリックで接近",
       noGL: "お使いの環境では WebGL が利用できないため、<br>3D 表示を開始できませんでした。",
       imgPrefix: "画像: ", procTex: "テクスチャ: シェーダによる生成 (実写ではありません)",
       u: { yr: " 年", d: " 日", h: " 時間", min: " 分", s: " 秒" },
@@ -1065,7 +1065,7 @@
       nowBtn: "Set to current time", ratePrefix: "1s = ",
       viewTop: "Top", viewDef: "Default", viewSide: "Side", camera: "Camera",
       viewSpace: "Space", viewGround: "Ground", viewMoon: "Moon", gFovLabel: "Zoom", gAzLabel: "Azimuth", gAltLabel: "Alt",
-      hint: "Drag to rotate · Right-drag / two fingers to pan · Wheel / pinch to zoom · Click a body to approach",
+      hint: "Drag to rotate · Right-drag / two fingers to pan · Wheel / pinch to zoom (Shift for distance) · Click a body to approach",
       noGL: "WebGL is not available in this environment,<br>so the 3D view could not be started.",
       imgPrefix: "Imagery: ", procTex: "Texture: procedurally generated (not actual imagery)",
       u: { yr: " yr", d: " days", h: " hr", min: " min", s: " sec" },
@@ -3981,6 +3981,9 @@
     e.preventDefault();
     if (groundView) {
       gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, gFovTgt * Math.exp(e.deltaY * 0.0012)));
+    } else if (e.shiftKey) {
+      const dl = e.deltaY || e.deltaX;   // Shift押下時は環境により横スクロール (deltaX) に載る
+      cam.distTgt = Math.max(minDist(), Math.min(1400, cam.distTgt * Math.exp(dl * 0.0016)));   // Shift+ホイールで距離
     } else {
       camZoomTgt = Math.max(1, Math.min(MAG_MAX, camZoomTgt * Math.exp(-e.deltaY * 0.0015)));   // ホイールで拡大率
     }
