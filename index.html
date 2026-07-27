@@ -125,6 +125,13 @@
     color: var(--text); background: rgba(150, 178, 224, 0.08); border: 1px solid var(--line); border-radius: 3px; cursor: pointer; }
 
   /* ---- モーダル (操作方法 / ライセンス・クレジット) ---- */
+  #modalScrim {
+    position: absolute; inset: 0; z-index: 19;
+    background: rgba(4, 6, 14, 0.55);
+    backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+    display: none;
+  }
+  #modalScrim.on { display: block; }
   #about, #howto {
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
@@ -790,6 +797,7 @@
     </div>
   </div>
 
+  <div id="modalScrim"></div>
   <aside id="about" class="hud" aria-modal="true"></aside>
   <aside id="howto" class="hud" aria-modal="true"></aside>
   <div id="welcome"></div>
@@ -4626,14 +4634,23 @@
     setMenu(false);
     buildAbout();
     aboutEl.classList.add("open");
+    modalScrim.classList.add("on");
   });
   aboutEl.addEventListener("click", (e) => {
-    if (e.target.id === "aboutClose") aboutEl.classList.remove("open");
+    if (e.target.id === "aboutClose") hideModals();
   });
 
   // ---------- 操作方法 (モーダル) ----------
   const menuHelpBtn = document.getElementById("menuHelp");
   const howtoEl = document.getElementById("howto");
+  const modalScrim = document.getElementById("modalScrim");
+  // モーダル(操作方法/ライセンス)を閉じる。背景スクリムのクリックでも閉じられる
+  function hideModals() {
+    aboutEl.classList.remove("open");
+    howtoEl.classList.remove("open");
+    modalScrim.classList.remove("on");
+  }
+  modalScrim.addEventListener("click", hideModals);
   function buildHowto() {
     const c = lang === "ja" ? {
       title: "操作方法", space: "宇宙ビュー", ground: "地上・月面ビュー", common: "共通",
@@ -4693,10 +4710,10 @@
       `<h3>${c.ground}</h3>${tbl(c.ground_rows)}` +
       `<h3>${c.common}</h3>${tbl(c.common_rows)}`;
   }
-  function openHowto() { buildHowto(); howtoEl.classList.add("open"); }
+  function openHowto() { buildHowto(); howtoEl.classList.add("open"); modalScrim.classList.add("on"); }
   menuHelpBtn.addEventListener("click", () => { setMenu(false); openHowto(); });
   howtoEl.addEventListener("click", (e) => {
-    if (e.target.id === "howtoClose") howtoEl.classList.remove("open");
+    if (e.target.id === "howtoClose") hideModals();
   });
 
   // ---------- 初回ガイド (welcome overlay) ----------
@@ -4735,8 +4752,7 @@
 
   window.addEventListener("keydown", (e) => {
     if (e.code === "Escape") {
-      aboutEl.classList.remove("open");
-      howtoEl.classList.remove("open");
+      hideModals();
       if (welcomeEl.classList.contains("open")) closeWelcome();
       setMenu(false);
     }
