@@ -994,7 +994,7 @@
       tilt:0, rot:2.2, rkm:5.5, type:1, comet:true,
       colA:[0.45,0.50,0.60], colB:[0.20,0.22,0.26], colC:[0,0,0], rim:[0.4,0.5,0.7], params:[0,0,0,0],
       rows:[["区分","周期彗星 (1P)"],["核の大きさ","約 15×8 km"],["近日点距離","0.59 au"],["遠日点距離","35.1 au"],["公転周期","約 75.3 年"],["軌道傾斜角","162.3° (逆行)"],["前回の近日点","1986年2月"],["次回の近日点","2061年ごろ"]],
-      fact:"約76年ごとに回帰する最も有名な周期彗星。黄道に対してほぼ逆向き (逆行) の細長い楕円軌道を持ち、遠日点は海王星の外側に達します。※ 摂動を無視した固定軌道のため、回帰時期は実際と数ヶ月ずれます。" },
+      fact:"約76年ごとに回帰する最も有名な周期彗星。黄道に対してほぼ逆向き (逆行) の細長い楕円軌道を持ち、遠日点は海王星の外側に達します。※ 木星・土星の摂動で回帰間隔が毎回変わるため、実際の近日点通過日 (1835・1910・1986・2061・2134年) に合わせています。2134年以降は外挿です。" },
   ];
 
   const SUN = {
@@ -1212,7 +1212,7 @@
       fact:"Discovered in 1804, one of the historic 'big four' asteroids, on a notably eccentric orbit." },
     halley: {
       rows:[["Class","Periodic comet (1P)"],["Nucleus","~15×8 km"],["Perihelion","0.59 au"],["Aphelion","35.1 au"],["Orbital period","~75.3 yr"],["Inclination","162.3° (retrograde)"],["Last perihelion","Feb 1986"],["Next perihelion","c. 2061"]],
-      fact:"The most famous periodic comet, returning roughly every 76 years on a retrograde, highly elongated orbit that reaches beyond Neptune. Note: with perturbations ignored, return dates drift by a few months." },
+      fact:"The most famous periodic comet, returning roughly every 76 years on a retrograde, highly elongated orbit that reaches beyond Neptune. Note: because Jupiter and Saturn shift each return, the timing is matched to the actual perihelion passages (1835, 1910, 1986, 2061, 2134); dates past 2134 are extrapolated." },
     phobos: {
       rows:[["Diameter","~22 km"],["Orbital radius","9,376 km"],["Orbital period","7.66 hours"],["Rotation","synchronous"]],
       fact:"Orbits faster than Mars rotates, so it rises in the west and sets in the east. It is slowly spiraling inward and will eventually crash into Mars." },
@@ -1285,8 +1285,31 @@
     ];
   }
 
+  // 実際の近日点通過日 (TT)。ハレー彗星は木星・土星の摂動で回帰間隔が毎回
+  // 0.5年ほど変わるため、単一の公転周期では全ての回帰に時期を合わせられない
+  // (1986年に合わせると1910年が約半年ずれ、近日点付近では位置が大きく外れる)。
+  // 区間ごとの実周期で平均近点角を求めることで、どの回帰でも時期を合わせる
+  const PERI_EPOCHS = {
+    halley: [
+      Date.UTC(1835, 10, 16), Date.UTC(1910, 3, 20), Date.UTC(1986, 1, 9),
+      Date.UTC(2061, 6, 28), Date.UTC(2134, 2, 27),
+    ].map((ms) => (ms - J2000) / DAY_MS),
+  };
+  for (const p of PLANETS) {
+    if (PERI_EPOCHS[p.key]) p.periT = PERI_EPOCHS[p.key];
+  }
+  // 平均近点角。近日点通過日の表を持つ天体は、その区間の実周期から求める
+  // (表の範囲外は両端の区間の周期で外挿)
+  function meanAnom(p, days) {
+    const tp = p.periT;
+    if (!tp) return (p.L0 - p.peri) * DEG + 2 * Math.PI * days / p.T;
+    let i = 0;
+    while (i < tp.length - 2 && days >= tp[i + 1]) i++;
+    return 2 * Math.PI * (days - tp[i]) / (tp[i + 1] - tp[i]);
+  }
+
   function keplerAU(p, days, out) {
-    const M = ((p.L0 - p.peri) * DEG + 2 * Math.PI * days / p.T) % (2 * Math.PI);
+    const M = meanAnom(p, days) % (2 * Math.PI);
     let E = M;
     // 反復回数はハレー彗星 (e≈0.97) でも収束する回数に設定
     for (let k = 0; k < 12; k++) E -= (E - p.e * Math.sin(E) - M) / (1 - p.e * Math.cos(E));
@@ -1300,7 +1323,7 @@
 
   // 現在の離心近点角 E ∈ [0, 2π) を返す (軌道の高精細パッチ用)
   function keplerE(p, days) {
-    const M = ((p.L0 - p.peri) * DEG + 2 * Math.PI * days / p.T) % (2 * Math.PI);
+    const M = meanAnom(p, days) % (2 * Math.PI);
     let E = M;
     for (let k = 0; k < 12; k++) E -= (E - p.e * Math.sin(E) - M) / (1 - p.e * Math.cos(E));
     return ((E % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
