@@ -1442,17 +1442,26 @@
   const bodyVS = `
     attribute vec3 aPos;
     uniform mat4 uMVP, uModel;
+    uniform float uComet;
     varying vec3 vL, vW, vN;
     void main() {
-      vL = aPos;
-      vW = (uModel * vec4(aPos, 1.0)).xyz;
-      vN = normalize((uModel * vec4(aPos, 0.0)).xyz);
-      gl_Position = uMVP * vec4(aPos, 1.0);
+      vec3 q = aPos;
+      if (uComet > 0.5) {
+        // ハレー核の実測に近い細長い比率と、低ポリ化せず分かる程度の凹凸
+        q *= vec3(1.28, 0.72, 0.82);
+        float rough = 1.0 + sin(q.x * 19.0 + q.y * 13.0) *
+                            sin(q.z * 17.0 - q.x * 7.0) * 0.055;
+        q *= rough;
+      }
+      vL = q;
+      vW = (uModel * vec4(q, 1.0)).xyz;
+      vN = normalize((uModel * vec4(q, 0.0)).xyz);
+      gl_Position = uMVP * vec4(q, 1.0);
     }`;
 
   const bodyFS = PRE + `
     varying vec3 vL, vW, vN;
-    uniform float uType, uTime, uHasTex;
+    uniform float uType, uTime, uHasTex, uComet;
     uniform vec3 uCam, uSun, uColA, uColB, uColC, uRim;
     uniform vec4 uParams;
     uniform sampler2D uTex;
@@ -1499,7 +1508,13 @@
       vec3 alb = vec3(0.5);
       float spec = 0.0;
 
-      if (uHasTex > 0.5) {
+      if (uComet > 0.5) {
+        // ---- 彗星核: 自発光しない、煤と有機物に覆われた非常に暗い表面 ----
+        float rock = fbm(p * 6.0 + 2.0);
+        float pits = fbm(p * 18.0 - 4.0);
+        alb = mix(vec3(0.040, 0.043, 0.046), vec3(0.240, 0.195, 0.145), rock);
+        alb *= 0.58 + 0.52 * smoothstep(0.28, 0.76, pits);
+      } else if (uHasTex > 0.5) {
         // ---- 実テクスチャ (NASA/USGS 全球マップ) ----
         vec2 uv = vec2(0.5 - atan(p.z, p.x) / 6.2831853,
                        acos(clamp(p.y, -1.0, 1.0)) / 3.14159265);
@@ -1542,8 +1557,10 @@
       float fres = pow(1.0 - max(dot(N, V), 0.0), 2.6);
       alb += uRim * fres * (0.25 + 0.75 * dif) * 0.55;
 
-      // 夜側にも地形が見える程度の環境光を入れる
-      vec3 c = alb * (0.3 + dif * 0.9) + vec3(spec) * dif;
+      // 彗星核だけは宇宙空間らしく夜側をほぼ黒くし、他天体は従来の視認性を保つ
+      float ambient = mix(0.3, 0.150, uComet);
+      float direct = mix(0.9, 1.08, uComet);
+      vec3 c = alb * (ambient + dif * direct) + vec3(spec) * dif;
       gl_FragColor = vec4(pow(c, vec3(0.92)), 1.0);
     }`;
 
@@ -1716,29 +1733,72 @@
       gl_FragColor = vec4(c * a * 0.9, 0.0);
     }`;
 
-  // ---- 彗星の尾 (頭部から軸方向に伸びる帯, 加算) ----
+  // ---- 彗星の尾 (曲率を持つカメラ正対リボン, 加算) ----
   const tailVS = `
     attribute vec2 aCorner;
     uniform mat4 uVP;
-    uniform vec3 uHead, uAxis, uSide;
+    uniform vec3 uHead, uAxis, uCurve, uSide;
     uniform vec2 uDim;                  // x: 長さ  y: 半幅
     varying vec2 vUv;
     void main() {
       float x = aCorner.x * 0.5 + 0.5;
+      float flow = x;
+      // 核では極細幅に絞り、コマの内部で開くことで根元の断面を見せない
+      float rootOpen = 0.18 + 0.82 * smoothstep(0.0, 0.014, x);
+      float fan = rootOpen * mix(0.13, 1.0, smoothstep(0.0, 1.0, flow));
       vec3 w = uHead + uAxis * (x * uDim.x)
-             + uSide * (aCorner.y * uDim.y * (0.35 + 0.65 * x));  // 先端ほど広がる
+             + uCurve * (flow * flow * uDim.x)
+             + uSide * (aCorner.y * uDim.y * fan);
       vUv = vec2(x, aCorner.y);
       gl_Position = uVP * vec4(w, 1.0);
     }`;
   const tailFS = PRE + `
     varying vec2 vUv;
-    uniform vec3 uCol;
-    uniform float uAlpha;
+    uniform vec3 uCol1, uCol2;
+    uniform float uAlpha, uKind, uTime, uSeed;
+    float hash(float n) {
+      return fract(sin(n) * 43758.5453123);
+    }
+    float noise1(float x) {
+      float i = floor(x), f = fract(x);
+      f = f * f * (3.0 - 2.0 * f);
+      return mix(hash(i), hash(i + 1.0), f);
+    }
     void main() {
-      // 付け根はフェードインさせ、コマの光と連続につなぐ (段差防止)
-      float a = pow(1.0 - vUv.x, 1.6) * smoothstep(0.0, 0.07, vUv.x)
-              * pow(max(1.0 - abs(vUv.y), 0.0), 1.8) * uAlpha;
-      gl_FragColor = vec4(uCol * a, 0.0);
+      float x = vUv.x, y = vUv.y;
+      float flow = max(x, 0.0);
+      // 形状は極細幅から開きつつ、密度は核の中心から保って空白を作らない
+      float head = 0.72 + 0.28 * smoothstep(0.0, 0.018, x);
+      float end = pow(max(1.0 - flow, 0.0), uKind < 0.5 ? 0.68 : 0.76);
+      float a;
+      if (uKind < 0.5) {
+        // イオンテイル: 細い芯と、互いに明滅する数本の青いフィラメント
+        float w1 = sin(flow * 30.0 + uSeed * 4.1 + uTime * 0.13) * (0.035 + flow * 0.07);
+        float w2 = sin(flow * 19.0 + uSeed * 7.3 - uTime * 0.09) * 0.12 - 0.16;
+        float w3 = sin(flow * 23.0 + uSeed * 2.7 + uTime * 0.06) * 0.10 + 0.18;
+        float core = exp(-y * y * 28.0);
+        float f1 = exp(-(y - w1) * (y - w1) * 115.0);
+        float f2 = exp(-(y - w2) * (y - w2) * 155.0);
+        float f3 = exp(-(y - w3) * (y - w3) * 145.0);
+        float pulse = 0.80 + 0.20 * noise1(flow * 31.0 + uSeed * 19.0 + uTime * 0.035);
+        a = (core * 0.82 + (f1 + f2 + f3) * 0.08) * pulse;
+      } else {
+        // ダストテイル: 幅広い扇の中に、密度の異なる暖色の筋を作る
+        float center = sin(flow * 5.5 + uSeed) * 0.06 * flow;
+        float yy = y - center;
+        float broad = exp(-yy * yy * 2.15) * pow(max(1.0 - abs(y), 0.0), 1.35);
+        float f1 = exp(-(yy - sin(flow * 12.0 + uSeed) * 0.16) *
+                       (yy - sin(flow * 12.0 + uSeed) * 0.16) * 36.0);
+        float f2 = exp(-(yy + 0.31 - sin(flow * 8.0 - uSeed) * 0.11) *
+                       (yy + 0.31 - sin(flow * 8.0 - uSeed) * 0.11) * 42.0);
+        float f3 = exp(-(yy - 0.38 - sin(flow * 10.0 + uSeed * 0.7) * 0.09) *
+                       (yy - 0.38 - sin(flow * 10.0 + uSeed * 0.7) * 0.09) * 48.0);
+        float grain = 0.84 + 0.16 * noise1(flow * 24.0 + y * 3.0 + uSeed * 13.0);
+        a = (broad * 0.78 + (f1 + f2 + f3) * 0.09) * grain;
+      }
+      a *= head * end * uAlpha;
+      vec3 col = mix(uCol1, uCol2, smoothstep(0.0, 0.85, flow));
+      gl_FragColor = vec4(col * a, 0.0);
     }`;
 
   // ---- 彗星のコマ (太陽側が圧縮された涙滴型の光。ガウシアン減衰で継ぎ目なし) ----
@@ -1749,7 +1809,7 @@
     uniform vec2 uDim;                  // x: 軸方向スケール  y: 半幅
     varying vec2 vP;                    // x: 軸方向 (太陽側が負)  y: 横方向
     void main() {
-      float x = mix(-0.4, 1.2, aCorner.x * 0.5 + 0.5);
+      float x = mix(-1.2, 1.2, aCorner.x * 0.5 + 0.5);
       vP = vec2(x, aCorner.y);
       vec3 w = uHead + uAxis * (x * uDim.x) + uSide * (aCorner.y * uDim.y);
       gl_Position = uVP * vec4(w, 1.0);
@@ -1757,15 +1817,21 @@
   const comaFS = PRE + `
     varying vec2 vP;
     uniform vec3 uCol;
-    uniform float uAlpha;
+    uniform float uAlpha, uCore, uFacing;
     void main() {
-      // 太陽側 (x<0) は圧縮、反太陽側はゆるやかに伸びて尾へ連続する
-      float sx = vP.x < 0.0 ? vP.x * 2.8 : vP.x;
+      // 太陽側の圧縮から尾側の伸びまで、核をまたいで連続的に変化させる
+      float rearMix = smoothstep(-0.32, 0.42, vP.x);
+      float sx = vP.x * mix(1.0, mix(2.4, 0.90, rearMix), uFacing);
       float d2 = sx * sx + vP.y * vP.y * 1.3;
-      float glow = exp(-d2 * 4.5);
-      float core = exp(-(vP.x * vP.x + vP.y * vP.y) * 30.0);
-      float a = (glow * 0.8 + core * 1.7) * uAlpha;
-      gl_FragColor = vec4(uCol * a, 0.0);
+      float glow = exp(-d2 * 3.8);
+      float ix = vP.x * mix(1.0, mix(1.5, 0.62, rearMix), uFacing);
+      float inner = exp(-(ix * ix + vP.y * vP.y) * 18.0);
+      float cx = vP.x * mix(1.0, mix(1.0, 0.70, rearMix), uFacing);
+      float core = exp(-(cx * cx + vP.y * vP.y) * 64.0);
+      // 遠距離では未解像の明るい頭部、接近時は境界のない淡いガス雲だけを残す
+      vec3 light = uCol * (glow * 0.36 + inner * 0.42)
+                 + vec3(1.0, 0.98, 0.92) * core * 2.80 * uCore;
+      gl_FragColor = vec4(light * uAlpha, 0.0);
     }`;
 
   // ---- 土星の環 ----
@@ -1855,6 +1921,18 @@
   const billVB = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, billVB);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+  // 彗星の尾は根元の開きと湾曲を滑らかにするため、長さ方向を細分化する
+  const TAIL_SEG = 96, TAIL_VERTS = (TAIL_SEG + 1) * 2;
+  const tailData = new Float32Array(TAIL_VERTS * 2);
+  for (let i = 0, o = 0; i <= TAIL_SEG; i++) {
+    const x = i / TAIL_SEG * 2 - 1;
+    tailData[o++] = x; tailData[o++] = -1;
+    tailData[o++] = x; tailData[o++] = 1;
+  }
+  const tailVB = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, tailVB);
+  gl.bufferData(gl.ARRAY_BUFFER, tailData, gl.STATIC_DRAW);
 
   // ---------- 天体テクスチャ (パブリックドメインの実全球マップ, data URI 埋め込み) ----------
   //   出典: 水星 MESSENGER (USGS) / 金星 Magellan レーダー地形 (NASA) / 地球 Blue Marble (NASA) /
@@ -2185,6 +2263,7 @@
     gl.uniform1f(bodyP.u.uHasTex, tx ? 1 : 0);
     gl.uniformMatrix4fv(bodyP.u.uMVP, false, mvp);
     gl.uniformMatrix4fv(bodyP.u.uModel, false, model);
+    gl.uniform1f(bodyP.u.uComet, b.comet ? 1 : 0);
     gl.uniform1f(bodyP.u.uType, b.type);
     gl.uniform3fv(bodyP.u.uColA, b.colA);
     gl.uniform3fv(bodyP.u.uColB, b.colB);
@@ -2199,7 +2278,8 @@
     const x = VP[0]*wx + VP[4]*wy + VP[8]*wz + VP[12];
     const y = VP[1]*wx + VP[5]*wy + VP[9]*wz + VP[13];
     const cw = VP[3]*wx + VP[7]*wy + VP[11]*wz + VP[15];
-    if (cw <= 0.01) return null;
+    // 微小天体への接近時は cw が 0.01 を大きく下回る。背面判定は符号だけで行う
+    if (cw <= 1e-9) return null;
     return { x: (x / cw * 0.5 + 0.5) * W, y: (1 - (y / cw * 0.5 + 0.5)) * H, w: cw };
   }
 
@@ -3470,7 +3550,9 @@
       for (const c of COMETS) {
         const pa = posAU.get(c.key);
         const rau = Math.hypot(pa[0], pa[1], pa[2]);
-        const act = Math.min(1, Math.max(0, (3 - rau) / 2.2));   // 3au 以内で活動
+        // 氷の昇華は境界で突然始まらないため、3au から近日点へ滑らかに立ち上げる
+        const actT = Math.min(1, Math.max(0, (3 - rau) / 2.4));
+        const act = actT * actT * (3 - 2 * actT);
         if (act < 0.02) continue;
         const w = posW.get(c.key);
         // 反太陽方向 (イオンテイルの軸)
@@ -3483,6 +3565,27 @@
         const vl = Math.hypot(vx, vy, vz) || 1;
         vx /= vl; vy /= vl; vz /= vl;
         const hx = w[0] - eye[0], hy = w[1] - eye[1], hz = w[2] - eye[2];
+        // 遠方では写真のような未解像の頭部と尾、接近時は暗い核と局所ジェットへ遷移
+        const camCometDist = Math.hypot(hx, hy, hz) || 1;
+        const nucleusPx = bodyR(c) * fpx / camCometDist;
+        const nearT = Math.min(1, Math.max(0, (nucleusPx - 0.7) / 3.3));
+        const pixelLod = nearT * nearT * (3 - 2 * nearT);
+        const camCometKm = camCometDist / KM2W;
+        const distT = Math.min(1, Math.max(0,
+          (Math.log(1000000) - Math.log(Math.max(1, camCometKm))) / Math.log(100)));
+        const distLod = distT * distT * (3 - 2 * distT);
+        const nearLod = Math.max(pixelLod, distLod);
+        // 尾を正面・背面から見るとリボンの投影が破綻するため、軸の画面投影量で減衰
+        const viewX = hx / camCometDist, viewY = hy / camCometDist, viewZ = hz / camCometDist;
+        const axisViewDot = ax * viewX + ay * viewY + az * viewZ;
+        const tailFacing = Math.sqrt(Math.max(0, 1 - axisViewDot * axisViewDot));
+        const angleT = Math.min(1, Math.max(0, (tailFacing - 0.05) / 0.20));
+        const angleVis = angleT * angleT * (3 - 2 * angleT);
+        const tailVis = (1 - nearLod) * (1 - nearLod) * angleVis;
+        // 核が未解像なら位置を見失わない程度の小さなコマを残し、核が見えたら消す
+        const comaVis = (1 - pixelLod) * (1 - distLod * 0.55) + 0.12 * nearLod;
+        const jetT = Math.min(1, Math.max(0, (nucleusPx - 1.0) / 3.0));
+        const jetVis = Math.max(jetT * jetT * (3 - 2 * jetT), distLod);
         // 尾の幅方向 = 軸×視線 (カメラに正対する帯)
         const sideOf = (bx, by, bz) => {
           let sx = by * hz - bz * hy, sy = bz * hx - bx * hz, sz = bx * hy - by * hx;
@@ -3490,42 +3593,115 @@
           if (sl < 1e-9) { sx = 0; sy = 1; sz = 0; } else { sx /= sl; sy /= sl; sz /= sl; }
           return [sx, sy, sz];
         };
-        const L = act * act * 0.55 * K_REAL;                     // 近日点で約 0.55au
+        const L = act * act * 0.72 * K_REAL;                     // 近日点で約 0.72au
         gl.useProgram(tailP.pr);
         gl.uniformMatrix4fv(tailP.u.uVP, false, VP);
         gl.uniform3f(tailP.u.uHead, hx, hy, hz);
-        gl.bindBuffer(gl.ARRAY_BUFFER, billVB);
+        gl.uniform1f(tailP.u.uTime, nowSec);
+        gl.bindBuffer(gl.ARRAY_BUFFER, tailVB);
         gl.enableVertexAttribArray(tailP.a.aCorner);
         gl.vertexAttribPointer(tailP.a.aCorner, 2, gl.FLOAT, false, 0, 0);
-        // イオンテイル (青白, 反太陽方向にまっすぐ)
-        let s = sideOf(ax, ay, az);
+        // ダストテイル (黄白)。反太陽方向から徐々に進行方向の後方へ曲がる
+        const av = ax * vx + ay * vy + az * vz;
+        let cvx = vx - ax * av, cvy = vy - ay * av, cvz = vz - az * av;
+        const cvl = Math.hypot(cvx, cvy, cvz) || 1;
+        cvx /= cvl; cvy /= cvl; cvz /= cvl;
+        const curve = 0.12;
+        let s = sideOf(ax - cvx * curve, ay - cvy * curve, az - cvz * curve);
         gl.uniform3f(tailP.u.uAxis, ax, ay, az);
+        gl.uniform3f(tailP.u.uCurve, -cvx * curve, -cvy * curve, -cvz * curve);
         gl.uniform3f(tailP.u.uSide, s[0], s[1], s[2]);
-        gl.uniform2f(tailP.u.uDim, L, L * 0.08);
-        gl.uniform3f(tailP.u.uCol, 0.45, 0.6, 1.0);
-        gl.uniform1f(tailP.u.uAlpha, 0.6 * act);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        // ダストテイル (黄白, 進行方向の後ろへ湾曲)
-        let dx = ax - vx * 0.35, dy = ay - vy * 0.35, dz = az - vz * 0.35;
-        const dl = Math.hypot(dx, dy, dz) || 1;
-        dx /= dl; dy /= dl; dz /= dl;
-        s = sideOf(dx, dy, dz);
-        gl.uniform3f(tailP.u.uAxis, dx, dy, dz);
+        gl.uniform2f(tailP.u.uDim, L * 0.74, L * 0.065);
+        gl.uniform3f(tailP.u.uCol1, 1.0, 0.95, 0.86);
+        gl.uniform3f(tailP.u.uCol2, 0.52, 0.62, 0.86);
+        gl.uniform1f(tailP.u.uKind, 1);
+        gl.uniform1f(tailP.u.uSeed, 2.7);
+        gl.uniform1f(tailP.u.uAlpha, 0.38 * act * tailVis);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
+        // ダストの内層を重ね、コマから続く明るい流れを作る
+        gl.uniform2f(tailP.u.uDim, L * 0.68, L * 0.035);
+        gl.uniform3f(tailP.u.uCol1, 1.0, 0.99, 0.94);
+        gl.uniform3f(tailP.u.uCol2, 0.68, 0.75, 0.94);
+        gl.uniform1f(tailP.u.uSeed, 7.1);
+        gl.uniform1f(tailP.u.uAlpha, 0.55 * act * tailVis);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
+        // イオンテイルの外層 (青白, 反太陽方向にほぼ直線)
+        s = sideOf(ax, ay, az);
+        gl.uniform3f(tailP.u.uAxis, ax, ay, az);
+        gl.uniform3f(tailP.u.uCurve, 0, 0, 0);
         gl.uniform3f(tailP.u.uSide, s[0], s[1], s[2]);
-        gl.uniform2f(tailP.u.uDim, L * 0.75, L * 0.16);
-        gl.uniform3f(tailP.u.uCol, 1.0, 0.9, 0.7);
-        gl.uniform1f(tailP.u.uAlpha, 0.45 * act);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.uniform2f(tailP.u.uDim, L * 1.18, L * 0.042);
+        gl.uniform3f(tailP.u.uCol1, 0.68, 0.90, 1.0);
+        gl.uniform3f(tailP.u.uCol2, 0.18, 0.38, 1.0);
+        gl.uniform1f(tailP.u.uKind, 0);
+        gl.uniform1f(tailP.u.uSeed, 4.3);
+        gl.uniform1f(tailP.u.uAlpha, 0.43 * act * tailVis);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
+        // イオンテイルの細い発光芯
+        gl.uniform2f(tailP.u.uDim, L * 1.08, L * 0.014);
+        gl.uniform3f(tailP.u.uCol1, 0.88, 0.98, 1.0);
+        gl.uniform3f(tailP.u.uCol2, 0.28, 0.52, 1.0);
+        gl.uniform1f(tailP.u.uSeed, 9.4);
+        gl.uniform1f(tailP.u.uAlpha, 0.58 * act * tailVis);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
+        // 接近時: 太陽に熱せられた核表面から噴き、反太陽方向へ曲げられる局所ジェット
+        if (jetVis > 0.01) {
+          let qx = ay * cvz - az * cvy, qy = az * cvx - ax * cvz, qz = ax * cvy - ay * cvx;
+          const ql = Math.hypot(qx, qy, qz) || 1;
+          qx /= ql; qy /= ql; qz /= ql;
+          const jetLen = bodyR(c) * (28 + 12 * act);
+          const drawJet = (jx0, jy0, jz0, spread, seed, alpha) => {
+            const jl = Math.hypot(jx0, jy0, jz0) || 1;
+            const jx = jx0 / jl, jy = jy0 / jl, jz = jz0 / jl;
+            const js = sideOf(jx, jy, jz);
+            gl.uniform3f(tailP.u.uAxis, jx, jy, jz);
+            gl.uniform3f(tailP.u.uCurve, ax * 0.42, ay * 0.42, az * 0.42);
+            gl.uniform3f(tailP.u.uSide, js[0], js[1], js[2]);
+            gl.uniform2f(tailP.u.uDim, jetLen, bodyR(c) * spread);
+            gl.uniform3f(tailP.u.uCol1, 0.92, 0.90, 0.82);
+            gl.uniform3f(tailP.u.uCol2, 0.36, 0.43, 0.52);
+            gl.uniform1f(tailP.u.uKind, 1);
+            gl.uniform1f(tailP.u.uSeed, seed);
+            gl.uniform1f(tailP.u.uAlpha, alpha * act * jetVis);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
+          };
+          drawJet(-ax + cvx * 0.28 + qx * 0.10,
+                  -ay + cvy * 0.28 + qy * 0.10,
+                  -az + cvz * 0.28 + qz * 0.10, 3.0, 3.2, 0.34);
+          drawJet(-ax - cvx * 0.18 - qx * 0.22,
+                  -ay - cvy * 0.18 - qy * 0.22,
+                  -az - cvz * 0.18 - qz * 0.22, 2.2, 8.6, 0.24);
+        }
         // コマ (太陽側が圧縮された涙滴型。反太陽側はそのまま尾に連続する)
         gl.useProgram(comaP.pr);
         gl.uniformMatrix4fv(comaP.u.uVP, false, VP);
         gl.uniform3f(comaP.u.uHead, hx, hy, hz);
-        s = sideOf(ax, ay, az);
-        gl.uniform3f(comaP.u.uAxis, ax, ay, az);
+        gl.uniform1f(comaP.u.uCore, 1 - pixelLod);
+        // コマは投影した尾方向を使う。正面視ではカメラ正対の円形へ滑らかに移行
+        const comaT = Math.min(1, Math.max(0, (tailFacing - 0.03) / 0.30));
+        const comaFacing = comaT * comaT * (3 - 2 * comaT);
+        let pax = ax - viewX * axisViewDot;
+        let pay = ay - viewY * axisViewDot;
+        let paz = az - viewZ * axisViewDot;
+        const pal = Math.hypot(pax, pay, paz);
+        if (pal < 1e-5) {
+          pax = Vm[0]; pay = Vm[4]; paz = Vm[8];
+        } else {
+          pax /= pal; pay /= pal; paz /= pal;
+        }
+        s = sideOf(pax, pay, paz);
+        gl.uniform3f(comaP.u.uAxis, pax, pay, paz);
         gl.uniform3f(comaP.u.uSide, s[0], s[1], s[2]);
-        gl.uniform2f(comaP.u.uDim, L * 0.10, L * 0.045);
-        gl.uniform3f(comaP.u.uCol, 0.75, 0.85, 1.0);
-        gl.uniform1f(comaP.u.uAlpha, act);
+        gl.uniform1f(comaP.u.uFacing, comaFacing);
+        const comaFar = (1 - distLod) * (1 - distLod);
+        const comaCloseXpx = Math.max(8, nucleusPx * 2.2);
+        const comaCloseYpx = Math.max(6, nucleusPx * 1.6);
+        const comaX = L * 0.014 * comaFar + camCometDist / fpx * comaCloseXpx * (1 - comaFar);
+        const comaY = L * 0.009 * comaFar + camCometDist / fpx * comaCloseYpx * (1 - comaFar);
+        const comaProjX = comaY + (comaX - comaY) * comaFacing;
+        gl.uniform2f(comaP.u.uDim, comaProjX, comaY);
+        gl.uniform3f(comaP.u.uCol, 0.70, 0.78, 0.86);
+        gl.uniform1f(comaP.u.uAlpha, 0.92 * act * comaVis);
         gl.bindBuffer(gl.ARRAY_BUFFER, billVB);
         gl.enableVertexAttribArray(comaP.a.aCorner);
         gl.vertexAttribPointer(comaP.a.aCorner, 2, gl.FLOAT, false, 0, 0);
@@ -3822,7 +3998,7 @@
         neptune: 500000, triton: 30000,
         pluto: 30000, charon: 20000,
         ceres: 10000, vesta: 10000, pallas: 10000, juno: 10000,
-        halley: 1000,
+        halley: 300,
       };
       cam.distTgt = body === SUN
         ? bodyR(SUN) * 4.2
