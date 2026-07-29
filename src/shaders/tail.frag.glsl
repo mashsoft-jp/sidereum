@@ -22,12 +22,14 @@
         float w1 = sin(flow * 30.0 + uSeed * 4.1 + uTime * 0.13) * (0.035 + flow * 0.07);
         float w2 = sin(flow * 19.0 + uSeed * 7.3 - uTime * 0.09) * 0.12 - 0.16;
         float w3 = sin(flow * 23.0 + uSeed * 2.7 + uTime * 0.06) * 0.10 + 0.18;
-        float core = exp(-y * y * 28.0);
+        // 芯は緩やかに減衰させる。鋭いガウシアンにすると加算合成で軸上だけが
+        // 飽和し、光線のような硬い一本線に見えてしまう
+        float core = exp(-y * y * 14.0);
         float f1 = exp(-(y - w1) * (y - w1) * 115.0);
         float f2 = exp(-(y - w2) * (y - w2) * 155.0);
         float f3 = exp(-(y - w3) * (y - w3) * 145.0);
         float pulse = 0.80 + 0.20 * noise1(flow * 31.0 + uSeed * 19.0 + uTime * 0.035);
-        a = (core * 0.82 + (f1 + f2 + f3) * 0.08) * pulse;
+        a = (core * 0.62 + (f1 + f2 + f3) * 0.11) * pulse;
       } else {
         // ダストテイル: 幅広い扇の中に、密度の異なる暖色の筋を作る
         float center = sin(flow * 5.5 + uSeed) * 0.06 * flow;

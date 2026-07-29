@@ -70,14 +70,14 @@
           gl.uniform3f(tailP.u.uCol2, 0.74, 0.66, 0.54);
           gl.uniform1f(tailP.u.uKind, 1);
           gl.uniform1f(tailP.u.uSeed, 2.7);
-          gl.uniform1f(tailP.u.uAlpha, 0.38 * act * tailVis);
+          gl.uniform1f(tailP.u.uAlpha, 0.46 * act * tailVis);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
           // ダストの内層を重ね、コマから続く明るい流れを作る
-          gl.uniform2f(tailP.u.uDim, L * 0.68, L * 0.10);
+          gl.uniform2f(tailP.u.uDim, L * 0.68, L * 0.15);
           gl.uniform3f(tailP.u.uCol1, 1.0, 0.99, 0.94);
           gl.uniform3f(tailP.u.uCol2, 0.84, 0.78, 0.66);
           gl.uniform1f(tailP.u.uSeed, 7.1);
-          gl.uniform1f(tailP.u.uAlpha, 0.55 * act * tailVis);
+          gl.uniform1f(tailP.u.uAlpha, 0.34 * act * tailVis);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
           // イオンテイルの外層 (青白, 反太陽方向にほぼ直線)
           s = sideOf(ax, ay, az);
@@ -89,14 +89,14 @@
           gl.uniform3f(tailP.u.uCol2, 0.18, 0.38, 1.0);
           gl.uniform1f(tailP.u.uKind, 0);
           gl.uniform1f(tailP.u.uSeed, 4.3);
-          gl.uniform1f(tailP.u.uAlpha, 0.43 * act * tailVis);
+          gl.uniform1f(tailP.u.uAlpha, 0.30 * act * tailVis);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
           // イオンテイルの細い発光芯
-          gl.uniform2f(tailP.u.uDim, L * 1.08, L * 0.014);
+          gl.uniform2f(tailP.u.uDim, L * 1.08, L * 0.024);
           gl.uniform3f(tailP.u.uCol1, 0.88, 0.98, 1.0);
           gl.uniform3f(tailP.u.uCol2, 0.28, 0.52, 1.0);
           gl.uniform1f(tailP.u.uSeed, 9.4);
-          gl.uniform1f(tailP.u.uAlpha, 0.58 * act * tailVis);
+          gl.uniform1f(tailP.u.uAlpha, 0.22 * act * tailVis);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
         }
         // 接近時: 太陽に熱せられた核表面から噴き、反太陽方向へ曲げられる局所ジェット
