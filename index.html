@@ -1758,9 +1758,10 @@
     void main() {
       float x = aCorner.x * 0.5 + 0.5;
       float flow = x;
-      // 核では極細幅に絞り、コマの内部で開くことで根元の断面を見せない
-      float rootOpen = 0.18 + 0.82 * smoothstep(0.0, 0.014, x);
-      float fan = rootOpen * mix(0.13, 1.0, smoothstep(0.0, 1.0, flow));
+      // 尾は核を頂点とする円錐として開かせる。根元に一定の幅を残すと、そこは
+      // 「軸方向の長さより幅の方が広い」板になり、核の真横へ光を噴き出して
+      // いるように見えてしまう。写真の彗星は頭部から細く出て徐々に広がる
+      float fan = mix(0.012, 1.0, pow(flow, 0.85));
       vec3 w = uHead + uAxis * (x * uDim.x)
              + uCurve * (flow * flow * uDim.x)
              + uSide * (aCorner.y * uDim.y * fan);
