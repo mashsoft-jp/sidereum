@@ -1,0 +1,6 @@
+# index.html は tools/build.mjs の生成物。差分レビューでは折りたたむ
+# (バイナリ扱いにはしないので、必要なら展開して中身を確認できる)
+index.html            linguist-generated=true
+
+# 1.1MB の base64。差分に意味がない
+src/data/textures.js  -diff linguist-generated=true
