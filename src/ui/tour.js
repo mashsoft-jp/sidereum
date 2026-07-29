@@ -145,11 +145,55 @@
     renderTourUI();
     armTourTimer();
   }
+  // ツアーは日時・ビュー・カメラ・速度・選択を書き換えるので、開始前の状態を
+  // まるごと控えておき、終了時に戻す (tour.keep が真のツアーだけ戻さない)
+  function captureTourState() {
+    return {
+      showConst, showSelMark,
+      simDays, daysPerSec, playing,
+      groundView, surfaceBody,
+      selected, lastCenter,
+      infoOpen: infoPanel.classList.contains("open"),
+      yaw: cam.yawTgt, pitch: cam.pitchTgt, dist: cam.distTgt, mag: camZoomTgt,
+      focus: cam.focusTgt.slice(), pan: cam.panOffTgt.slice(),
+      gAz: gAzTgt, gAlt: gAltTgt, gFov: gFovTgt,
+    };
+  }
+  function restoreTourState(v, keepScene) {
+    // 表示設定 (星座・選択マーク) はツアー中だけの一時変更なので必ず戻す
+    showConst = v.showConst;
+    constBtn.classList.toggle("on", showConst);
+    showSelMark = v.showSelMark;
+    if (keepScene) return;
+    simDays = v.simDays;
+    daysPerSec = v.daysPerSec;
+    speedInput.value = Math.max(0, Math.min(100,
+      Math.round(18 * Math.log(v.daysPerSec * 86400) / Math.log(60))));
+    speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
+    setPlaying(v.playing);
+    // ビューを戻してから地上の照準を書き戻す (enterSurface が再照準するため)
+    if (v.groundView) enterSurface(v.surfaceBody);
+    else exitGround();
+    select(v.selected, false);
+    lastCenter = v.lastCenter;
+    if (!v.infoOpen) infoPanel.classList.remove("open");
+    updatePositions();
+    cam.yaw = cam.yawTgt = v.yaw;
+    cam.pitch = cam.pitchTgt = v.pitch;
+    cam.dist = cam.distTgt = v.dist;
+    camZoom = camZoomTgt = v.mag;
+    for (let i = 0; i < 3; i++) {
+      cam.focus[i] = cam.focusTgt[i] = v.focus[i];
+      cam.panOff[i] = cam.panOffTgt[i] = v.pan[i];
+    }
+    gAz = gAzTgt = v.gAz; gAlt = gAltTgt = v.gAlt; gFov = gFovTgt = v.gFov;
+  }
+
   function startTour(t, step) {
     if (!t) return;
-    // ツアーが一時的に変える設定を退避 (再入時に上書きしない)
-    if (!tourSaved) tourSaved = { showConst, showSelMark };
+    if (!tourSaved) tourSaved = captureTourState();   // 再入時は最初の状態を保つ
     tour = t;
+    tourActive = true;
     hideModals();
     setMenu(false);
     if (welcomeEl.classList.contains("open")) closeWelcome();
@@ -159,13 +203,10 @@
   }
   function endTour() {
     clearTourTimer();
+    const keepScene = !!(tour && tour.keep);
     tour = null;
-    if (tourSaved) {
-      showConst = tourSaved.showConst;
-      constBtn.classList.toggle("on", showConst);
-      showSelMark = tourSaved.showSelMark;
-      tourSaved = null;
-    }
+    tourActive = false;
+    if (tourSaved) { restoreTourState(tourSaved, keepScene); tourSaved = null; }
     tourApp.classList.remove("tourMode");
     tourBar.classList.remove("open");
     updateHint();

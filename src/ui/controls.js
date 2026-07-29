@@ -82,7 +82,9 @@
   });
 
   function endPointer(e) {
-    if (pointers.has(e.pointerId) && dragMoved < 5 && pointers.size === 1 && e.button === 0) {
+    // ツアー中は見回し・ズームだけ許し、天体の選択はさせない (シーンの注視先が変わるため)
+    if (!tourActive &&
+        pointers.has(e.pointerId) && dragMoved < 5 && pointers.size === 1 && e.button === 0) {
       if (groundView) {
         // 選択 + その方向へカメラを向けて追尾 (以後のズームでも中央に保つ)
         const hit = hitTestGround(e.clientX, e.clientY);
@@ -496,7 +498,8 @@
   });
 
   window.addEventListener("keydown", (e) => {
-    if (e.code === "Space" && e.target === document.body) {
+    // ツアー中は操作パネルを隠しているので、ショートカットだけ効くのは筋が悪い
+    if (e.code === "Space" && e.target === document.body && !tourActive) {
       e.preventDefault();
       setPlaying(!playing);
     }

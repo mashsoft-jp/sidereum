@@ -498,12 +498,20 @@
     display: none;
   }
   #tourBar.open { display: block; }
-  /* ツアー中は操作パネル・天体リスト・ヒントを引っ込め、画面を空ける */
+  /* ツアー中は操作パネル・天体リスト・ヒントを引っ込め、画面を空ける。
+     メニュー・ビュー切替・観測地・現在時刻ボタンも、シーンを壊すので隠す */
   #app.tourMode #controls,
   #app.tourMode #ctrlExpand,
   #app.tourMode #navPanel,
   #app.tourMode #navExpand,
-  #app.tourMode #hint { display: none; }
+  #app.tourMode #hint,
+  #app.tourMode #menuBtn,
+  #app.tourMode #viewMode,
+  #app.tourMode #obsSiteBar,
+  #app.tourMode #nowBtn { display: none; }
+  /* 日時は時間の経過が見えるよう表示は残し、入力だけ止める */
+  #app.tourMode #dateInput,
+  #app.tourMode #timeInput { pointer-events: none; color: var(--dim); }
   /* 自動送りの残り時間 (幅のトランジションで伸ばすので rAF は増やさない) */
   #tourProg {
     position: absolute; top: 0; left: 0; height: 2px; width: 0;
@@ -1399,6 +1407,9 @@
   //
   // カメラは Tgt 側だけを設定し、実際の移動はメインループの緩和に任せる
   // (通常操作と同じ動きで繋がる)。
+  //
+  // 終了時は開始前の状態 (日時・ビュー・カメラ・速度・選択) へ戻す。
+  // 終わった場面にそのまま留まらせたいツアーだけ、ツアー側に keep: true を書く。
   const TOURS = [
     {
       id: "scale",
@@ -2319,6 +2330,8 @@
   // 選択マーク (オレンジのリングとラベル強調) を出すか。ガイドツアーの selected は
   // 「カメラの注視先」であって利用者が選んだわけではないので、既定では出さない
   let showSelMark = true;
+  // ガイドツアー実行中。シーンを壊す操作 (天体の選択・再生の切替) を止めるのに使う
+  let tourActive = false;
   const FOV = 45 * DEG;
   // 宇宙ビューのズーム (拡大率)。距離とは別に、画角を狭めて望遠的に拡大する
   const MAG_MAX = 100;
@@ -4933,7 +4946,9 @@
   });
 
   function endPointer(e) {
-    if (pointers.has(e.pointerId) && dragMoved < 5 && pointers.size === 1 && e.button === 0) {
+    // ツアー中は見回し・ズームだけ許し、天体の選択はさせない (シーンの注視先が変わるため)
+    if (!tourActive &&
+        pointers.has(e.pointerId) && dragMoved < 5 && pointers.size === 1 && e.button === 0) {
       if (groundView) {
         // 選択 + その方向へカメラを向けて追尾 (以後のズームでも中央に保つ)
         const hit = hitTestGround(e.clientX, e.clientY);
@@ -5347,7 +5362,8 @@
   });
 
   window.addEventListener("keydown", (e) => {
-    if (e.code === "Space" && e.target === document.body) {
+    // ツアー中は操作パネルを隠しているので、ショートカットだけ効くのは筋が悪い
+    if (e.code === "Space" && e.target === document.body && !tourActive) {
       e.preventDefault();
       setPlaying(!playing);
     }
@@ -5909,11 +5925,55 @@
     renderTourUI();
     armTourTimer();
   }
+  // ツアーは日時・ビュー・カメラ・速度・選択を書き換えるので、開始前の状態を
+  // まるごと控えておき、終了時に戻す (tour.keep が真のツアーだけ戻さない)
+  function captureTourState() {
+    return {
+      showConst, showSelMark,
+      simDays, daysPerSec, playing,
+      groundView, surfaceBody,
+      selected, lastCenter,
+      infoOpen: infoPanel.classList.contains("open"),
+      yaw: cam.yawTgt, pitch: cam.pitchTgt, dist: cam.distTgt, mag: camZoomTgt,
+      focus: cam.focusTgt.slice(), pan: cam.panOffTgt.slice(),
+      gAz: gAzTgt, gAlt: gAltTgt, gFov: gFovTgt,
+    };
+  }
+  function restoreTourState(v, keepScene) {
+    // 表示設定 (星座・選択マーク) はツアー中だけの一時変更なので必ず戻す
+    showConst = v.showConst;
+    constBtn.classList.toggle("on", showConst);
+    showSelMark = v.showSelMark;
+    if (keepScene) return;
+    simDays = v.simDays;
+    daysPerSec = v.daysPerSec;
+    speedInput.value = Math.max(0, Math.min(100,
+      Math.round(18 * Math.log(v.daysPerSec * 86400) / Math.log(60))));
+    speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
+    setPlaying(v.playing);
+    // ビューを戻してから地上の照準を書き戻す (enterSurface が再照準するため)
+    if (v.groundView) enterSurface(v.surfaceBody);
+    else exitGround();
+    select(v.selected, false);
+    lastCenter = v.lastCenter;
+    if (!v.infoOpen) infoPanel.classList.remove("open");
+    updatePositions();
+    cam.yaw = cam.yawTgt = v.yaw;
+    cam.pitch = cam.pitchTgt = v.pitch;
+    cam.dist = cam.distTgt = v.dist;
+    camZoom = camZoomTgt = v.mag;
+    for (let i = 0; i < 3; i++) {
+      cam.focus[i] = cam.focusTgt[i] = v.focus[i];
+      cam.panOff[i] = cam.panOffTgt[i] = v.pan[i];
+    }
+    gAz = gAzTgt = v.gAz; gAlt = gAltTgt = v.gAlt; gFov = gFovTgt = v.gFov;
+  }
+
   function startTour(t, step) {
     if (!t) return;
-    // ツアーが一時的に変える設定を退避 (再入時に上書きしない)
-    if (!tourSaved) tourSaved = { showConst, showSelMark };
+    if (!tourSaved) tourSaved = captureTourState();   // 再入時は最初の状態を保つ
     tour = t;
+    tourActive = true;
     hideModals();
     setMenu(false);
     if (welcomeEl.classList.contains("open")) closeWelcome();
@@ -5923,13 +5983,10 @@
   }
   function endTour() {
     clearTourTimer();
+    const keepScene = !!(tour && tour.keep);
     tour = null;
-    if (tourSaved) {
-      showConst = tourSaved.showConst;
-      constBtn.classList.toggle("on", showConst);
-      showSelMark = tourSaved.showSelMark;
-      tourSaved = null;
-    }
+    tourActive = false;
+    if (tourSaved) { restoreTourState(tourSaved, keepScene); tourSaved = null; }
     tourApp.classList.remove("tourMode");
     tourBar.classList.remove("open");
     updateHint();

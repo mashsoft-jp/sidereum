@@ -482,12 +482,20 @@
     display: none;
   }
   #tourBar.open { display: block; }
-  /* ツアー中は操作パネル・天体リスト・ヒントを引っ込め、画面を空ける */
+  /* ツアー中は操作パネル・天体リスト・ヒントを引っ込め、画面を空ける。
+     メニュー・ビュー切替・観測地・現在時刻ボタンも、シーンを壊すので隠す */
   #app.tourMode #controls,
   #app.tourMode #ctrlExpand,
   #app.tourMode #navPanel,
   #app.tourMode #navExpand,
-  #app.tourMode #hint { display: none; }
+  #app.tourMode #hint,
+  #app.tourMode #menuBtn,
+  #app.tourMode #viewMode,
+  #app.tourMode #obsSiteBar,
+  #app.tourMode #nowBtn { display: none; }
+  /* 日時は時間の経過が見えるよう表示は残し、入力だけ止める */
+  #app.tourMode #dateInput,
+  #app.tourMode #timeInput { pointer-events: none; color: var(--dim); }
   /* 自動送りの残り時間 (幅のトランジションで伸ばすので rAF は増やさない) */
   #tourProg {
     position: absolute; top: 0; left: 0; height: 2px; width: 0;
