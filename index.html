@@ -3646,8 +3646,15 @@
       gl.enableVertexAttribArray(billP.a.aCorner);
       gl.vertexAttribPointer(billP.a.aCorner, 2, gl.FLOAT, false, 0, 0);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
 
-      // --- 彗星の尾・コマ (太陽接近時のみ, 加算) ---
+    // --- 彗星の尾・コマ (太陽接近時のみ, 加算) ---
+    // 直前の太陽コロナが blendFunc を ONE,ONE にしたままなので明示的に指定し直す。
+    // コマ・尾のシェーダは alpha=0 を出すので現状は両者の結果が一致するが、
+    // 状態を引き継いだままにすると地上ビュー (ONE,ONE_MINUS_SRC_ALPHA) と
+    // 食い違ったまま気づけない
+    {
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       for (const c of COMETS) {
         const act = cometAct(c);
         if (act < 0.02) continue;
