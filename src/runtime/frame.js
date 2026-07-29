@@ -1,0 +1,253 @@
+  // ---------- オーバーレイ (ラベル・選択リング) ----------
+  function drawOverlay() {
+    octx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    octx.clearRect(0, 0, W, H);
+    octx.textAlign = "center";
+    octx.font = '10.5px "Avenir Next","Hiragino Sans",sans-serif';
+
+    for (const b of [SUN, ...PLANETS]) {
+      const s = screenPos.get(b.key);
+      if (!s || s.x < -40 || s.x > W + 40 || s.y < -40 || s.y > H + 40) continue;
+      if (s.r > H * 0.6) continue;
+      if (selected === b) {
+        octx.beginPath();
+        octx.arc(s.x, s.y, Math.max(s.r, 3) + 6, 0, 2 * Math.PI);
+        octx.strokeStyle = "rgba(242,178,62,0.9)";
+        octx.lineWidth = 1.2;
+        octx.stroke();
+      }
+      if (b.showLabel) {
+        octx.fillStyle = selected === b ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.75)";
+        octx.fillText(bName(b), s.x, s.y - Math.max(s.r, 3) - 9);
+      }
+    }
+
+    // 衛星ラベル (母天体から画面上で離れている、または十分拡大している時のみ)
+    for (const s of SATELLITES) {
+      const sp = screenPos.get(s.key);
+      if (!sp || sp.r >= H * 0.6) continue;
+      if (sp.x < -40 || sp.x > W + 40 || sp.y < -40 || sp.y > H + 40) continue;
+      const pp = screenPos.get(s.parent);
+      const away = pp ? Math.hypot(sp.x - pp.x, sp.y - pp.y) > 16 : true;
+      if (s.showLabel && (sp.r > 2 || away)) {
+        octx.fillStyle = selected === s ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.6)";
+        octx.fillText(bName(s), sp.x, sp.y - Math.max(sp.r, 3) - 8);
+      }
+      if (selected === s) {
+        octx.beginPath();
+        octx.arc(sp.x, sp.y, Math.max(sp.r, 3) + 6, 0, 2 * Math.PI);
+        octx.strokeStyle = "rgba(242,178,62,0.9)";
+        octx.lineWidth = 1.2;
+        octx.stroke();
+      }
+    }
+
+    // 星座名 (背景天球上のラベル)
+    if (showConst) {
+      octx.fillStyle = "rgba(150,178,224,0.5)";
+      octx.font = '11px "Avenir Next","Hiragino Sans",sans-serif';
+      for (const c of CONST_LABELS) {
+        const w = VP[3] * c.wx + VP[7] * c.wy + VP[11] * c.wz + VP[15];
+        if (w <= 0.001) continue;
+        const x = (VP[0] * c.wx + VP[4] * c.wy + VP[8] * c.wz + VP[12]) / w;
+        const y = (VP[1] * c.wx + VP[5] * c.wy + VP[9] * c.wz + VP[13]) / w;
+        const px = (x * 0.5 + 0.5) * W, py = (1 - (y * 0.5 + 0.5)) * H;
+        if (px < 0 || px > W || py < 0 || py > H) continue;
+        octx.fillText(lang === "ja" ? c.ja : c.en, px, py);
+      }
+      // 黄道ラベル: 画面中央に最も近い可視点に1つ
+      let bx = 0, by = 0, bd = Infinity;
+      for (let i = 0; i + 2 < ECL_WORLD.length; i += 3) {
+        const X = ECL_WORLD[i], Y = ECL_WORLD[i + 1], Z = ECL_WORLD[i + 2];
+        const w = VP[3] * X + VP[7] * Y + VP[11] * Z + VP[15];
+        if (w <= 0.001) continue;
+        const px = ((VP[0] * X + VP[4] * Y + VP[8] * Z + VP[12]) / w * 0.5 + 0.5) * W;
+        const py = (1 - ((VP[1] * X + VP[5] * Y + VP[9] * Z + VP[13]) / w * 0.5 + 0.5)) * H;
+        if (px < 0 || px > W || py < 0 || py > H) continue;
+        const d = (px - W / 2) ** 2 + (py - H / 2) ** 2;
+        if (d < bd) { bd = d; bx = px; by = py; }
+      }
+      if (bd < Infinity) {
+        octx.fillStyle = "rgba(226,178,110,0.75)";
+        octx.fillText(lang === "ja" ? "黄道" : "Ecliptic", bx, by - 6);
+      }
+    }
+  }
+
+  // ---------- 時刻表示 & 日付入力 (表示はローカル時刻) ----------
+  const dateInput = document.getElementById("dateInput");
+  const timeText = document.getElementById("timeText");
+  const tzText = document.getElementById("tzText");
+  const pad2 = (n) => String(n).padStart(2, "0");
+  // タイムゾーン略称 (JST / GMT / BST など)。日付・言語ごとにキャッシュ (夏時間対応)
+  let tzKey = "", tzVal = "";
+  function tzAbbr(d) {
+    const key = lang + "|" + d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+    if (key !== tzKey) {
+      tzKey = key;
+      try {
+        tzVal = new Intl.DateTimeFormat(lang === "ja" ? "ja-JP" : "en", { timeZoneName: "short" })
+          .formatToParts(d).find((p) => p.type === "timeZoneName").value || "";
+      } catch (e) {
+        tzVal = "";
+      }
+    }
+    return tzVal;
+  }
+  // DOM への書き込みは値が変わった時だけ行う (毎フレームのレイアウト誘発を防ぐ)
+  let lastDateStr = "", lastTimeStr = "", lastTzStr = "";
+  function updateClock() {
+    const d = new Date(J2000 + simDays * DAY_MS);
+    const ds = String(d.getFullYear()).padStart(4, "0") +
+      "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+    // 編集中は上書きしない
+    if (document.activeElement !== dateInput && ds !== lastDateStr) {
+      dateInput.value = ds;
+      lastDateStr = ds;
+    }
+    // 再生中はコロンを実時間1秒周期で点滅 (前半0.5秒は表示、後半は半角空白)。
+    // font-num は等幅なので ":" ↔ " " で桁位置はずれない。停止中は常に表示
+    const colon = (playing && Math.floor(Date.now() / 500) % 2 === 1) ? " " : ":";
+    const ts = pad2(d.getHours()) + colon + pad2(d.getMinutes());
+    if (ts !== lastTimeStr) {
+      timeText.textContent = ts;
+      lastTimeStr = ts;
+    }
+    const tz = tzAbbr(d);
+    if (tz !== lastTzStr) {
+      tzText.textContent = tz;
+      lastTzStr = tz;
+    }
+  }
+  // 年を4桁打ち終える前にも change は発火する ("1" の時点で 0001 年として発火)。
+  // そこで確定・補正すると入力途中の年が勝手に書き換わってしまうため、
+  // 4桁揃うまでは何もしない。フォーカスも奪わない (奪うと続きが打てない)
+  dateInput.addEventListener("change", () => {
+    const v = dateInput.value;                // "YYYY-MM-DD"
+    if (!v) return;
+    const [y, mo, dd] = v.split("-").map(Number);
+    if (!(y >= 1000)) return;                 // 入力途中 (年が4桁未満)
+    let t = new Date(y, mo - 1, dd).getTime();   // ローカル 0時
+    t = Math.min(Math.max(t, Date.UTC(1900, 0, 1)), Date.UTC(2199, 11, 31));
+    simDays = (t - J2000) / DAY_MS;
+  });
+  // Enter で入力を終える
+  dateInput.addEventListener("keydown", (e) => { if (e.key === "Enter") dateInput.blur(); });
+  // 入力欄を離れたら、実際の日時を必ず書き戻す (範囲外や打ちかけの表示を正す)
+  dateInput.addEventListener("blur", () => { lastDateStr = ""; });
+  document.getElementById("nowBtn").addEventListener("click", () => {
+    simDays = (Date.now() - J2000) / DAY_MS;
+  });
+  function fmtDays(v) {
+    const u = T().u;
+    if (v >= 365.25) return (v / 365.25).toFixed(1) + u.yr;
+    if (v >= 10) return Math.round(v) + u.d;
+    if (v >= 1) return v.toFixed(1) + u.d;
+    if (v >= 1 / 24) return (v * 24).toFixed(1) + u.h;
+    if (v >= 1 / 1440) return Math.round(v * 1440) + u.min;
+    return Math.round(v * 86400) + u.s;
+  }
+
+  // ---------- メインループ ----------
+  let last = performance.now();
+  let lastSettingsSave = 0;
+  let followKey = null;                   // 前フレームで追従していた天体
+  const followPrev = [0, 0, 0];
+  function frame(now) {
+    const raw = (now - last) / 1000;
+    last = now;
+    const dtc = Math.min(0.5, raw);       // カメラ緩和用 (低 fps でも追従)
+    // シミュレーション時刻は「実経過時間 × 再生速度」の連続関数にする。
+    // タブ非表示中は rAF が止まるが、復帰フレームで隠れていた時間ぶんを
+    // 一括で進める (クランプすると 1秒=1秒 でも時計が現実から遅れていく)
+    if (playing) simDays += daysPerSec * raw;
+
+    if (selected && followKey === selected.key) {
+      const t = posW.get(selected.key);
+      followPrev[0] = t[0]; followPrev[1] = t[1]; followPrev[2] = t[2];
+    }
+
+    updatePositions();
+
+    // 注視点追従 & ズーム・角度の緩和
+    if (selected) {
+      const t = posW.get(selected.key);
+      if (followKey === selected.key) {
+        // 天体の公転移動分は即時追従 (緩和すると実サイズ時に遅れで見失う)
+        cam.focus[0] += t[0] - followPrev[0];
+        cam.focus[1] += t[1] - followPrev[1];
+        cam.focus[2] += t[2] - followPrev[2];
+      }
+      followKey = selected.key;
+      lastCenter = selected;
+      cam.focusTgt[0] = t[0]; cam.focusTgt[1] = t[1]; cam.focusTgt[2] = t[2];
+    } else {
+      followKey = null;
+    }
+    const k = 1 - Math.exp(-dtc * 5.5);
+    cam.focus[0] += (cam.focusTgt[0] - cam.focus[0]) * k;
+    cam.focus[1] += (cam.focusTgt[1] - cam.focus[1]) * k;
+    cam.focus[2] += (cam.focusTgt[2] - cam.focus[2]) * k;
+    cam.panOff[0] += (cam.panOffTgt[0] - cam.panOff[0]) * k;
+    cam.panOff[1] += (cam.panOffTgt[1] - cam.panOff[1]) * k;
+    cam.panOff[2] += (cam.panOffTgt[2] - cam.panOff[2]) * k;
+    cam.distTgt = Math.max(minDist(), Math.min(1400, cam.distTgt));
+    cam.dist += (cam.distTgt - cam.dist) * k;
+    camZoomTgt = Math.max(1, Math.min(MAG_MAX, camZoomTgt));
+    camZoom += (camZoomTgt - camZoom) * k;
+    let dyaw = (cam.yawTgt - cam.yaw) % (2 * Math.PI);
+    if (dyaw > Math.PI) dyaw -= 2 * Math.PI;
+    if (dyaw < -Math.PI) dyaw += 2 * Math.PI;
+    cam.yaw += dyaw * k;
+    cam.pitch += (cam.pitchTgt - cam.pitch) * k;
+    // 地上ビューのカメラ緩和 (目標方位は aimGroundAt で現在値の近傍に正規化済み)
+    if (groundView) {
+      buildObsFrame();   // 追尾計算 (surfaceAltAz) が現在フレームの観測者基底を使えるように
+      // 選択が変わって天体別の画角下限が上がった場合は目標を追従させる
+      const mf = gMinFov();
+      if (gFovTgt < mf) gFovTgt = mf;
+      // 自動追尾: 日周運動での移動分は即時反映し、残差のみ緩和で追従
+      // (緩和だけだと定常遅れが高倍率の視野幅を超え、天体が視野外に留まるため)
+      if (gTrack) {
+        const b = selected || lastCenter;
+        if (b && b.key !== surfaceBody) {
+          const c = surfaceAltAz(b);
+          const az = c.az * DEG, alt = c.alt * DEG;
+          if (gTrkKey === b.key) {
+            // 前フレームからの移動分は即時追従
+            let dm = (az - gTrkAz) % (2 * Math.PI);
+            if (dm > Math.PI) dm -= 2 * Math.PI;
+            if (dm < -Math.PI) dm += 2 * Math.PI;
+            gAz += dm;
+            gAlt += alt - gTrkAlt;
+          }
+          // 残差 (追尾開始前に生じたずれ等) は目標へ寄せて緩和で収束させる
+          let dr = (az - gAz) % (2 * Math.PI);
+          if (dr > Math.PI) dr -= 2 * Math.PI;
+          if (dr < -Math.PI) dr += 2 * Math.PI;
+          gAzTgt = gAz + dr;
+          gAltTgt = Math.max(-1.4, Math.min(GALT_MAX, alt));
+          gTrkKey = b.key; gTrkAz = az; gTrkAlt = alt;
+        }
+      } else {
+        gTrkKey = "";
+      }
+    }
+    gAz += (gAzTgt - gAz) * k;
+    gAlt += (gAltTgt - gAlt) * k;
+    gFov += (gFovTgt - gFov) * k;
+
+    render(now / 1000);
+    updateClock();
+    updateZoomUI();
+    updateMagUI();
+    updateAngleUI();
+    updateObs();
+    updateGroundUI();
+    if (now - lastSettingsSave > 2000) {
+      lastSettingsSave = now;
+      saveSettings();
+    }
+    requestAnimationFrame(frame);
+  }
+

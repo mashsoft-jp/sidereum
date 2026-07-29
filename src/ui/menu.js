@@ -1,0 +1,198 @@
+  // ---------- ハンバーガーメニュー & ライセンス表示 ----------
+  const menuBtn = document.getElementById("menuBtn");
+  const menuEl = document.getElementById("menu");
+  const menuLangBtn = document.getElementById("menuLang");
+  const menuUnitBtn = document.getElementById("menuUnit");
+  const menuAboutBtn = document.getElementById("menuAbout");
+  const aboutEl = document.getElementById("about");
+
+  // 距離単位の切替 (km ⇔ マイル)
+  function updateUnitLabel() {
+    menuUnitBtn.textContent = distUnit === "km" ? T().menuUnitToMi : T().menuUnitToKm;
+  }
+  menuUnitBtn.addEventListener("click", () => {
+    distUnit = distUnit === "km" ? "mi" : "km";
+    localStorage.setItem("ssUnit", distUnit);
+    updateUnitLabel();
+    setMenu(false);
+  });
+
+  // 風景 (地面の質感・地平の稜線・空の色) の表示切替。地上・月面ビューのみ効く
+  const menuTerrainBtn = document.getElementById("menuTerrain");
+  function updateTerrainLabel() {
+    menuTerrainBtn.textContent = showTerrain ? T().menuTerrainOff : T().menuTerrainOn;
+  }
+  menuTerrainBtn.addEventListener("click", () => {
+    showTerrain = !showTerrain;
+    try { localStorage.setItem("ssTerrain", showTerrain ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
+    updateTerrainLabel();
+    setMenu(false);
+  });
+
+  // 全画面表示 (Fullscreen API)。iPhone の Safari は非対応のためボタン自体を隠す
+  const menuFsBtn = document.getElementById("menuFullscreen");
+  const docEl = document.documentElement;
+  const fsSupported = !!(docEl.requestFullscreen || docEl.webkitRequestFullscreen);
+  if (!fsSupported) menuFsBtn.style.display = "none";
+  const isFs = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  function updateFsLabel() {
+    menuFsBtn.textContent = isFs() ? T().menuFsExit : T().menuFs;
+  }
+  menuFsBtn.addEventListener("click", () => {
+    if (isFs()) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    } else {
+      const p = (docEl.requestFullscreen || docEl.webkitRequestFullscreen).call(docEl);
+      if (p && p.catch) p.catch(() => {});   // ジェスチャ判定などで拒否されても静かに無視
+    }
+    setMenu(false);
+  });
+  document.addEventListener("fullscreenchange", updateFsLabel);
+  document.addEventListener("webkitfullscreenchange", updateFsLabel);
+
+  // 配信中ビルドの識別 (Last-Modified ヘッダ由来)。キャッシュで旧ビルドを
+  // 見ていないかを実機で確認できるようにする
+  (() => {
+    const d = new Date(document.lastModified);
+    if (isNaN(d)) return;
+    const p2 = n => String(n).padStart(2, "0");
+    document.getElementById("menuBuild").textContent =
+      `build ${d.getFullYear()}/${p2(d.getMonth() + 1)}/${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+  })();
+
+  // 天体リストの表示/非表示 (« で左へ引っ込み、左端の » で出てくる。モバイルは初期非表示)
+  let navVisible = !window.matchMedia("(max-width: 720px)").matches;
+  const navCollapseBtn = document.getElementById("navCollapse");
+  const navExpandBtn = document.getElementById("navExpand");
+  function applyNavVisible() {
+    document.getElementById("app").classList.toggle("navHidden", !navVisible);
+    navCollapseBtn.title = T().menuNavHide;
+    navExpandBtn.title = T().menuNavShow;
+  }
+  navCollapseBtn.addEventListener("click", () => { navVisible = false; applyNavVisible(); });
+  navExpandBtn.addEventListener("click", () => { navVisible = true; applyNavVisible(); });
+
+  // ---------- シーン共有URL ----------
+  // 日時・選択天体・カメラ (ズーム/角度/方位)・速度・再生状態を URL に載せる。
+  // バックエンド不要。起動時に applyShareURL() で復元する。
+  const menuShareBtn = document.getElementById("menuShare");
+  function buildShareURL() {
+    const p = new URLSearchParams();
+    p.set("d", new Date(J2000 + simDays * DAY_MS).toISOString().slice(0, 16));  // UTC 分精度
+    if (selected) p.set("sel", selected.key);
+    p.set("z", cam.distTgt.toPrecision(6));   // world単位は桁が小さいので有効桁で保持
+    if (camZoomTgt > 1.001) p.set("mag", camZoomTgt.toPrecision(4));
+    p.set("a", cam.pitchTgt.toFixed(4));
+    p.set("y", cam.yawTgt.toFixed(4));
+    p.set("spd", daysPerSec.toPrecision(6));
+    p.set("play", playing ? "1" : "0");
+    return location.origin + location.pathname + "?" + p.toString();
+  }
+  function applyShareURL() {
+    const q = new URLSearchParams(location.search);
+    if (!q.has("d") && !q.has("sel") && !q.has("z")) return false;
+    const d = q.get("d");
+    if (d) {
+      let iso = d;
+      if (iso.length === 10) iso += "T00:00:00";
+      else if (iso.length === 16) iso += ":00";
+      if (!/[zZ]$/.test(iso)) iso += "Z";
+      const t = Date.parse(iso);
+      if (isFinite(t)) simDays = (t - J2000) / DAY_MS;
+    }
+    const spd = parseFloat(q.get("spd"));
+    if (isFinite(spd) && spd > 0) {
+      daysPerSec = spd;
+      speedInput.value = Math.max(0, Math.min(100, Math.round(18 * Math.log(spd * 86400) / Math.log(60))));
+      speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
+    }
+    if (q.get("play") === "0") setPlaying(false);
+    else if (q.get("play") === "1") setPlaying(true);
+    const selKey = q.get("sel");
+    const selBody = selKey ? BODY_BY_KEY.get(selKey) : null;
+    if (selBody) {
+      select(selBody, false);           // fly させず、カメラは URL の値で直接復元
+      updatePositions();
+      const w = posW.get(selBody.key);
+      cam.focusTgt[0] = w[0]; cam.focusTgt[1] = w[1]; cam.focusTgt[2] = w[2];
+      cam.focus[0] = w[0]; cam.focus[1] = w[1]; cam.focus[2] = w[2];
+    }
+    const z = parseFloat(q.get("z")), a = parseFloat(q.get("a")), y = parseFloat(q.get("y"));
+    if (isFinite(z)) { cam.distTgt = Math.min(1400, z); cam.dist = cam.distTgt; }
+    const mg = parseFloat(q.get("mag"));
+    if (isFinite(mg) && mg >= 1) { camZoomTgt = Math.min(MAG_MAX, mg); camZoom = camZoomTgt; }
+    if (isFinite(a)) { cam.pitchTgt = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, a)); cam.pitch = cam.pitchTgt; }
+    if (isFinite(y)) { cam.yawTgt = y; cam.yaw = y; }
+    return true;
+  }
+  let shareResetTimer = 0;
+  menuShareBtn.addEventListener("click", () => {
+    const url = buildShareURL();
+    const done = () => {
+      menuShareBtn.textContent = T().menuShareDone;
+      clearTimeout(shareResetTimer);
+      shareResetTimer = setTimeout(() => { menuShareBtn.textContent = T().menuShare; }, 1600);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done, () => { prompt("URL", url); });
+    } else {
+      prompt("URL", url);
+    }
+  });
+
+  function setMenu(open) {
+    menuEl.classList.toggle("open", open);
+    menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  menuBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setMenu(!menuEl.classList.contains("open"));
+  });
+  // メニュー外クリックで閉じる
+  document.addEventListener("pointerdown", (e) => {
+    if (!menuEl.contains(e.target) && e.target !== menuBtn) setMenu(false);
+  });
+
+  const CREDIT_ORDER = ["mercury", "venus", "earth", "moon", "mars", "jupiter", "pluto", "ceres", "vesta"];
+  function buildAbout() {
+    const rows = CREDIT_ORDER
+      .map((k) => `<tr><td>${bName(BODY_BY_KEY.get(k))}</td><td>${IMG_CREDIT[k]}</td></tr>`)
+      .join("");
+    const c = lang === "ja" ? {
+      lic: "ライセンス",
+      licBody: '© 2026 <a href="https://www.mashsoft.co.jp" target="_blank" rel="noopener">Mashsoft Inc.</a> — コードは MIT License で公開されています。',
+      img: "画像クレジット",
+      imgBody: "以下の天体の表面には、NASA / USGS のパブリックドメイン画像を使用しています。",
+      proc: "太陽・土星 (環を含む)・天王星・海王星・パラス・ジュノーは、シェーダによる生成テクスチャです (実写ではありません)。",
+      data: "データと精度",
+      dataBody: "軌道間隔・天体の大きさとも実寸比で表示しています。天体位置は J2000 平均軌道要素 (NASA JPL 公表値) にもとづくケプラー軌道の近似計算です。教育・可視化目的であり、天文計算・観測用途の精度はありません。小惑星の軌道上の位相は概略です。恒星 (宇宙ビューの背景・地上ビューとも) は Yale Bright Star Catalogue 第5改訂版 (Hoffleit & Warren 1991, パブリックドメイン) の実位置・実等級 (6.5等まで・約8,400星)、色は B-V 色指数にもとづく近似です。星座線は d3-celestial (Olaf Frohn, BSD-2-Clause) を使用しています。月面ビューは潮汐ロック近似 (表側が地球を向く・月の極 ≈ 黄道北) によるもので、秤動などは省略しています。",
+      disc: "本アプリは NASA・USGS とは無関係であり、両機関による承認・推奨を意味するものではありません。",
+    } : {
+      lic: "License",
+      licBody: '© 2026 <a href="https://www.mashsoft.co.jp" target="_blank" rel="noopener">Mashsoft Inc.</a> — The code is released under the MIT License.',
+      img: "Image credits",
+      imgBody: "The surfaces of the following bodies use public-domain imagery from NASA / USGS.",
+      proc: "The Sun, Saturn (incl. rings), Uranus, Neptune, Pallas and Juno use procedurally generated textures (not actual imagery).",
+      data: "Data & accuracy",
+      dataBody: "Orbital spacing and body sizes are displayed to actual scale. Positions are approximated with Keplerian orbits based on J2000 mean orbital elements published by NASA JPL. This app is for education and visualization; it is not suitable for astronomical or observational use. Orbital phases of the asteroids are approximate. Stars (both the space-view background and the ground view) use real positions and magnitudes (mag ≤ 6.5, ~8,400 stars) from the Yale Bright Star Catalogue, 5th Revised Ed. (Hoffleit & Warren 1991, public domain); colors are approximated from the B-V index. Constellation lines are from d3-celestial (Olaf Frohn, BSD-2-Clause). The Moon-surface view uses a tidal-lock approximation (near side faces Earth; lunar pole ≈ ecliptic north) and omits libration.",
+      disc: "This app is not affiliated with, nor endorsed by, NASA or USGS.",
+    };
+    aboutEl.innerHTML =
+      `<button id="aboutClose" aria-label="close">✕</button>` +
+      `<h2>SIDEREUM<span class="yomi">${lang === "ja" ? "(シデレウム β版)" : "(Beta)"}</span></h2>` +
+      `<h3>${c.lic}</h3><p>${c.licBody}</p>` +
+      `<h3>${c.img}</h3><p>${c.imgBody}</p>` +
+      `<table><tbody>${rows}</tbody></table>` +
+      `<p>${c.proc}</p>` +
+      `<h3>${c.data}</h3><p>${c.dataBody}</p><p>${c.disc}</p>`;
+  }
+  menuAboutBtn.addEventListener("click", () => {
+    setMenu(false);
+    buildAbout();
+    aboutEl.classList.add("open");
+    modalScrim.classList.add("on");
+  });
+  aboutEl.addEventListener("click", (e) => {
+    if (e.target.id === "aboutClose") hideModals();
+  });
+

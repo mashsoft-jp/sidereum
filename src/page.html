@@ -1,0 +1,177 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04060e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<!-- black-translucent は不可: iOS のバグでセッションによって WebView が
+     「画面高 − ステータスバー」サイズで生成され、下部 59pt が描画不能になる -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Sidereum">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Sidereum (シデレウム β版) — 見上げる空から、太陽系の果てまで</title>
+<style>
+@@include:styles.css@@
+</style>
+
+<div id="app">
+  <canvas id="gl" aria-label="太陽系 3D シミュレーション"></canvas>
+  <canvas id="overlay"></canvas>
+  <div id="noGL">お使いの環境では WebGL が利用できないため、<br>3D 表示を開始できませんでした。</div>
+
+  <header id="title" class="hud">
+    <button id="menuBtn" aria-label="メニュー" aria-haspopup="true">☰</button>
+    <h1>SIDEREUM<span class="beta">(β版)</span></h1>
+  </header>
+
+  <div id="viewMode" role="group" aria-label="ビュー切替">
+    <button id="vmSpace" class="on">宇宙</button>
+    <button id="vmGround">地上</button>
+    <button id="vmMoon">月面</button>
+  </div>
+
+  <!-- 並び順: よく使う操作 (全画面・共有) → 環境設定 (単位・言語) → 情報。観測地は別枠 -->
+  <div id="menu" class="hud" role="menu">
+    <button id="menuHelp" role="menuitem"></button>
+    <button id="menuTerrain" role="menuitem"></button>
+    <button id="menuFullscreen" role="menuitem"></button>
+    <button id="menuShare" role="menuitem"></button>
+    <button id="menuUnit" role="menuitem"></button>
+    <button id="menuLang" role="menuitem"></button>
+    <button id="menuAbout" role="menuitem"></button>
+    <div id="menuBuild"></div>
+  </div>
+
+  <!-- 観測地 (地上=地球の観測地 / 月面=月面地点)。ハンバーガーと天体リストの間に配置 -->
+  <div id="obsSiteBar">
+    <button id="obsSiteChip" class="hud" aria-haspopup="true" aria-expanded="false"></button>
+    <div id="obsSitePop" class="hud" hidden>
+      <div id="obsLoc">
+        <select id="obsCity" aria-label="都市"></select>
+        <span class="obsField">
+          <input id="obsLat" type="number" step="0.1" min="0" max="90" aria-label="緯度">
+          <button id="obsNS" class="obsHemi" type="button"></button>
+        </span>
+        <span class="obsField">
+          <input id="obsLon" type="number" step="0.1" min="0" max="180" aria-label="経度">
+          <button id="obsEW" class="obsHemi" type="button"></button>
+        </span>
+        <button id="obsGeo"></button>
+      </div>
+      <div id="moonSiteRow" class="moonOnly">
+        <canvas id="moonMap" aria-label="月の表側と観測地点"></canvas>
+        <select id="moonSite" aria-label="月面の観測地点"></select>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalScrim"></div>
+  <aside id="about" class="hud" aria-modal="true"></aside>
+  <aside id="howto" class="hud" aria-modal="true"></aside>
+  <div id="welcome"></div>
+
+  <div id="navPanel" class="hud">
+    <button id="navCollapse" aria-label="リストを隠す">«</button>
+    <div id="masterToggles">
+      <button id="orbitsBtn" class="on">軌道</button>
+      <button id="labelsBtn" class="on">名前</button>
+      <button id="constBtn" class="on">星座</button>
+    </div>
+    <nav id="nav" aria-label="天体を選択"></nav>
+  </div>
+  <button id="navExpand" aria-label="リストを表示">»</button>
+
+  <div id="clock" class="hud">
+    <div class="dtrow">
+      <input type="date" id="dateInput" min="1900-01-01" max="2199-12-31" aria-label="日付を指定">
+      <span class="timeRow"><span id="timeText">--:--</span><span id="tzText"></span></span>
+    </div>
+    <button id="nowBtn">現在時刻に合わせる</button>
+  </div>
+
+  <aside id="info" class="hud" aria-live="polite">
+    <button id="closeInfo" aria-label="閉じる">✕</button>
+    <p class="eyebrow" id="infoEyebrow"></p>
+    <h2 id="infoName"></h2>
+    <div id="infoTabs">
+      <button id="tabFacts" class="on"></button>
+      <button id="tabObs"></button>
+    </div>
+    <table><tbody id="infoRows"></tbody></table>
+    <p class="fact" id="infoFact"></p>
+    <p class="credit" id="infoCredit"></p>
+  </aside>
+
+  <div id="hint">ドラッグで回転 ・ ホイール / ピンチでズーム (Shift+で距離) ・ 天体クリックで接近</div>
+
+  <footer id="controls" class="hud">
+    <button id="ctrlCollapse" aria-label="操作パネルを隠す">⌄</button>
+    <button id="play" class="primary"><span id="playIcon"><svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="2.4" y="1.8" width="2.6" height="8.4" rx="0.7"/><rect x="7" y="1.8" width="2.6" height="8.4" rx="0.7"/></svg></span><span id="playLabel">停止</span></button>
+    <label class="slider" id="speedLabel" for="speed">速度</label>
+    <button id="speedDown" class="step" aria-label="遅くする">−</button>
+    <input type="range" id="speed" min="0" max="100" value="0" aria-label="時間の速さ">
+    <button id="speedUp" class="step" aria-label="速くする">＋</button>
+    <span id="speedVal"></span>
+
+    <!-- カメラ視点プルダウン (距離・ズームの左横、col1 を2行ぶん占有) -->
+    <select id="camSelect" class="spaceOnly" aria-label="カメラ視点">
+      <option value="" selected>カメラ</option>
+      <option value="top">真上</option>
+      <option value="def">デフォルト</option>
+      <option value="side">真横</option>
+      <option value="reset">全体表示</option>
+    </select>
+    <span class="camGap"></span>
+    <span class="slider spaceOnly" id="magLabel">ズーム</span>
+    <button id="magOut" class="step spaceOnly" aria-label="ズームアウト">−</button>
+    <input type="range" id="mag" class="spaceOnly" min="0" max="100" value="0" aria-label="拡大率">
+    <button id="magIn" class="step spaceOnly" aria-label="ズームイン">＋</button>
+    <span id="magVal" class="spaceOnly"></span>
+
+    <span class="camGap"></span>
+    <span class="slider spaceOnly" id="zoomLabel">距離</span>
+    <button id="zoomOut" class="step spaceOnly" aria-label="遠ざける">−</button>
+    <input type="range" id="zoom" class="spaceOnly" min="0" max="100" value="40" aria-label="注視点との距離">
+    <button id="zoomIn" class="step spaceOnly" aria-label="近づける">＋</button>
+    <span id="zoomVal" class="spaceOnly"></span>
+
+    <!-- カメラ俯角の縦スライダー (地上ビューの「高度」と同じ右端カラム) -->
+    <div id="angleCell" class="spaceOnly">
+      <span id="angleLabel">角度</span>
+      <button id="angleUp" class="step" aria-label="上から見おろす">▲</button>
+      <input type="range" id="angle" min="-90" max="90" value="20" aria-label="カメラ俯角">
+      <button id="angleDown" class="step" aria-label="横から見る">▼</button>
+      <span id="angleVal"></span>
+    </div>
+
+    <!-- 地上ビュー用 -->
+    <span class="groundOnly"></span>
+    <span class="slider groundOnly" id="gFovLabel">ズーム</span>
+    <button id="gFovOut" class="step groundOnly" aria-label="ズームアウト">−</button>
+    <input type="range" id="gFov" class="groundOnly" min="0" max="100" value="43" aria-label="ズーム">
+    <button id="gFovIn" class="step groundOnly" aria-label="ズームイン">＋</button>
+    <span id="gFovVal" class="groundOnly"></span>
+
+    <span class="groundOnly"></span>
+    <span class="slider groundOnly" id="gAzLabel">方位</span>
+    <button id="gAzLeft" class="step groundOnly" aria-label="左へ回す">◀</button>
+    <svg id="gAzTape" class="groundOnly" viewBox="-90 -22 180 36" aria-hidden="true"></svg>
+    <button id="gAzRight" class="step groundOnly" aria-label="右へ回す">▶</button>
+    <span id="gAzDir" class="groundOnly"></span>
+
+    <div id="gAltCell" class="groundOnly">
+      <span id="gAltLabelTop">高度</span>
+      <button id="gAltUp" class="step" aria-label="上を向く">▲</button>
+      <input type="range" id="gAlt" min="-80" max="90" value="30" aria-label="高度">
+      <button id="gAltDown" class="step" aria-label="下を向く">▼</button>
+      <span id="gAltVal"></span>
+    </div>
+  </footer>
+
+  <button id="ctrlExpand" aria-label="操作パネルを表示">⌃</button>
+</div>
+
+<script>
+@@script@@
+</script>
