@@ -1390,7 +1390,10 @@
   //   km    選択天体からの距離 [km]。fit より優先
   //   z     カメラ距離 [world]。fit・km が無いときだけ使う
   //   mag   ズーム倍率   a 俯角 [rad]   y 方位 [rad]
+  //   lit   true なら太陽光の当たる側へ回り込む (a・y より優先)
   //   spd   再生速度 [日/秒]   play 再生するか
+  //   constel 星座 (と黄道) を出すか。ツアー中だけの一時変更で設定は保存しない
+  //   mark  sel の天体に選択マーク (オレンジのリング) を出すか。既定は false
   //   hold  自動送りでの滞留秒 (既定 12)
   //   text  ナレーション
   //
@@ -1406,8 +1409,8 @@
       },
       steps: [
         {
-          view: "space", sel: "earth", km: 25000, mag: 1, a: 0.30, y: 0.9,
-          play: false, hold: 10,
+          view: "space", sel: "earth", km: 25000, mag: 1, lit: true,
+          play: false, constel: false, hold: 10,
           text: {
             ja: "まずは地球から。直径は約 12,700 km。このあと視点を引いていくので、" +
                 "この球の大きさを覚えておいてください。",
@@ -1425,7 +1428,7 @@
           },
         },
         {
-          sel: null, fit: 1.7, a: 0.42, hold: 13,
+          sel: null, fit: 1.7, a: 0.42, y: 0.9, hold: 13,
           text: {
             ja: "太陽から火星までを一望します。太陽と地球の距離が 1 天文単位 (au) — " +
                 "約1億5000万 km で、太陽の光でも8分20秒かかります。" +
@@ -2313,6 +2316,9 @@
   let daysPerSec = 8;
   let selected = null;                    // SUN / PLANETS[i] / MOON / null
   let lastCenter = null;                   // 最後に中心にした天体 (解除後のズーム下限に使用)
+  // 選択マーク (オレンジのリングとラベル強調) を出すか。ガイドツアーの selected は
+  // 「カメラの注視先」であって利用者が選んだわけではないので、既定では出さない
+  let showSelMark = true;
   const FOV = 45 * DEG;
   // 宇宙ビューのズーム (拡大率)。距離とは別に、画角を狭めて望遠的に拡大する
   const MAG_MAX = 100;
@@ -4073,12 +4079,14 @@
     octx.clearRect(0, 0, W, H);
     octx.textAlign = "center";
     octx.font = '10.5px "Avenir Next","Hiragino Sans",sans-serif';
+    // 注視しているだけの天体 (ツアー) には選択マークを付けない
+    const marked = showSelMark ? selected : null;
 
     for (const b of [SUN, ...PLANETS]) {
       const s = screenPos.get(b.key);
       if (!s || s.x < -40 || s.x > W + 40 || s.y < -40 || s.y > H + 40) continue;
       if (s.r > H * 0.6) continue;
-      if (selected === b) {
+      if (marked === b) {
         octx.beginPath();
         octx.arc(s.x, s.y, Math.max(s.r, 3) + 6, 0, 2 * Math.PI);
         octx.strokeStyle = "rgba(242,178,62,0.9)";
@@ -4086,7 +4094,7 @@
         octx.stroke();
       }
       if (b.showLabel) {
-        octx.fillStyle = selected === b ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.75)";
+        octx.fillStyle = marked === b ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.75)";
         octx.fillText(bName(b), s.x, s.y - Math.max(s.r, 3) - 9);
       }
     }
@@ -4099,10 +4107,10 @@
       const pp = screenPos.get(s.parent);
       const away = pp ? Math.hypot(sp.x - pp.x, sp.y - pp.y) > 16 : true;
       if (s.showLabel && (sp.r > 2 || away)) {
-        octx.fillStyle = selected === s ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.6)";
+        octx.fillStyle = marked === s ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.6)";
         octx.fillText(bName(s), sp.x, sp.y - Math.max(sp.r, 3) - 8);
       }
-      if (selected === s) {
+      if (marked === s) {
         octx.beginPath();
         octx.arc(sp.x, sp.y, Math.max(sp.r, 3) + 6, 0, 2 * Math.PI);
         octx.strokeStyle = "rgba(242,178,62,0.9)";
@@ -5777,6 +5785,7 @@
   let tourAuto = false;       // 自動送り
   let tourTimer = 0;
   let tourTouched = false;    // このシーンで手動操作したか
+  let tourSaved = null;       // ツアーが一時的に変える表示設定の退避先
 
   const tourText = (o) => (o ? (lang === "ja" ? o.ja : o.en) : "");
 
@@ -5818,6 +5827,13 @@
       speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
     }
     setPlaying(!!s.play);
+    // 星座 (連動して黄道も) の一時的な出し分け。localStorage は書き換えない
+    if (s.constel !== undefined) {
+      showConst = !!s.constel;
+      constBtn.classList.toggle("on", showConst);
+    }
+    // selected はカメラの注視先として使うだけなので、既定では選択マークを出さない
+    showSelMark = !!s.mark;
     // 選択はするが情報パネルは開かない (ナレーションと重なるため)
     const b = s.sel ? BODY_BY_KEY.get(s.sel) : null;
     select(b, false);
@@ -5833,6 +5849,14 @@
     // fit は俯角を使って距離を出すので、角度を先に確定させる
     if (isFinite(s.a)) cam.pitchTgt = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, s.a));
     if (isFinite(s.y)) cam.yawTgt = s.y;
+    // lit: 太陽光の当たる側へ回り込む (select(fly) と同じ計算)。日時によって
+    // 天体が影側を向いてしまうのを防ぐので、接近して見せるシーンでは必須
+    if (s.lit && b && b !== SUN) {
+      const w = posW.get(b.key);
+      const l = Math.hypot(w[0], w[1], w[2]) || 1;
+      cam.yawTgt = Math.atan2(-w[2] / l, -w[0] / l) + 0.5;
+      cam.pitchTgt = Math.asin(Math.max(-1, Math.min(1, -w[1] / l))) + 0.22;
+    }
     const mag = isFinite(s.mag) ? Math.max(1, Math.min(MAG_MAX, s.mag)) : 1;
     camZoomTgt = mag;
     let dist = cam.distTgt;
@@ -5887,6 +5911,8 @@
   }
   function startTour(t, step) {
     if (!t) return;
+    // ツアーが一時的に変える設定を退避 (再入時に上書きしない)
+    if (!tourSaved) tourSaved = { showConst, showSelMark };
     tour = t;
     hideModals();
     setMenu(false);
@@ -5898,6 +5924,12 @@
   function endTour() {
     clearTourTimer();
     tour = null;
+    if (tourSaved) {
+      showConst = tourSaved.showConst;
+      constBtn.classList.toggle("on", showConst);
+      showSelMark = tourSaved.showSelMark;
+      tourSaved = null;
+    }
     tourApp.classList.remove("tourMode");
     tourBar.classList.remove("open");
     updateHint();

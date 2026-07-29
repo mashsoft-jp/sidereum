@@ -12,7 +12,10 @@
   //   km    選択天体からの距離 [km]。fit より優先
   //   z     カメラ距離 [world]。fit・km が無いときだけ使う
   //   mag   ズーム倍率   a 俯角 [rad]   y 方位 [rad]
+  //   lit   true なら太陽光の当たる側へ回り込む (a・y より優先)
   //   spd   再生速度 [日/秒]   play 再生するか
+  //   constel 星座 (と黄道) を出すか。ツアー中だけの一時変更で設定は保存しない
+  //   mark  sel の天体に選択マーク (オレンジのリング) を出すか。既定は false
   //   hold  自動送りでの滞留秒 (既定 12)
   //   text  ナレーション
   //
@@ -28,8 +31,8 @@
       },
       steps: [
         {
-          view: "space", sel: "earth", km: 25000, mag: 1, a: 0.30, y: 0.9,
-          play: false, hold: 10,
+          view: "space", sel: "earth", km: 25000, mag: 1, lit: true,
+          play: false, constel: false, hold: 10,
           text: {
             ja: "まずは地球から。直径は約 12,700 km。このあと視点を引いていくので、" +
                 "この球の大きさを覚えておいてください。",
@@ -47,7 +50,7 @@
           },
         },
         {
-          sel: null, fit: 1.7, a: 0.42, hold: 13,
+          sel: null, fit: 1.7, a: 0.42, y: 0.9, hold: 13,
           text: {
             ja: "太陽から火星までを一望します。太陽と地球の距離が 1 天文単位 (au) — " +
                 "約1億5000万 km で、太陽の光でも8分20秒かかります。" +

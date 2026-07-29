@@ -5,6 +5,9 @@
   let daysPerSec = 8;
   let selected = null;                    // SUN / PLANETS[i] / MOON / null
   let lastCenter = null;                   // 最後に中心にした天体 (解除後のズーム下限に使用)
+  // 選択マーク (オレンジのリングとラベル強調) を出すか。ガイドツアーの selected は
+  // 「カメラの注視先」であって利用者が選んだわけではないので、既定では出さない
+  let showSelMark = true;
   const FOV = 45 * DEG;
   // 宇宙ビューのズーム (拡大率)。距離とは別に、画角を狭めて望遠的に拡大する
   const MAG_MAX = 100;

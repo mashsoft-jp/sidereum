@@ -21,6 +21,7 @@
   let tourAuto = false;       // 自動送り
   let tourTimer = 0;
   let tourTouched = false;    // このシーンで手動操作したか
+  let tourSaved = null;       // ツアーが一時的に変える表示設定の退避先
 
   const tourText = (o) => (o ? (lang === "ja" ? o.ja : o.en) : "");
 
@@ -62,6 +63,13 @@
       speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
     }
     setPlaying(!!s.play);
+    // 星座 (連動して黄道も) の一時的な出し分け。localStorage は書き換えない
+    if (s.constel !== undefined) {
+      showConst = !!s.constel;
+      constBtn.classList.toggle("on", showConst);
+    }
+    // selected はカメラの注視先として使うだけなので、既定では選択マークを出さない
+    showSelMark = !!s.mark;
     // 選択はするが情報パネルは開かない (ナレーションと重なるため)
     const b = s.sel ? BODY_BY_KEY.get(s.sel) : null;
     select(b, false);
@@ -77,6 +85,14 @@
     // fit は俯角を使って距離を出すので、角度を先に確定させる
     if (isFinite(s.a)) cam.pitchTgt = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, s.a));
     if (isFinite(s.y)) cam.yawTgt = s.y;
+    // lit: 太陽光の当たる側へ回り込む (select(fly) と同じ計算)。日時によって
+    // 天体が影側を向いてしまうのを防ぐので、接近して見せるシーンでは必須
+    if (s.lit && b && b !== SUN) {
+      const w = posW.get(b.key);
+      const l = Math.hypot(w[0], w[1], w[2]) || 1;
+      cam.yawTgt = Math.atan2(-w[2] / l, -w[0] / l) + 0.5;
+      cam.pitchTgt = Math.asin(Math.max(-1, Math.min(1, -w[1] / l))) + 0.22;
+    }
     const mag = isFinite(s.mag) ? Math.max(1, Math.min(MAG_MAX, s.mag)) : 1;
     camZoomTgt = mag;
     let dist = cam.distTgt;
@@ -131,6 +147,8 @@
   }
   function startTour(t, step) {
     if (!t) return;
+    // ツアーが一時的に変える設定を退避 (再入時に上書きしない)
+    if (!tourSaved) tourSaved = { showConst, showSelMark };
     tour = t;
     hideModals();
     setMenu(false);
@@ -142,6 +160,12 @@
   function endTour() {
     clearTourTimer();
     tour = null;
+    if (tourSaved) {
+      showConst = tourSaved.showConst;
+      constBtn.classList.toggle("on", showConst);
+      showSelMark = tourSaved.showSelMark;
+      tourSaved = null;
+    }
     tourApp.classList.remove("tourMode");
     tourBar.classList.remove("open");
     updateHint();
