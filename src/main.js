@@ -32,6 +32,11 @@
   }
   // 共有URLのパラメータがあれば localStorage 復元より優先して適用
   const fromShare = applyShareURL();
-  // 初回のみ操作ガイドを表示 (共有リンクで開いた場合はそのまま見せる)
-  if (!fromShare && !localStorage.getItem("ssGuideSeen")) { buildWelcome(); welcomeEl.classList.add("open"); }
+  // ?tour=... はさらに優先 (シーンの状態を上書きする)
+  const fromTour = applyTourURL();
+  // 初回のみ操作ガイドを表示 (共有リンク・ツアーで開いた場合はそのまま見せる)
+  if (!fromShare && !fromTour && !localStorage.getItem("ssGuideSeen")) {
+    buildWelcome();
+    welcomeEl.classList.add("open");
+  }
   requestAnimationFrame(frame);

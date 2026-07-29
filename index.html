@@ -136,7 +136,7 @@
     display: none;
   }
   #modalScrim.on { display: block; }
-  #about, #howto {
+  #about, #howto, #tourList {
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     width: min(540px, calc(100vw - 32px));
@@ -148,8 +148,8 @@
     display: none;
     z-index: 20;
   }
-  #about.open, #howto.open { display: block; }
-  #about h2, #howto h2 {
+  #about.open, #howto.open, #tourList.open { display: block; }
+  #about h2, #howto h2, #tourList h2 {
     margin: 0 0 10px;
     font-size: 15px;
     font-weight: 600;
@@ -175,7 +175,7 @@
   }
   #about td:first-child, #howto td:first-child { color: var(--dim); white-space: nowrap; padding-right: 14px; }
   #howto td:first-child { width: 7.5em; white-space: normal; }
-  #aboutClose, #howtoClose {
+  #aboutClose, #howtoClose, #tourListClose {
     position: absolute;
     top: 10px; right: 10px;
     padding: 2px 8px;
@@ -184,7 +184,30 @@
     border: none;
     color: var(--dim);
   }
-  #aboutClose:hover, #howtoClose:hover { color: var(--text); background: none; }
+  #aboutClose:hover, #howtoClose:hover, #tourListClose:hover { color: var(--text); background: none; }
+  /* ---- ガイドツアーの一覧 (モーダル) ---- */
+  #tourList .tourCard {
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 12px 14px 10px;
+    margin-top: 10px;
+  }
+  #tourList .tourCard h3 {
+    margin: 0 0 4px;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+    color: var(--text);
+  }
+  #tourList .tourCard p { margin: 0; color: var(--dim); }
+  #tourList .tourMeta {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-top: 10px;
+    font-size: 10px; letter-spacing: 0.1em; color: var(--dim);
+  }
+  #tourList .tourStart {
+    color: #0a0d16; background: var(--accent); border-color: var(--accent);
+    font-weight: 600; padding: 5px 14px;
+  }
+  #tourList .tourStart:hover { background: #f7c25c; }
   /* ---- 初回ガイド (welcome overlay) ---- */
   #welcome {
     position: absolute; inset: 0; z-index: 40;
@@ -463,6 +486,61 @@
   #ctrlExpand:hover { color: var(--text); }
   #app.ctrlHidden #ctrlExpand { display: block; }
 
+  /* ---- ガイドツアーのナレーションバー (操作パネルと同じ位置に入れ替わる) ---- */
+  #tourBar {
+    left: 50%;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    width: min(620px, calc(100vw - 24px));
+    box-sizing: border-box;
+    padding: 12px 16px 10px;
+    z-index: 14;
+    display: none;
+  }
+  #tourBar.open { display: block; }
+  /* ツアー中は操作パネル・天体リスト・ヒントを引っ込め、画面を空ける */
+  #app.tourMode #controls,
+  #app.tourMode #ctrlExpand,
+  #app.tourMode #navPanel,
+  #app.tourMode #navExpand,
+  #app.tourMode #hint { display: none; }
+  /* 自動送りの残り時間 (幅のトランジションで伸ばすので rAF は増やさない) */
+  #tourProg {
+    position: absolute; top: 0; left: 0; height: 2px; width: 0;
+    background: var(--accent); border-radius: 6px 0 0 0;
+  }
+  #tourHead { display: flex; align-items: baseline; gap: 10px; }
+  #tourTitle {
+    font-size: 10px; letter-spacing: 0.22em; color: var(--accent);
+    text-transform: none;
+  }
+  #tourStep {
+    font-family: var(--font-num); font-variant-numeric: tabular-nums;
+    font-size: 10px; letter-spacing: 0.1em; color: var(--dim);
+    margin-right: auto;
+  }
+  #tourClose {
+    padding: 2px 8px; font-size: 13px; line-height: 1;
+    background: none; border: none; color: var(--dim);
+  }
+  #tourClose:hover { color: var(--text); background: none; }
+  #tourText {
+    margin: 8px 0 10px;
+    font-size: 12.5px; line-height: 1.85; color: var(--text);
+    min-height: 3.7em;
+  }
+  #tourNav { display: flex; align-items: center; gap: 8px; }
+  #tourDots { display: flex; align-items: center; gap: 5px; margin-right: auto; }
+  #tourDots i {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: rgba(150, 178, 224, 0.28);
+  }
+  #tourDots i.on { background: var(--accent); }
+  #tourPrev, #tourNext { min-width: 62px; }
+  #tourPrev:disabled { opacity: 0.35; cursor: default; }
+  #tourAuto.on { color: var(--accent); border-color: var(--accent-dim); }
+  #tourResume { color: var(--accent); border-color: var(--accent-dim); }
+
   button {
     font-family: var(--font-ui);
     font-size: 12px;
@@ -655,6 +733,9 @@
     #clock { padding: 6px 10px; }
     #dateInput, #timeInput { font-size: 13px; }
     #nowBtn { font-size: 9px; padding: 2px 8px; margin-top: 4px; }
+    #tourBar { left: 8px; right: 8px; width: auto; transform: none; padding: 10px 12px 8px; }
+    #tourText { margin: 6px 0 8px; font-size: 11.5px; line-height: 1.7; min-height: 0; }
+    #tourPrev, #tourNext { min-width: 0; }
     /* 縦持ち: 日付を上、時刻を下の2行にしてタイトルと重ならないよう幅を詰める */
     #clock .dtrow { flex-direction: column; align-items: flex-end; gap: 1px; }
     /* 情報パネル: 操作パネルの直上に、同程度の高さで内部スクロール */
@@ -709,6 +790,12 @@
     #clock { padding: 5px 10px; }
     #dateInput, #timeInput { font-size: 13px; }
     #nowBtn { font-size: 9px; padding: 2px 8px; margin-top: 3px; }
+    #tourBar {
+      left: 8px; right: 8px; width: auto; transform: none;
+      bottom: calc(6px + env(safe-area-inset-bottom, 0px)); padding: 8px 12px 7px;
+    }
+    #tourText { margin: 5px 0 7px; font-size: 11px; line-height: 1.6; min-height: 0; }
+    #tourPrev, #tourNext { min-width: 0; }
     #hint { display: none; }
     #navPanel {
       top: calc(54px + var(--sat));
@@ -767,6 +854,7 @@
   <!-- 並び順: よく使う操作 (全画面・共有) → 環境設定 (単位・言語) → 情報。観測地は別枠 -->
   <div id="menu" class="hud" role="menu">
     <button id="menuHelp" role="menuitem"></button>
+    <button id="menuTour" role="menuitem"></button>
     <button id="menuTerrain" role="menuitem"></button>
     <button id="menuFullscreen" role="menuitem"></button>
     <button id="menuShare" role="menuitem"></button>
@@ -802,6 +890,7 @@
   <div id="modalScrim"></div>
   <aside id="about" class="hud" aria-modal="true"></aside>
   <aside id="howto" class="hud" aria-modal="true"></aside>
+  <aside id="tourList" class="hud" aria-modal="true"></aside>
   <div id="welcome"></div>
 
   <div id="navPanel" class="hud">
@@ -903,6 +992,24 @@
   </footer>
 
   <button id="ctrlExpand" aria-label="操作パネルを表示">⌃</button>
+
+  <!-- ガイドツアーのナレーションバー (ツアー中のみ表示。操作パネルと入れ替わる) -->
+  <div id="tourBar" class="hud">
+    <div id="tourProg"></div>
+    <div id="tourHead">
+      <span id="tourTitle"></span>
+      <span id="tourStep"></span>
+      <button id="tourClose" aria-label="ツアーを終了">✕</button>
+    </div>
+    <p id="tourText"></p>
+    <div id="tourNav">
+      <button id="tourPrev" aria-label="前のシーン">◀</button>
+      <div id="tourDots"></div>
+      <button id="tourResume" hidden></button>
+      <button id="tourAuto"></button>
+      <button id="tourNext" class="primary"></button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1093,6 +1200,10 @@
       u: { yr: " 年", d: " 日", h: " 時間", min: " 分", s: " 秒" },
       menuLang: "English",
       menuHelp: "操作方法",
+      menuTour: "ガイドツアー",
+      tourStart: "はじめる", tourSteps: " シーン",
+      tourNext: "次へ ▶", tourDone: "終了", tourAuto: "自動送り",
+      tourResume: "シーンに戻す", tourExit: "ツアーを終了",
       menuTerrainOn: "風景を表示",
       menuTerrainOff: "風景を隠す",
       menuAbout: "ライセンス・クレジット",
@@ -1134,6 +1245,10 @@
       u: { yr: " yr", d: " days", h: " hr", min: " min", s: " sec" },
       menuLang: "日本語",
       menuHelp: "Controls",
+      menuTour: "Guided tour",
+      tourStart: "Start", tourSteps: " scenes",
+      tourNext: "Next ▶", tourDone: "Finish", tourAuto: "Auto",
+      tourResume: "Reset view", tourExit: "Exit tour",
       menuTerrainOn: "Show scenery",
       menuTerrainOff: "Hide scenery",
       menuAbout: "License & Credits",
@@ -1258,6 +1373,98 @@
     ceres: "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (Dawn)",
     vesta: "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (Dawn)",
   };
+
+  //#endregion
+  //#region src/data/tours.js
+  // ============================================================
+  // ガイドツアー (シーンの並び + ナレーション)
+  // ============================================================
+  // 1ステップ = 共有URL 相当の状態 + ナレーション。
+  // 各ステップには「変えたい項目だけ」を書く。書かなかった項目は直前の
+  // ステップの状態がそのまま続く (畳み込んでから適用する)。
+  //
+  //   view  "space" | "ground" | "moon"
+  //   d     日時。UTC の ISO 文字列 ("1910-05-20T06:00")
+  //   sel   選択天体のキー。null で選択解除 (注視点は太陽へ)
+  //   fit   この軌道半径 [au] が画面に収まる距離にする (画角と縦横比から算出)
+  //   km    選択天体からの距離 [km]。fit より優先
+  //   z     カメラ距離 [world]。fit・km が無いときだけ使う
+  //   mag   ズーム倍率   a 俯角 [rad]   y 方位 [rad]
+  //   spd   再生速度 [日/秒]   play 再生するか
+  //   hold  自動送りでの滞留秒 (既定 12)
+  //   text  ナレーション
+  //
+  // カメラは Tgt 側だけを設定し、実際の移動はメインループの緩和に任せる
+  // (通常操作と同じ動きで繋がる)。
+  const TOURS = [
+    {
+      id: "scale",
+      title: { ja: "太陽系の大きさ", en: "The Size of the Solar System" },
+      lead: {
+        ja: "地球から出発して海王星まで、実寸比のまま引いていきます。",
+        en: "Pull back from Earth to Neptune, all at true scale.",
+      },
+      steps: [
+        {
+          view: "space", sel: "earth", km: 25000, mag: 1, a: 0.30, y: 0.9,
+          play: false, hold: 10,
+          text: {
+            ja: "まずは地球から。直径は約 12,700 km。このあと視点を引いていくので、" +
+                "この球の大きさを覚えておいてください。",
+            en: "We start at Earth — about 12,700 km across. Keep this size in mind: " +
+                "everything that follows is drawn to the same scale.",
+          },
+        },
+        {
+          km: 1100000, hold: 11,
+          text: {
+            ja: "月の軌道まで引きました。月までは約 38万 km — 地球を30個ならべた距離で、" +
+                "人類がこれまでに到達した最も遠い場所です。",
+            en: "Out to the Moon's orbit: about 384,000 km, or 30 Earths side by side. " +
+                "This is still the farthest humans have ever travelled.",
+          },
+        },
+        {
+          sel: null, fit: 1.7, a: 0.42, hold: 13,
+          text: {
+            ja: "太陽から火星までを一望します。太陽と地球の距離が 1 天文単位 (au) — " +
+                "約1億5000万 km で、太陽の光でも8分20秒かかります。" +
+                "さきほどの月の軌道は、もう地球の点の中に隠れてしまいました。",
+            en: "The Sun out to Mars. The Earth–Sun distance is 1 astronomical unit (au), " +
+                "about 150 million km — sunlight takes 8 minutes 20 seconds to cross it. " +
+                "The Moon's orbit has already vanished into Earth's dot.",
+          },
+        },
+        {
+          fit: 5.5, hold: 12,
+          text: {
+            ja: "火星の外側の小惑星帯を越えると木星。太陽から 5.2 au です。" +
+                "内側の4惑星は、この軌道の内側のごく狭い範囲に収まってしまいます。",
+            en: "Past the asteroid belt lies Jupiter, 5.2 au from the Sun. " +
+                "All four inner planets now fit inside a small patch at the centre.",
+          },
+        },
+        {
+          fit: 30, spd: 200, play: true, hold: 16,
+          text: {
+            ja: "一番外側の海王星は 30 au。太陽の光でも4時間以上かかります。" +
+                "時間を進めてみると、外側の惑星ほどゆっくり動くことがわかります。",
+            en: "Neptune, the outermost planet, orbits at 30 au — over four light-hours out. " +
+                "With time running you can see how much more slowly the outer planets move.",
+          },
+        },
+        {
+          fit: 30, a: 1.5708, play: false, hold: 14,
+          text: {
+            ja: "真上から見た太陽系。ここまでが主要な惑星の領域ですが、" +
+                "太陽の重力が届く範囲は、さらにこの数千倍先まで広がっています。",
+            en: "The Solar System from above. This is the realm of the major planets — " +
+                "yet the Sun's gravity reaches thousands of times farther still.",
+          },
+        },
+      ],
+    },
+  ];
 
   //#endregion
   //#region src/core/math.js
@@ -5348,6 +5555,7 @@
   function hideModals() {
     aboutEl.classList.remove("open");
     howtoEl.classList.remove("open");
+    tourListEl.classList.remove("open");
     modalScrim.classList.remove("on");
   }
   modalScrim.addEventListener("click", hideModals);
@@ -5371,6 +5579,7 @@
       ],
       common_rows: [
         ["ビュー切替", "上部の 宇宙 / 地上 / 月面"],
+        ["ガイドツアー", "メニュー「ガイドツアー」(← → で移動・自動送りあり)"],
         ["日時", "右上の日付・時刻をタップ・「現在時刻に合わせる」"],
         ["再生・速度", "下部パネル"],
         ["表示切替", "左上の 軌道 / 名前 / 星座 (黄道も連動)"],
@@ -5396,6 +5605,7 @@
       ],
       common_rows: [
         ["Switch view", "Space / Ground / Moon at the top"],
+        ["Guided tour", "Menu “Guided tour” (← → to move · auto-advance available)"],
         ["Date & time", "Tap the date or time top-right · “Set to current time”"],
         ["Play & speed", "Bottom panel"],
         ["Toggles", "Orbits / Labels / Constellations (top-left)"],
@@ -5497,6 +5707,7 @@
     menuShareBtn.textContent = t.menuShare;
     updateFsLabel();
     menuHelpBtn.textContent = t.menuHelp;
+    menuTourBtn.textContent = t.menuTour;
     menuAboutBtn.textContent = t.menuAbout;
     updateTerrainLabel();
     updateUnitLabel();
@@ -5517,6 +5728,7 @@
     if (aboutEl.classList.contains("open")) buildAbout();
     if (howtoEl.classList.contains("open")) buildHowto();
     if (welcomeEl.classList.contains("open")) buildWelcome();
+    refreshTourUI();
   }
   menuLangBtn.addEventListener("click", () => {
     lang = lang === "ja" ? "en" : "ja";
@@ -5538,6 +5750,231 @@
     hint.classList.remove("fade");
     clearTimeout(hintTimer);
     hintTimer = setTimeout(hideHint, 9000);
+  }
+
+  //#endregion
+  //#region src/ui/tour.js
+  // ---------- ガイドツアー ----------
+  // TOURS のステップを順に適用する。カメラは Tgt 側だけを設定し、実際の移動は
+  // メインループの緩和に任せるので、通常の操作と同じ動きで次のシーンへ繋がる。
+  const tourBar = document.getElementById("tourBar");
+  const tourListEl = document.getElementById("tourList");
+  const tourTitleEl = document.getElementById("tourTitle");
+  const tourStepEl = document.getElementById("tourStep");
+  const tourTextEl = document.getElementById("tourText");
+  const tourDotsEl = document.getElementById("tourDots");
+  const tourProgEl = document.getElementById("tourProg");
+  const tourPrevBtn = document.getElementById("tourPrev");
+  const tourNextBtn = document.getElementById("tourNext");
+  const tourAutoBtn = document.getElementById("tourAuto");
+  const tourResumeBtn = document.getElementById("tourResume");
+  const tourCloseBtn = document.getElementById("tourClose");
+  const menuTourBtn = document.getElementById("menuTour");
+  const tourApp = document.getElementById("app");
+
+  let tour = null;            // 実行中のツアー (null = 非実行)
+  let tourIdx = 0;
+  let tourAuto = false;       // 自動送り
+  let tourTimer = 0;
+  let tourTouched = false;    // このシーンで手動操作したか
+
+  const tourText = (o) => (o ? (lang === "ja" ? o.ja : o.en) : "");
+
+  // 「この軌道半径 [au] が画面に収まる」カメラ距離。
+  // 軌道面は俯角ぶん縦に潰れて見えるので、横 (半径そのもの) と縦 (半径×sin俯角)
+  // の必要量を別々に出し、両方を満たす距離を採る。縦横比によらず同じ見え方になる
+  function tourFitDist(au, mag, pitch) {
+    const half = Math.tan(FOV / Math.max(1, mag) / 2);
+    const r = au * K_REAL * 1.10;                       // 10% の余白込み
+    const wide = r / (half * Math.max(0.2, (W / H) || 1));
+    // ナレーションバーが画面下部を覆う。描画は画面中央基準なので、バーの高さの
+    // 半分ぶんだけ縦に使える範囲が狭いものとして距離を出す (横は影響なし)
+    const vis = Math.max(0.5, 1 - ((tourBar.offsetHeight || 0) + 24) * 0.55 / (H / 2));
+    // 真横 (俯角0) では軌道が線に潰れるため、下限を入れて 0 除算相当を避ける
+    const tall = r * Math.max(0.15, Math.abs(Math.sin(pitch))) / (half * vis);
+    return Math.max(wide, tall);
+  }
+
+  // 0..i のステップを畳み込んだ状態 (書かれていない項目は前のステップを引き継ぐ)
+  function tourStateAt(i) {
+    const st = {};
+    for (let k = 0; k <= i; k++) Object.assign(st, tour.steps[k]);
+    return st;
+  }
+
+  function applyTourStep(i) {
+    const s = tourStateAt(i);
+    if (s.view === "ground") enterGround();
+    else if (s.view === "moon") enterMoon();
+    else exitGround();
+    if (s.d) {
+      const t = Date.parse(/[zZ]$/.test(s.d) ? s.d : s.d + "Z");
+      if (isFinite(t)) simDays = (t - J2000) / DAY_MS;
+    }
+    if (isFinite(s.spd) && s.spd > 0) {
+      daysPerSec = s.spd;
+      speedInput.value = Math.max(0, Math.min(100,
+        Math.round(18 * Math.log(s.spd * 86400) / Math.log(60))));
+      speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
+    }
+    setPlaying(!!s.play);
+    // 選択はするが情報パネルは開かない (ナレーションと重なるため)
+    const b = s.sel ? BODY_BY_KEY.get(s.sel) : null;
+    select(b, false);
+    infoPanel.classList.remove("open");
+    updatePositions();
+    if (b) {
+      const w = posW.get(b.key);
+      cam.focusTgt[0] = w[0]; cam.focusTgt[1] = w[1]; cam.focusTgt[2] = w[2];
+    } else {
+      cam.focusTgt[0] = 0; cam.focusTgt[1] = 0; cam.focusTgt[2] = 0;
+      lastCenter = null;             // 注視点が太陽へ戻るのでズーム下限も太陽サイズに
+    }
+    // fit は俯角を使って距離を出すので、角度を先に確定させる
+    if (isFinite(s.a)) cam.pitchTgt = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, s.a));
+    if (isFinite(s.y)) cam.yawTgt = s.y;
+    const mag = isFinite(s.mag) ? Math.max(1, Math.min(MAG_MAX, s.mag)) : 1;
+    camZoomTgt = mag;
+    let dist = cam.distTgt;
+    if (isFinite(s.km) && b) dist = s.km * KM2W;
+    else if (isFinite(s.fit)) dist = tourFitDist(s.fit, mag, cam.pitchTgt);
+    else if (isFinite(s.z)) dist = s.z;
+    cam.distTgt = Math.min(1400, dist);
+    resetPan();
+    tourTouched = false;
+    tourResumeBtn.hidden = true;
+  }
+
+  function clearTourTimer() {
+    clearTimeout(tourTimer);
+    tourTimer = 0;
+    tourProgEl.style.transition = "none";
+    tourProgEl.style.width = "0%";
+  }
+  function armTourTimer() {
+    clearTourTimer();
+    if (!tour || !tourAuto || tourIdx >= tour.steps.length - 1) return;
+    const sec = tourStateAt(tourIdx).hold || 12;
+    void tourProgEl.offsetWidth;     // 直前の width:0 を確定させ、遷移を必ず走らせる
+    tourProgEl.style.transition = "width " + sec + "s linear";
+    tourProgEl.style.width = "100%";
+    tourTimer = setTimeout(() => tourGo(tourIdx + 1), sec * 1000);
+  }
+
+  function renderTourUI() {
+    if (!tour) return;
+    const t = T();
+    tourTitleEl.textContent = tourText(tour.title);
+    tourStepEl.textContent = (tourIdx + 1) + " / " + tour.steps.length;
+    tourTextEl.textContent = tourText(tourStateAt(tourIdx).text);
+    tourDotsEl.innerHTML = tour.steps
+      .map((_, i) => '<i class="' + (i === tourIdx ? "on" : "") + '"></i>').join("");
+    tourPrevBtn.disabled = tourIdx === 0;
+    tourNextBtn.textContent = tourIdx === tour.steps.length - 1 ? t.tourDone : t.tourNext;
+    tourAutoBtn.textContent = t.tourAuto;
+    tourAutoBtn.classList.toggle("on", tourAuto);
+    tourResumeBtn.textContent = t.tourResume;
+    tourCloseBtn.title = t.tourExit;
+  }
+
+  function tourGo(i) {
+    if (!tour) return;
+    if (i >= tour.steps.length) { endTour(); return; }
+    tourIdx = Math.max(0, i);
+    applyTourStep(tourIdx);
+    renderTourUI();
+    armTourTimer();
+  }
+  function startTour(t, step) {
+    if (!t) return;
+    tour = t;
+    hideModals();
+    setMenu(false);
+    if (welcomeEl.classList.contains("open")) closeWelcome();
+    tourApp.classList.add("tourMode");
+    tourBar.classList.add("open");
+    tourGo(Math.max(0, Math.min(t.steps.length - 1, step | 0)));
+  }
+  function endTour() {
+    clearTourTimer();
+    tour = null;
+    tourApp.classList.remove("tourMode");
+    tourBar.classList.remove("open");
+    updateHint();
+  }
+
+  // 手動でカメラを動かしたら自動送りを止め、「シーンに戻す」を出す
+  function tourTouch() {
+    if (!tour || tourTouched) return;
+    tourTouched = true;
+    tourResumeBtn.hidden = false;
+    clearTourTimer();
+  }
+  glc.addEventListener("pointerdown", tourTouch);
+  glc.addEventListener("wheel", tourTouch, { passive: true });
+
+  tourPrevBtn.addEventListener("click", () => tourGo(tourIdx - 1));
+  tourNextBtn.addEventListener("click", () => tourGo(tourIdx + 1));
+  tourCloseBtn.addEventListener("click", endTour);
+  tourResumeBtn.addEventListener("click", () => { applyTourStep(tourIdx); armTourTimer(); });
+  tourAutoBtn.addEventListener("click", () => {
+    tourAuto = !tourAuto;
+    renderTourUI();
+    armTourTimer();
+  });
+
+  // ---------- ツアー一覧 (モーダル) ----------
+  function buildTourList() {
+    const t = T();
+    tourListEl.innerHTML =
+      '<button id="tourListClose" aria-label="close">✕</button>' +
+      "<h2>" + t.menuTour + "</h2>" +
+      TOURS.map((tr, i) =>
+        '<div class="tourCard">' +
+          "<h3>" + tourText(tr.title) + "</h3>" +
+          "<p>" + tourText(tr.lead) + "</p>" +
+          '<div class="tourMeta"><span>' + tr.steps.length + t.tourSteps + "</span>" +
+          '<button class="tourStart" data-i="' + i + '">' + t.tourStart + "</button></div>" +
+        "</div>").join("");
+  }
+  function openTourList() {
+    buildTourList();
+    tourListEl.classList.add("open");
+    modalScrim.classList.add("on");
+  }
+  tourListEl.addEventListener("click", (e) => {
+    if (e.target.id === "tourListClose") { hideModals(); return; }
+    const btn = e.target.closest(".tourStart");
+    if (btn) startTour(TOURS[+btn.dataset.i], 0);
+  });
+  menuTourBtn.addEventListener("click", () => { setMenu(false); openTourList(); });
+
+  // 言語切替時に開いているものだけ作り直す (applyLang の末尾から呼ばれる)
+  function refreshTourUI() {
+    if (tour) {
+      renderTourUI();
+      // applyLang は選択天体の情報パネルを開き直すが、ツアー中は開かせない
+      infoPanel.classList.remove("open");
+    }
+    if (tourListEl.classList.contains("open")) buildTourList();
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (!tour || e.target !== document.body) return;
+    if (e.code === "ArrowRight") { e.preventDefault(); tourGo(tourIdx + 1); }
+    else if (e.code === "ArrowLeft") { e.preventDefault(); tourGo(tourIdx - 1); }
+  });
+
+  // ?tour=<id>&step=<n> で途中から開ける
+  function applyTourURL() {
+    const q = new URLSearchParams(location.search);
+    const id = q.get("tour");
+    if (!id) return false;
+    const t = TOURS.find((x) => x.id === id);
+    if (!t) return false;
+    const n = parseInt(q.get("step"), 10);
+    startTour(t, isFinite(n) ? n - 1 : 0);
+    return true;
   }
 
   //#endregion
@@ -5576,8 +6013,13 @@
   }
   // 共有URLのパラメータがあれば localStorage 復元より優先して適用
   const fromShare = applyShareURL();
-  // 初回のみ操作ガイドを表示 (共有リンクで開いた場合はそのまま見せる)
-  if (!fromShare && !localStorage.getItem("ssGuideSeen")) { buildWelcome(); welcomeEl.classList.add("open"); }
+  // ?tour=... はさらに優先 (シーンの状態を上書きする)
+  const fromTour = applyTourURL();
+  // 初回のみ操作ガイドを表示 (共有リンク・ツアーで開いた場合はそのまま見せる)
+  if (!fromShare && !fromTour && !localStorage.getItem("ssGuideSeen")) {
+    buildWelcome();
+    welcomeEl.classList.add("open");
+  }
   requestAnimationFrame(frame);
   //#endregion
 })();

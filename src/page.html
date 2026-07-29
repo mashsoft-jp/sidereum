@@ -34,6 +34,7 @@
   <!-- 並び順: よく使う操作 (全画面・共有) → 環境設定 (単位・言語) → 情報。観測地は別枠 -->
   <div id="menu" class="hud" role="menu">
     <button id="menuHelp" role="menuitem"></button>
+    <button id="menuTour" role="menuitem"></button>
     <button id="menuTerrain" role="menuitem"></button>
     <button id="menuFullscreen" role="menuitem"></button>
     <button id="menuShare" role="menuitem"></button>
@@ -69,6 +70,7 @@
   <div id="modalScrim"></div>
   <aside id="about" class="hud" aria-modal="true"></aside>
   <aside id="howto" class="hud" aria-modal="true"></aside>
+  <aside id="tourList" class="hud" aria-modal="true"></aside>
   <div id="welcome"></div>
 
   <div id="navPanel" class="hud">
@@ -170,6 +172,24 @@
   </footer>
 
   <button id="ctrlExpand" aria-label="操作パネルを表示">⌃</button>
+
+  <!-- ガイドツアーのナレーションバー (ツアー中のみ表示。操作パネルと入れ替わる) -->
+  <div id="tourBar" class="hud">
+    <div id="tourProg"></div>
+    <div id="tourHead">
+      <span id="tourTitle"></span>
+      <span id="tourStep"></span>
+      <button id="tourClose" aria-label="ツアーを終了">✕</button>
+    </div>
+    <p id="tourText"></p>
+    <div id="tourNav">
+      <button id="tourPrev" aria-label="前のシーン">◀</button>
+      <div id="tourDots"></div>
+      <button id="tourResume" hidden></button>
+      <button id="tourAuto"></button>
+      <button id="tourNext" class="primary"></button>
+    </div>
+  </div>
 </div>
 
 <script>

@@ -35,6 +35,7 @@ const SRC = path.join(ROOT, "src");
 const MANIFEST = [
   "data/bodies.js",      // 基本定数・天体/太陽/月・衛星
   "data/i18n.js",        // UI 辞書・EN_DATA・画像クレジット
+  "data/tours.js",       // ガイドツアーのシーン定義
   "core/math.js",        // 表示スケール・ケプラー軌道・mat4
   "gl/setup.js",         // canvas/gl・シェーダ・プログラム・ジオメトリ  ※return を含む
   "data/textures.js",    // テクスチャ (base64)
@@ -51,6 +52,7 @@ const MANIFEST = [
   "ui/controls.js",      // 入力・操作パネル・設定保存
   "ui/menu.js",          // メニュー・共有URL・About
   "ui/panels.js",        // 操作方法・初回ガイド・言語切替・ヒント
+  "ui/tour.js",          // ガイドツアーの実行・ナレーションバー・一覧
   "main.js",             // 起動処理 (必ず最後)
 ];
 
