@@ -82,8 +82,9 @@
   });
 
   function endPointer(e) {
-    // ツアー中は見回し・ズームだけ許し、天体の選択はさせない (シーンの注視先が変わるため)
-    if (!tourActive &&
+    // ツアー中は見回し・ズームだけ許し、天体の選択はさせない (シーンの注視先が
+    // 変わるため)。ただし選択を促しているチュートリアルのステップだけは通す
+    if ((!tourActive || tourAllowsSelect()) &&
         pointers.has(e.pointerId) && dragMoved < 5 && pointers.size === 1 && e.button === 0) {
       if (groundView) {
         // 選択 + その方向へカメラを向けて追尾 (以後のズームでも中央に保つ)

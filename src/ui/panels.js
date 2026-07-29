@@ -100,6 +100,7 @@
         `<ul>${c.rows.map((r) => `<li>${r}</li>`).join("")}</ul>` +
         `<div id="welcomeBtns">` +
           `<button id="welcomeMore">${c.more}</button>` +
+          `<button id="welcomeTour">${T().welcomeTour}</button>` +
           `<button id="welcomeStart">${c.start}</button>` +
         `</div>` +
       `</div>`;
@@ -111,6 +112,8 @@
   welcomeEl.addEventListener("click", (e) => {
     if (e.target.id === "welcomeStart" || e.target === welcomeEl) closeWelcome();
     else if (e.target.id === "welcomeMore") { closeWelcome(); openHowto(); }
+    // 端末に合うチュートリアルを開始 (startTour が closeWelcome も行う)
+    else if (e.target.id === "welcomeTour") startTour(tutorialTour(), 0);
   });
 
   window.addEventListener("keydown", (e) => {

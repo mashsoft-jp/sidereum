@@ -230,6 +230,11 @@
   #welcomeCard li { font-size: 12px; line-height: 1.7; margin: 4px 0; }
   #welcomeBtns { display: flex; gap: 8px; justify-content: flex-end; }
   #welcomeBtns button { padding: 8px 16px; font-size: 12px; }
+  /* 狭い画面では3つ横並びだとボタン内で折り返して読みづらいので縦に積む */
+  @media (max-width: 430px) {
+    #welcomeBtns { flex-direction: column; align-items: stretch; }
+    #welcomeBtns button { padding: 10px 16px; }
+  }
   #welcomeStart { color: #0a0d16; background: var(--accent); border-color: var(--accent); font-weight: 600; }
   #welcomeStart:hover { background: var(--accent); }
   #title h1 {
@@ -512,6 +517,29 @@
   /* 日時は時間の経過が見えるよう表示は残し、入力だけ止める */
   #app.tourMode #dateInput,
   #app.tourMode #timeInput { pointer-events: none; color: var(--dim); }
+  /* チュートリアルのステップが ui: [...] で一時的に出すもの。
+     display は隠す前の値に戻す必要があるため、要素ごとに書く */
+  #app.tourMode #controls.tourShow { display: grid; }
+  #app.tourMode #navPanel.tourShow,
+  #app.tourMode #viewMode.tourShow { display: flex; }
+  #app.tourMode #menuBtn.tourShow { display: block; }
+  #app.tourMode #clock.tourShow #nowBtn { display: block; }
+  #app.tourMode #clock.tourShow #dateInput,
+  #app.tourMode #clock.tourShow #timeInput { pointer-events: auto; color: var(--text); }
+  /* 説明している要素のハイライト */
+  .tourHi {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 8px;
+    animation: tourPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes tourPulse {
+    0%, 100% { outline-color: var(--accent); }
+    50% { outline-color: rgba(242, 178, 62, 0.25); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tourHi { animation: none; }
+  }
   /* 自動送りの残り時間 (幅のトランジションで伸ばすので rAF は増やさない) */
   #tourProg {
     position: absolute; top: 0; left: 0; height: 2px; width: 0;
@@ -525,13 +553,20 @@
   #tourStep {
     font-family: var(--font-num); font-variant-numeric: tabular-nums;
     font-size: 10px; letter-spacing: 0.1em; color: var(--dim);
-    margin-right: auto;
   }
   #tourClose {
     padding: 2px 8px; font-size: 13px; line-height: 1;
     background: none; border: none; color: var(--dim);
   }
   #tourClose:hover { color: var(--text); background: none; }
+  /* 操作を検知したときの合図 (次のステップへ進むまでの短い間だけ出す) */
+  #tourDone {
+    font-size: 10px; letter-spacing: 0.12em; color: var(--accent);
+    margin-right: auto;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  #tourDone::before { content: "✓ "; }
+  #tourBar.done #tourDone { opacity: 1; }
   #tourText {
     margin: 8px 0 10px;
     font-size: 12.5px; line-height: 1.85; color: var(--text);
@@ -1007,6 +1042,7 @@
     <div id="tourHead">
       <span id="tourTitle"></span>
       <span id="tourStep"></span>
+      <span id="tourDone" aria-live="polite"></span>
       <button id="tourClose" aria-label="ツアーを終了">✕</button>
     </div>
     <p id="tourText"></p>
@@ -1212,6 +1248,7 @@
       tourStart: "はじめる", tourSteps: " シーン",
       tourNext: "次へ ▶", tourDone: "終了", tourAuto: "自動送り",
       tourResume: "シーンに戻す", tourExit: "ツアーを終了",
+      tourGood: "できました", welcomeTour: "ツアーではじめる",
       menuTerrainOn: "風景を表示",
       menuTerrainOff: "風景を隠す",
       menuAbout: "ライセンス・クレジット",
@@ -1257,6 +1294,7 @@
       tourStart: "Start", tourSteps: " scenes",
       tourNext: "Next ▶", tourDone: "Finish", tourAuto: "Auto",
       tourResume: "Reset view", tourExit: "Exit tour",
+      tourGood: "Nice", welcomeTour: "Take the tour",
       menuTerrainOn: "Show scenery",
       menuTerrainOff: "Hide scenery",
       menuAbout: "License & Credits",
@@ -1404,6 +1442,19 @@
   //   mark  sel の天体に選択マーク (オレンジのリング) を出すか。既定は false
   //   hold  自動送りでの滞留秒 (既定 12)
   //   text  ナレーション
+  //   scene false ならシーン (ビュー・日時・カメラ・速度・選択) を触らない。
+  //         畳み込みで前の設定が毎回再適用されるため、利用者に操作させる
+  //         チュートリアルではこれが無いとカメラが巻き戻る
+  //   ui    一時的に出す UI: "controls" / "nav" / "menu" / "view" / "clock"
+  //   hi    ハイライトする要素の CSS セレクタ
+  //   await 検知したら自動で次へ進む操作:
+  //         "rotate" / "zoom" / "dist" / "pan" / "select" / "view" / "menu"
+  //         (日時は再生中に勝手に動いて誤検知するので対象にしない)
+  //
+  // ツアー単位:
+  //   platform "touch" | "desktop" — 一覧に出す端末。未指定は常に出す
+  //   manual   true なら「自動送り」ボタンを隠す (検知式のツアー用)
+  //   keep     true なら終了時にシーンを戻さない
   //
   // カメラは Tgt 側だけを設定し、実際の移動はメインループの緩和に任せる
   // (通常操作と同じ動きで繋がる)。
@@ -1411,6 +1462,189 @@
   // 終了時は開始前の状態 (日時・ビュー・カメラ・速度・選択) へ戻す。
   // 終わった場面にそのまま留まらせたいツアーだけ、ツアー側に keep: true を書く。
   const TOURS = [
+    {
+      id: "basics-desktop",
+      platform: "desktop",
+      manual: true,
+      title: { ja: "はじめての操作", en: "Getting Started" },
+      lead: {
+        ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
+        en: "Learn the basics — rotate, zoom, pick a body — by trying each one.",
+      },
+      steps: [
+        {
+          view: "space", sel: null, fit: 1.7, a: 0.42, y: 0.9, mag: 1,
+          play: false, constel: true, mark: true,
+          text: {
+            ja: "Sidereum へようこそ。太陽系を実際の縮尺で見てまわれます。" +
+                "基本の操作をひとつずつ試してみましょう。",
+            en: "Welcome to Sidereum — the Solar System at true scale. " +
+                "Let's try the basic controls one at a time.",
+          },
+        },
+        {
+          scene: false, await: "rotate",
+          text: {
+            ja: "まずは視点を回してみます。画面をドラッグしてください。",
+            en: "First, turn the view: drag anywhere on the screen.",
+          },
+        },
+        {
+          scene: false, await: "zoom",
+          text: {
+            ja: "マウスホイールを回すと拡大・縮小できます。回してみてください。",
+            en: "Scroll the mouse wheel to zoom in and out. Give it a try.",
+          },
+        },
+        {
+          scene: false, await: "dist",
+          text: {
+            ja: "Shift を押しながらホイールを回すと、拡大率ではなく" +
+                "太陽系との距離そのものが変わります。",
+            en: "Hold Shift while scrolling to change your distance from the " +
+                "Solar System itself, rather than the magnification.",
+          },
+        },
+        {
+          scene: false, await: "pan",
+          text: {
+            ja: "右ドラッグすると、見ている位置を平行に動かせます。" +
+                "中心から外れた天体を追いたいときに使います。",
+            en: "Right-drag to slide the view sideways — handy for following " +
+                "something that has drifted off centre.",
+          },
+        },
+        {
+          scene: false, await: "select", ui: ["nav"], hi: "#navPanel",
+          text: {
+            ja: "天体をクリックすると選択して近づきます。左のリストからも選べます。" +
+                "どれか選んでみてください。",
+            en: "Click a body to select it and fly closer — or pick one from the " +
+                "list on the left. Try selecting one.",
+          },
+        },
+        {
+          scene: false, ui: ["clock", "controls"], hi: "#clock",
+          text: {
+            ja: "右上で日時を指定できます。下のパネルでは再生と速度を変えられるので、" +
+                "過去や未来の空を動かして見られます。",
+            en: "Set any date and time at the top right. The panel below plays time " +
+                "forward and sets its speed, so you can watch the past or the future.",
+          },
+        },
+        {
+          scene: false, await: "view", ui: ["view"], hi: "#viewMode",
+          text: {
+            ja: "上のタブで宇宙・地上・月面を切り替えられます。" +
+                "地上と月面は、その場所から見た実際の空になります。切り替えてみてください。",
+            en: "The tabs at the top switch between Space, Ground and Moon. Ground and " +
+                "Moon show the real sky from that place. Try switching.",
+          },
+        },
+        {
+          scene: false, ui: ["menu"], hi: "#menuBtn",
+          text: {
+            ja: "左上のメニューには、共有リンク・風景の表示・単位や言語の切替・" +
+                "操作方法があります。基本操作はここまでです。" +
+                "ほかのガイドツアーも同じメニューから開けます。",
+            en: "The menu at the top left holds share links, scenery, units, language " +
+                "and the full control list. That's the basics — the other guided tours " +
+                "live in the same menu.",
+          },
+        },
+      ],
+    },
+    {
+      id: "basics-touch",
+      platform: "touch",
+      manual: true,
+      title: { ja: "はじめての操作", en: "Getting Started" },
+      lead: {
+        ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
+        en: "Learn the basics — rotate, zoom, pick a body — by trying each one.",
+      },
+      steps: [
+        {
+          view: "space", sel: null, fit: 1.7, a: 0.42, y: 0.9, mag: 1,
+          play: false, constel: true, mark: true,
+          text: {
+            ja: "Sidereum へようこそ。太陽系を実際の縮尺で見てまわれます。" +
+                "基本の操作をひとつずつ試してみましょう。",
+            en: "Welcome to Sidereum — the Solar System at true scale. " +
+                "Let's try the basic controls one at a time.",
+          },
+        },
+        {
+          scene: false, await: "rotate",
+          text: {
+            ja: "まずは視点を回してみます。1本指で画面をドラッグしてください。",
+            en: "First, turn the view: drag the screen with one finger.",
+          },
+        },
+        {
+          scene: false, await: "zoom",
+          text: {
+            ja: "2本の指でつまむように広げたり縮めたり (ピンチ) すると拡大・縮小できます。",
+            en: "Pinch with two fingers to zoom in and out.",
+          },
+        },
+        {
+          scene: false, await: "dist", ui: ["controls"], hi: "#zoom",
+          text: {
+            ja: "下のパネルの「距離」スライダーでは、拡大率ではなく" +
+                "太陽系との距離そのものが変わります。動かしてみてください。",
+            en: "The “Distance” slider in the panel below changes how far you are from " +
+                "the Solar System itself, rather than the magnification. Try moving it.",
+          },
+        },
+        {
+          scene: false, await: "pan",
+          text: {
+            ja: "2本の指を同時にドラッグすると、見ている位置を平行に動かせます。" +
+                "中心から外れた天体を追いたいときに使います。",
+            en: "Drag with two fingers to slide the view sideways — handy for following " +
+                "something that has drifted off centre.",
+          },
+        },
+        {
+          scene: false, await: "select", ui: ["nav"], hi: "#navPanel",
+          text: {
+            ja: "天体をタップすると選択して近づきます。左のリストからも選べます。" +
+                "どれか選んでみてください。",
+            en: "Tap a body to select it and fly closer — or pick one from the list on " +
+                "the left. Try selecting one.",
+          },
+        },
+        {
+          scene: false, ui: ["clock", "controls"], hi: "#clock",
+          text: {
+            ja: "右上で日時を指定できます。下のパネルでは再生と速度を変えられるので、" +
+                "過去や未来の空を動かして見られます。",
+            en: "Set any date and time at the top right. The panel below plays time " +
+                "forward and sets its speed, so you can watch the past or the future.",
+          },
+        },
+        {
+          scene: false, await: "view", ui: ["menu", "view"], hi: "#menuBtn",
+          text: {
+            ja: "左上のメニューを開くと、宇宙・地上・月面を切り替えられます。" +
+                "地上と月面は、その場所から見た実際の空になります。切り替えてみてください。",
+            en: "Open the menu at the top left to switch between Space, Ground and Moon. " +
+                "Ground and Moon show the real sky from that place. Try switching.",
+          },
+        },
+        {
+          scene: false, ui: ["menu"], hi: "#menuBtn",
+          text: {
+            ja: "同じメニューに、共有リンク・風景の表示・単位や言語の切替・" +
+                "操作方法があります。基本操作はここまでです。" +
+                "ほかのガイドツアーも同じメニューから開けます。",
+            en: "The same menu holds share links, scenery, units, language and the full " +
+                "control list. That's the basics — the other guided tours live there too.",
+          },
+        },
+      ],
+    },
     {
       id: "scale",
       title: { ja: "太陽系の大きさ", en: "The Size of the Solar System" },
@@ -4344,6 +4578,7 @@
 
     render(now / 1000);
     updateClock();
+    tourWatch();          // ガイドツアー: 促した操作をされたら次のステップへ
     updateZoomUI();
     updateMagUI();
     updateAngleUI();
@@ -4946,8 +5181,9 @@
   });
 
   function endPointer(e) {
-    // ツアー中は見回し・ズームだけ許し、天体の選択はさせない (シーンの注視先が変わるため)
-    if (!tourActive &&
+    // ツアー中は見回し・ズームだけ許し、天体の選択はさせない (シーンの注視先が
+    // 変わるため)。ただし選択を促しているチュートリアルのステップだけは通す
+    if ((!tourActive || tourAllowsSelect()) &&
         pointers.has(e.pointerId) && dragMoved < 5 && pointers.size === 1 && e.button === 0) {
       if (groundView) {
         // 選択 + その方向へカメラを向けて追尾 (以後のズームでも中央に保つ)
@@ -5673,6 +5909,7 @@
         `<ul>${c.rows.map((r) => `<li>${r}</li>`).join("")}</ul>` +
         `<div id="welcomeBtns">` +
           `<button id="welcomeMore">${c.more}</button>` +
+          `<button id="welcomeTour">${T().welcomeTour}</button>` +
           `<button id="welcomeStart">${c.start}</button>` +
         `</div>` +
       `</div>`;
@@ -5684,6 +5921,8 @@
   welcomeEl.addEventListener("click", (e) => {
     if (e.target.id === "welcomeStart" || e.target === welcomeEl) closeWelcome();
     else if (e.target.id === "welcomeMore") { closeWelcome(); openHowto(); }
+    // 端末に合うチュートリアルを開始 (startTour が closeWelcome も行う)
+    else if (e.target.id === "welcomeTour") startTour(tutorialTour(), 0);
   });
 
   window.addEventListener("keydown", (e) => {
@@ -5793,8 +6032,17 @@
   const tourAutoBtn = document.getElementById("tourAuto");
   const tourResumeBtn = document.getElementById("tourResume");
   const tourCloseBtn = document.getElementById("tourClose");
+  const tourDoneEl = document.getElementById("tourDone");
   const menuTourBtn = document.getElementById("menuTour");
   const tourApp = document.getElementById("app");
+  // ステップの ui: [...] で一時的に出す UI (既定ではツアー中は隠している)
+  const TOUR_UI_EL = {
+    controls: document.getElementById("controls"),
+    nav: document.getElementById("navPanel"),
+    menu: document.getElementById("menuBtn"),
+    view: document.getElementById("viewMode"),
+    clock: document.getElementById("clock"),
+  };
 
   let tour = null;            // 実行中のツアー (null = 非実行)
   let tourIdx = 0;
@@ -5802,8 +6050,55 @@
   let tourTimer = 0;
   let tourTouched = false;    // このシーンで手動操作したか
   let tourSaved = null;       // ツアーが一時的に変える表示設定の退避先
+  let tourAwaitTest = null;   // 現在のステップの達成判定 (null = 待っていない)
+  let tourDoneTimer = 0;
+  let tourHiEl = null;        // ハイライト中の要素
+  let tourSceneDone = false;  // このツアーでシーンを一度でも適用したか
 
   const tourText = (o) => (o ? (lang === "ja" ? o.ja : o.en) : "");
+
+  // 端末の出し分け。UI の位置はレイアウトで、操作方法は入力方式で変わるので
+  // 「狭い画面」と「タッチ (ホバーできない粗いポインタ)」のどちらかで判定する
+  const mqTouch = matchMedia("(hover: none) and (pointer: coarse)");
+  const mqNarrow = matchMedia("(max-width: 720px), (max-height: 480px)");
+  const isTouchUI = () => mqTouch.matches || mqNarrow.matches;
+  const tourVisible = (t) => !t.platform || (t.platform === "touch") === isTouchUI();
+  // 初回ガイドから開くチュートリアル (端末に合う方)
+  function tutorialTour() {
+    return TOURS.find((t) => t.id.indexOf("basics") === 0 && tourVisible(t)) || null;
+  }
+
+  // ステップ開始時にスナップショットを取り、毎フレーム「操作されたか」を見る述語を返す。
+  // 入力ハンドラ側には手を入れない (操作の経路が増えたときに拾い漏らすため)
+  const wrapPi = (a) => ((a + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+  const TOUR_AWAIT = {
+    rotate: () => {
+      const y = cam.yawTgt, p = cam.pitchTgt;
+      return () => Math.abs(wrapPi(cam.yawTgt - y)) + Math.abs(cam.pitchTgt - p) > 0.18;
+    },
+    zoom: () => {
+      const v = camZoomTgt;
+      return () => Math.abs(Math.log(camZoomTgt / v)) > 0.2;
+    },
+    dist: () => {
+      const v = cam.distTgt;
+      return () => Math.abs(Math.log(cam.distTgt / v)) > 0.2;
+    },
+    pan: () => {
+      const p = cam.panOffTgt.slice();
+      return () => Math.hypot(cam.panOffTgt[0] - p[0], cam.panOffTgt[1] - p[1],
+                              cam.panOffTgt[2] - p[2]) > cam.dist * 0.05;
+    },
+    select: () => {
+      const b = selected;
+      return () => !!selected && selected !== b;
+    },
+    view: () => {
+      const g = groundView, s = surfaceBody;
+      return () => groundView !== g || surfaceBody !== s;
+    },
+    menu: () => () => menuEl.classList.contains("open"),
+  };
 
   // 「この軌道半径 [au] が画面に収まる」カメラ距離。
   // 軌道面は俯角ぶん縦に潰れて見えるので、横 (半径そのもの) と縦 (半径×sin俯角)
@@ -5812,12 +6107,54 @@
     const half = Math.tan(FOV / Math.max(1, mag) / 2);
     const r = au * K_REAL * 1.10;                       // 10% の余白込み
     const wide = r / (half * Math.max(0.2, (W / H) || 1));
-    // ナレーションバーが画面下部を覆う。描画は画面中央基準なので、バーの高さの
-    // 半分ぶんだけ縦に使える範囲が狭いものとして距離を出す (横は影響なし)
-    const vis = Math.max(0.5, 1 - ((tourBar.offsetHeight || 0) + 24) * 0.55 / (H / 2));
+    // 画面下部はナレーションバー (操作パネルを出すステップではその上まで) で隠れる。
+    // 描画は画面中央基準なので、隠れる高さの半分ぶん縦が狭いものとして距離を出す
+    const cover = tourBar.classList.contains("open")
+      ? Math.max(0, H - tourBar.getBoundingClientRect().top) + 12 : 0;
+    const vis = Math.max(0.5, 1 - cover * 0.55 / (H / 2));
     // 真横 (俯角0) では軌道が線に潰れるため、下限を入れて 0 除算相当を避ける
     const tall = r * Math.max(0.15, Math.abs(Math.sin(pitch))) / (half * vis);
     return Math.max(wide, tall);
+  }
+
+  // ステップが要求する UI の出し分け・ハイライト・ナレーションバーの位置
+  function applyTourChrome(s) {
+    for (const k in TOUR_UI_EL) {
+      TOUR_UI_EL[k].classList.toggle("tourShow", !!s.ui && s.ui.indexOf(k) >= 0);
+    }
+    if (tourHiEl) tourHiEl.classList.remove("tourHi");
+    tourHiEl = s.hi ? document.querySelector(s.hi) : null;
+    if (tourHiEl) tourHiEl.classList.add("tourHi");
+    // 操作パネルを出すステップはナレーションバーと重なるので、実高さぶん持ち上げる。
+    // パネルの高さはビュー (宇宙/地上) で変わり、クラスを付けた直後はまだ確定して
+    // いないことがあるので、次のフレームで測り直す
+    liftTourBar();
+    requestAnimationFrame(liftTourBar);
+  }
+  function liftTourBar() {
+    const c = TOUR_UI_EL.controls;
+    const up = c.classList.contains("tourShow") ? c.offsetHeight + 18 : 0;
+    tourBar.style.bottom = up
+      ? "calc(" + (18 + up) + "px + env(safe-area-inset-bottom, 0px))" : "";
+  }
+
+  // 操作の検知。達成したら「できました」を出し、少し置いてから次のステップへ
+  function armTourAwait(s) {
+    clearTimeout(tourDoneTimer);
+    tourDoneTimer = 0;
+    tourBar.classList.remove("done");
+    const f = s.await && TOUR_AWAIT[s.await];
+    tourAwaitTest = f ? f() : null;
+  }
+  function tourWatch() {
+    if (!tourAwaitTest || !tourAwaitTest()) return;
+    tourAwaitTest = null;
+    tourBar.classList.add("done");
+    tourDoneTimer = setTimeout(() => tourGo(tourIdx + 1), 900);
+  }
+  // ツアー中でも、天体の選択を促しているステップだけはキャンバスのクリックを通す
+  function tourAllowsSelect() {
+    return !!tour && tourStateAt(tourIdx).await === "select";
   }
 
   // 0..i のステップを畳み込んだ状態 (書かれていない項目は前のステップを引き継ぐ)
@@ -5829,6 +6166,30 @@
 
   function applyTourStep(i) {
     const s = tourStateAt(i);
+    applyTourChrome(s);
+    // 星座 (連動して黄道も) の一時的な出し分け。localStorage は書き換えない
+    if (s.constel !== undefined) {
+      showConst = !!s.constel;
+      constBtn.classList.toggle("on", showConst);
+    }
+    // selected はカメラの注視先として使うだけなので、既定では選択マークを出さない
+    showSelMark = !!s.mark;
+    tourTouched = false;
+    tourResumeBtn.hidden = true;
+    // 情報パネルはナレーションと重なるので、ステップが変わったら必ず閉じる
+    // (チュートリアルで天体を選ばせたときも、次へ進む時点で畳む)
+    infoPanel.classList.remove("open");
+    // scene: false はナレーションと UI だけのステップ。畳み込みで前のシーン設定が
+    // 毎回再適用されると、利用者が動かしたカメラが巻き戻ってしまうため必要。
+    // ただしツアーの最初の1回だけは必ず適用する (?step=N で scene: false の
+    // 途中から開いたときに、シーンが設定されないまま始まってしまうため)
+    if (s.scene === false && tourSceneDone) { armTourAwait(s); return; }
+    applyTourScene(s);
+    tourSceneDone = true;
+    armTourAwait(s);   // 検知のスナップショットはシーン適用の後に取る
+  }
+
+  function applyTourScene(s) {
     if (s.view === "ground") enterGround();
     else if (s.view === "moon") enterMoon();
     else exitGround();
@@ -5843,13 +6204,6 @@
       speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
     }
     setPlaying(!!s.play);
-    // 星座 (連動して黄道も) の一時的な出し分け。localStorage は書き換えない
-    if (s.constel !== undefined) {
-      showConst = !!s.constel;
-      constBtn.classList.toggle("on", showConst);
-    }
-    // selected はカメラの注視先として使うだけなので、既定では選択マークを出さない
-    showSelMark = !!s.mark;
     // 選択はするが情報パネルは開かない (ナレーションと重なるため)
     const b = s.sel ? BODY_BY_KEY.get(s.sel) : null;
     select(b, false);
@@ -5881,8 +6235,6 @@
     else if (isFinite(s.z)) dist = s.z;
     cam.distTgt = Math.min(1400, dist);
     resetPan();
-    tourTouched = false;
-    tourResumeBtn.hidden = true;
   }
 
   function clearTourTimer() {
@@ -5911,10 +6263,13 @@
       .map((_, i) => '<i class="' + (i === tourIdx ? "on" : "") + '"></i>').join("");
     tourPrevBtn.disabled = tourIdx === 0;
     tourNextBtn.textContent = tourIdx === tour.steps.length - 1 ? t.tourDone : t.tourNext;
+    // 操作の検知で進むツアーでは自動送りに意味がないので出さない
+    tourAutoBtn.hidden = !!tour.manual;
     tourAutoBtn.textContent = t.tourAuto;
     tourAutoBtn.classList.toggle("on", tourAuto);
     tourResumeBtn.textContent = t.tourResume;
     tourCloseBtn.title = t.tourExit;
+    tourDoneEl.textContent = t.tourGood;
   }
 
   function tourGo(i) {
@@ -5974,6 +6329,8 @@
     if (!tourSaved) tourSaved = captureTourState();   // 再入時は最初の状態を保つ
     tour = t;
     tourActive = true;
+    tourSceneDone = false;
+    if (t.manual) tourAuto = false;   // ボタンを隠すので、前のツアーの ON を持ち込まない
     hideModals();
     setMenu(false);
     if (welcomeEl.classList.contains("open")) closeWelcome();
@@ -5983,18 +6340,26 @@
   }
   function endTour() {
     clearTourTimer();
+    clearTimeout(tourDoneTimer);
+    tourDoneTimer = 0;
+    tourAwaitTest = null;
     const keepScene = !!(tour && tour.keep);
     tour = null;
     tourActive = false;
     if (tourSaved) { restoreTourState(tourSaved, keepScene); tourSaved = null; }
+    for (const k in TOUR_UI_EL) TOUR_UI_EL[k].classList.remove("tourShow");
+    if (tourHiEl) { tourHiEl.classList.remove("tourHi"); tourHiEl = null; }
+    tourBar.style.bottom = "";
+    tourBar.classList.remove("done", "open");
     tourApp.classList.remove("tourMode");
-    tourBar.classList.remove("open");
     updateHint();
   }
 
   // 手動でカメラを動かしたら自動送りを止め、「シーンに戻す」を出す
   function tourTouch() {
     if (!tour || tourTouched) return;
+    // 操作を促しているステップは動かすのが目的なので、戻す導線を出さない
+    if (tourStateAt(tourIdx).await) return;
     tourTouched = true;
     tourResumeBtn.hidden = false;
     clearTourTimer();
@@ -6013,18 +6378,19 @@
   });
 
   // ---------- ツアー一覧 (モーダル) ----------
+  // 端末に合うものだけ並べる (URL 指定は絞らないので、他端末向けも確認できる)
   function buildTourList() {
     const t = T();
     tourListEl.innerHTML =
       '<button id="tourListClose" aria-label="close">✕</button>' +
       "<h2>" + t.menuTour + "</h2>" +
-      TOURS.map((tr, i) =>
+      TOURS.map((tr, i) => (!tourVisible(tr) ? "" :
         '<div class="tourCard">' +
           "<h3>" + tourText(tr.title) + "</h3>" +
           "<p>" + tourText(tr.lead) + "</p>" +
           '<div class="tourMeta"><span>' + tr.steps.length + t.tourSteps + "</span>" +
           '<button class="tourStart" data-i="' + i + '">' + t.tourStart + "</button></div>" +
-        "</div>").join("");
+        "</div>")).join("");
   }
   function openTourList() {
     buildTourList();
@@ -6046,6 +6412,12 @@
       infoPanel.classList.remove("open");
     }
     if (tourListEl.classList.contains("open")) buildTourList();
+  }
+  // 画面サイズや入力方式が変わったら一覧の出し分けを追従させる
+  for (const mq of [mqTouch, mqNarrow]) {
+    mq.addEventListener("change", () => {
+      if (tourListEl.classList.contains("open")) buildTourList();
+    });
   }
 
   window.addEventListener("keydown", (e) => {

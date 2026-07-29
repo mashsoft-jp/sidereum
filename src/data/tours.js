@@ -18,6 +18,19 @@
   //   mark  sel の天体に選択マーク (オレンジのリング) を出すか。既定は false
   //   hold  自動送りでの滞留秒 (既定 12)
   //   text  ナレーション
+  //   scene false ならシーン (ビュー・日時・カメラ・速度・選択) を触らない。
+  //         畳み込みで前の設定が毎回再適用されるため、利用者に操作させる
+  //         チュートリアルではこれが無いとカメラが巻き戻る
+  //   ui    一時的に出す UI: "controls" / "nav" / "menu" / "view" / "clock"
+  //   hi    ハイライトする要素の CSS セレクタ
+  //   await 検知したら自動で次へ進む操作:
+  //         "rotate" / "zoom" / "dist" / "pan" / "select" / "view" / "menu"
+  //         (日時は再生中に勝手に動いて誤検知するので対象にしない)
+  //
+  // ツアー単位:
+  //   platform "touch" | "desktop" — 一覧に出す端末。未指定は常に出す
+  //   manual   true なら「自動送り」ボタンを隠す (検知式のツアー用)
+  //   keep     true なら終了時にシーンを戻さない
   //
   // カメラは Tgt 側だけを設定し、実際の移動はメインループの緩和に任せる
   // (通常操作と同じ動きで繋がる)。
@@ -25,6 +38,189 @@
   // 終了時は開始前の状態 (日時・ビュー・カメラ・速度・選択) へ戻す。
   // 終わった場面にそのまま留まらせたいツアーだけ、ツアー側に keep: true を書く。
   const TOURS = [
+    {
+      id: "basics-desktop",
+      platform: "desktop",
+      manual: true,
+      title: { ja: "はじめての操作", en: "Getting Started" },
+      lead: {
+        ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
+        en: "Learn the basics — rotate, zoom, pick a body — by trying each one.",
+      },
+      steps: [
+        {
+          view: "space", sel: null, fit: 1.7, a: 0.42, y: 0.9, mag: 1,
+          play: false, constel: true, mark: true,
+          text: {
+            ja: "Sidereum へようこそ。太陽系を実際の縮尺で見てまわれます。" +
+                "基本の操作をひとつずつ試してみましょう。",
+            en: "Welcome to Sidereum — the Solar System at true scale. " +
+                "Let's try the basic controls one at a time.",
+          },
+        },
+        {
+          scene: false, await: "rotate",
+          text: {
+            ja: "まずは視点を回してみます。画面をドラッグしてください。",
+            en: "First, turn the view: drag anywhere on the screen.",
+          },
+        },
+        {
+          scene: false, await: "zoom",
+          text: {
+            ja: "マウスホイールを回すと拡大・縮小できます。回してみてください。",
+            en: "Scroll the mouse wheel to zoom in and out. Give it a try.",
+          },
+        },
+        {
+          scene: false, await: "dist",
+          text: {
+            ja: "Shift を押しながらホイールを回すと、拡大率ではなく" +
+                "太陽系との距離そのものが変わります。",
+            en: "Hold Shift while scrolling to change your distance from the " +
+                "Solar System itself, rather than the magnification.",
+          },
+        },
+        {
+          scene: false, await: "pan",
+          text: {
+            ja: "右ドラッグすると、見ている位置を平行に動かせます。" +
+                "中心から外れた天体を追いたいときに使います。",
+            en: "Right-drag to slide the view sideways — handy for following " +
+                "something that has drifted off centre.",
+          },
+        },
+        {
+          scene: false, await: "select", ui: ["nav"], hi: "#navPanel",
+          text: {
+            ja: "天体をクリックすると選択して近づきます。左のリストからも選べます。" +
+                "どれか選んでみてください。",
+            en: "Click a body to select it and fly closer — or pick one from the " +
+                "list on the left. Try selecting one.",
+          },
+        },
+        {
+          scene: false, ui: ["clock", "controls"], hi: "#clock",
+          text: {
+            ja: "右上で日時を指定できます。下のパネルでは再生と速度を変えられるので、" +
+                "過去や未来の空を動かして見られます。",
+            en: "Set any date and time at the top right. The panel below plays time " +
+                "forward and sets its speed, so you can watch the past or the future.",
+          },
+        },
+        {
+          scene: false, await: "view", ui: ["view"], hi: "#viewMode",
+          text: {
+            ja: "上のタブで宇宙・地上・月面を切り替えられます。" +
+                "地上と月面は、その場所から見た実際の空になります。切り替えてみてください。",
+            en: "The tabs at the top switch between Space, Ground and Moon. Ground and " +
+                "Moon show the real sky from that place. Try switching.",
+          },
+        },
+        {
+          scene: false, ui: ["menu"], hi: "#menuBtn",
+          text: {
+            ja: "左上のメニューには、共有リンク・風景の表示・単位や言語の切替・" +
+                "操作方法があります。基本操作はここまでです。" +
+                "ほかのガイドツアーも同じメニューから開けます。",
+            en: "The menu at the top left holds share links, scenery, units, language " +
+                "and the full control list. That's the basics — the other guided tours " +
+                "live in the same menu.",
+          },
+        },
+      ],
+    },
+    {
+      id: "basics-touch",
+      platform: "touch",
+      manual: true,
+      title: { ja: "はじめての操作", en: "Getting Started" },
+      lead: {
+        ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
+        en: "Learn the basics — rotate, zoom, pick a body — by trying each one.",
+      },
+      steps: [
+        {
+          view: "space", sel: null, fit: 1.7, a: 0.42, y: 0.9, mag: 1,
+          play: false, constel: true, mark: true,
+          text: {
+            ja: "Sidereum へようこそ。太陽系を実際の縮尺で見てまわれます。" +
+                "基本の操作をひとつずつ試してみましょう。",
+            en: "Welcome to Sidereum — the Solar System at true scale. " +
+                "Let's try the basic controls one at a time.",
+          },
+        },
+        {
+          scene: false, await: "rotate",
+          text: {
+            ja: "まずは視点を回してみます。1本指で画面をドラッグしてください。",
+            en: "First, turn the view: drag the screen with one finger.",
+          },
+        },
+        {
+          scene: false, await: "zoom",
+          text: {
+            ja: "2本の指でつまむように広げたり縮めたり (ピンチ) すると拡大・縮小できます。",
+            en: "Pinch with two fingers to zoom in and out.",
+          },
+        },
+        {
+          scene: false, await: "dist", ui: ["controls"], hi: "#zoom",
+          text: {
+            ja: "下のパネルの「距離」スライダーでは、拡大率ではなく" +
+                "太陽系との距離そのものが変わります。動かしてみてください。",
+            en: "The “Distance” slider in the panel below changes how far you are from " +
+                "the Solar System itself, rather than the magnification. Try moving it.",
+          },
+        },
+        {
+          scene: false, await: "pan",
+          text: {
+            ja: "2本の指を同時にドラッグすると、見ている位置を平行に動かせます。" +
+                "中心から外れた天体を追いたいときに使います。",
+            en: "Drag with two fingers to slide the view sideways — handy for following " +
+                "something that has drifted off centre.",
+          },
+        },
+        {
+          scene: false, await: "select", ui: ["nav"], hi: "#navPanel",
+          text: {
+            ja: "天体をタップすると選択して近づきます。左のリストからも選べます。" +
+                "どれか選んでみてください。",
+            en: "Tap a body to select it and fly closer — or pick one from the list on " +
+                "the left. Try selecting one.",
+          },
+        },
+        {
+          scene: false, ui: ["clock", "controls"], hi: "#clock",
+          text: {
+            ja: "右上で日時を指定できます。下のパネルでは再生と速度を変えられるので、" +
+                "過去や未来の空を動かして見られます。",
+            en: "Set any date and time at the top right. The panel below plays time " +
+                "forward and sets its speed, so you can watch the past or the future.",
+          },
+        },
+        {
+          scene: false, await: "view", ui: ["menu", "view"], hi: "#menuBtn",
+          text: {
+            ja: "左上のメニューを開くと、宇宙・地上・月面を切り替えられます。" +
+                "地上と月面は、その場所から見た実際の空になります。切り替えてみてください。",
+            en: "Open the menu at the top left to switch between Space, Ground and Moon. " +
+                "Ground and Moon show the real sky from that place. Try switching.",
+          },
+        },
+        {
+          scene: false, ui: ["menu"], hi: "#menuBtn",
+          text: {
+            ja: "同じメニューに、共有リンク・風景の表示・単位や言語の切替・" +
+                "操作方法があります。基本操作はここまでです。" +
+                "ほかのガイドツアーも同じメニューから開けます。",
+            en: "The same menu holds share links, scenery, units, language and the full " +
+                "control list. That's the basics — the other guided tours live there too.",
+          },
+        },
+      ],
+    },
     {
       id: "scale",
       title: { ja: "太陽系の大きさ", en: "The Size of the Solar System" },

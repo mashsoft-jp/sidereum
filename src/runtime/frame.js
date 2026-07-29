@@ -256,6 +256,7 @@
 
     render(now / 1000);
     updateClock();
+    tourWatch();          // ガイドツアー: 促した操作をされたら次のステップへ
     updateZoomUI();
     updateMagUI();
     updateAngleUI();

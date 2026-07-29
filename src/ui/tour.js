@@ -13,8 +13,17 @@
   const tourAutoBtn = document.getElementById("tourAuto");
   const tourResumeBtn = document.getElementById("tourResume");
   const tourCloseBtn = document.getElementById("tourClose");
+  const tourDoneEl = document.getElementById("tourDone");
   const menuTourBtn = document.getElementById("menuTour");
   const tourApp = document.getElementById("app");
+  // ステップの ui: [...] で一時的に出す UI (既定ではツアー中は隠している)
+  const TOUR_UI_EL = {
+    controls: document.getElementById("controls"),
+    nav: document.getElementById("navPanel"),
+    menu: document.getElementById("menuBtn"),
+    view: document.getElementById("viewMode"),
+    clock: document.getElementById("clock"),
+  };
 
   let tour = null;            // 実行中のツアー (null = 非実行)
   let tourIdx = 0;
@@ -22,8 +31,55 @@
   let tourTimer = 0;
   let tourTouched = false;    // このシーンで手動操作したか
   let tourSaved = null;       // ツアーが一時的に変える表示設定の退避先
+  let tourAwaitTest = null;   // 現在のステップの達成判定 (null = 待っていない)
+  let tourDoneTimer = 0;
+  let tourHiEl = null;        // ハイライト中の要素
+  let tourSceneDone = false;  // このツアーでシーンを一度でも適用したか
 
   const tourText = (o) => (o ? (lang === "ja" ? o.ja : o.en) : "");
+
+  // 端末の出し分け。UI の位置はレイアウトで、操作方法は入力方式で変わるので
+  // 「狭い画面」と「タッチ (ホバーできない粗いポインタ)」のどちらかで判定する
+  const mqTouch = matchMedia("(hover: none) and (pointer: coarse)");
+  const mqNarrow = matchMedia("(max-width: 720px), (max-height: 480px)");
+  const isTouchUI = () => mqTouch.matches || mqNarrow.matches;
+  const tourVisible = (t) => !t.platform || (t.platform === "touch") === isTouchUI();
+  // 初回ガイドから開くチュートリアル (端末に合う方)
+  function tutorialTour() {
+    return TOURS.find((t) => t.id.indexOf("basics") === 0 && tourVisible(t)) || null;
+  }
+
+  // ステップ開始時にスナップショットを取り、毎フレーム「操作されたか」を見る述語を返す。
+  // 入力ハンドラ側には手を入れない (操作の経路が増えたときに拾い漏らすため)
+  const wrapPi = (a) => ((a + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+  const TOUR_AWAIT = {
+    rotate: () => {
+      const y = cam.yawTgt, p = cam.pitchTgt;
+      return () => Math.abs(wrapPi(cam.yawTgt - y)) + Math.abs(cam.pitchTgt - p) > 0.18;
+    },
+    zoom: () => {
+      const v = camZoomTgt;
+      return () => Math.abs(Math.log(camZoomTgt / v)) > 0.2;
+    },
+    dist: () => {
+      const v = cam.distTgt;
+      return () => Math.abs(Math.log(cam.distTgt / v)) > 0.2;
+    },
+    pan: () => {
+      const p = cam.panOffTgt.slice();
+      return () => Math.hypot(cam.panOffTgt[0] - p[0], cam.panOffTgt[1] - p[1],
+                              cam.panOffTgt[2] - p[2]) > cam.dist * 0.05;
+    },
+    select: () => {
+      const b = selected;
+      return () => !!selected && selected !== b;
+    },
+    view: () => {
+      const g = groundView, s = surfaceBody;
+      return () => groundView !== g || surfaceBody !== s;
+    },
+    menu: () => () => menuEl.classList.contains("open"),
+  };
 
   // 「この軌道半径 [au] が画面に収まる」カメラ距離。
   // 軌道面は俯角ぶん縦に潰れて見えるので、横 (半径そのもの) と縦 (半径×sin俯角)
@@ -32,12 +88,54 @@
     const half = Math.tan(FOV / Math.max(1, mag) / 2);
     const r = au * K_REAL * 1.10;                       // 10% の余白込み
     const wide = r / (half * Math.max(0.2, (W / H) || 1));
-    // ナレーションバーが画面下部を覆う。描画は画面中央基準なので、バーの高さの
-    // 半分ぶんだけ縦に使える範囲が狭いものとして距離を出す (横は影響なし)
-    const vis = Math.max(0.5, 1 - ((tourBar.offsetHeight || 0) + 24) * 0.55 / (H / 2));
+    // 画面下部はナレーションバー (操作パネルを出すステップではその上まで) で隠れる。
+    // 描画は画面中央基準なので、隠れる高さの半分ぶん縦が狭いものとして距離を出す
+    const cover = tourBar.classList.contains("open")
+      ? Math.max(0, H - tourBar.getBoundingClientRect().top) + 12 : 0;
+    const vis = Math.max(0.5, 1 - cover * 0.55 / (H / 2));
     // 真横 (俯角0) では軌道が線に潰れるため、下限を入れて 0 除算相当を避ける
     const tall = r * Math.max(0.15, Math.abs(Math.sin(pitch))) / (half * vis);
     return Math.max(wide, tall);
+  }
+
+  // ステップが要求する UI の出し分け・ハイライト・ナレーションバーの位置
+  function applyTourChrome(s) {
+    for (const k in TOUR_UI_EL) {
+      TOUR_UI_EL[k].classList.toggle("tourShow", !!s.ui && s.ui.indexOf(k) >= 0);
+    }
+    if (tourHiEl) tourHiEl.classList.remove("tourHi");
+    tourHiEl = s.hi ? document.querySelector(s.hi) : null;
+    if (tourHiEl) tourHiEl.classList.add("tourHi");
+    // 操作パネルを出すステップはナレーションバーと重なるので、実高さぶん持ち上げる。
+    // パネルの高さはビュー (宇宙/地上) で変わり、クラスを付けた直後はまだ確定して
+    // いないことがあるので、次のフレームで測り直す
+    liftTourBar();
+    requestAnimationFrame(liftTourBar);
+  }
+  function liftTourBar() {
+    const c = TOUR_UI_EL.controls;
+    const up = c.classList.contains("tourShow") ? c.offsetHeight + 18 : 0;
+    tourBar.style.bottom = up
+      ? "calc(" + (18 + up) + "px + env(safe-area-inset-bottom, 0px))" : "";
+  }
+
+  // 操作の検知。達成したら「できました」を出し、少し置いてから次のステップへ
+  function armTourAwait(s) {
+    clearTimeout(tourDoneTimer);
+    tourDoneTimer = 0;
+    tourBar.classList.remove("done");
+    const f = s.await && TOUR_AWAIT[s.await];
+    tourAwaitTest = f ? f() : null;
+  }
+  function tourWatch() {
+    if (!tourAwaitTest || !tourAwaitTest()) return;
+    tourAwaitTest = null;
+    tourBar.classList.add("done");
+    tourDoneTimer = setTimeout(() => tourGo(tourIdx + 1), 900);
+  }
+  // ツアー中でも、天体の選択を促しているステップだけはキャンバスのクリックを通す
+  function tourAllowsSelect() {
+    return !!tour && tourStateAt(tourIdx).await === "select";
   }
 
   // 0..i のステップを畳み込んだ状態 (書かれていない項目は前のステップを引き継ぐ)
@@ -49,6 +147,30 @@
 
   function applyTourStep(i) {
     const s = tourStateAt(i);
+    applyTourChrome(s);
+    // 星座 (連動して黄道も) の一時的な出し分け。localStorage は書き換えない
+    if (s.constel !== undefined) {
+      showConst = !!s.constel;
+      constBtn.classList.toggle("on", showConst);
+    }
+    // selected はカメラの注視先として使うだけなので、既定では選択マークを出さない
+    showSelMark = !!s.mark;
+    tourTouched = false;
+    tourResumeBtn.hidden = true;
+    // 情報パネルはナレーションと重なるので、ステップが変わったら必ず閉じる
+    // (チュートリアルで天体を選ばせたときも、次へ進む時点で畳む)
+    infoPanel.classList.remove("open");
+    // scene: false はナレーションと UI だけのステップ。畳み込みで前のシーン設定が
+    // 毎回再適用されると、利用者が動かしたカメラが巻き戻ってしまうため必要。
+    // ただしツアーの最初の1回だけは必ず適用する (?step=N で scene: false の
+    // 途中から開いたときに、シーンが設定されないまま始まってしまうため)
+    if (s.scene === false && tourSceneDone) { armTourAwait(s); return; }
+    applyTourScene(s);
+    tourSceneDone = true;
+    armTourAwait(s);   // 検知のスナップショットはシーン適用の後に取る
+  }
+
+  function applyTourScene(s) {
     if (s.view === "ground") enterGround();
     else if (s.view === "moon") enterMoon();
     else exitGround();
@@ -63,13 +185,6 @@
       speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
     }
     setPlaying(!!s.play);
-    // 星座 (連動して黄道も) の一時的な出し分け。localStorage は書き換えない
-    if (s.constel !== undefined) {
-      showConst = !!s.constel;
-      constBtn.classList.toggle("on", showConst);
-    }
-    // selected はカメラの注視先として使うだけなので、既定では選択マークを出さない
-    showSelMark = !!s.mark;
     // 選択はするが情報パネルは開かない (ナレーションと重なるため)
     const b = s.sel ? BODY_BY_KEY.get(s.sel) : null;
     select(b, false);
@@ -101,8 +216,6 @@
     else if (isFinite(s.z)) dist = s.z;
     cam.distTgt = Math.min(1400, dist);
     resetPan();
-    tourTouched = false;
-    tourResumeBtn.hidden = true;
   }
 
   function clearTourTimer() {
@@ -131,10 +244,13 @@
       .map((_, i) => '<i class="' + (i === tourIdx ? "on" : "") + '"></i>').join("");
     tourPrevBtn.disabled = tourIdx === 0;
     tourNextBtn.textContent = tourIdx === tour.steps.length - 1 ? t.tourDone : t.tourNext;
+    // 操作の検知で進むツアーでは自動送りに意味がないので出さない
+    tourAutoBtn.hidden = !!tour.manual;
     tourAutoBtn.textContent = t.tourAuto;
     tourAutoBtn.classList.toggle("on", tourAuto);
     tourResumeBtn.textContent = t.tourResume;
     tourCloseBtn.title = t.tourExit;
+    tourDoneEl.textContent = t.tourGood;
   }
 
   function tourGo(i) {
@@ -194,6 +310,8 @@
     if (!tourSaved) tourSaved = captureTourState();   // 再入時は最初の状態を保つ
     tour = t;
     tourActive = true;
+    tourSceneDone = false;
+    if (t.manual) tourAuto = false;   // ボタンを隠すので、前のツアーの ON を持ち込まない
     hideModals();
     setMenu(false);
     if (welcomeEl.classList.contains("open")) closeWelcome();
@@ -203,18 +321,26 @@
   }
   function endTour() {
     clearTourTimer();
+    clearTimeout(tourDoneTimer);
+    tourDoneTimer = 0;
+    tourAwaitTest = null;
     const keepScene = !!(tour && tour.keep);
     tour = null;
     tourActive = false;
     if (tourSaved) { restoreTourState(tourSaved, keepScene); tourSaved = null; }
+    for (const k in TOUR_UI_EL) TOUR_UI_EL[k].classList.remove("tourShow");
+    if (tourHiEl) { tourHiEl.classList.remove("tourHi"); tourHiEl = null; }
+    tourBar.style.bottom = "";
+    tourBar.classList.remove("done", "open");
     tourApp.classList.remove("tourMode");
-    tourBar.classList.remove("open");
     updateHint();
   }
 
   // 手動でカメラを動かしたら自動送りを止め、「シーンに戻す」を出す
   function tourTouch() {
     if (!tour || tourTouched) return;
+    // 操作を促しているステップは動かすのが目的なので、戻す導線を出さない
+    if (tourStateAt(tourIdx).await) return;
     tourTouched = true;
     tourResumeBtn.hidden = false;
     clearTourTimer();
@@ -233,18 +359,19 @@
   });
 
   // ---------- ツアー一覧 (モーダル) ----------
+  // 端末に合うものだけ並べる (URL 指定は絞らないので、他端末向けも確認できる)
   function buildTourList() {
     const t = T();
     tourListEl.innerHTML =
       '<button id="tourListClose" aria-label="close">✕</button>' +
       "<h2>" + t.menuTour + "</h2>" +
-      TOURS.map((tr, i) =>
+      TOURS.map((tr, i) => (!tourVisible(tr) ? "" :
         '<div class="tourCard">' +
           "<h3>" + tourText(tr.title) + "</h3>" +
           "<p>" + tourText(tr.lead) + "</p>" +
           '<div class="tourMeta"><span>' + tr.steps.length + t.tourSteps + "</span>" +
           '<button class="tourStart" data-i="' + i + '">' + t.tourStart + "</button></div>" +
-        "</div>").join("");
+        "</div>")).join("");
   }
   function openTourList() {
     buildTourList();
@@ -266,6 +393,12 @@
       infoPanel.classList.remove("open");
     }
     if (tourListEl.classList.contains("open")) buildTourList();
+  }
+  // 画面サイズや入力方式が変わったら一覧の出し分けを追従させる
+  for (const mq of [mqTouch, mqNarrow]) {
+    mq.addEventListener("change", () => {
+      if (tourListEl.classList.contains("open")) buildTourList();
+    });
   }
 
   window.addEventListener("keydown", (e) => {
