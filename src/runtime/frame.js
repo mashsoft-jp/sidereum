@@ -74,9 +74,9 @@
     }
   }
 
-  // ---------- 時刻表示 & 日付入力 (表示はローカル時刻) ----------
+  // ---------- 日時の表示 & 入力 (表示はローカル時刻) ----------
   const dateInput = document.getElementById("dateInput");
-  const timeText = document.getElementById("timeText");
+  const timeInput = document.getElementById("timeInput");
   const tzText = document.getElementById("tzText");
   const pad2 = (n) => String(n).padStart(2, "0");
   // タイムゾーン略称 (JST / GMT / BST など)。日付・言語ごとにキャッシュ (夏時間対応)
@@ -105,12 +105,9 @@
       dateInput.value = ds;
       lastDateStr = ds;
     }
-    // 再生中はコロンを実時間1秒周期で点滅 (前半0.5秒は表示、後半は半角空白)。
-    // font-num は等幅なので ":" ↔ " " で桁位置はずれない。停止中は常に表示
-    const colon = (playing && Math.floor(Date.now() / 500) % 2 === 1) ? " " : ":";
-    const ts = pad2(d.getHours()) + colon + pad2(d.getMinutes());
-    if (ts !== lastTimeStr) {
-      timeText.textContent = ts;
+    const ts = pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+    if (document.activeElement !== timeInput && ts !== lastTimeStr) {
+      timeInput.value = ts;
       lastTimeStr = ts;
     }
     const tz = tzAbbr(d);
@@ -118,6 +115,12 @@
       tzText.textContent = tz;
       lastTzStr = tz;
     }
+  }
+  // 入力欄の min/max はローカル日付なので、範囲もローカル時刻で揃える
+  const MIN_T = new Date(1900, 0, 1).getTime();
+  const MAX_T = new Date(2199, 11, 31, 23, 59, 59, 999).getTime();
+  function setSimTime(t) {
+    simDays = (Math.min(Math.max(t, MIN_T), MAX_T) - J2000) / DAY_MS;
   }
   // 年を4桁打ち終える前にも change は発火する ("1" の時点で 0001 年として発火)。
   // そこで確定・補正すると入力途中の年が勝手に書き換わってしまうため、
@@ -127,14 +130,26 @@
     if (!v) return;
     const [y, mo, dd] = v.split("-").map(Number);
     if (!(y >= 1000)) return;                 // 入力途中 (年が4桁未満)
-    let t = new Date(y, mo - 1, dd).getTime();   // ローカル 0時
-    t = Math.min(Math.max(t, Date.UTC(1900, 0, 1)), Date.UTC(2199, 11, 31));
-    simDays = (t - J2000) / DAY_MS;
+    // 日付だけを差し替え、時刻は今の値をそのまま持ち越す
+    const c = new Date(J2000 + simDays * DAY_MS);
+    setSimTime(new Date(y, mo - 1, dd,
+      c.getHours(), c.getMinutes(), c.getSeconds(), c.getMilliseconds()).getTime());
+  });
+  timeInput.addEventListener("change", () => {
+    const v = timeInput.value;                // "HH:MM"
+    if (!v) return;
+    const [hh, mi] = v.split(":").map(Number);
+    if (!Number.isFinite(hh) || !Number.isFinite(mi)) return;
+    // 時刻だけを差し替え。入力欄に秒が無いので秒以下は 0 に揃える
+    const c = new Date(J2000 + simDays * DAY_MS);
+    setSimTime(new Date(c.getFullYear(), c.getMonth(), c.getDate(), hh, mi, 0, 0).getTime());
   });
   // Enter で入力を終える
   dateInput.addEventListener("keydown", (e) => { if (e.key === "Enter") dateInput.blur(); });
+  timeInput.addEventListener("keydown", (e) => { if (e.key === "Enter") timeInput.blur(); });
   // 入力欄を離れたら、実際の日時を必ず書き戻す (範囲外や打ちかけの表示を正す)
   dateInput.addEventListener("blur", () => { lastDateStr = ""; });
+  timeInput.addEventListener("blur", () => { lastTimeStr = ""; });
   document.getElementById("nowBtn").addEventListener("click", () => {
     simDays = (Date.now() - J2000) / DAY_MS;
   });

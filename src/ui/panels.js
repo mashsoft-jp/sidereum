@@ -29,7 +29,7 @@
       ],
       common_rows: [
         ["ビュー切替", "上部の 宇宙 / 地上 / 月面"],
-        ["日時", "右上の日付をタップ・「現在時刻に合わせる」"],
+        ["日時", "右上の日付・時刻をタップ・「現在時刻に合わせる」"],
         ["再生・速度", "下部パネル"],
         ["表示切替", "左上の 軌道 / 名前 / 星座 (黄道も連動)"],
         ["風景", "メニュー「風景を表示」(地面の質感・地平の稜線・空の色)"],
@@ -54,7 +54,7 @@
       ],
       common_rows: [
         ["Switch view", "Space / Ground / Moon at the top"],
-        ["Date & time", "Tap the date top-right · “Set to current time”"],
+        ["Date & time", "Tap the date or time top-right · “Set to current time”"],
         ["Play & speed", "Bottom panel"],
         ["Toggles", "Orbits / Labels / Constellations (top-left)"],
         ["Scenery", "Menu “Show scenery” (ground texture, ridgeline, sky color)"],

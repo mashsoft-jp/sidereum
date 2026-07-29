@@ -299,7 +299,7 @@
     text-align: right;
     pointer-events: none;
   }
-  #dateInput {
+  #dateInput, #timeInput {
     font-family: var(--font-num);
     font-variant-numeric: tabular-nums;
     font-size: 16px;
@@ -313,7 +313,11 @@
     pointer-events: auto;
     cursor: pointer;
   }
-  #dateInput:focus-visible { outline: 1px solid var(--accent-dim); border-radius: 3px; }
+  /* 時刻欄のスピナーは HUD では邪魔なので消す (ピッカーのアイコンは日付欄と揃える) */
+  #timeInput::-webkit-inner-spin-button { display: none; }
+  #dateInput:focus-visible, #timeInput:focus-visible {
+    outline: 1px solid var(--accent-dim); border-radius: 3px;
+  }
   #clock .dtrow {
     display: flex;
     align-items: baseline;
@@ -321,12 +325,6 @@
     gap: 9px;
   }
   #clock .timeRow { display: inline-flex; align-items: baseline; gap: 9px; }
-  #timeText {
-    font-family: var(--font-num);
-    font-variant-numeric: tabular-nums;
-    font-size: 16px;
-    letter-spacing: 0.04em;
-  }
   #tzText {
     font-size: 10px;
     letter-spacing: 0.06em;
@@ -461,7 +459,7 @@
     cursor: pointer;
     touch-action: manipulation;   /* ダブルタップズーム抑止 */
   }
-  input[type="range"], input[type="date"] { touch-action: manipulation; }
+  input[type="range"], input[type="date"], input[type="time"] { touch-action: manipulation; }
   button:hover { background: rgba(150, 178, 224, 0.16); }
   button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   button.primary { color: #0a0d16; background: var(--accent); border-color: var(--accent); font-weight: 600; }
@@ -639,8 +637,7 @@
     #title h1 { font-size: 11px; letter-spacing: 0.14em; }
     #menuBtn { padding: 4px 6px; font-size: 15px; }
     #clock { padding: 6px 10px; }
-    #dateInput { font-size: 13px; }
-    #timeText { font-size: 13px; }
+    #dateInput, #timeInput { font-size: 13px; }
     #nowBtn { font-size: 9px; padding: 2px 8px; margin-top: 4px; }
     /* 縦持ち: 日付を上、時刻を下の2行にしてタイトルと重ならないよう幅を詰める */
     #clock .dtrow { flex-direction: column; align-items: flex-end; gap: 1px; }
@@ -694,8 +691,7 @@
     #menuBtn { padding: 4px 6px; font-size: 15px; }
     #menu { top: calc(54px + var(--sat)); left: calc(16px + var(--sal) / 2); }
     #clock { padding: 5px 10px; }
-    #dateInput { font-size: 13px; }
-    #timeText { font-size: 13px; }
+    #dateInput, #timeInput { font-size: 13px; }
     #nowBtn { font-size: 9px; padding: 2px 8px; margin-top: 3px; }
     #hint { display: none; }
     #navPanel {
