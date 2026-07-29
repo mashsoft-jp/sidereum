@@ -36,7 +36,11 @@
           if (sl < 1e-9) { sx = 0; sy = 1; sz = 0; } else { sx /= sl; sy /= sl; sz /= sl; }
           return [sx, sy, sz];
         };
-        const L = act * act * 0.72 * K_REAL * scl;               // 近日点で約 0.72au
+        // 尾の基準長。実際の彗星の尾は 10^7〜10^8 km (0.07〜0.67 au) で、
+        // 大彗星でも 0.5 au 程度が上限。1910年の「尾が空を100〜150°横切った」
+        // という記録は、地球が尾のほぼ内部にいたための遠近効果によるもので、
+        // 物理長がそれほど必要なわけではない
+        const L = act * act * 0.45 * K_REAL * scl;               // 近日点で約 0.45au
         // ダストの湾曲方向 (尾とジェットの両方で使うのでここで求めておく)
         const av = ax * vx + ay * vy + az * vz;
         let cvx = vx - ax * av, cvy = vy - ay * av, cvz = vz - az * av;
@@ -54,12 +58,14 @@
         if (tailVis > 0.004) {
           // ダストテイル。反太陽方向から徐々に進行方向の後方へ曲がる。
           // 太陽光の反射なので先端まで黄白のまま、薄くなるだけ (青くはならない)
-          const curve = 0.12;
+          const curve = 0.16;
           s = sideOf(ax - cvx * curve, ay - cvy * curve, az - cvz * curve);
           gl.uniform3f(tailP.u.uAxis, ax, ay, az);
           gl.uniform3f(tailP.u.uCurve, -cvx * curve, -cvy * curve, -cvz * curve);
           gl.uniform3f(tailP.u.uSide, s[0], s[1], s[2]);
-          gl.uniform2f(tailP.u.uDim, L * 0.74, L * 0.065);
+          // ダストは放出速度が遅く広い角度に散るため扇状に広がる (全開角 約32°)。
+          // 細い直線状なのはイオンテイルの方
+          gl.uniform2f(tailP.u.uDim, L * 0.74, L * 0.21);
           gl.uniform3f(tailP.u.uCol1, 1.0, 0.95, 0.86);
           gl.uniform3f(tailP.u.uCol2, 0.74, 0.66, 0.54);
           gl.uniform1f(tailP.u.uKind, 1);
@@ -67,7 +73,7 @@
           gl.uniform1f(tailP.u.uAlpha, 0.38 * act * tailVis);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
           // ダストの内層を重ね、コマから続く明るい流れを作る
-          gl.uniform2f(tailP.u.uDim, L * 0.68, L * 0.035);
+          gl.uniform2f(tailP.u.uDim, L * 0.68, L * 0.10);
           gl.uniform3f(tailP.u.uCol1, 1.0, 0.99, 0.94);
           gl.uniform3f(tailP.u.uCol2, 0.84, 0.78, 0.66);
           gl.uniform1f(tailP.u.uSeed, 7.1);
@@ -145,8 +151,10 @@
         const comaFar = (1 - distLod) * (1 - distLod);
         const comaCloseXpx = Math.max(8, nucleusPx * 2.2);
         const comaCloseYpx = Math.max(6, nucleusPx * 1.6);
-        const comaX = L * 0.014 * comaFar + camCometDist / fpxV * comaCloseXpx * (1 - comaFar);
-        const comaY = L * 0.009 * comaFar + camCometDist / fpxV * comaCloseYpx * (1 - comaFar);
+        // 係数は L を短くしたぶんを打ち消してあり、遠方でのコマの見かけの
+        // 大きさは尾の長さ変更前と同じになる (0.72*0.014 = 0.45*0.0224)
+        const comaX = L * 0.0224 * comaFar + camCometDist / fpxV * comaCloseXpx * (1 - comaFar);
+        const comaY = L * 0.0144 * comaFar + camCometDist / fpxV * comaCloseYpx * (1 - comaFar);
         const comaProjX = comaY + (comaX - comaY) * comaFacing;
         gl.uniform2f(comaP.u.uDim, comaProjX, comaY);
         gl.uniform3f(comaP.u.uCol, 0.70, 0.78, 0.86);
