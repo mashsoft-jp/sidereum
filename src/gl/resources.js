@@ -19,8 +19,7 @@
     img.src = TEXTURES[key];
     texByKey.set(key, tex);
   }
-  gl.useProgram(bodyP.pr);
-  gl.uniform1i(bodyP.u.uTex, 0);
+  // サンプラーとテクスチャユニットの指定は bodyRenderer.beginPass が毎回行う
 
   // ---------- 星空 ----------
   // 宇宙ビューの背景恒星。以前は乱数配置の装飾だったが、現在はヨール輝星

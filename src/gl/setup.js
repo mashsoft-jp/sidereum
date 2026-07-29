@@ -69,9 +69,12 @@
   const ringVS = `@@glsl:ring.vert@@`;
   const ringFS = PRE + `@@glsl:ring.frag@@`;
 
-  let bodyP, lineP, pointP, billP, ringP, tailP, comaP, terrainP;
+  // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
+  // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
+  let bodyRenderer;
+  let lineP, pointP, billP, ringP, tailP, comaP, terrainP;
   try {
-    bodyP = program(bodyVS, bodyFS);
+    bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
     lineP = program(lineVS, lineFS);
     pointP = program(pointVS, pointFS);
     billP = program(billVS, billFS);

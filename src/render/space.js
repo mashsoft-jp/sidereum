@@ -207,17 +207,14 @@
     gl.disable(gl.BLEND);
 
     // --- 天体 ---
-    gl.useProgram(bodyP.pr);
-    gl.bindBuffer(gl.ARRAY_BUFFER, sphereVB);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIB);
-    gl.enableVertexAttribArray(bodyP.a.aPos);
-    gl.vertexAttribPointer(bodyP.a.aPos, 3, gl.FLOAT, false, 0, 0);
-    gl.uniform1f(bodyP.u.uTime, nowSec);
-    gl.uniform3f(bodyP.u.uCam, 0, 0, 0);                          // カメラ = 原点 (相対座標)
-    gl.uniform3f(bodyP.u.uSun, -eye[0], -eye[1], -eye[2]);        // 太陽のカメラ相対位置
-    drawBody(SUN);
-    for (const p of PLANETS) drawBody(p);
-    for (const s of SATELLITES) drawBody(s);
+    // 座標はカメラ相対なので、カメラは原点・太陽の位置は -eye になる。
+    // 光源はワールドの原点にある太陽1つなので全天体で同じ値を渡す
+    bodyRenderer.beginPass({ time: nowSec, cameraPosition: ZERO3, depthTest: true, depthWrite: true });
+    SCR.sun[0] = -eye[0]; SCR.sun[1] = -eye[1]; SCR.sun[2] = -eye[2];
+    drawBody(SUN, SCR.sun);
+    for (const p of PLANETS) drawBody(p, SCR.sun);
+    for (const s of SATELLITES) drawBody(s, SCR.sun);
+    bodyRenderer.endPass();
 
     // --- 自転軸 (各天体の軌道表示に連動。深度テストで天体の裏側は隠れる) ---
     if (ALL_BODIES.some((b) => b.showOrbit)) {

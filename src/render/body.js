@@ -32,6 +32,7 @@
     model: new Float32Array(16), mvp: new Float32Array(16),
     t: [0, 0, 0], tgt: [0, 0, 0],
     v: [0, 0, 0], v2: [0, 0, 0],
+    sun: [0, 0, 0],             // bodyRenderer.draw へ渡す光源位置
   };
 
   function bodyModel(b, r) {
@@ -52,23 +53,73 @@
     return mTRS(SCR.t, SCR.rot, r, SCR.model);
   }
 
-  function drawBody(b) {
+  // ---------- 天体レンダラ ----------
+  // WebGL のプログラムと uniform はグローバルな状態なので、設定漏れがあると
+  // 直前の描画の値がそのまま残る (実際に uComet の設定漏れで、地上ビューの
+  // 全天体が彗星核として描かれうる状態になっていた)。
+  //
+  // そこで prog をクロージャに閉じ込め、この関数の外から uniform を触れなく
+  // する。draw() は呼ばれるたびに天体単位の uniform を「すべて」設定する。
+  // どれか1つでも省くと同じ種類のバグが再発するため、条件分岐で飛ばさない。
+  //
+  // 宇宙ビューと地上ビューでは座標系・モデル行列の作り方・カリング・深度の
+  // 扱いが異なるので、パス単位 (beginPass) と天体単位 (draw) を分けている。
+  // モデル行列の生成と地上ビューの深度クリアは呼び出し側に残す。
+  function createBodyRenderer(prog) {
+    const { pr, u, a } = prog;
+    let inPass = false;
+    return {
+      // program・バッファ・頂点属性・テクスチャユニット・depth/cull を確定させる。
+      // cullFace は gl.FRONT / gl.BACK、不要なら null
+      beginPass({ time, cameraPosition, cullFace = null, depthTest = true, depthWrite = true }) {
+        if (inPass) throw new Error("bodyRenderer: beginPass が入れ子になっています");
+        inPass = true;
+        gl.useProgram(pr);
+        gl.bindBuffer(gl.ARRAY_BUFFER, sphereVB);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIB);
+        gl.enableVertexAttribArray(a.aPos);
+        gl.vertexAttribPointer(a.aPos, 3, gl.FLOAT, false, 0, 0);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.uniform1i(u.uTex, 0);
+        gl.uniform1f(u.uTime, time);
+        gl.uniform3f(u.uCam, cameraPosition[0], cameraPosition[1], cameraPosition[2]);
+        if (depthTest) gl.enable(gl.DEPTH_TEST); else gl.disable(gl.DEPTH_TEST);
+        gl.depthMask(!!depthWrite);
+        if (cullFace !== null) { gl.enable(gl.CULL_FACE); gl.cullFace(cullFace); }
+        else gl.disable(gl.CULL_FACE);
+      },
+      // sunPosition は方向ではなく「シェーダが使う座標系での光源位置」。
+      // 宇宙ビューは全天体で同一 (カメラ相対の太陽位置)、地上ビューは天体ごとに
+      // 「天体 → 実際の太陽」方向を遠方光源の位置として渡す
+      draw({ body, model, mvp, sunPosition }) {
+        if (!inPass) throw new Error("bodyRenderer: beginPass より前に draw が呼ばれました");
+        const tx = texByKey.get(body.key);
+        gl.bindTexture(gl.TEXTURE_2D, tx || noTex);
+        gl.uniform1f(u.uHasTex, tx ? 1 : 0);
+        gl.uniformMatrix4fv(u.uMVP, false, mvp);
+        gl.uniformMatrix4fv(u.uModel, false, model);
+        gl.uniform3f(u.uSun, sunPosition[0], sunPosition[1], sunPosition[2]);
+        gl.uniform1f(u.uComet, body.comet ? 1 : 0);
+        gl.uniform1f(u.uType, body.type);
+        gl.uniform3fv(u.uColA, body.colA);
+        gl.uniform3fv(u.uColB, body.colB);
+        gl.uniform3fv(u.uColC, body.colC);
+        gl.uniform3fv(u.uRim, body.rim);
+        gl.uniform4fv(u.uParams, body.params);
+        gl.drawElements(gl.TRIANGLES, sphere.idx.length, gl.UNSIGNED_SHORT, 0);
+      },
+      endPass() {
+        inPass = false;
+        gl.disable(gl.CULL_FACE);
+      },
+    };
+  }
+
+  // 宇宙ビュー用。モデル行列を作って1天体を描く (パスは呼び出し側で開く)
+  function drawBody(b, sunPosition) {
     const r = bodyR(b);
     const model = bodyModel(b, r);
-    const mvp = mMul(VP, model, SCR.mvp);
-    const tx = texByKey.get(b.key);
-    gl.bindTexture(gl.TEXTURE_2D, tx || noTex);
-    gl.uniform1f(bodyP.u.uHasTex, tx ? 1 : 0);
-    gl.uniformMatrix4fv(bodyP.u.uMVP, false, mvp);
-    gl.uniformMatrix4fv(bodyP.u.uModel, false, model);
-    gl.uniform1f(bodyP.u.uComet, b.comet ? 1 : 0);
-    gl.uniform1f(bodyP.u.uType, b.type);
-    gl.uniform3fv(bodyP.u.uColA, b.colA);
-    gl.uniform3fv(bodyP.u.uColB, b.colB);
-    gl.uniform3fv(bodyP.u.uColC, b.colC);
-    gl.uniform3fv(bodyP.u.uRim, b.rim);
-    gl.uniform4fv(bodyP.u.uParams, b.params);
-    gl.drawElements(gl.TRIANGLES, sphere.idx.length, gl.UNSIGNED_SHORT, 0);
+    bodyRenderer.draw({ body: b, model, mvp: mMul(VP, model, SCR.mvp), sunPosition });
   }
 
   function project(w) {

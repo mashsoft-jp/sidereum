@@ -388,15 +388,10 @@
       // Zファイティングで突き抜ける。片面カリングで自己交差を防ぐ。
       // この球の巻き方向では FRONT を落とすと観測者側の半球が残る
       // (BACK だと裏側の半球が見えてしまい、満ち欠けが反転する)
-      gl.enable(gl.CULL_FACE);
-      gl.cullFace(gl.FRONT);
-      gl.useProgram(bodyP.pr);
-      gl.bindBuffer(gl.ARRAY_BUFFER, sphereVB);
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIB);
-      gl.enableVertexAttribArray(bodyP.a.aPos);
-      gl.vertexAttribPointer(bodyP.a.aPos, 3, gl.FLOAT, false, 0, 0);
-      gl.uniform1f(bodyP.u.uTime, nowSec);
-      gl.uniform3f(bodyP.u.uCam, 0, 0, 0);
+      bodyRenderer.beginPass({
+        time: nowSec, cameraPosition: ZERO3,
+        cullFace: gl.FRONT, depthTest: true, depthWrite: true,
+      });
       let satLx = 0, satLy = 0, satLz = 0;   // 土星の環の照射方向 (ループ内で確定)
       for (const bb of bigBodies) {
         const b = bb.b, R = bb.wr;
@@ -422,32 +417,19 @@
         // 太陽」(ワールドで太陽は原点 = -posW) を遠方光源として使う。ドーム上の
         // 2点間で照らすと位相角が 90°-離角/2 に潰れ、常に満ち気味になるため
         if (b === SUN) {
-          gl.uniform3f(bodyP.u.uSun, sunGx, sunGy, sunGz);
+          SCR.sun[0] = sunGx; SCR.sun[1] = sunGy; SCR.sun[2] = sunGz;
         } else {
           const w = posW.get(b.key);
           _gp[0] = -w[0]; _gp[1] = -w[1]; _gp[2] = -w[2];
           const Ld = worldDirToGround(_gp, _fwd);
           if (b.key === "saturn") { satLx = Ld[0]; satLy = Ld[1]; satLz = Ld[2]; }
-          gl.uniform3f(bodyP.u.uSun, Ld[0] * 1e6, Ld[1] * 1e6, Ld[2] * 1e6);
+          SCR.sun[0] = Ld[0] * 1e6; SCR.sun[1] = Ld[1] * 1e6; SCR.sun[2] = Ld[2] * 1e6;
         }
-        const tx = texByKey.get(b.key);
-        gl.bindTexture(gl.TEXTURE_2D, tx || noTex);
-        gl.uniform1f(bodyP.u.uHasTex, tx ? 1 : 0);
-        gl.uniformMatrix4fv(bodyP.u.uMVP, false, mMul(gVP, m, SCR.mvp));
+        const mvp = mMul(gVP, m, SCR.mvp);
         SCR.model.set(m);   // uModel は f32 で十分 (法線用)。f64 配列を直接渡さない
-        gl.uniformMatrix4fv(bodyP.u.uModel, false, SCR.model);
-        // uComet はプログラム単位で保持されるため、ここで必ず設定する。
-        // 省くと直前の描画の値が残り、全天体が彗星核として描かれうる
-        gl.uniform1f(bodyP.u.uComet, b.comet ? 1 : 0);
-        gl.uniform1f(bodyP.u.uType, b.type);
-        gl.uniform3fv(bodyP.u.uColA, b.colA);
-        gl.uniform3fv(bodyP.u.uColB, b.colB);
-        gl.uniform3fv(bodyP.u.uColC, b.colC);
-        gl.uniform3fv(bodyP.u.uRim, b.rim);
-        gl.uniform4fv(bodyP.u.uParams, b.params);
-        gl.drawElements(gl.TRIANGLES, sphere.idx.length, gl.UNSIGNED_SHORT, 0);
+        bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun });
       }
-      gl.disable(gl.CULL_FACE);
+      bodyRenderer.endPass();
       // 土星の環 (球として描かれる倍率のときのみ。軸の向きを地上フレームへ変換)
       const satBB = bigBodies.find((x) => x.b.key === "saturn");
       if (satBB) {

@@ -1877,9 +1877,12 @@
       gl_FragColor = vec4(c * a, a);
     }`;
 
-  let bodyP, lineP, pointP, billP, ringP, tailP, comaP, terrainP;
+  // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
+  // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
+  let bodyRenderer;
+  let lineP, pointP, billP, ringP, tailP, comaP, terrainP;
   try {
-    bodyP = program(bodyVS, bodyFS);
+    bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
     lineP = program(lineVS, lineFS);
     pointP = program(pointVS, pointFS);
     billP = program(billVS, billFS);
@@ -1990,8 +1993,7 @@
     img.src = TEXTURES[key];
     texByKey.set(key, tex);
   }
-  gl.useProgram(bodyP.pr);
-  gl.uniform1i(bodyP.u.uTex, 0);
+  // サンプラーとテクスチャユニットの指定は bodyRenderer.beginPass が毎回行う
 
   // ---------- 星空 ----------
   // 宇宙ビューの背景恒星。以前は乱数配置の装飾だったが、現在はヨール輝星
@@ -2257,6 +2259,7 @@
     model: new Float32Array(16), mvp: new Float32Array(16),
     t: [0, 0, 0], tgt: [0, 0, 0],
     v: [0, 0, 0], v2: [0, 0, 0],
+    sun: [0, 0, 0],             // bodyRenderer.draw へ渡す光源位置
   };
 
   function bodyModel(b, r) {
@@ -2277,23 +2280,73 @@
     return mTRS(SCR.t, SCR.rot, r, SCR.model);
   }
 
-  function drawBody(b) {
+  // ---------- 天体レンダラ ----------
+  // WebGL のプログラムと uniform はグローバルな状態なので、設定漏れがあると
+  // 直前の描画の値がそのまま残る (実際に uComet の設定漏れで、地上ビューの
+  // 全天体が彗星核として描かれうる状態になっていた)。
+  //
+  // そこで prog をクロージャに閉じ込め、この関数の外から uniform を触れなく
+  // する。draw() は呼ばれるたびに天体単位の uniform を「すべて」設定する。
+  // どれか1つでも省くと同じ種類のバグが再発するため、条件分岐で飛ばさない。
+  //
+  // 宇宙ビューと地上ビューでは座標系・モデル行列の作り方・カリング・深度の
+  // 扱いが異なるので、パス単位 (beginPass) と天体単位 (draw) を分けている。
+  // モデル行列の生成と地上ビューの深度クリアは呼び出し側に残す。
+  function createBodyRenderer(prog) {
+    const { pr, u, a } = prog;
+    let inPass = false;
+    return {
+      // program・バッファ・頂点属性・テクスチャユニット・depth/cull を確定させる。
+      // cullFace は gl.FRONT / gl.BACK、不要なら null
+      beginPass({ time, cameraPosition, cullFace = null, depthTest = true, depthWrite = true }) {
+        if (inPass) throw new Error("bodyRenderer: beginPass が入れ子になっています");
+        inPass = true;
+        gl.useProgram(pr);
+        gl.bindBuffer(gl.ARRAY_BUFFER, sphereVB);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIB);
+        gl.enableVertexAttribArray(a.aPos);
+        gl.vertexAttribPointer(a.aPos, 3, gl.FLOAT, false, 0, 0);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.uniform1i(u.uTex, 0);
+        gl.uniform1f(u.uTime, time);
+        gl.uniform3f(u.uCam, cameraPosition[0], cameraPosition[1], cameraPosition[2]);
+        if (depthTest) gl.enable(gl.DEPTH_TEST); else gl.disable(gl.DEPTH_TEST);
+        gl.depthMask(!!depthWrite);
+        if (cullFace !== null) { gl.enable(gl.CULL_FACE); gl.cullFace(cullFace); }
+        else gl.disable(gl.CULL_FACE);
+      },
+      // sunPosition は方向ではなく「シェーダが使う座標系での光源位置」。
+      // 宇宙ビューは全天体で同一 (カメラ相対の太陽位置)、地上ビューは天体ごとに
+      // 「天体 → 実際の太陽」方向を遠方光源の位置として渡す
+      draw({ body, model, mvp, sunPosition }) {
+        if (!inPass) throw new Error("bodyRenderer: beginPass より前に draw が呼ばれました");
+        const tx = texByKey.get(body.key);
+        gl.bindTexture(gl.TEXTURE_2D, tx || noTex);
+        gl.uniform1f(u.uHasTex, tx ? 1 : 0);
+        gl.uniformMatrix4fv(u.uMVP, false, mvp);
+        gl.uniformMatrix4fv(u.uModel, false, model);
+        gl.uniform3f(u.uSun, sunPosition[0], sunPosition[1], sunPosition[2]);
+        gl.uniform1f(u.uComet, body.comet ? 1 : 0);
+        gl.uniform1f(u.uType, body.type);
+        gl.uniform3fv(u.uColA, body.colA);
+        gl.uniform3fv(u.uColB, body.colB);
+        gl.uniform3fv(u.uColC, body.colC);
+        gl.uniform3fv(u.uRim, body.rim);
+        gl.uniform4fv(u.uParams, body.params);
+        gl.drawElements(gl.TRIANGLES, sphere.idx.length, gl.UNSIGNED_SHORT, 0);
+      },
+      endPass() {
+        inPass = false;
+        gl.disable(gl.CULL_FACE);
+      },
+    };
+  }
+
+  // 宇宙ビュー用。モデル行列を作って1天体を描く (パスは呼び出し側で開く)
+  function drawBody(b, sunPosition) {
     const r = bodyR(b);
     const model = bodyModel(b, r);
-    const mvp = mMul(VP, model, SCR.mvp);
-    const tx = texByKey.get(b.key);
-    gl.bindTexture(gl.TEXTURE_2D, tx || noTex);
-    gl.uniform1f(bodyP.u.uHasTex, tx ? 1 : 0);
-    gl.uniformMatrix4fv(bodyP.u.uMVP, false, mvp);
-    gl.uniformMatrix4fv(bodyP.u.uModel, false, model);
-    gl.uniform1f(bodyP.u.uComet, b.comet ? 1 : 0);
-    gl.uniform1f(bodyP.u.uType, b.type);
-    gl.uniform3fv(bodyP.u.uColA, b.colA);
-    gl.uniform3fv(bodyP.u.uColB, b.colB);
-    gl.uniform3fv(bodyP.u.uColC, b.colC);
-    gl.uniform3fv(bodyP.u.uRim, b.rim);
-    gl.uniform4fv(bodyP.u.uParams, b.params);
-    gl.drawElements(gl.TRIANGLES, sphere.idx.length, gl.UNSIGNED_SHORT, 0);
+    bodyRenderer.draw({ body: b, model, mvp: mMul(VP, model, SCR.mvp), sunPosition });
   }
 
   function project(w) {
@@ -2859,15 +2912,10 @@
       // Zファイティングで突き抜ける。片面カリングで自己交差を防ぐ。
       // この球の巻き方向では FRONT を落とすと観測者側の半球が残る
       // (BACK だと裏側の半球が見えてしまい、満ち欠けが反転する)
-      gl.enable(gl.CULL_FACE);
-      gl.cullFace(gl.FRONT);
-      gl.useProgram(bodyP.pr);
-      gl.bindBuffer(gl.ARRAY_BUFFER, sphereVB);
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIB);
-      gl.enableVertexAttribArray(bodyP.a.aPos);
-      gl.vertexAttribPointer(bodyP.a.aPos, 3, gl.FLOAT, false, 0, 0);
-      gl.uniform1f(bodyP.u.uTime, nowSec);
-      gl.uniform3f(bodyP.u.uCam, 0, 0, 0);
+      bodyRenderer.beginPass({
+        time: nowSec, cameraPosition: ZERO3,
+        cullFace: gl.FRONT, depthTest: true, depthWrite: true,
+      });
       let satLx = 0, satLy = 0, satLz = 0;   // 土星の環の照射方向 (ループ内で確定)
       for (const bb of bigBodies) {
         const b = bb.b, R = bb.wr;
@@ -2893,32 +2941,19 @@
         // 太陽」(ワールドで太陽は原点 = -posW) を遠方光源として使う。ドーム上の
         // 2点間で照らすと位相角が 90°-離角/2 に潰れ、常に満ち気味になるため
         if (b === SUN) {
-          gl.uniform3f(bodyP.u.uSun, sunGx, sunGy, sunGz);
+          SCR.sun[0] = sunGx; SCR.sun[1] = sunGy; SCR.sun[2] = sunGz;
         } else {
           const w = posW.get(b.key);
           _gp[0] = -w[0]; _gp[1] = -w[1]; _gp[2] = -w[2];
           const Ld = worldDirToGround(_gp, _fwd);
           if (b.key === "saturn") { satLx = Ld[0]; satLy = Ld[1]; satLz = Ld[2]; }
-          gl.uniform3f(bodyP.u.uSun, Ld[0] * 1e6, Ld[1] * 1e6, Ld[2] * 1e6);
+          SCR.sun[0] = Ld[0] * 1e6; SCR.sun[1] = Ld[1] * 1e6; SCR.sun[2] = Ld[2] * 1e6;
         }
-        const tx = texByKey.get(b.key);
-        gl.bindTexture(gl.TEXTURE_2D, tx || noTex);
-        gl.uniform1f(bodyP.u.uHasTex, tx ? 1 : 0);
-        gl.uniformMatrix4fv(bodyP.u.uMVP, false, mMul(gVP, m, SCR.mvp));
+        const mvp = mMul(gVP, m, SCR.mvp);
         SCR.model.set(m);   // uModel は f32 で十分 (法線用)。f64 配列を直接渡さない
-        gl.uniformMatrix4fv(bodyP.u.uModel, false, SCR.model);
-        // uComet はプログラム単位で保持されるため、ここで必ず設定する。
-        // 省くと直前の描画の値が残り、全天体が彗星核として描かれうる
-        gl.uniform1f(bodyP.u.uComet, b.comet ? 1 : 0);
-        gl.uniform1f(bodyP.u.uType, b.type);
-        gl.uniform3fv(bodyP.u.uColA, b.colA);
-        gl.uniform3fv(bodyP.u.uColB, b.colB);
-        gl.uniform3fv(bodyP.u.uColC, b.colC);
-        gl.uniform3fv(bodyP.u.uRim, b.rim);
-        gl.uniform4fv(bodyP.u.uParams, b.params);
-        gl.drawElements(gl.TRIANGLES, sphere.idx.length, gl.UNSIGNED_SHORT, 0);
+        bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun });
       }
-      gl.disable(gl.CULL_FACE);
+      bodyRenderer.endPass();
       // 土星の環 (球として描かれる倍率のときのみ。軸の向きを地上フレームへ変換)
       const satBB = bigBodies.find((x) => x.b.key === "saturn");
       if (satBB) {
@@ -3496,17 +3531,14 @@
     gl.disable(gl.BLEND);
 
     // --- 天体 ---
-    gl.useProgram(bodyP.pr);
-    gl.bindBuffer(gl.ARRAY_BUFFER, sphereVB);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIB);
-    gl.enableVertexAttribArray(bodyP.a.aPos);
-    gl.vertexAttribPointer(bodyP.a.aPos, 3, gl.FLOAT, false, 0, 0);
-    gl.uniform1f(bodyP.u.uTime, nowSec);
-    gl.uniform3f(bodyP.u.uCam, 0, 0, 0);                          // カメラ = 原点 (相対座標)
-    gl.uniform3f(bodyP.u.uSun, -eye[0], -eye[1], -eye[2]);        // 太陽のカメラ相対位置
-    drawBody(SUN);
-    for (const p of PLANETS) drawBody(p);
-    for (const s of SATELLITES) drawBody(s);
+    // 座標はカメラ相対なので、カメラは原点・太陽の位置は -eye になる。
+    // 光源はワールドの原点にある太陽1つなので全天体で同じ値を渡す
+    bodyRenderer.beginPass({ time: nowSec, cameraPosition: ZERO3, depthTest: true, depthWrite: true });
+    SCR.sun[0] = -eye[0]; SCR.sun[1] = -eye[1]; SCR.sun[2] = -eye[2];
+    drawBody(SUN, SCR.sun);
+    for (const p of PLANETS) drawBody(p, SCR.sun);
+    for (const s of SATELLITES) drawBody(s, SCR.sun);
+    bodyRenderer.endPass();
 
     // --- 自転軸 (各天体の軌道表示に連動。深度テストで天体の裏側は隠れる) ---
     if (ALL_BODIES.some((b) => b.showOrbit)) {
