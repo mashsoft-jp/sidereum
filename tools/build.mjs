@@ -23,8 +23,10 @@
 // ---------------------------------------------------------------------------
 
 import { readFile, writeFile, rename, readdir, unlink } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import vm from "node:vm";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = path.join(ROOT, "src");
@@ -136,11 +138,19 @@ async function build({ markers }) {
   if (unusedGlsl.length) fail(`参照されていないシェーダ: ${unusedGlsl.join(", ")}`);
 
   const script = IIFE_HEAD + js + IIFE_TAIL;
-  if (script.includes("</script")) fail("生成した JS に </script> が含まれます (インラインを壊します)");
+  // HTML のタグ名は ASCII 大小文字を区別しないので、</SCRIPT> なども終了タグになる
+  if (/<\/script/i.test(script)) fail("生成した JS に </script> が含まれます (インラインを壊します)");
+  // 断片単位ではなく、連結して IIFE に戻したものだけを構文検査する。
+  // (gl/setup.js はトップレベル return を含むため単独では構文的に不正)
+  try {
+    new vm.Script(script, { filename: "index.html (inline script)" });
+  } catch (e) {
+    fail(`連結した JS が構文エラーです: ${e.message}`);
+  }
 
   // --- CSS ---
   const css = await readText(path.join(SRC, "styles.css"), "src/styles.css");
-  if (css.includes("</style")) fail("CSS に </style> が含まれます (インラインを壊します)");
+  if (/<\/style/i.test(css)) fail("CSS に </style> が含まれます (インラインを壊します)");
 
   // --- ページ骨格へ差し込む ---
   let html = await readText(path.join(SRC, "page.html"), "src/page.html");
@@ -150,12 +160,26 @@ async function build({ markers }) {
   return html;
 }
 
-// --- 引数 ---
+// --- 引数 (未知の引数は黙って無視せずエラーにする。--chek のような打ち間違いで
+//     検査のつもりが再生成になる事故を防ぐ) ---
 const argv = process.argv.slice(2);
-const check = argv.includes("--check");
-const markers = !argv.includes("--no-markers");
-const outIdx = argv.indexOf("--out");
-const outPath = outIdx >= 0 ? path.resolve(argv[outIdx + 1]) : path.join(ROOT, "index.html");
+let check = false;
+let markers = true;
+let outArg = null;
+for (let i = 0; i < argv.length; i++) {
+  const a = argv[i];
+  if (a === "--check") check = true;
+  else if (a === "--no-markers") markers = false;
+  else if (a === "--out") {
+    if (outArg !== null) fail("--out が複数指定されています");
+    const v = argv[++i];
+    if (v === undefined || v.startsWith("--")) fail("--out には出力先のパスが必要です");
+    outArg = v;
+  } else {
+    fail(`不明な引数: ${a}\n       使い方: node tools/build.mjs [--check] [--no-markers] [--out <path>]`);
+  }
+}
+const outPath = outArg !== null ? path.resolve(outArg) : path.join(ROOT, "index.html");
 
 const html = await build({ markers });
 
@@ -174,10 +198,12 @@ if (check) {
   }
   console.log(`build --check: ${path.relative(ROOT, outPath)} は src/ と一致しています`);
 } else {
-  // 生成途中で既存ファイルを壊さないよう、一時ファイルに書いてから置換する
-  const tmp = outPath + ".tmp";
-  await writeFile(tmp, html, "utf8");
+  // 生成途中で既存ファイルを壊さないよう、一時ファイルに書いてから置換する。
+  // 名前は一意にし、flag "wx" で排他生成する (並行実行での衝突と、既存の
+  // シンボリックリンク経由でリンク先を切り詰めてしまう事故を避ける)
+  const tmp = `${outPath}.${process.pid}-${randomBytes(4).toString("hex")}.tmp`;
   try {
+    await writeFile(tmp, html, { encoding: "utf8", flag: "wx" });
     await rename(tmp, outPath);
   } catch (e) {
     await unlink(tmp).catch(() => {});
