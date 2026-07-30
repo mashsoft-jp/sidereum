@@ -239,6 +239,10 @@
   function renderInfoBody() {
     const body = currentInfoBody;
     if (!body) return;
+    // 「地球から見る」は地球の観測地からの見え方なので、月面ビューではタブ自体を
+    // 隠している。選択状態が obs のまま残ると、月に立っているのに東京基準の
+    // 方位・高度が出てしまうため (地球を選ぶと「観測地点そのものです」も出る)
+    if (surfaceBody === "moon" && infoTab === "obs") infoTab = "facts";
     positionInfoPanel();
     const t = T();
     document.getElementById("infoEyebrow").textContent = lang === "ja" ? body.en : body.name;
@@ -266,6 +270,12 @@
   function openInfo(body) { currentInfoBody = body; renderInfoBody(); infoPanel.classList.add("open"); }
   // 観測モード表示中は時間経過に合わせて数値を更新
   function updateObs() {
+    // 月面ビューへ切り替えただけでは情報パネルは再描画されないので、
+    // 表示中の「地球から見る」がそのまま残る。ここで基本情報へ戻す
+    if (surfaceBody === "moon" && infoTab === "obs" && currentInfoBody) {
+      renderInfoBody();
+      return;
+    }
     if (infoTab !== "obs" || !currentInfoBody || currentInfoBody.key === "earth") return;
     if (!infoPanel.classList.contains("open")) return;
     const r = obsContent(currentInfoBody);
