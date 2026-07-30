@@ -1,6 +1,6 @@
 
     varying vec3 vL, vW, vN;
-    uniform float uType, uTime, uHasTex, uComet;
+    uniform float uType, uTime, uHasTex, uComet, uAmb;
     uniform vec3 uCam, uSun, uColA, uColB, uColC, uRim;
     uniform vec4 uParams;
     uniform sampler2D uTex;
@@ -96,9 +96,11 @@
       float fres = pow(1.0 - max(dot(N, V), 0.0), 2.6);
       alb += uRim * fres * (0.25 + 0.75 * dif) * 0.55;
 
-      // 彗星核だけは宇宙空間らしく夜側をほぼ黒くし、他天体は従来の視認性を保つ
-      float ambient = mix(0.3, 0.150, uComet);
-      float direct = mix(0.9, 1.08, uComet);
+      // uAmb = 夜側の明るさ。呼び出し側が見かけの大きさから決める。点にしか
+      // 見えない遠くの天体は見失わないよう明るく、円盤として分解できる大きさ
+      // では暗くして満ち欠けを見せる。昼側の明るさは uAmb によらず一定に保つ
+      float ambient = uAmb;
+      float direct = mix(1.20, 1.23, uComet) - ambient;
       vec3 c = alb * (ambient + dif * direct) + vec3(spec) * dif;
       gl_FragColor = vec4(pow(c, vec3(0.92)), 1.0);
     }

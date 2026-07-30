@@ -350,7 +350,8 @@
       const px = _gp[0]*SKYR, py = _gp[1]*SKYR, pz = _gp[2]*SKYR;
       groundVis.push({ b, px, py, pz });
       if (spherePx >= 5) {                          // 画面上で十分大きい → 球
-        bigBodies.push({ b, dx: _gp[0], dy: _gp[1], dz: _gp[2], px, py, pz, wr: SKYR * Math.tan(angR) });
+        bigBodies.push({ b, dx: _gp[0], dy: _gp[1], dz: _gp[2], px, py, pz,
+                         wr: SKYR * Math.tan(angR), rpx: spherePx });
         continue;
       }
       let size, r, g, bl;
@@ -427,7 +428,7 @@
         }
         const mvp = mMul(gVP, m, SCR.mvp);
         SCR.model.set(m);   // uModel は f32 で十分 (法線用)。f64 配列を直接渡さない
-        bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun });
+        bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun, radiusPx: bb.rpx });
       }
       bodyRenderer.endPass();
       // 土星の環 (球として描かれる倍率のときのみ。軸の向きを地上フレームへ変換)

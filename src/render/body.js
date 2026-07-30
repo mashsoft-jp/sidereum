@@ -65,6 +65,15 @@
   // 宇宙ビューと地上ビューでは座標系・モデル行列の作り方・カリング・深度の
   // 扱いが異なるので、パス単位 (beginPass) と天体単位 (draw) を分けている。
   // モデル行列の生成と地上ビューの深度クリアは呼び出し側に残す。
+  // 夜側の明るさ。点にしか見えない遠くの天体は、真っ暗にすると細い時期に
+  // 見失うので明るく保つ。円盤として分解できる大きさになったら暗くして、
+  // 月や金星の満ち欠けがはっきり出るようにする
+  function nightAmbient(b, radiusPx) {
+    if (b.comet) return 0.15;              // 彗星核は宇宙空間らしく常に暗い
+    const t = Math.min(1, Math.max(0, ((radiusPx || 0) - 3) / 14));
+    return 0.30 - 0.26 * (t * t * (3 - 2 * t));
+  }
+
   function createBodyRenderer(prog) {
     const { pr, u, a } = prog;
     let inPass = false;
@@ -91,11 +100,13 @@
       // sunPosition は方向ではなく「シェーダが使う座標系での光源位置」。
       // 宇宙ビューは全天体で同一 (カメラ相対の太陽位置)、地上ビューは天体ごとに
       // 「天体 → 実際の太陽」方向を遠方光源の位置として渡す
-      draw({ body, model, mvp, sunPosition }) {
+      // radiusPx = 画面上の見かけの半径。夜側の明るさ (満ち欠けの見え方) を決める
+      draw({ body, model, mvp, sunPosition, radiusPx }) {
         if (!inPass) throw new Error("bodyRenderer: beginPass より前に draw が呼ばれました");
         const tx = texByKey.get(body.key);
         gl.bindTexture(gl.TEXTURE_2D, tx || noTex);
         gl.uniform1f(u.uHasTex, tx ? 1 : 0);
+        gl.uniform1f(u.uAmb, nightAmbient(body, radiusPx));
         gl.uniformMatrix4fv(u.uMVP, false, mvp);
         gl.uniformMatrix4fv(u.uModel, false, model);
         gl.uniform3f(u.uSun, sunPosition[0], sunPosition[1], sunPosition[2]);
@@ -118,8 +129,10 @@
   // 宇宙ビュー用。モデル行列を作って1天体を描く (パスは呼び出し側で開く)
   function drawBody(b, sunPosition) {
     const r = bodyR(b);
-    const model = bodyModel(b, r);
-    bodyRenderer.draw({ body: b, model, mvp: mMul(VP, model, SCR.mvp), sunPosition });
+    const model = bodyModel(b, r);              // SCR.t にカメラ相対位置が入る
+    const d = Math.hypot(SCR.t[0], SCR.t[1], SCR.t[2]) || 1;
+    const radiusPx = r / d * (H / 2) / Math.tan(eFov() / 2);
+    bodyRenderer.draw({ body: b, model, mvp: mMul(VP, model, SCR.mvp), sunPosition, radiusPx });
   }
 
   function project(w) {
