@@ -428,5 +428,112 @@
         },
       ],
     },
+    {
+      id: "phases",
+      title: { ja: "満ち欠けのしくみ", en: "Why Worlds Wax and Wane" },
+      lead: {
+        ja: "月と金星の満ち欠けを追い、なぜ形が変わるのか、なぜ金星だけ大きさまで変わるのかを見ます。",
+        en: "Follow the phases of the Moon and Venus, and see why the shapes change — and why only Venus changes size.",
+      },
+      steps: [
+        {
+          view: "ground", dLocal: "2026-09-15T19:00", sel: "moon",
+          aim: true, gfov: 1.2, constel: false, mark: false, play: false, mag: 1,
+          text: {
+            ja: "新月から4日後の月。太陽に照らされているのは、いつでも月の半分です。" +
+                "このときは、その照らされた面をほとんど横から見ているので、細い弧しか光りません。",
+            en: "Four days after new moon. Exactly half of the Moon is always lit by the Sun — " +
+                "but right now we are looking at that lit half almost edge-on, so only a thin arc shows.",
+          },
+        },
+        {
+          dLocal: "2026-09-19T19:30",
+          text: {
+            ja: "4日後、上弦。地球から見て太陽と直角の方向に来たので、" +
+                "照らされた面のちょうど半分が見えています。",
+            en: "Four days later, first quarter. The Moon now sits at right angles to the Sun as seen " +
+                "from Earth, so we see exactly half of the lit side.",
+          },
+        },
+        {
+          dLocal: "2026-09-27T22:00",
+          text: {
+            ja: "さらに8日後、満月。太陽と反対側に回りこみ、照らされた面を真正面から見ています。" +
+                "月そのものは何も変わっていません。変わったのは見る角度だけです。",
+            en: "Eight days on, full moon. The Moon has swung round to the far side of Earth from the Sun, " +
+                "and we see the lit face head-on. Nothing about the Moon changed — only our viewing angle.",
+          },
+        },
+        {
+          view: "space", sel: "moon", km: 9000, a: 1.15, mag: 1,
+          d: "2026-09-15", spd: 2, play: true, until: "2026-10-15",
+          text: {
+            ja: "宇宙から月に寄って、ひと月ぶん早送りしてみましょう。" +
+                "太陽に照らされた半分はずっと同じ大きさのままで、明暗の境目が月面を横切っていくだけ " +
+                "— 月が地球のまわりを回るにつれて、その半分を見る角度が変わり続けるからです。",
+            en: "Now close in from space and run a month forward. The lit half never changes size; " +
+                "only the line between day and night sweeps across the surface. " +
+                "As the Moon circles Earth, the angle we view that half from keeps turning.",
+          },
+        },
+        {
+          view: "ground", dLocal: "2026-08-11T19:30", sel: "venus",
+          aim: true, gfov: 0.04, play: false,
+          text: {
+            ja: "満ち欠けするのは月だけではありません。2026年8月の金星、ちょうど半分です。" +
+                "このあとの大きさに注目してください。",
+            en: "The Moon is not the only one. Here is Venus in August 2026, exactly half lit. " +
+                "Keep an eye on how big it looks.",
+          },
+        },
+        {
+          dLocal: "2026-09-20T18:15",
+          text: {
+            ja: "ひと月半後、同じ倍率です。三日月形になったのに、見かけの大きさは 1.7倍。" +
+                "月は地球のまわりを回るので距離がほぼ一定ですが、金星は太陽のまわりを回るので、" +
+                "細く見えるときほど地球の近くにいます。",
+            en: "Six weeks later, at the same magnification. It has thinned to a crescent — and grown " +
+                "1.7 times larger. The Moon orbits Earth, so its distance barely changes; Venus orbits " +
+                "the Sun, so the thinner it looks, the closer it is to us.",
+          },
+        },
+        {
+          view: "space", sel: null, fit: 1.05, a: 1.5708, y: 0.9,
+          d: "2026-09-20", play: false,
+          text: {
+            ja: "上から見ると理由がはっきりします。金星の軌道は地球より内側なので、" +
+                "地球と太陽のあいだに入りこめます。そのとき地球に最も近く、しかも夜の側を向けている " +
+                "— ガリレオはこれを望遠鏡で確かめ、金星が太陽のまわりを回っている証拠としました。",
+            en: "From above the reason is plain. Venus orbits inside Earth's orbit, so it can pass between " +
+                "us and the Sun — closest to us, and showing us its night side. Galileo saw exactly this " +
+                "through his telescope, and took it as proof that Venus circles the Sun.",
+          },
+        },
+        {
+          view: "ground", dLocal: "2037-07-24T03:00", sel: "mars",
+          aim: true, gfov: 0.011,
+          text: {
+            ja: "では外側の惑星は。火星が最も欠けるのがこの日で、それでも 84% です。" +
+                "地球より外側にある天体は、いつも太陽とほぼ同じ方向から眺めることになるので、" +
+                "木星では 99%、土星より外ではもう見分けがつきません。",
+            en: "What about the outer planets? This is Mars at its most gibbous — and it is still 84% lit. " +
+                "Anything outside Earth's orbit is always viewed from nearly the Sun's direction: " +
+                "Jupiter reaches 99%, and beyond Saturn the effect is undetectable.",
+          },
+        },
+        {
+          view: "moon", d: "2026-09-19T12:00", sel: "earth",
+          aim: true, gfov: 4.5,
+          text: {
+            ja: "最後に、月面から地球を見てみます。地球も同じように満ち欠けします。" +
+                "しかも地球から見た月とはちょうど逆 — 地球で上弦の月を眺めている人がいるとき、" +
+                "月にいる人は半分欠けた地球を見上げていることになります。",
+            en: "Finally, Earth seen from the Moon. It goes through phases too — and always the opposite " +
+                "of the Moon's. While someone on Earth watches a first-quarter Moon, someone on the Moon " +
+                "is looking up at a half-lit Earth.",
+          },
+        },
+      ],
+    },
   ];
 
