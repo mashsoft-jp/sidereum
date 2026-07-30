@@ -187,6 +187,7 @@
     // selected はカメラの注視先として使うだけなので、既定では選択マークを出さない
     showSelMark = !!s.mark;
     tourSight = s.sight || null;
+    tourSpot = s.spot || null;
     tourTouched = false;
     tourResumeBtn.hidden = true;
     // 情報パネルはナレーションと重なるので、ステップが変わったら必ず閉じる
@@ -387,6 +388,7 @@
     tourAwaitTest = null;
     tourUntil = null;
     tourSight = null;
+    tourSpot = null;
     const keepScene = !!(tour && tour.keep);
     tour = null;
     tourActive = false;

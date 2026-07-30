@@ -4,14 +4,16 @@
     octx.clearRect(0, 0, W, H);
     octx.textAlign = "center";
     octx.font = '10.5px "Avenir Next","Hiragino Sans",sans-serif';
-    // 注視しているだけの天体 (ツアー) には選択マークを付けない
+    // 注視しているだけの天体 (ツアー) には選択マークを付けない。
+    // ツアーの注目天体 (spot) は選択とは別に、同じ見た目で強調する
     const marked = showSelMark ? selected : null;
+    const spotB = tourSpot ? BODY_BY_KEY.get(tourSpot) : null;
 
     for (const b of [SUN, ...PLANETS]) {
       const s = screenPos.get(b.key);
       if (!s || s.x < -40 || s.x > W + 40 || s.y < -40 || s.y > H + 40) continue;
       if (s.r > H * 0.6) continue;
-      if (marked === b) {
+      if (marked === b || spotB === b) {
         octx.beginPath();
         octx.arc(s.x, s.y, Math.max(s.r, 3) + 6, 0, 2 * Math.PI);
         octx.strokeStyle = "rgba(242,178,62,0.9)";
@@ -19,7 +21,7 @@
         octx.stroke();
       }
       if (b.showLabel) {
-        octx.fillStyle = marked === b ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.75)";
+        octx.fillStyle = (marked === b || spotB === b) ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.75)";
         octx.fillText(bName(b), s.x, s.y - Math.max(s.r, 3) - 9);
       }
     }
@@ -32,10 +34,10 @@
       const pp = screenPos.get(s.parent);
       const away = pp ? Math.hypot(sp.x - pp.x, sp.y - pp.y) > 16 : true;
       if (s.showLabel && (sp.r > 2 || away)) {
-        octx.fillStyle = marked === s ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.6)";
+        octx.fillStyle = (marked === s || spotB === s) ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.6)";
         octx.fillText(bName(s), sp.x, sp.y - Math.max(sp.r, 3) - 8);
       }
-      if (marked === s) {
+      if (marked === s || spotB === s) {
         octx.beginPath();
         octx.arc(sp.x, sp.y, Math.max(sp.r, 3) + 6, 0, 2 * Math.PI);
         octx.strokeStyle = "rgba(242,178,62,0.9)";

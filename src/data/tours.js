@@ -19,6 +19,8 @@
   //   site  地上ビューの観測地 [緯度, 経度]。ビューを開く前に適用する
   //   aim   true なら地上ビューで sel の天体に照準を合わせ、追尾する
   //   sight 宇宙ビューで、注視天体からこの天体へ向かう視線ガイド (破線) を出す
+  //   spot  この天体の名前と輪郭を強調する (カメラは動かさない)。
+  //         引きの画では点になって見つけられないので、注目させたい回に使う
   //   gfov  地上ビューの画角 [度]
   //   spd   再生速度 [日/秒]   play 再生するか
   //   until play: true のとき、この日時 (UTC) まで再生したら停止して次へ
@@ -320,6 +322,7 @@
     },
     {
       id: "halley1910",
+      ver: 2,
       manual: true,
       title: { ja: "ハレー彗星 1910年の大接近", en: "Halley's Comet: the 1910 Approach" },
       lead: {
@@ -329,7 +332,7 @@
       steps: [
         {
           view: "space", sel: null, fit: 11, a: 0.55, y: 0.9, mag: 1,
-          d: "1907-06-25", play: false, constel: false, mark: true,
+          d: "1907-06-25", play: false, constel: false, spot: "halley",
           text: {
             ja: "1907年、ハレー彗星は木星と土星の軌道のあいだ、太陽から 10 au のあたりにいます。" +
                 "この距離では太陽の熱が届かず、コマも尾もない、ただの暗い氷の塊です。",
@@ -350,7 +353,7 @@
         },
         {
           sel: "halley", fit: 0.2, a: 0.55, side: true, d: "1910-02-09",
-          play: false, mark: false,
+          play: false, spot: null,
           text: {
             ja: "1910年2月、太陽まで 1.5 au。噴き出したガスと塵が太陽と反対の方向へ流されて、" +
                 "核をつつむコマと、その後ろに伸びる尾ができてきました。" +
@@ -417,7 +420,7 @@
         },
         {
           view: "space", sel: null, fit: 3.2, a: 0.5, y: 0.9,
-          d: "1910-08-08", spd: 30, play: true, until: "1911-06-01",
+          d: "1910-08-08", spd: 30, play: true, until: "1911-06-01", spot: "halley",
           text: {
             ja: "太陽から離れるにつれて活動が止まり、尾は縮んで消えていきます。" +
                 "次に戻ってきたのは1986年 — このときは 0.42 au までしか近づかず条件が悪く、" +

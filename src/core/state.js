@@ -12,6 +12,8 @@
   let tourActive = false;
   // ツアーの視線ガイド。注視天体からこの天体へ向かう破線をオーバーレイに描く
   let tourSight = null;
+  // ツアーの注目天体。選択とは別に、名前と輪郭を強調して見つけやすくする
+  let tourSpot = null;
   const FOV = 45 * DEG;
   // 宇宙ビューのズーム (拡大率)。距離とは別に、画角を狭めて望遠的に拡大する
   const MAG_MAX = 100;

@@ -1475,6 +1475,8 @@
   //   site  地上ビューの観測地 [緯度, 経度]。ビューを開く前に適用する
   //   aim   true なら地上ビューで sel の天体に照準を合わせ、追尾する
   //   sight 宇宙ビューで、注視天体からこの天体へ向かう視線ガイド (破線) を出す
+  //   spot  この天体の名前と輪郭を強調する (カメラは動かさない)。
+  //         引きの画では点になって見つけられないので、注目させたい回に使う
   //   gfov  地上ビューの画角 [度]
   //   spd   再生速度 [日/秒]   play 再生するか
   //   until play: true のとき、この日時 (UTC) まで再生したら停止して次へ
@@ -1776,6 +1778,7 @@
     },
     {
       id: "halley1910",
+      ver: 2,
       manual: true,
       title: { ja: "ハレー彗星 1910年の大接近", en: "Halley's Comet: the 1910 Approach" },
       lead: {
@@ -1785,7 +1788,7 @@
       steps: [
         {
           view: "space", sel: null, fit: 11, a: 0.55, y: 0.9, mag: 1,
-          d: "1907-06-25", play: false, constel: false, mark: true,
+          d: "1907-06-25", play: false, constel: false, spot: "halley",
           text: {
             ja: "1907年、ハレー彗星は木星と土星の軌道のあいだ、太陽から 10 au のあたりにいます。" +
                 "この距離では太陽の熱が届かず、コマも尾もない、ただの暗い氷の塊です。",
@@ -1806,7 +1809,7 @@
         },
         {
           sel: "halley", fit: 0.2, a: 0.55, side: true, d: "1910-02-09",
-          play: false, mark: false,
+          play: false, spot: null,
           text: {
             ja: "1910年2月、太陽まで 1.5 au。噴き出したガスと塵が太陽と反対の方向へ流されて、" +
                 "核をつつむコマと、その後ろに伸びる尾ができてきました。" +
@@ -1873,7 +1876,7 @@
         },
         {
           view: "space", sel: null, fit: 3.2, a: 0.5, y: 0.9,
-          d: "1910-08-08", spd: 30, play: true, until: "1911-06-01",
+          d: "1910-08-08", spd: 30, play: true, until: "1911-06-01", spot: "halley",
           text: {
             ja: "太陽から離れるにつれて活動が止まり、尾は縮んで消えていきます。" +
                 "次に戻ってきたのは1986年 — このときは 0.42 au までしか近づかず条件が悪く、" +
@@ -2884,6 +2887,8 @@
   let tourActive = false;
   // ツアーの視線ガイド。注視天体からこの天体へ向かう破線をオーバーレイに描く
   let tourSight = null;
+  // ツアーの注目天体。選択とは別に、名前と輪郭を強調して見つけやすくする
+  let tourSpot = null;
   const FOV = 45 * DEG;
   // 宇宙ビューのズーム (拡大率)。距離とは別に、画角を狭めて望遠的に拡大する
   const MAG_MAX = 100;
@@ -4663,14 +4668,16 @@
     octx.clearRect(0, 0, W, H);
     octx.textAlign = "center";
     octx.font = '10.5px "Avenir Next","Hiragino Sans",sans-serif';
-    // 注視しているだけの天体 (ツアー) には選択マークを付けない
+    // 注視しているだけの天体 (ツアー) には選択マークを付けない。
+    // ツアーの注目天体 (spot) は選択とは別に、同じ見た目で強調する
     const marked = showSelMark ? selected : null;
+    const spotB = tourSpot ? BODY_BY_KEY.get(tourSpot) : null;
 
     for (const b of [SUN, ...PLANETS]) {
       const s = screenPos.get(b.key);
       if (!s || s.x < -40 || s.x > W + 40 || s.y < -40 || s.y > H + 40) continue;
       if (s.r > H * 0.6) continue;
-      if (marked === b) {
+      if (marked === b || spotB === b) {
         octx.beginPath();
         octx.arc(s.x, s.y, Math.max(s.r, 3) + 6, 0, 2 * Math.PI);
         octx.strokeStyle = "rgba(242,178,62,0.9)";
@@ -4678,7 +4685,7 @@
         octx.stroke();
       }
       if (b.showLabel) {
-        octx.fillStyle = marked === b ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.75)";
+        octx.fillStyle = (marked === b || spotB === b) ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.75)";
         octx.fillText(bName(b), s.x, s.y - Math.max(s.r, 3) - 9);
       }
     }
@@ -4691,10 +4698,10 @@
       const pp = screenPos.get(s.parent);
       const away = pp ? Math.hypot(sp.x - pp.x, sp.y - pp.y) > 16 : true;
       if (s.showLabel && (sp.r > 2 || away)) {
-        octx.fillStyle = marked === s ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.6)";
+        octx.fillStyle = (marked === s || spotB === s) ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.6)";
         octx.fillText(bName(s), sp.x, sp.y - Math.max(sp.r, 3) - 8);
       }
-      if (marked === s) {
+      if (marked === s || spotB === s) {
         octx.beginPath();
         octx.arc(sp.x, sp.y, Math.max(sp.r, 3) + 6, 0, 2 * Math.PI);
         octx.strokeStyle = "rgba(242,178,62,0.9)";
@@ -6656,6 +6663,7 @@
     // selected はカメラの注視先として使うだけなので、既定では選択マークを出さない
     showSelMark = !!s.mark;
     tourSight = s.sight || null;
+    tourSpot = s.spot || null;
     tourTouched = false;
     tourResumeBtn.hidden = true;
     // 情報パネルはナレーションと重なるので、ステップが変わったら必ず閉じる
@@ -6856,6 +6864,7 @@
     tourAwaitTest = null;
     tourUntil = null;
     tourSight = null;
+    tourSpot = null;
     const keepScene = !!(tour && tour.keep);
     tour = null;
     tourActive = false;
