@@ -1448,7 +1448,7 @@
   //   ui    一時的に出す UI: "controls" / "nav" / "menu" / "view" / "clock"
   //   hi    ハイライトする要素の CSS セレクタ
   //   await 検知したら自動で次へ進む操作:
-  //         "rotate" / "zoom" / "dist" / "pan" / "select" / "view" / "menu"
+  //         "rotate" / "zoom" / "dist" / "pan" / "select" / "play" / "view" / "menu"
   //         (日時は再生中に勝手に動いて誤検知するので対象にしない)
   //
   // ツアー単位:
@@ -1524,12 +1524,21 @@
           },
         },
         {
-          scene: false, ui: ["clock", "controls"], hi: "#clock",
+          scene: false, ui: ["clock"], hi: "#clock",
           text: {
-            ja: "右上で日時を指定できます。下のパネルでは再生と速度を変えられるので、" +
-                "過去や未来の空を動かして見られます。",
-            en: "Set any date and time at the top right. The panel below plays time " +
-                "forward and sets its speed, so you can watch the past or the future.",
+            ja: "右上の日付・時刻を直接指定すると、任意の日時へジャンプできます。" +
+                "1900年から2199年まで指定できます。",
+            en: "Type into the date and time at the top right to jump to any moment — " +
+                "anywhere from 1900 to 2199.",
+          },
+        },
+        {
+          scene: false, ui: ["controls"], hi: "#play", await: "play",
+          text: {
+            ja: "下のパネルの再生ボタンで時間を進められます。速度は隣のスライダーで、" +
+                "1秒 = 1秒 から約240年まで変えられます。押してみてください。",
+            en: "Press play in the panel below to run time forward. The slider next to it " +
+                "sets the speed, from 1 second per second up to about 240 years. Try it.",
           },
         },
         {
@@ -1616,12 +1625,21 @@
           },
         },
         {
-          scene: false, ui: ["clock", "controls"], hi: "#clock",
+          scene: false, ui: ["clock"], hi: "#clock",
           text: {
-            ja: "右上で日時を指定できます。下のパネルでは再生と速度を変えられるので、" +
-                "過去や未来の空を動かして見られます。",
-            en: "Set any date and time at the top right. The panel below plays time " +
-                "forward and sets its speed, so you can watch the past or the future.",
+            ja: "右上の日付・時刻を直接指定すると、任意の日時へジャンプできます。" +
+                "1900年から2199年まで指定できます。",
+            en: "Type into the date and time at the top right to jump to any moment — " +
+                "anywhere from 1900 to 2199.",
+          },
+        },
+        {
+          scene: false, ui: ["controls"], hi: "#play", await: "play",
+          text: {
+            ja: "下のパネルの再生ボタンで時間を進められます。速度は隣のスライダーで、" +
+                "1秒 = 1秒 から約240年まで変えられます。押してみてください。",
+            en: "Press play in the panel below to run time forward. The slider next to it " +
+                "sets the speed, from 1 second per second up to about 240 years. Try it.",
           },
         },
         {
@@ -6092,6 +6110,10 @@
     select: () => {
       const b = selected;
       return () => !!selected && selected !== b;
+    },
+    play: () => {
+      const p = playing;
+      return () => playing !== p;
     },
     view: () => {
       const g = groundView, s = surfaceBody;

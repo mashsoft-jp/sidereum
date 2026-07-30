@@ -74,6 +74,10 @@
       const b = selected;
       return () => !!selected && selected !== b;
     },
+    play: () => {
+      const p = playing;
+      return () => playing !== p;
+    },
     view: () => {
       const g = groundView, s = surfaceBody;
       return () => groundView !== g || surfaceBody !== s;
