@@ -140,7 +140,62 @@
     }
   });
 
+  // ---------- メニューの New / Update タグ ----------
+  // 中身が増えた・変わった項目に印を付ける。項目ごとに「今の版」を持ち、
+  // 利用者がその項目を開いた時点の版を localStorage に控えて比べる。
+  // 中身を直したら、その項目の版を +1 する
+  const MENU_VER = { menuHelp: 1, menuAbout: 1 };
+  const MENU_SEEN_KEY = "ssMenuSeen";
+  function loadMenuSeen() {
+    try { return JSON.parse(localStorage.getItem(MENU_SEEN_KEY)) || {}; }
+    catch (e) { return {}; }
+  }
+  // 初回起動時に現在の版を全部書き込んでおく。こうすると「初めての人には
+  // 何も New が付かず、その後に増えた・上がった項目だけに印が出る」
+  if (!localStorage.getItem(MENU_SEEN_KEY)) {
+    try { localStorage.setItem(MENU_SEEN_KEY, JSON.stringify(MENU_VER)); }
+    catch (e) { /* プライベートモード等 */ }
+  }
+  // 0 = 印なし  1 = New (この項目自体が新しい)  2 = Update (中身が変わった)
+  function menuBadgeState(id) {
+    if (id === "menuTour") return tourBadgeState();   // ツアーは個々の視聴記録から
+    const cur = MENU_VER[id];
+    if (!cur) return 0;
+    const seen = loadMenuSeen()[id];
+    if (seen === undefined) return 1;                 // 初回記録より後に増えた項目
+    return seen >= cur ? 0 : 2;
+  }
+  function markMenuSeen(id) {
+    const cur = MENU_VER[id];
+    if (!cur) return;
+    const m = loadMenuSeen();
+    if (m[id] === cur) return;
+    m[id] = cur;
+    try { localStorage.setItem(MENU_SEEN_KEY, JSON.stringify(m)); }
+    catch (e) { /* プライベートモード等 */ }
+  }
+  // applyLang が textContent でラベルを書き換えるとタグも消えるので、
+  // メニューを開くたびに付け直す
+  function refreshMenuBadges() {
+    for (const btn of menuEl.querySelectorAll(':scope > button[role="menuitem"]')) {
+      const st = menuBadgeState(btn.id);
+      let tag = btn.querySelector(".menuTag");
+      if (!st) { if (tag) tag.remove(); continue; }
+      if (!tag) {
+        tag = document.createElement("span");
+        tag.className = "menuTag";
+        btn.appendChild(tag);
+      }
+      tag.textContent = st === 1 ? T().tagNew : T().tourUpdated;
+    }
+  }
+  menuEl.addEventListener("click", (e) => {
+    const b = e.target.closest('button[role="menuitem"]');
+    if (b) markMenuSeen(b.id);
+  });
+
   function setMenu(open) {
+    if (open) refreshMenuBadges();
     menuEl.classList.toggle("open", open);
     menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
   }

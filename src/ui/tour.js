@@ -441,6 +441,20 @@
     catch (e) { /* プライベートモード等 */ }
   }
 
+  // ハンバーガーメニューの「ガイドツアー」に付ける印を決める。
+  // 0 = なし  1 = New (未視聴のツアーがある)  2 = Update (見た版より新しいものがある)
+  function tourBadgeState() {
+    const seen = loadTourSeen();
+    let st = 0;
+    for (const t of TOURS) {
+      if (!tourVisible(t)) continue;
+      const s = tourSeenState(t, seen);
+      if (s === 0) return 1;
+      if (s === 1) st = 2;
+    }
+    return st;
+  }
+
   // ---------- ツアー一覧 (モーダル) ----------
   // 端末に合うものだけ並べる (URL 指定は絞らないので、他端末向けも確認できる)。
   // 番号は「その端末で見えるツアーの追加順」。並びは 未視聴・更新あり → 視聴済み で、
