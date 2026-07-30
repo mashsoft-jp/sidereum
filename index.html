@@ -1458,8 +1458,8 @@
   //         のステップに使う (UTC 固定だと観測地の経度によっては昼になる)
   //   sel   選択天体のキー。null で選択解除 (注視点は太陽へ)
   //   fit   この軌道半径 [au] が画面に収まる距離にする (画角と縦横比から算出)
-  //   km    選択天体からの距離 [km]。fit より優先
-  //   z     カメラ距離 [world]。fit・km が無いときだけ使う
+  //   km    選択天体からの距離 [km]
+  //   z     カメラ距離 [world]。km / fit / z は後から書いたものだけが効く
   //   mag   ズーム倍率   a 俯角 [rad]   y 方位 [rad]
   //   lit   true なら太陽光の当たる側へ回り込む (a・y より優先)
   //   side  true なら彗星の尾を横から見る向きへ回り込む (y より優先)
@@ -1877,6 +1877,7 @@
     },
     {
       id: "phases",
+      ver: 2,
       title: { ja: "満ち欠けのしくみ", en: "Why Worlds Wax and Wane" },
       lead: {
         ja: "月と金星の満ち欠けを追い、なぜ形が変わるのか、なぜ金星だけ大きさまで変わるのかを見ます。",
@@ -1945,15 +1946,17 @@
           },
         },
         {
-          view: "space", sel: null, fit: 1.05, a: 1.5708, y: 0.9,
-          d: "2026-09-20", play: false,
+          view: "space", sel: "venus", fit: 0.85, a: 1.5708, y: 0.9,
+          d: "2026-09-20", play: false, mark: true,
           text: {
-            ja: "上から見ると理由がはっきりします。金星の軌道は地球より内側なので、" +
-                "地球と太陽のあいだに入りこめます。そのとき地球に最も近く、しかも夜の側を向けている " +
-                "— ガリレオはこれを望遠鏡で確かめ、金星が太陽のまわりを回っている証拠としました。",
-            en: "From above the reason is plain. Venus orbits inside Earth's orbit, so it can pass between " +
-                "us and the Sun — closest to us, and showing us its night side. Galileo saw exactly this " +
-                "through his telescope, and took it as proof that Venus circles the Sun.",
+            ja: "同じ日を真上から。太陽・金星・地球がほぼ一直線に並び、金星がそのあいだにいます。" +
+                "金星が照らされているのは太陽を向いた側 — つまり地球からは反対の、夜の側を" +
+                "多く見ることになり、細い三日月形になります。地球より内側を回る天体でしか" +
+                "起きないことで、ガリレオはこれを金星が太陽のまわりを回っている証拠としました。",
+            en: "The same day, from directly above. Sun, Venus and Earth are nearly in line, with Venus " +
+                "in between. Venus is lit on the side facing the Sun — the far side from us — so we mostly " +
+                "see its night side, and it appears as a thin crescent. Only a body orbiting inside Earth's " +
+                "orbit can do this, and Galileo took it as proof that Venus circles the Sun.",
           },
         },
         {
@@ -6504,10 +6507,13 @@
     const st = {};
     for (let k = 0; k <= i; k++) {
       const s = tour.steps[k];
-      // 日時の指定は d (UTC) と dLocal (現地時刻) のどちらか一方だけを残す。
-      // 両方が畳み込まれると、後から書いた方が効かなくなる
-      if (s.d) delete st.dLocal;
+      // 同じものを別々の書き方で指定する項目は、後から書いた方だけを残す。
+      // 両方が畳み込まれると、適用側の優先順で先に書いた方が勝ってしまう
+      if (s.d) delete st.dLocal;                                  // 日時
       if (s.dLocal) delete st.d;
+      if (s.km !== undefined) { delete st.fit; delete st.z; }     // カメラ距離
+      if (s.fit !== undefined) { delete st.km; delete st.z; }
+      if (s.z !== undefined) { delete st.km; delete st.fit; }
       Object.assign(st, s);
     }
     return st;

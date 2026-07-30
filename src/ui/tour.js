@@ -164,10 +164,13 @@
     const st = {};
     for (let k = 0; k <= i; k++) {
       const s = tour.steps[k];
-      // 日時の指定は d (UTC) と dLocal (現地時刻) のどちらか一方だけを残す。
-      // 両方が畳み込まれると、後から書いた方が効かなくなる
-      if (s.d) delete st.dLocal;
+      // 同じものを別々の書き方で指定する項目は、後から書いた方だけを残す。
+      // 両方が畳み込まれると、適用側の優先順で先に書いた方が勝ってしまう
+      if (s.d) delete st.dLocal;                                  // 日時
       if (s.dLocal) delete st.d;
+      if (s.km !== undefined) { delete st.fit; delete st.z; }     // カメラ距離
+      if (s.fit !== undefined) { delete st.km; delete st.z; }
+      if (s.z !== undefined) { delete st.km; delete st.fit; }
       Object.assign(st, s);
     }
     return st;
