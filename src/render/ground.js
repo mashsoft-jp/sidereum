@@ -392,6 +392,7 @@
       bodyRenderer.beginPass({
         time: nowSec, cameraPosition: ZERO3,
         cullFace: gl.FRONT, depthTest: true, depthWrite: true,
+        airSun: _sunG, airDay: dayF,
       });
       let satLx = 0, satLy = 0, satLz = 0;   // 土星の環の照射方向 (ループ内で確定)
       for (const bb of bigBodies) {

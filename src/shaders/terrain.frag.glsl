@@ -46,20 +46,9 @@
       vec3 d = normalize(vD);
 
       if (uSky > 0.5) {
-        // ---- 大気 (地球のみ)。天頂〜地平のグラデーション + 太陽近傍の朝夕焼け ----
-        float h = clamp(d.y, 0.0, 1.0);
+        // ---- 大気 (地球のみ)。色は天体のエアライトと共有 (skyDayColor) ----
         vec3 night = vec3(0.015, 0.02, 0.045);
-        vec3 zen = vec3(0.16, 0.34, 0.68);
-        vec3 hor = vec3(0.55, 0.70, 0.88);
-        vec3 dayC = mix(hor, zen, pow(h, 0.55));
-        // 太陽の方位・高度に近いほど暖色 (低い太陽ほど強く広がる)
-        float sd = max(dot(d, normalize(uSun)), 0.0);
-        float low = 1.0 - smoothstep(0.0, 0.35, uSun.y);          // 太陽が低いほど 1
-        vec3 warm = mix(vec3(0.95, 0.55, 0.25), vec3(0.85, 0.35, 0.18), low);
-        dayC = mix(dayC, warm, low * pow(sd, 3.0) * 0.85);
-        // 地平近くはうっすら霞む
-        dayC = mix(dayC, mix(dayC, vec3(0.72, 0.76, 0.82), 0.35), 1.0 - smoothstep(0.0, 0.18, h));
-        gl_FragColor = vec4(mix(night, dayC, uDay), 1.0);
+        gl_FragColor = vec4(night * (1.0 - uDay) + skyDayColor(d, uSun, uDay), 1.0);
         return;
       }
 

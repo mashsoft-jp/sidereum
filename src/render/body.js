@@ -54,6 +54,15 @@
   }
 
   // ---------- 天体レンダラ ----------
+  // 夜側の明るさ。点にしか見えない遠くの天体は、真っ暗にすると細い時期に
+  // 見失うので明るく保つ。円盤として分解できる大きさになったら暗くして、
+  // 月や金星の満ち欠けがはっきり出るようにする
+  function nightAmbient(b, radiusPx) {
+    if (b.comet) return 0.15;              // 彗星核は宇宙空間らしく常に暗い
+    const t = Math.min(1, Math.max(0, ((radiusPx || 0) - 3) / 14));
+    return 0.30 - 0.26 * (t * t * (3 - 2 * t));
+  }
+
   // WebGL のプログラムと uniform はグローバルな状態なので、設定漏れがあると
   // 直前の描画の値がそのまま残る (実際に uComet の設定漏れで、地上ビューの
   // 全天体が彗星核として描かれうる状態になっていた)。
@@ -65,25 +74,20 @@
   // 宇宙ビューと地上ビューでは座標系・モデル行列の作り方・カリング・深度の
   // 扱いが異なるので、パス単位 (beginPass) と天体単位 (draw) を分けている。
   // モデル行列の生成と地上ビューの深度クリアは呼び出し側に残す。
-  // 夜側の明るさ。点にしか見えない遠くの天体は、真っ暗にすると細い時期に
-  // 見失うので明るく保つ。円盤として分解できる大きさになったら暗くして、
-  // 月や金星の満ち欠けがはっきり出るようにする
-  function nightAmbient(b, radiusPx) {
-    if (b.comet) return 0.15;              // 彗星核は宇宙空間らしく常に暗い
-    const t = Math.min(1, Math.max(0, ((radiusPx || 0) - 3) / 14));
-    return 0.30 - 0.26 * (t * t * (3 - 2 * t));
-  }
-
   function createBodyRenderer(prog) {
     const { pr, u, a } = prog;
     let inPass = false;
     return {
       // program・バッファ・頂点属性・テクスチャユニット・depth/cull を確定させる。
       // cullFace は gl.FRONT / gl.BACK、不要なら null
-      beginPass({ time, cameraPosition, cullFace = null, depthTest = true, depthWrite = true }) {
+      // airSun / airDay は地上ビューのエアライト用。宇宙ビューは airDay = 0
+      beginPass({ time, cameraPosition, cullFace = null, depthTest = true, depthWrite = true,
+                  airSun = null, airDay = 0 }) {
         if (inPass) throw new Error("bodyRenderer: beginPass が入れ子になっています");
         inPass = true;
         gl.useProgram(pr);
+        gl.uniform1f(u.uAirDay, airDay);
+        gl.uniform3f(u.uAirSun, airSun ? airSun[0] : 0, airSun ? airSun[1] : 1, airSun ? airSun[2] : 0);
         gl.bindBuffer(gl.ARRAY_BUFFER, sphereVB);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIB);
         gl.enableVertexAttribArray(a.aPos);

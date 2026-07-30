@@ -2,6 +2,8 @@
     varying vec3 vL, vW, vN;
     uniform float uType, uTime, uHasTex, uComet, uAmb;
     uniform vec3 uCam, uSun, uColA, uColB, uColC, uRim;
+    uniform vec3 uAirSun;   // 大気の光の計算に使う太陽方向 (地平フレーム)
+    uniform float uAirDay;  // 昼夜係数。宇宙ビューは 0 (大気が無い)
     uniform vec4 uParams;
     uniform sampler2D uTex;
 
@@ -93,14 +95,21 @@
         }
       }
 
+      // 昼の空では、光が当たっていない側はエアライトに埋もれて見えない。
+      // 環境光とリム光の「光が当たっていないぶん」を落として空に溶け込ませる
+      float dayFade = 1.0 - 0.92 * uAirDay;
       float fres = pow(1.0 - max(dot(N, V), 0.0), 2.6);
-      alb += uRim * fres * (0.25 + 0.75 * dif) * 0.55;
+      alb += uRim * fres * (0.25 * dayFade + 0.75 * dif) * 0.55;
 
       // uAmb = 夜側の明るさ。呼び出し側が見かけの大きさから決める。点にしか
       // 見えない遠くの天体は見失わないよう明るく、円盤として分解できる大きさ
       // では暗くして満ち欠けを見せる。昼側の明るさは uAmb によらず一定に保つ
-      float ambient = uAmb;
+      float ambient = uAmb * dayFade;
       float direct = mix(1.20, 1.23, uComet) - ambient;
       vec3 c = alb * (ambient + dif * direct) + vec3(spec) * dif;
-      gl_FragColor = vec4(pow(c, vec3(0.92)), 1.0);
+      // 地上ビューの昼間は、天体との間の大気そのものが光っている (エアライト)。
+      // 大気は天体より手前にあるので色を上乗せする。これが無いと、新月ごろの月が
+      // 青空に黒い円盤として浮いてしまう (実際は夜側は空と見分けがつかない)。
+      // 空ドームはガンマを掛けないので、こちらもガンマの後に足して色を揃える
+      gl_FragColor = vec4(pow(c, vec3(0.92)) + skyDayColor(normalize(vW), uAirSun, uAirDay), 1.0);
     }

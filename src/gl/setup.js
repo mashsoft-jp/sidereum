@@ -38,7 +38,10 @@
   // ---- 天体シェーダ (全種別を uType で分岐) ----
   const bodyVS = `@@glsl:body.vert@@`;
 
-  const bodyFS = PRE + `@@glsl:body.frag@@`;
+  // 空の色は空ドームと天体のエアライトで共有する (GLSL は入れ子 include できないので
+  // ここで前置きして両方に持たせる)
+  const SKY_FN = `@@glsl:sky-color@@`;
+  const bodyFS = PRE + SKY_FN + `@@glsl:body.frag@@`;
 
   // ---- 線 (軌道) ----
   const lineVS = `@@glsl:line.vert@@`;
@@ -47,7 +50,7 @@
   // ---- 風景 (地面の質感 / 空の色。地上・月面ビュー用。すべてプロシージャル生成) ----
   const terrainVS = `@@glsl:terrain.vert@@`;
 
-  const terrainFS = PRE + `@@glsl:terrain.frag@@`;
+  const terrainFS = PRE + SKY_FN + `@@glsl:terrain.frag@@`;
 
   // ---- 点 (星・小惑星・惑星マーカー) ----
   const pointVS = `@@glsl:point.vert@@`;
