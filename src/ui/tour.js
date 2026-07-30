@@ -35,6 +35,7 @@
   let tourDoneTimer = 0;
   let tourHiEl = null;        // ハイライト中の要素
   let tourSceneDone = false;  // このツアーでシーンを一度でも適用したか
+  let tourUntil = null;       // 早送りステップの停止日時 (simDays)
 
   const tourText = (o) => (o ? (lang === "ja" ? o.ja : o.en) : "");
 
@@ -130,12 +131,28 @@
     tourBar.classList.remove("done");
     const f = s.await && TOUR_AWAIT[s.await];
     tourAwaitTest = f ? f() : null;
+    // until は再生するステップでだけ効かせる。停止中のステップにも効くと、
+    // 畳み込みで引き継がれた until を開始時点で満たして即座に進んでしまう
+    const t = s.play && s.until ? Date.parse(s.until + "Z") : NaN;
+    tourUntil = isFinite(t) ? (t - J2000) / DAY_MS : null;
   }
-  function tourWatch() {
-    if (!tourAwaitTest || !tourAwaitTest()) return;
-    tourAwaitTest = null;
+  function tourStepDone() {
     tourBar.classList.add("done");
     tourDoneTimer = setTimeout(() => tourGo(tourIdx + 1), 900);
+  }
+  function tourWatch() {
+    // 早送りのステップ: 指定日時に達したら止める。rAF が止まっていた時間は
+    // 復帰フレームで一気に進むので、行き過ぎないよう日時も丸める
+    if (tourUntil !== null && simDays >= tourUntil) {
+      simDays = tourUntil;
+      setPlaying(false);
+      tourUntil = null;
+      if (tourIdx < tour.steps.length - 1) tourStepDone();
+      return;
+    }
+    if (!tourAwaitTest || !tourAwaitTest()) return;
+    tourAwaitTest = null;
+    tourStepDone();
   }
   // ツアー中でも、天体の選択を促しているステップだけはキャンバスのクリックを通す
   function tourAllowsSelect() {
@@ -145,7 +162,14 @@
   // 0..i のステップを畳み込んだ状態 (書かれていない項目は前のステップを引き継ぐ)
   function tourStateAt(i) {
     const st = {};
-    for (let k = 0; k <= i; k++) Object.assign(st, tour.steps[k]);
+    for (let k = 0; k <= i; k++) {
+      const s = tour.steps[k];
+      // 日時の指定は d (UTC) と dLocal (現地時刻) のどちらか一方だけを残す。
+      // 両方が畳み込まれると、後から書いた方が効かなくなる
+      if (s.d) delete st.dLocal;
+      if (s.dLocal) delete st.d;
+      Object.assign(st, s);
+    }
     return st;
   }
 
@@ -175,12 +199,19 @@
   }
 
   function applyTourScene(s) {
+    // 観測地はビューを開く前に決める (enterSurface が観測者基底を作り直すため)
+    if (s.site) setObsSite(s.site[0], s.site[1]);
     if (s.view === "ground") enterGround();
     else if (s.view === "moon") enterMoon();
     else exitGround();
     if (s.d) {
       const t = Date.parse(/[zZ]$/.test(s.d) ? s.d : s.d + "Z");
       if (isFinite(t)) simDays = (t - J2000) / DAY_MS;
+    } else if (s.dLocal) {
+      // 観測地の平均太陽時での指定。地上ビューで「現地の何時の空か」を揃えたい
+      // ステップに使う (UTC 固定だと観測地の経度によっては昼になってしまう)
+      const t = Date.parse(s.dLocal + "Z");
+      if (isFinite(t)) simDays = (t - J2000) / DAY_MS - obsLon / 360;
     }
     if (isFinite(s.spd) && s.spd > 0) {
       daysPerSec = s.spd;
@@ -201,6 +232,16 @@
       cam.focusTgt[0] = 0; cam.focusTgt[1] = 0; cam.focusTgt[2] = 0;
       lastCenter = null;             // 注視点が太陽へ戻るのでズーム下限も太陽サイズに
     }
+    // 地上・月面ビュー: 今の日時で観測者基底を作り直してから照準を合わせる。
+    // aimGroundAt は gTrack を立てるので、時間を進めても天体が中央に留まる
+    if (groundView) {
+      buildObsFrame();
+      if (s.aim && b) aimGroundAt(b, true);
+      if (isFinite(s.gfov)) {
+        gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, s.gfov * DEG));
+        gFov = gFovTgt;
+      }
+    }
     // fit は俯角を使って距離を出すので、角度を先に確定させる
     if (isFinite(s.a)) cam.pitchTgt = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, s.a));
     if (isFinite(s.y)) cam.yawTgt = s.y;
@@ -211,6 +252,12 @@
       const l = Math.hypot(w[0], w[1], w[2]) || 1;
       cam.yawTgt = Math.atan2(-w[2] / l, -w[0] / l) + 0.5;
       cam.pitchTgt = Math.asin(Math.max(-1, Math.min(1, -w[1] / l))) + 0.22;
+    }
+    // side: 彗星の尾を横から見る向きへ回り込む。尾は反太陽方向 (= 太陽から見た
+    // 天体の方向) に伸びるリボンなので、軸を正面から見ると潰れて消えてしまう
+    if (s.side && b) {
+      const w = posW.get(b.key);
+      cam.yawTgt = Math.atan2(w[2], w[0]) + Math.PI / 2;
     }
     const mag = isFinite(s.mag) ? Math.max(1, Math.min(MAG_MAX, s.mag)) : 1;
     camZoomTgt = mag;
@@ -276,7 +323,8 @@
       infoOpen: infoPanel.classList.contains("open"),
       yaw: cam.yawTgt, pitch: cam.pitchTgt, dist: cam.distTgt, mag: camZoomTgt,
       focus: cam.focusTgt.slice(), pan: cam.panOffTgt.slice(),
-      gAz: gAzTgt, gAlt: gAltTgt, gFov: gFovTgt,
+      gAz: gAzTgt, gAlt: gAltTgt, gFov: gFovTgt, gTrack,
+      obsLat, obsLon,
     };
   }
   function restoreTourState(v, keepScene) {
@@ -291,6 +339,8 @@
       Math.round(18 * Math.log(v.daysPerSec * 86400) / Math.log(60))));
     speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
     setPlaying(v.playing);
+    // 観測地はビューを開く前に戻す (setObsSite が localStorage も書き戻す)
+    if (obsLat !== v.obsLat || obsLon !== v.obsLon) setObsSite(v.obsLat, v.obsLon);
     // ビューを戻してから地上の照準を書き戻す (enterSurface が再照準するため)
     if (v.groundView) enterSurface(v.surfaceBody);
     else exitGround();
@@ -307,6 +357,7 @@
       cam.panOff[i] = cam.panOffTgt[i] = v.pan[i];
     }
     gAz = gAzTgt = v.gAz; gAlt = gAltTgt = v.gAlt; gFov = gFovTgt = v.gFov;
+    gTrack = v.gTrack;   // ツアーの aim で立てた追尾を持ち越さない
   }
 
   function startTour(t, step) {
@@ -328,6 +379,7 @@
     clearTimeout(tourDoneTimer);
     tourDoneTimer = 0;
     tourAwaitTest = null;
+    tourUntil = null;
     const keepScene = !!(tour && tour.keep);
     tour = null;
     tourActive = false;

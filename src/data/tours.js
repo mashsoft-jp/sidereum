@@ -7,13 +7,20 @@
   //
   //   view  "space" | "ground" | "moon"
   //   d     日時。UTC の ISO 文字列 ("1910-05-20T06:00")
+  //   dLocal 観測地の平均太陽時での日時。「現地の何時の空か」を揃えたい地上ビュー
+  //         のステップに使う (UTC 固定だと観測地の経度によっては昼になる)
   //   sel   選択天体のキー。null で選択解除 (注視点は太陽へ)
   //   fit   この軌道半径 [au] が画面に収まる距離にする (画角と縦横比から算出)
   //   km    選択天体からの距離 [km]。fit より優先
   //   z     カメラ距離 [world]。fit・km が無いときだけ使う
   //   mag   ズーム倍率   a 俯角 [rad]   y 方位 [rad]
   //   lit   true なら太陽光の当たる側へ回り込む (a・y より優先)
+  //   side  true なら彗星の尾を横から見る向きへ回り込む (y より優先)
+  //   site  地上ビューの観測地 [緯度, 経度]。ビューを開く前に適用する
+  //   aim   true なら地上ビューで sel の天体に照準を合わせ、追尾する
+  //   gfov  地上ビューの画角 [度]
   //   spd   再生速度 [日/秒]   play 再生するか
+  //   until play: true のとき、この日時 (UTC) まで再生したら停止して次へ
   //   constel 星座 (と黄道) を出すか。ツアー中だけの一時変更で設定は保存しない
   //   mark  sel の天体に選択マーク (オレンジのリング) を出すか。既定は false
   //   hold  自動送りでの滞留秒 (既定 12)
@@ -235,6 +242,117 @@
                 "ほかのガイドツアーも同じメニューから開けます。",
             en: "The same menu holds share links, scenery, units, language and the full " +
                 "control list. That's the basics — the other guided tours live there too.",
+          },
+        },
+      ],
+    },
+    {
+      id: "halley1910",
+      manual: true,
+      title: { ja: "ハレー彗星 1910年の大接近", en: "Halley's Comet: the 1910 Approach" },
+      lead: {
+        ja: "太陽系の外から落ちてきて、地球のすぐ横をかすめ、また去っていくまでを辿ります。",
+        en: "Follow the comet as it falls in from the outer Solar System, grazes past Earth, and departs.",
+      },
+      steps: [
+        {
+          view: "space", sel: null, fit: 11, a: 0.55, y: 0.9, mag: 1,
+          d: "1907-06-25", play: false, constel: false, mark: true,
+          text: {
+            ja: "1907年、ハレー彗星は木星と土星の軌道のあいだ、太陽から 10 au のあたりにいます。" +
+                "この距離では太陽の熱が届かず、コマも尾もない、ただの暗い氷の塊です。",
+            en: "In 1907 Halley is between the orbits of Jupiter and Saturn, 10 au from the Sun. " +
+                "Out here there is no warmth to speak of — it is just a dark lump of ice, with no coma or tail.",
+          },
+        },
+        {
+          spd: 60, play: true, until: "1910-02-09",
+          text: {
+            ja: "落ちていく様子を早送りで見てみましょう。外側では這うようにしか動きませんが、" +
+                "内側へ入るほど速くなります。楕円軌道では太陽に近いほど速く動くためです。" +
+                "1909年10月に太陽から 3 au を切り、氷が昇華しはじめます。",
+            en: "Watch it fall, sped up. Far out it barely crawls; the closer it gets, the faster it moves — " +
+                "on an elliptical orbit, speed rises as you approach the Sun. " +
+                "In October 1909 it crosses 3 au and its ice begins to sublimate.",
+          },
+        },
+        {
+          sel: "halley", fit: 0.2, a: 0.55, side: true, d: "1910-02-09",
+          play: false, mark: false,
+          text: {
+            ja: "1910年2月、太陽まで 1.5 au。噴き出したガスと塵が太陽と反対の方向へ流されて、" +
+                "核をつつむコマと、その後ろに伸びる尾ができてきました。" +
+                "ただし地球からはまだ 1.8 au。この頃は望遠鏡でしか見えません。",
+            en: "February 1910, 1.5 au from the Sun. Gas and dust streaming off the nucleus are swept " +
+                "away from it, forming a coma and a tail behind. But at 1.8 au from Earth it is still " +
+                "a telescopic object.",
+          },
+        },
+        {
+          fit: 0.75, a: 0.35, side: true, d: "1910-04-20",
+          text: {
+            ja: "1910年4月20日、近日点。太陽まで 0.59 au まで迫り、噴き出したガスと塵が" +
+                "太陽と反対の方向へ長く流れます。尾がもっとも伸びるのはこの時期です。",
+            en: "20 April 1910: perihelion. At 0.59 au from the Sun, the escaping gas and dust stream away " +
+                "from it in a long tail. This is when the tail is at its longest.",
+          },
+        },
+        {
+          view: "ground", dLocal: "1910-05-05T04:00", sel: "halley",
+          aim: true, gfov: 55, constel: true,
+          text: {
+            ja: "5月5日の夜明け前。地球まで 0.66 au、太陽から 41° 離れて暗い東の空に上がり、" +
+                "ついに肉眼で見えるようになりました。金星のそばで、尾が空を横切っています。",
+            en: "Before dawn on 5 May. Now 0.66 au from Earth and 41° from the Sun, it climbs into a " +
+                "dark eastern sky and is finally visible to the naked eye, tail streaming past Venus.",
+          },
+        },
+        {
+          view: "space", sel: "earth", fit: 0.3, a: 1.4, d: "1910-05-19", constel: false,
+          text: {
+            ja: "5月19日、彗星が地球と太陽のあいだを通過。尾は太陽と反対、つまり地球の側へ向いていて、" +
+                "地球はこの日その中を通り抜けました。当時は尾に含まれるシアンで人類が滅ぶという噂が流れ、" +
+                "実際には何も起きませんでした。",
+            en: "19 May: the comet passes between Earth and the Sun. Its tail points away from the Sun — " +
+                "straight at us — and Earth passed right through it. Newspapers warned that cyanogen in the tail " +
+                "would poison the planet. Nothing happened.",
+          },
+        },
+        {
+          view: "ground", dLocal: "1910-05-21T20:00", aim: true, gfov: 85,
+          constel: true, sel: "halley",
+          text: {
+            ja: "5月21日、地球最接近 0.152 au。月までの距離の約60倍です。" +
+                "尾のすぐ横をかすめて進むため、遠近の効果で尾は空を大きく横切って見えます。" +
+                "当時は「100°以上に伸びた」と記録されました。ただし太陽から 24° しか離れておらず、" +
+                "日が沈むと西の低い空にいて、まもなく沈んでしまいます。",
+            en: "21 May: closest approach at 0.152 au, about 60 times the distance to the Moon. " +
+                "Earth skims right alongside the tail, so perspective throws it across the sky — " +
+                "observers recorded a tail more than 100° long. But at only 24° from the Sun it hangs " +
+                "low in the west after sunset and soon follows it down.",
+          },
+        },
+        {
+          dLocal: "1910-05-30T21:00", gfov: 55,
+          text: {
+            ja: "9日後。地球からは 0.44 au まで離れて尾も短くなりましたが、" +
+                "太陽から 79° 離れて空高くに移り、一晩じゅう暗い空で眺められるようになりました。" +
+                "多くの人が実際に目にしたのはこの時期です。",
+            en: "Nine days later. It has receded to 0.44 au and the tail has shrunk, but at 79° from the " +
+                "Sun it now rides high in a dark sky for most of the night. This is when most people " +
+                "actually saw it.",
+          },
+        },
+        {
+          view: "space", sel: null, fit: 3.2, a: 0.5, y: 0.9,
+          d: "1910-08-08", constel: false, spd: 30, play: true, until: "1911-06-01",
+          text: {
+            ja: "太陽から離れるにつれて活動が止まり、尾は縮んで消えていきます。" +
+                "次に戻ってきたのは1986年 — このときは 0.42 au までしか近づかず条件が悪く、" +
+                "「見えなかった彗星」として記憶されました。その次は2061年です。",
+            en: "As it recedes the activity shuts down and the tail shrinks away. " +
+                "It returned in 1986, but only came within 0.42 au in poor viewing geometry — " +
+                "remembered as the apparition nobody could see. The next is 2061.",
           },
         },
       ],
