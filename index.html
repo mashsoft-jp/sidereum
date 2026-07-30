@@ -1465,6 +1465,7 @@
   //   side  true なら彗星の尾を横から見る向きへ回り込む (y より優先)
   //   site  地上ビューの観測地 [緯度, 経度]。ビューを開く前に適用する
   //   aim   true なら地上ビューで sel の天体に照準を合わせ、追尾する
+  //   sight 宇宙ビューで、注視天体からこの天体へ向かう視線ガイド (破線) を出す
   //   gfov  地上ビューの画角 [度]
   //   spd   再生速度 [日/秒]   play 再生するか
   //   until play: true のとき、この日時 (UTC) まで再生したら停止して次へ
@@ -1877,7 +1878,7 @@
     },
     {
       id: "phases",
-      ver: 2,
+      ver: 3,
       title: { ja: "満ち欠けのしくみ", en: "Why Worlds Wax and Wane" },
       lead: {
         ja: "月と金星の満ち欠けを追い、なぜ形が変わるのか、なぜ金星だけ大きさまで変わるのかを見ます。",
@@ -1949,19 +1950,30 @@
           view: "space", sel: "venus", fit: 0.85, a: 1.5708, y: 0.9,
           d: "2026-09-20", play: false, mark: true,
           text: {
-            ja: "同じ日を真上から。太陽・金星・地球がほぼ一直線に並び、金星がそのあいだにいます。" +
-                "金星が照らされているのは太陽を向いた側 — つまり地球からは反対の、夜の側を" +
-                "多く見ることになり、細い三日月形になります。地球より内側を回る天体でしか" +
-                "起きないことで、ガリレオはこれを金星が太陽のまわりを回っている証拠としました。",
-            en: "The same day, from directly above. Sun, Venus and Earth are nearly in line, with Venus " +
-                "in between. Venus is lit on the side facing the Sun — the far side from us — so we mostly " +
-                "see its night side, and it appears as a thin crescent. Only a body orbiting inside Earth's " +
-                "orbit can do this, and Galileo took it as proof that Venus circles the Sun.",
+            ja: "同じ日を真上から見てみましょう。太陽・金星・地球がほぼ一直線に並び、" +
+                "金星がそのあいだにいます。この位置関係のまま、金星に寄ってみます。",
+            en: "Now the same day from directly above. Sun, Venus and Earth line up almost exactly, " +
+                "with Venus in between. Keeping this angle, let's move in on Venus.",
+          },
+        },
+        {
+          km: 26000, mark: false, sight: "earth",
+          text: {
+            ja: "同じ真上からのアングルで金星に寄りました。向かって左側が太陽に照らされた昼、" +
+                "右側が夜です。破線が地球の方向 — 私たちはこの矢印の側から眺めているので、" +
+                "見えているのはほとんど夜の側で、明るい部分は縁の細い弧だけになります。" +
+                "地球より内側を回る天体でしか起きないことで、ガリレオはこれを" +
+                "金星が太陽のまわりを回っている証拠としました。",
+            en: "Same view from above, now close in on Venus. The half facing the Sun is lit; the other " +
+                "half is night. The dashed line points to Earth — we are looking from that side, so almost " +
+                "all of what we see is the night side, and only a thin arc at the edge is lit. " +
+                "Only a body orbiting inside Earth's orbit can do this, and Galileo took it as proof " +
+                "that Venus circles the Sun.",
           },
         },
         {
           view: "ground", dLocal: "2037-07-24T03:00", sel: "mars",
-          aim: true, gfov: 0.011,
+          aim: true, gfov: 0.011, sight: null,
           text: {
             ja: "では外側の惑星は。火星が最も欠けるのがこの日で、それでも 84% です。" +
                 "地球より外側にある天体は、いつも太陽とほぼ同じ方向から眺めることになるので、" +
@@ -2861,6 +2873,8 @@
   let showSelMark = true;
   // ガイドツアー実行中。シーンを壊す操作 (天体の選択・再生の切替) を止めるのに使う
   let tourActive = false;
+  // ツアーの視線ガイド。注視天体からこの天体へ向かう破線をオーバーレイに描く
+  let tourSight = null;
   const FOV = 45 * DEG;
   // 宇宙ビューのズーム (拡大率)。距離とは別に、画角を狭めて望遠的に拡大する
   const MAG_MAX = 100;
@@ -4677,6 +4691,54 @@
         octx.strokeStyle = "rgba(242,178,62,0.9)";
         octx.lineWidth = 1.2;
         octx.stroke();
+      }
+    }
+
+    // ツアーの視線ガイド。注視している天体から、指定した天体の方向へ破線を引く。
+    // 実寸比では相手がほぼ必ず画面外なので、枠の内側で止めて名前と矢じりを出す
+    if (tourSight && !groundView && selected) {
+      const from = screenPos.get(selected.key);
+      const tb = BODY_BY_KEY.get(tourSight);
+      if (from && tb) {
+        // 相手はカメラの真横や後方にいることが多く、投影では位置が出ない。
+        // ワールドの方向ベクトルをカメラの右/上ベクトルへ射影して画面の向きを得る
+        const fw = posW.get(selected.key), tw = posW.get(tourSight);
+        const vx = tw[0] - fw[0], vy = tw[1] - fw[1], vz = tw[2] - fw[2];
+        let dx = vx * Vm[0] + vy * Vm[4] + vz * Vm[8];
+        let dy = -(vx * Vm[1] + vy * Vm[5] + vz * Vm[9]);   // 画面の y は下向き
+        const len = Math.hypot(dx, dy);
+        if (len > 1e-9) {
+          dx /= len; dy /= len;
+          // 枠の内側まで伸ばす (長さは画面のピクセル。方向だけを上で求めている)
+          const m = 52;                       // 枠からの余白 (名前を置く分)
+          let t = Math.max(W, H);
+          if (dx > 1e-6) t = Math.min(t, (W - m - from.x) / dx);
+          else if (dx < -1e-6) t = Math.min(t, (m - from.x) / dx);
+          if (dy > 1e-6) t = Math.min(t, (H - m - from.y) / dy);
+          else if (dy < -1e-6) t = Math.min(t, (m - from.y) / dy);
+          const t0 = Math.max(from.r, 3) + 10;
+          if (t > t0 + 24) {
+          const sx = from.x + dx * t0, sy = from.y + dy * t0;
+          const ex = from.x + dx * t, ey = from.y + dy * t;
+          octx.save();
+          octx.setLineDash([7, 5]);
+          octx.strokeStyle = "rgba(242,178,62,0.7)";
+          octx.lineWidth = 1.2;
+          octx.beginPath();
+          octx.moveTo(sx, sy);
+          octx.lineTo(ex, ey);
+          octx.stroke();
+          octx.restore();
+          octx.fillStyle = "rgba(242,178,62,0.95)";
+          octx.beginPath();                   // 矢じり
+          octx.moveTo(ex, ey);
+          octx.lineTo(ex - dx * 10 - dy * 5, ey - dy * 10 + dx * 5);
+          octx.lineTo(ex - dx * 10 + dy * 5, ey - dy * 10 - dx * 5);
+          octx.closePath();
+          octx.fill();
+          octx.fillText(bName(tb), ex - dx * 22, ey - dy * 22 - 4);
+          }
+        }
       }
     }
 
@@ -6529,6 +6591,7 @@
     }
     // selected はカメラの注視先として使うだけなので、既定では選択マークを出さない
     showSelMark = !!s.mark;
+    tourSight = s.sight || null;
     tourTouched = false;
     tourResumeBtn.hidden = true;
     // 情報パネルはナレーションと重なるので、ステップが変わったら必ず閉じる
@@ -6728,6 +6791,7 @@
     tourDoneTimer = 0;
     tourAwaitTest = null;
     tourUntil = null;
+    tourSight = null;
     const keepScene = !!(tour && tour.keep);
     tour = null;
     tourActive = false;

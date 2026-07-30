@@ -10,6 +10,8 @@
   let showSelMark = true;
   // ガイドツアー実行中。シーンを壊す操作 (天体の選択・再生の切替) を止めるのに使う
   let tourActive = false;
+  // ツアーの視線ガイド。注視天体からこの天体へ向かう破線をオーバーレイに描く
+  let tourSight = null;
   const FOV = 45 * DEG;
   // 宇宙ビューのズーム (拡大率)。距離とは別に、画角を狭めて望遠的に拡大する
   const MAG_MAX = 100;

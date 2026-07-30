@@ -18,6 +18,7 @@
   //   side  true なら彗星の尾を横から見る向きへ回り込む (y より優先)
   //   site  地上ビューの観測地 [緯度, 経度]。ビューを開く前に適用する
   //   aim   true なら地上ビューで sel の天体に照準を合わせ、追尾する
+  //   sight 宇宙ビューで、注視天体からこの天体へ向かう視線ガイド (破線) を出す
   //   gfov  地上ビューの画角 [度]
   //   spd   再生速度 [日/秒]   play 再生するか
   //   until play: true のとき、この日時 (UTC) まで再生したら停止して次へ
@@ -430,7 +431,7 @@
     },
     {
       id: "phases",
-      ver: 2,
+      ver: 3,
       title: { ja: "満ち欠けのしくみ", en: "Why Worlds Wax and Wane" },
       lead: {
         ja: "月と金星の満ち欠けを追い、なぜ形が変わるのか、なぜ金星だけ大きさまで変わるのかを見ます。",
@@ -502,19 +503,30 @@
           view: "space", sel: "venus", fit: 0.85, a: 1.5708, y: 0.9,
           d: "2026-09-20", play: false, mark: true,
           text: {
-            ja: "同じ日を真上から。太陽・金星・地球がほぼ一直線に並び、金星がそのあいだにいます。" +
-                "金星が照らされているのは太陽を向いた側 — つまり地球からは反対の、夜の側を" +
-                "多く見ることになり、細い三日月形になります。地球より内側を回る天体でしか" +
-                "起きないことで、ガリレオはこれを金星が太陽のまわりを回っている証拠としました。",
-            en: "The same day, from directly above. Sun, Venus and Earth are nearly in line, with Venus " +
-                "in between. Venus is lit on the side facing the Sun — the far side from us — so we mostly " +
-                "see its night side, and it appears as a thin crescent. Only a body orbiting inside Earth's " +
-                "orbit can do this, and Galileo took it as proof that Venus circles the Sun.",
+            ja: "同じ日を真上から見てみましょう。太陽・金星・地球がほぼ一直線に並び、" +
+                "金星がそのあいだにいます。この位置関係のまま、金星に寄ってみます。",
+            en: "Now the same day from directly above. Sun, Venus and Earth line up almost exactly, " +
+                "with Venus in between. Keeping this angle, let's move in on Venus.",
+          },
+        },
+        {
+          km: 26000, mark: false, sight: "earth",
+          text: {
+            ja: "同じ真上からのアングルで金星に寄りました。向かって左側が太陽に照らされた昼、" +
+                "右側が夜です。破線が地球の方向 — 私たちはこの矢印の側から眺めているので、" +
+                "見えているのはほとんど夜の側で、明るい部分は縁の細い弧だけになります。" +
+                "地球より内側を回る天体でしか起きないことで、ガリレオはこれを" +
+                "金星が太陽のまわりを回っている証拠としました。",
+            en: "Same view from above, now close in on Venus. The half facing the Sun is lit; the other " +
+                "half is night. The dashed line points to Earth — we are looking from that side, so almost " +
+                "all of what we see is the night side, and only a thin arc at the edge is lit. " +
+                "Only a body orbiting inside Earth's orbit can do this, and Galileo took it as proof " +
+                "that Venus circles the Sun.",
           },
         },
         {
           view: "ground", dLocal: "2037-07-24T03:00", sel: "mars",
-          aim: true, gfov: 0.011,
+          aim: true, gfov: 0.011, sight: null,
           text: {
             ja: "では外側の惑星は。火星が最も欠けるのがこの日で、それでも 84% です。" +
                 "地球より外側にある天体は、いつも太陽とほぼ同じ方向から眺めることになるので、" +

@@ -44,6 +44,54 @@
       }
     }
 
+    // ツアーの視線ガイド。注視している天体から、指定した天体の方向へ破線を引く。
+    // 実寸比では相手がほぼ必ず画面外なので、枠の内側で止めて名前と矢じりを出す
+    if (tourSight && !groundView && selected) {
+      const from = screenPos.get(selected.key);
+      const tb = BODY_BY_KEY.get(tourSight);
+      if (from && tb) {
+        // 相手はカメラの真横や後方にいることが多く、投影では位置が出ない。
+        // ワールドの方向ベクトルをカメラの右/上ベクトルへ射影して画面の向きを得る
+        const fw = posW.get(selected.key), tw = posW.get(tourSight);
+        const vx = tw[0] - fw[0], vy = tw[1] - fw[1], vz = tw[2] - fw[2];
+        let dx = vx * Vm[0] + vy * Vm[4] + vz * Vm[8];
+        let dy = -(vx * Vm[1] + vy * Vm[5] + vz * Vm[9]);   // 画面の y は下向き
+        const len = Math.hypot(dx, dy);
+        if (len > 1e-9) {
+          dx /= len; dy /= len;
+          // 枠の内側まで伸ばす (長さは画面のピクセル。方向だけを上で求めている)
+          const m = 52;                       // 枠からの余白 (名前を置く分)
+          let t = Math.max(W, H);
+          if (dx > 1e-6) t = Math.min(t, (W - m - from.x) / dx);
+          else if (dx < -1e-6) t = Math.min(t, (m - from.x) / dx);
+          if (dy > 1e-6) t = Math.min(t, (H - m - from.y) / dy);
+          else if (dy < -1e-6) t = Math.min(t, (m - from.y) / dy);
+          const t0 = Math.max(from.r, 3) + 10;
+          if (t > t0 + 24) {
+          const sx = from.x + dx * t0, sy = from.y + dy * t0;
+          const ex = from.x + dx * t, ey = from.y + dy * t;
+          octx.save();
+          octx.setLineDash([7, 5]);
+          octx.strokeStyle = "rgba(242,178,62,0.7)";
+          octx.lineWidth = 1.2;
+          octx.beginPath();
+          octx.moveTo(sx, sy);
+          octx.lineTo(ex, ey);
+          octx.stroke();
+          octx.restore();
+          octx.fillStyle = "rgba(242,178,62,0.95)";
+          octx.beginPath();                   // 矢じり
+          octx.moveTo(ex, ey);
+          octx.lineTo(ex - dx * 10 - dy * 5, ey - dy * 10 + dx * 5);
+          octx.lineTo(ex - dx * 10 + dy * 5, ey - dy * 10 - dx * 5);
+          octx.closePath();
+          octx.fill();
+          octx.fillText(bName(tb), ex - dx * 22, ey - dy * 22 - 4);
+          }
+        }
+      }
+    }
+
     // 星座名 (背景天球上のラベル)
     if (showConst) {
       octx.fillStyle = "rgba(150,178,224,0.5)";
