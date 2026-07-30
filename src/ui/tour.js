@@ -308,6 +308,8 @@
     if (!tour) return;
     if (i >= tour.steps.length) { endTour(); return; }
     tourIdx = Math.max(0, i);
+    // 最後のシーンまで来たら視聴済みに (✕ で閉じても「見終えた」と扱う)
+    if (tourIdx === tour.steps.length - 1) markTourSeen(tour);
     applyTourStep(tourIdx);
     renderTourUI();
     armTourTimer();
@@ -414,20 +416,51 @@
     armTourTimer();
   });
 
+  // ---------- 視聴済みの記録 ----------
+  // { ツアーID: 最後に見終えた版 }。ツアー側の ver を上げると「更新あり」に戻る
+  const TOUR_SEEN_KEY = "ssTourSeen";
+  function loadTourSeen() {
+    try { return JSON.parse(localStorage.getItem(TOUR_SEEN_KEY)) || {}; }
+    catch (e) { return {}; }        // 壊れた値・プライベートモード
+  }
+  // 0 = 未視聴  1 = 更新あり (前の版は見終えた)  2 = 視聴済み
+  function tourSeenState(tr, seen) {
+    const v = seen[tr.id];
+    return v === undefined ? 0 : (v >= (tr.ver || 1) ? 2 : 1);
+  }
+  function markTourSeen(tr) {
+    const seen = loadTourSeen();
+    if (seen[tr.id] === (tr.ver || 1)) return;
+    seen[tr.id] = tr.ver || 1;
+    try { localStorage.setItem(TOUR_SEEN_KEY, JSON.stringify(seen)); }
+    catch (e) { /* プライベートモード等 */ }
+  }
+
   // ---------- ツアー一覧 (モーダル) ----------
-  // 端末に合うものだけ並べる (URL 指定は絞らないので、他端末向けも確認できる)
+  // 端末に合うものだけ並べる (URL 指定は絞らないので、他端末向けも確認できる)。
+  // 番号は「その端末で見えるツアーの追加順」。並びは 未視聴・更新あり → 視聴済み で、
+  // それぞれ番号順にする
   function buildTourList() {
     const t = T();
+    const seen = loadTourSeen();
+    const rows = TOURS
+      .map((tr, i) => ({ tr, i }))
+      .filter((r) => tourVisible(r.tr));
+    rows.forEach((r, n) => { r.no = n + 1; r.st = tourSeenState(r.tr, seen); });
+    rows.sort((a, b) => (a.st === 2) - (b.st === 2) || a.no - b.no);
     tourListEl.innerHTML =
       '<button id="tourListClose" aria-label="close">✕</button>' +
       "<h2>" + t.menuTour + "</h2>" +
-      TOURS.map((tr, i) => (!tourVisible(tr) ? "" :
-        '<div class="tourCard">' +
-          "<h3>" + tourText(tr.title) + "</h3>" +
-          "<p>" + tourText(tr.lead) + "</p>" +
-          '<div class="tourMeta"><span>' + tr.steps.length + t.tourSteps + "</span>" +
-          '<button class="tourStart" data-i="' + i + '">' + t.tourStart + "</button></div>" +
-        "</div>")).join("");
+      rows.map((r) =>
+        '<div class="tourCard' + (r.st === 2 ? " done" : "") + '">' +
+          '<h3><span class="tourNo">' + r.no + "</span>" + tourText(r.tr.title) +
+          (r.st === 1 ? '<span class="tourNew">' + t.tourUpdated + "</span>" : "") +
+          "</h3>" +
+          "<p>" + tourText(r.tr.lead) + "</p>" +
+          '<div class="tourMeta"><span>' + r.tr.steps.length + t.tourSteps + "</span>" +
+          '<button class="tourStart" data-i="' + r.i + '">' +
+          (r.st === 2 ? t.tourAgain : t.tourStart) + "</button></div>" +
+        "</div>").join("");
   }
   function openTourList() {
     buildTourList();

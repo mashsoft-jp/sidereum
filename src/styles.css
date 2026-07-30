@@ -181,6 +181,27 @@
     font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
     color: var(--text);
   }
+  /* 通し番号 (その端末で見えるツアーの追加順。並び替えても変わらない) */
+  #tourList .tourNo {
+    display: inline-block; min-width: 1.5em;
+    font-family: var(--font-num); font-variant-numeric: tabular-nums;
+    font-size: 11px; color: var(--accent);
+  }
+  #tourList .tourNew {
+    margin-left: 8px; padding: 1px 6px; border-radius: 3px;
+    font-size: 9px; font-weight: 600; letter-spacing: 0.06em;
+    color: #0a0d16; background: var(--accent); vertical-align: 1px;
+  }
+  /* 見終えたツアー: 一覧の下へ回し、控えめな見た目にする (再生はできる) */
+  #tourList .tourCard.done { border-color: rgba(150, 178, 224, 0.10); }
+  #tourList .tourCard.done h3,
+  #tourList .tourCard.done .tourNo { color: var(--dim); }
+  #tourList .tourCard.done p { opacity: 0.6; }
+  #tourList .tourCard.done .tourStart {
+    color: var(--text); background: rgba(150, 178, 224, 0.08);
+    border-color: var(--line); font-weight: 400;
+  }
+  #tourList .tourCard.done .tourStart:hover { background: rgba(150, 178, 224, 0.16); }
   #tourList .tourCard p { margin: 0; color: var(--dim); }
   #tourList .tourMeta {
     display: flex; align-items: center; justify-content: space-between;
