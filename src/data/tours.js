@@ -17,6 +17,11 @@
   //   lit   true なら太陽光の当たる側へ回り込む (a・y より優先)
   //   side  true なら彗星の尾を横から見る向きへ回り込む (y より優先)
   //   apart 中心天体とこの天体が画面上で重ならない向きへ回り込む (lit より優先)
+  //   front この天体が中心天体の手前に重なる向きへ回り込む (apart の逆)。
+  //         km をこの天体までの距離より大きくすると、円盤を背に小さく写る
+  //   ride  探査機ツアー専用。カメラを探査機の位置に置き、この天体を見続ける。
+  //         sel・km・角度の指定より優先する (毎フレーム計算し直す)
+  //   path  探査機の軌跡を描く。通過済みは濃く、これから通る先は淡く出る
   //   site  地上ビューの観測地 [緯度, 経度]。ビューを開く前に適用する
   //   aim   true なら地上ビューで sel の天体に照準を合わせ、追尾する
   //   sight 宇宙ビューで、注視天体からこの天体へ向かう視線ガイド (破線) を出す
@@ -562,6 +567,7 @@
       id: "voyager1",
       manual: true,
       probe: "voyager1",
+      ver: 2,
       title: { ja: "ボイジャー1号の旅", en: "The Voyage of Voyager 1" },
       lead: {
         ja: "1977年の打ち上げから、木星・土星を経て星間空間へ。人類が最も遠くへ送った機体を追います。",
@@ -569,7 +575,7 @@
       },
       steps: [
         {
-          view: "space", sel: "earth", km: 115000, lit: true, apart: "voyager1", mag: 1,
+          view: "space", sel: "earth", km: 24000, front: "voyager1", mag: 1,
           d: "1977-09-05T00:11", play: false, constel: false, spot: "voyager1",
           text: {
             ja: "1977年9月5日、ボイジャー1号がタイタン3Eで打ち上げられました。" +
@@ -580,8 +586,8 @@
           },
         },
         {
-          sel: null, fit: 6, a: 0.5, y: 0.9,
-          spd: 12, play: true, until: "1979-03-04T18:30",
+          sel: null, fit: 6, a: 0.5, y: 0.9, spot: "voyager1",
+          spd: 12, play: true, until: "1979-03-03",
           text: {
             ja: "火星軌道を越え、小惑星帯を抜けて木星へ。18か月の巡航です。" +
                 "軌跡はフライバイの日付と場所を経由点にした近似ですが、" +
@@ -592,17 +598,23 @@
           },
         },
         {
-          sel: "voyager1", km: 1260000, lit: true, apart: "jupiter", play: false, spot: null,
-          d: "1979-03-04T18:30",
+          // 探査機視点で木星の脇を通り抜ける。最接近 (中心から 34.9万km) では
+          // 木星の視直径が 23° になり、画面の半分を占める
+          sel: "jupiter", ride: "jupiter", spot: null, mark: false,
+          d: "1979-03-03", spd: 0.25, play: true, until: "1979-03-05T07:00",
           text: {
-            ja: "1979年3月5日、木星最接近。イオの火山噴火と、木星に薄い環があることを" +
-                "見つけたのはこのときです。木星の重力で加速し、進路を土星へ振り向けます。",
-            en: "5 March 1979: closest approach to Jupiter. This is the flyby that found volcanoes " +
-                "erupting on Io and a faint ring around Jupiter. Jupiter's gravity slings it on toward Saturn.",
+            ja: "ここからはボイジャー1号に乗って見てみます。1979年3月5日、木星最接近。" +
+                "中心から 34万9千km — 木星の半径の5倍のところをかすめ、" +
+                "イオの火山噴火と、木星に薄い環があることを見つけました。" +
+                "内側から近づいて外側へ抜けるので、通り過ぎたあとは細い月のように欠けて見えます。",
+            en: "Now ride along with Voyager 1. On 5 March 1979 it skims 349,000 km from Jupiter's " +
+                "centre — five Jupiter radii — and finds volcanoes erupting on Io and a faint " +
+                "ring around the planet. Arriving from the sunward side and leaving outward, it " +
+                "watches the planet thin to a crescent behind it.",
           },
         },
         {
-          km: 1400000, lit: true, apart: "saturn", d: "1980-11-11T19:18",
+          sel: "voyager1", ride: null, km: 1400000, lit: true, apart: "saturn", play: false, d: "1980-11-12",
           text: {
             ja: "1980年11月12日、土星最接近。厚い大気を持つタイタンを間近で調べるため、" +
                 "軌道を大きく曲げて黄道面を離れました。この選択で、以後どの惑星にも" +
@@ -625,7 +637,7 @@
           },
         },
         {
-          sel: "voyager1", fit: 130, a: 0.9, spd: 400, play: true, until: "2012-08-25",
+          sel: "voyager1", fit: 130, a: 0.9, path: true, spd: 400, play: true, until: "2012-08-25",
           text: {
             ja: "そのまま外へ。2012年8月25日、太陽風が星間物質に押し返される境界 " +
                 "— ヘリオポーズ — を越え、太陽から約121 au で星間空間に入りました。" +
@@ -633,6 +645,20 @@
             en: "Outward it goes. On 25 August 2012, at about 121 au, it crossed the heliopause where " +
                 "the solar wind gives way to the interstellar medium. A radio signal now takes " +
                 "17 hours to reach it.",
+          },
+        },
+        {
+          // 内側の道のり (地球→土星) と離脱方向の両方に直交する向きから見ると、
+          // 経路全体がほぼ画面の平面に乗る
+          sel: null, fit: 8, a: -0.95, y: 1.61, play: false, spot: null, mag: 1,
+          d: "2012-08-25",
+          text: {
+            ja: "たどってきた道のりです。木星と土星ですれ違いざまに進路を曲げてもらい、" +
+                "土星では黄道面を大きく外れて北へ抜けました。" +
+                "この線は経由点を繋いだ近似で、実際の軌道そのものではありません。",
+            en: "The route it took. Jupiter and Saturn each bent its path as it swept past, and " +
+                "Saturn threw it far north out of the plane of the planets. The line is an " +
+                "interpolation through the waypoints, not the true trajectory.",
           },
         },
       ],

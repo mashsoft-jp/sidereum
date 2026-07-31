@@ -190,6 +190,8 @@
     showSelMark = !!s.mark;
     tourSight = s.sight || null;
     tourSpot = s.spot || null;
+    tourRide = s.ride || null;
+    tourPath = !!s.path;
     tourTouched = false;
     tourResumeBtn.hidden = true;
     // 情報パネルはナレーションと重なるので、ステップが変わったら必ず閉じる
@@ -281,6 +283,18 @@
         }
       }
     }
+    // front: 指定天体が中心天体の手前に重なる向きへ回り込む (apart の逆)。
+    // 中心天体から見た指定天体の方向にカメラを置くので、km を指定天体までの
+    // 距離より大きくすれば、指定天体が中心天体の円盤を背にして写る
+    if (s.front && b) {
+      const o = posW.get(s.front), w = posW.get(b.key);
+      const dx = o[0] - w[0], dy = o[1] - w[1], dz = o[2] - w[2];
+      const l = Math.hypot(dx, dy, dz);
+      if (l > 1e-12) {
+        cam.yawTgt = Math.atan2(dz, dx);
+        cam.pitchTgt = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, Math.asin(dy / l)));
+      }
+    }
     // side: 彗星の尾を横から見る向きへ回り込む。尾は反太陽方向 (= 太陽から見た
     // 天体の方向) に伸びるリボンなので、軸を正面から見ると潰れて消えてしまう
     if (s.side && b) {
@@ -295,6 +309,28 @@
     else if (isFinite(s.z)) dist = s.z;
     cam.distTgt = Math.min(1400, dist);
     resetPan();
+  }
+
+  // ride: 探査機の位置にカメラを置き、指定天体を見続ける (探査機視点)。
+  // フライバイ中は距離も向きも毎フレーム大きく変わるので、緩和を通さず
+  // frame() の描画直前に現在値へ直接書き込む
+  function tourRideCam() {
+    if (!tourRide || groundView) return;
+    const pr = tourProbe ? BODY_BY_KEY.get(tourProbe) : null;
+    const tb = BODY_BY_KEY.get(tourRide);
+    if (!pr || !tb || !pr.live) return;
+    const e = posW.get(pr.key), f = posW.get(tb.key);
+    const dx = e[0] - f[0], dy = e[1] - f[1], dz = e[2] - f[2];
+    const d = Math.hypot(dx, dy, dz);
+    if (d < 1e-12) return;
+    cam.focus[0] = cam.focusTgt[0] = f[0];
+    cam.focus[1] = cam.focusTgt[1] = f[1];
+    cam.focus[2] = cam.focusTgt[2] = f[2];
+    cam.panOff[0] = cam.panOff[1] = cam.panOff[2] = 0;
+    cam.panOffTgt[0] = cam.panOffTgt[1] = cam.panOffTgt[2] = 0;
+    cam.dist = cam.distTgt = d;
+    cam.yaw = cam.yawTgt = Math.atan2(dz, dx);
+    cam.pitch = cam.pitchTgt = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, Math.asin(dy / d)));
   }
 
   function clearTourTimer() {
@@ -414,6 +450,8 @@
     tourSight = null;
     tourSpot = null;
     tourProbe = null;
+    tourRide = null;
+    tourPath = false;
     const keepScene = !!(tour && tour.keep);
     tour = null;
     tourActive = false;

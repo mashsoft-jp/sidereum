@@ -16,6 +16,10 @@
   let tourSpot = null;
   // 探査機ツアー中はこの1機だけを描く (他機が画面に混ざると主役が分からない)
   let tourProbe = null;
+  // 探査機視点。カメラを探査機の位置に置き、この天体を見る (キー文字列)
+  let tourRide = null;
+  // 探査機の軌跡 (通過済みは濃く、未通過は淡く) を描くか
+  let tourPath = false;
   const FOV = 45 * DEG;
   // 宇宙ビューのズーム (拡大率)。距離とは別に、画角を狭めて望遠的に拡大する
   const MAG_MAX = 100;
@@ -110,7 +114,16 @@
         if (w.au) return { t, au: w.au };
         const b = PLANETS.find((x) => x.key === w.at);
         keplerAU(b, t, tmp);
-        return { t, au: [tmp[0], tmp[1], tmp[2]] };
+        const au = [tmp[0], tmp[1], tmp[2]];
+        if (w.miss) {
+          // 最接近距離ぶん、惑星の公転運動の後ろ側へずらす (probes.js の miss)
+          const a = keplerAU(b, t - 0.01, [0, 0, 0]);
+          const c = keplerAU(b, t + 0.01, [0, 0, 0]);
+          const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+          const s = w.miss / AU_KM / (Math.hypot(vx, vy, vz) || 1);
+          au[0] -= vx * s; au[1] -= vy * s; au[2] -= vz * s;
+        }
+        return { t, au };
       });
     }
   }
@@ -132,6 +145,32 @@
       out[k] = h00 * p1.au[k] + h10 * m1 + h01 * p2.au[k] + h11 * m2;
     }
     return out;
+  }
+
+  // 軌跡の線。経由点は固定なので起動時に一度だけ焼く。区間ごとに等時間で刻む —
+  // 全体を通して等時間にすると、32年ある離脱区間に点が集中して、惑星まわりの
+  // 折れ曲がり (見せたい部分) が数点に潰れてしまう
+  {
+    const PATH_SEG = 48;
+    const au = [0, 0, 0], w = [0, 0, 0];
+    for (const pr of PROBES) {
+      const legs = pr.pts.length - 1;
+      const n = legs * PATH_SEG + 1;
+      pr.path = new Float32Array(n * 3);
+      pr.pathT = new Float64Array(n);
+      let i = 0;
+      for (let g = 0; g < legs; g++) {
+        const t0 = pr.pts[g].t, t1 = pr.pts[g + 1].t;
+        const last = g === legs - 1 ? PATH_SEG : PATH_SEG - 1;
+        for (let s = 0; s <= last; s++) {
+          const t = t0 + (t1 - t0) * (s / PATH_SEG);
+          toWorld(probeAU(pr, t, au), w);
+          pr.path[i * 3] = w[0]; pr.path[i * 3 + 1] = w[1]; pr.path[i * 3 + 2] = w[2];
+          pr.pathT[i] = t;
+          i++;
+        }
+      }
+    }
   }
 
   function updatePositions() {

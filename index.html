@@ -1264,6 +1264,10 @@
   //   way: [{ d: "YYYY-MM-DD", at: <天体キー> }] または { d, au: [x,y,z] }
   //        au は黄道直交座標 [au]。太陽系を離れる区間など、経由できる天体が
   //        無いところに置く
+  //   miss: 経由点を天体の中心から この距離 [km] だけずらす (実際の最接近距離)。
+  //        書かないと軌跡が惑星の中心を貫くので、探査機視点で見るステップが
+  //        惑星の内部を通ってしまう。向きは惑星の公転運動の後ろ側 —
+  //        重力アシストで加速する探査機が実際に通る側
   //   mesh: 3Dモデルのキー (data/models.js)   col: 描画色
   //
   // 太陽系離脱後の向きは実際の脱出方向 (V1 は黄緯 +35°、V2 は −48°) に合わせた。
@@ -1278,8 +1282,8 @@
       col: [0.82, 0.85, 0.90], ph0: 0.0,
       way: [
         { d: "1977-09-05", at: "earth" },     // 打ち上げ
-        { d: "1979-03-05", at: "jupiter" },   // 木星最接近
-        { d: "1980-11-12", at: "saturn" },    // 土星最接近 (タイタンへ寄るため黄道面を離れる)
+        { d: "1979-03-05", at: "jupiter", miss: 348890 },   // 木星最接近
+        { d: "1980-11-12", at: "saturn", miss: 184300 },    // 土星最接近 (タイタンへ寄るため黄道面を離れる)
         { d: "2012-08-25", au: [-25.6, -95.7, 69.4] },   // 太陽圏を離脱 (約121 au)
       ],
     },
@@ -1540,6 +1544,11 @@
   //   lit   true なら太陽光の当たる側へ回り込む (a・y より優先)
   //   side  true なら彗星の尾を横から見る向きへ回り込む (y より優先)
   //   apart 中心天体とこの天体が画面上で重ならない向きへ回り込む (lit より優先)
+  //   front この天体が中心天体の手前に重なる向きへ回り込む (apart の逆)。
+  //         km をこの天体までの距離より大きくすると、円盤を背に小さく写る
+  //   ride  探査機ツアー専用。カメラを探査機の位置に置き、この天体を見続ける。
+  //         sel・km・角度の指定より優先する (毎フレーム計算し直す)
+  //   path  探査機の軌跡を描く。通過済みは濃く、これから通る先は淡く出る
   //   site  地上ビューの観測地 [緯度, 経度]。ビューを開く前に適用する
   //   aim   true なら地上ビューで sel の天体に照準を合わせ、追尾する
   //   sight 宇宙ビューで、注視天体からこの天体へ向かう視線ガイド (破線) を出す
@@ -2085,6 +2094,7 @@
       id: "voyager1",
       manual: true,
       probe: "voyager1",
+      ver: 2,
       title: { ja: "ボイジャー1号の旅", en: "The Voyage of Voyager 1" },
       lead: {
         ja: "1977年の打ち上げから、木星・土星を経て星間空間へ。人類が最も遠くへ送った機体を追います。",
@@ -2092,7 +2102,7 @@
       },
       steps: [
         {
-          view: "space", sel: "earth", km: 115000, lit: true, apart: "voyager1", mag: 1,
+          view: "space", sel: "earth", km: 24000, front: "voyager1", mag: 1,
           d: "1977-09-05T00:11", play: false, constel: false, spot: "voyager1",
           text: {
             ja: "1977年9月5日、ボイジャー1号がタイタン3Eで打ち上げられました。" +
@@ -2103,8 +2113,8 @@
           },
         },
         {
-          sel: null, fit: 6, a: 0.5, y: 0.9,
-          spd: 12, play: true, until: "1979-03-04T18:30",
+          sel: null, fit: 6, a: 0.5, y: 0.9, spot: "voyager1",
+          spd: 12, play: true, until: "1979-03-03",
           text: {
             ja: "火星軌道を越え、小惑星帯を抜けて木星へ。18か月の巡航です。" +
                 "軌跡はフライバイの日付と場所を経由点にした近似ですが、" +
@@ -2115,17 +2125,23 @@
           },
         },
         {
-          sel: "voyager1", km: 1260000, lit: true, apart: "jupiter", play: false, spot: null,
-          d: "1979-03-04T18:30",
+          // 探査機視点で木星の脇を通り抜ける。最接近 (中心から 34.9万km) では
+          // 木星の視直径が 23° になり、画面の半分を占める
+          sel: "jupiter", ride: "jupiter", spot: null, mark: false,
+          d: "1979-03-03", spd: 0.25, play: true, until: "1979-03-05T07:00",
           text: {
-            ja: "1979年3月5日、木星最接近。イオの火山噴火と、木星に薄い環があることを" +
-                "見つけたのはこのときです。木星の重力で加速し、進路を土星へ振り向けます。",
-            en: "5 March 1979: closest approach to Jupiter. This is the flyby that found volcanoes " +
-                "erupting on Io and a faint ring around Jupiter. Jupiter's gravity slings it on toward Saturn.",
+            ja: "ここからはボイジャー1号に乗って見てみます。1979年3月5日、木星最接近。" +
+                "中心から 34万9千km — 木星の半径の5倍のところをかすめ、" +
+                "イオの火山噴火と、木星に薄い環があることを見つけました。" +
+                "内側から近づいて外側へ抜けるので、通り過ぎたあとは細い月のように欠けて見えます。",
+            en: "Now ride along with Voyager 1. On 5 March 1979 it skims 349,000 km from Jupiter's " +
+                "centre — five Jupiter radii — and finds volcanoes erupting on Io and a faint " +
+                "ring around the planet. Arriving from the sunward side and leaving outward, it " +
+                "watches the planet thin to a crescent behind it.",
           },
         },
         {
-          km: 1400000, lit: true, apart: "saturn", d: "1980-11-11T19:18",
+          sel: "voyager1", ride: null, km: 1400000, lit: true, apart: "saturn", play: false, d: "1980-11-12",
           text: {
             ja: "1980年11月12日、土星最接近。厚い大気を持つタイタンを間近で調べるため、" +
                 "軌道を大きく曲げて黄道面を離れました。この選択で、以後どの惑星にも" +
@@ -2148,7 +2164,7 @@
           },
         },
         {
-          sel: "voyager1", fit: 130, a: 0.9, spd: 400, play: true, until: "2012-08-25",
+          sel: "voyager1", fit: 130, a: 0.9, path: true, spd: 400, play: true, until: "2012-08-25",
           text: {
             ja: "そのまま外へ。2012年8月25日、太陽風が星間物質に押し返される境界 " +
                 "— ヘリオポーズ — を越え、太陽から約121 au で星間空間に入りました。" +
@@ -2156,6 +2172,20 @@
             en: "Outward it goes. On 25 August 2012, at about 121 au, it crossed the heliopause where " +
                 "the solar wind gives way to the interstellar medium. A radio signal now takes " +
                 "17 hours to reach it.",
+          },
+        },
+        {
+          // 内側の道のり (地球→土星) と離脱方向の両方に直交する向きから見ると、
+          // 経路全体がほぼ画面の平面に乗る
+          sel: null, fit: 8, a: -0.95, y: 1.61, play: false, spot: null, mag: 1,
+          d: "2012-08-25",
+          text: {
+            ja: "たどってきた道のりです。木星と土星ですれ違いざまに進路を曲げてもらい、" +
+                "土星では黄道面を大きく外れて北へ抜けました。" +
+                "この線は経由点を繋いだ近似で、実際の軌道そのものではありません。",
+            en: "The route it took. Jupiter and Saturn each bent its path as it swept past, and " +
+                "Saturn threw it far north out of the plane of the planets. The line is an " +
+                "interpolation through the waypoints, not the true trajectory.",
           },
         },
       ],
@@ -3271,6 +3301,10 @@
   let tourSpot = null;
   // 探査機ツアー中はこの1機だけを描く (他機が画面に混ざると主役が分からない)
   let tourProbe = null;
+  // 探査機視点。カメラを探査機の位置に置き、この天体を見る (キー文字列)
+  let tourRide = null;
+  // 探査機の軌跡 (通過済みは濃く、未通過は淡く) を描くか
+  let tourPath = false;
   const FOV = 45 * DEG;
   // 宇宙ビューのズーム (拡大率)。距離とは別に、画角を狭めて望遠的に拡大する
   const MAG_MAX = 100;
@@ -3365,7 +3399,16 @@
         if (w.au) return { t, au: w.au };
         const b = PLANETS.find((x) => x.key === w.at);
         keplerAU(b, t, tmp);
-        return { t, au: [tmp[0], tmp[1], tmp[2]] };
+        const au = [tmp[0], tmp[1], tmp[2]];
+        if (w.miss) {
+          // 最接近距離ぶん、惑星の公転運動の後ろ側へずらす (probes.js の miss)
+          const a = keplerAU(b, t - 0.01, [0, 0, 0]);
+          const c = keplerAU(b, t + 0.01, [0, 0, 0]);
+          const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+          const s = w.miss / AU_KM / (Math.hypot(vx, vy, vz) || 1);
+          au[0] -= vx * s; au[1] -= vy * s; au[2] -= vz * s;
+        }
+        return { t, au };
       });
     }
   }
@@ -3387,6 +3430,32 @@
       out[k] = h00 * p1.au[k] + h10 * m1 + h01 * p2.au[k] + h11 * m2;
     }
     return out;
+  }
+
+  // 軌跡の線。経由点は固定なので起動時に一度だけ焼く。区間ごとに等時間で刻む —
+  // 全体を通して等時間にすると、32年ある離脱区間に点が集中して、惑星まわりの
+  // 折れ曲がり (見せたい部分) が数点に潰れてしまう
+  {
+    const PATH_SEG = 48;
+    const au = [0, 0, 0], w = [0, 0, 0];
+    for (const pr of PROBES) {
+      const legs = pr.pts.length - 1;
+      const n = legs * PATH_SEG + 1;
+      pr.path = new Float32Array(n * 3);
+      pr.pathT = new Float64Array(n);
+      let i = 0;
+      for (let g = 0; g < legs; g++) {
+        const t0 = pr.pts[g].t, t1 = pr.pts[g + 1].t;
+        const last = g === legs - 1 ? PATH_SEG : PATH_SEG - 1;
+        for (let s = 0; s <= last; s++) {
+          const t = t0 + (t1 - t0) * (s / PATH_SEG);
+          toWorld(probeAU(pr, t, au), w);
+          pr.path[i * 3] = w[0]; pr.path[i * 3 + 1] = w[1]; pr.path[i * 3 + 2] = w[2];
+          pr.pathT[i] = t;
+          i++;
+        }
+      }
+    }
   }
 
   function updatePositions() {
@@ -4767,11 +4836,48 @@
     for (const s of SATELLITES) drawBody(s, SCR.sun);
     bodyRenderer.endPass();
 
+    // --- 探査機の軌跡 ---
+    // 頂点は絶対ワールド座標なので、カメラ相対にするため -eye だけ平行移動する
+    if (tourPath) {
+      gl.useProgram(lineP.pr);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.depthMask(false);
+      gl.enableVertexAttribArray(lineP.a.aPos);
+      SCR.t[0] = -eye[0]; SCR.t[1] = -eye[1]; SCR.t[2] = -eye[2];
+      mTRS(SCR.t, null, 1, SCR.model);
+      gl.uniformMatrix4fv(lineP.u.uVP, false, mMul(VP, SCR.model, SCR.mvp));
+      for (const pr of PROBES) {
+        if (tourProbe && pr.key !== tourProbe) continue;
+        if (!pr.pathVB) {
+          pr.pathVB = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, pr.pathVB);
+          gl.bufferData(gl.ARRAY_BUFFER, pr.path, gl.STATIC_DRAW);
+        } else {
+          gl.bindBuffer(gl.ARRAY_BUFFER, pr.pathVB);
+        }
+        gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+        const n = pr.pathT.length;
+        gl.uniform4f(lineP.u.uColor, 0.95, 0.70, 0.30, 0.14);
+        gl.drawArrays(gl.LINE_STRIP, 0, n);
+        // 通過済みの区間を上から濃く重ねる
+        let i = 0;
+        while (i < n - 1 && pr.pathT[i + 1] <= simDays) i++;
+        if (i > 0) {
+          gl.uniform4f(lineP.u.uColor, 0.95, 0.70, 0.30, 0.90);
+          gl.drawArrays(gl.LINE_STRIP, 0, i + 1);
+        }
+      }
+      gl.depthMask(true);
+      gl.disable(gl.BLEND);
+    }
+
     // --- 探査機 (NASA のモデル) ---
     // 実寸比だと 3m の機体は常に不可視なので、画面上の見かけの大きさを固定した
     // 記号として描く。位置と日時は正確、大きさだけが実寸比から外れる
+    // (探査機視点のステップでは、乗っている機体自体はカメラ位置なので描かない)
     {
-      const shown = (pr) => pr.live && (!tourProbe || pr.key === tourProbe);
+      const shown = (pr) => pr.live && (!tourProbe || pr.key === tourProbe) && !(tourRide && pr.key === tourProbe);
       let any = false;
       for (const pr of PROBES) if (shown(pr)) { any = true; break; }
       if (any) {
@@ -4834,7 +4940,8 @@
     screenPos.clear();
     const fpx = (H / 2) / Math.tan(eFov() / 2);
     let nMark = 0;
-    for (const b of [SUN, ...PLANETS, ...SATELLITES, ...PROBES.filter((p) => p.live && (!tourProbe || p.key === tourProbe))]) {
+    for (const b of [SUN, ...PLANETS, ...SATELLITES,
+                     ...PROBES.filter((p) => p.live && (!tourProbe || p.key === tourProbe) && !(tourRide && p.key === tourProbe))]) {
       const pr = project(posW.get(b.key));
       if (!pr) continue;
       const rpx = bodyR(b) * fpx / pr.w;
@@ -5443,6 +5550,7 @@
     gAlt += (gAltTgt - gAlt) * k;
     gFov += (gFovTgt - gFov) * k;
 
+    tourRideCam();        // ガイドツアー: 探査機視点のステップはカメラを直接置く
     render(now / 1000);
     updateClock();
     tourWatch();          // ガイドツアー: 促した操作をされたら次のステップへ
@@ -7143,6 +7251,8 @@
     showSelMark = !!s.mark;
     tourSight = s.sight || null;
     tourSpot = s.spot || null;
+    tourRide = s.ride || null;
+    tourPath = !!s.path;
     tourTouched = false;
     tourResumeBtn.hidden = true;
     // 情報パネルはナレーションと重なるので、ステップが変わったら必ず閉じる
@@ -7234,6 +7344,18 @@
         }
       }
     }
+    // front: 指定天体が中心天体の手前に重なる向きへ回り込む (apart の逆)。
+    // 中心天体から見た指定天体の方向にカメラを置くので、km を指定天体までの
+    // 距離より大きくすれば、指定天体が中心天体の円盤を背にして写る
+    if (s.front && b) {
+      const o = posW.get(s.front), w = posW.get(b.key);
+      const dx = o[0] - w[0], dy = o[1] - w[1], dz = o[2] - w[2];
+      const l = Math.hypot(dx, dy, dz);
+      if (l > 1e-12) {
+        cam.yawTgt = Math.atan2(dz, dx);
+        cam.pitchTgt = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, Math.asin(dy / l)));
+      }
+    }
     // side: 彗星の尾を横から見る向きへ回り込む。尾は反太陽方向 (= 太陽から見た
     // 天体の方向) に伸びるリボンなので、軸を正面から見ると潰れて消えてしまう
     if (s.side && b) {
@@ -7248,6 +7370,28 @@
     else if (isFinite(s.z)) dist = s.z;
     cam.distTgt = Math.min(1400, dist);
     resetPan();
+  }
+
+  // ride: 探査機の位置にカメラを置き、指定天体を見続ける (探査機視点)。
+  // フライバイ中は距離も向きも毎フレーム大きく変わるので、緩和を通さず
+  // frame() の描画直前に現在値へ直接書き込む
+  function tourRideCam() {
+    if (!tourRide || groundView) return;
+    const pr = tourProbe ? BODY_BY_KEY.get(tourProbe) : null;
+    const tb = BODY_BY_KEY.get(tourRide);
+    if (!pr || !tb || !pr.live) return;
+    const e = posW.get(pr.key), f = posW.get(tb.key);
+    const dx = e[0] - f[0], dy = e[1] - f[1], dz = e[2] - f[2];
+    const d = Math.hypot(dx, dy, dz);
+    if (d < 1e-12) return;
+    cam.focus[0] = cam.focusTgt[0] = f[0];
+    cam.focus[1] = cam.focusTgt[1] = f[1];
+    cam.focus[2] = cam.focusTgt[2] = f[2];
+    cam.panOff[0] = cam.panOff[1] = cam.panOff[2] = 0;
+    cam.panOffTgt[0] = cam.panOffTgt[1] = cam.panOffTgt[2] = 0;
+    cam.dist = cam.distTgt = d;
+    cam.yaw = cam.yawTgt = Math.atan2(dz, dx);
+    cam.pitch = cam.pitchTgt = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, Math.asin(dy / d)));
   }
 
   function clearTourTimer() {
@@ -7367,6 +7511,8 @@
     tourSight = null;
     tourSpot = null;
     tourProbe = null;
+    tourRide = null;
+    tourPath = false;
     const keepScene = !!(tour && tour.keep);
     tour = null;
     tourActive = false;

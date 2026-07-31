@@ -216,11 +216,48 @@
     for (const s of SATELLITES) drawBody(s, SCR.sun);
     bodyRenderer.endPass();
 
+    // --- 探査機の軌跡 ---
+    // 頂点は絶対ワールド座標なので、カメラ相対にするため -eye だけ平行移動する
+    if (tourPath) {
+      gl.useProgram(lineP.pr);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.depthMask(false);
+      gl.enableVertexAttribArray(lineP.a.aPos);
+      SCR.t[0] = -eye[0]; SCR.t[1] = -eye[1]; SCR.t[2] = -eye[2];
+      mTRS(SCR.t, null, 1, SCR.model);
+      gl.uniformMatrix4fv(lineP.u.uVP, false, mMul(VP, SCR.model, SCR.mvp));
+      for (const pr of PROBES) {
+        if (tourProbe && pr.key !== tourProbe) continue;
+        if (!pr.pathVB) {
+          pr.pathVB = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, pr.pathVB);
+          gl.bufferData(gl.ARRAY_BUFFER, pr.path, gl.STATIC_DRAW);
+        } else {
+          gl.bindBuffer(gl.ARRAY_BUFFER, pr.pathVB);
+        }
+        gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+        const n = pr.pathT.length;
+        gl.uniform4f(lineP.u.uColor, 0.95, 0.70, 0.30, 0.14);
+        gl.drawArrays(gl.LINE_STRIP, 0, n);
+        // 通過済みの区間を上から濃く重ねる
+        let i = 0;
+        while (i < n - 1 && pr.pathT[i + 1] <= simDays) i++;
+        if (i > 0) {
+          gl.uniform4f(lineP.u.uColor, 0.95, 0.70, 0.30, 0.90);
+          gl.drawArrays(gl.LINE_STRIP, 0, i + 1);
+        }
+      }
+      gl.depthMask(true);
+      gl.disable(gl.BLEND);
+    }
+
     // --- 探査機 (NASA のモデル) ---
     // 実寸比だと 3m の機体は常に不可視なので、画面上の見かけの大きさを固定した
     // 記号として描く。位置と日時は正確、大きさだけが実寸比から外れる
+    // (探査機視点のステップでは、乗っている機体自体はカメラ位置なので描かない)
     {
-      const shown = (pr) => pr.live && (!tourProbe || pr.key === tourProbe);
+      const shown = (pr) => pr.live && (!tourProbe || pr.key === tourProbe) && !(tourRide && pr.key === tourProbe);
       let any = false;
       for (const pr of PROBES) if (shown(pr)) { any = true; break; }
       if (any) {
@@ -283,7 +320,8 @@
     screenPos.clear();
     const fpx = (H / 2) / Math.tan(eFov() / 2);
     let nMark = 0;
-    for (const b of [SUN, ...PLANETS, ...SATELLITES, ...PROBES.filter((p) => p.live && (!tourProbe || p.key === tourProbe))]) {
+    for (const b of [SUN, ...PLANETS, ...SATELLITES,
+                     ...PROBES.filter((p) => p.live && (!tourProbe || p.key === tourProbe) && !(tourRide && p.key === tourProbe))]) {
       const pr = project(posW.get(b.key));
       if (!pr) continue;
       const rpx = bodyR(b) * fpx / pr.w;

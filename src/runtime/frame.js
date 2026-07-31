@@ -314,6 +314,7 @@
     gAlt += (gAltTgt - gAlt) * k;
     gFov += (gFovTgt - gFov) * k;
 
+    tourRideCam();        // ガイドツアー: 探査機視点のステップはカメラを直接置く
     render(now / 1000);
     updateClock();
     tourWatch();          // ガイドツアー: 促した操作をされたら次のステップへ
