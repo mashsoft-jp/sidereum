@@ -3352,6 +3352,8 @@
   // 近づくほど見かけの変化が速くなるので、開始時の距離を基準に再生速度を落とす
   let tourRide = null;
   let tourRideRef = 0, tourRideSpd = 0;
+  // 探査機視点の補間はカメラ位置を主にする (注視点はそこから逆算する)
+  let tourRideEye = null;
   // カメラが目標に落ち着くまで探査機を出さない (寄っている最中は隠す)
   let tourProbeHold = false;
   // 探査機の軌跡 (通過済みは濃く、未通過は淡く) を描くか
@@ -7378,6 +7380,7 @@
     // まま次の天体へ向き直る回 (タイタン → 土星) は止めずに飛び続けさせる
     tourRideFly = !!s.ride && !tourRide;
     tourProbeHold = !!s.probeIn;
+    if (!s.ride) tourRideEye = null;   // 探査機視点を抜けたら次回は今の視点から
     tourRide = s.ride || null;
     tourPath = !!s.path;
     tourStay = !!s.stay;
@@ -7512,10 +7515,13 @@
   }
 
   // ride: 探査機の位置にカメラを置き、指定天体を見続ける (探査機視点)。
-  // フライバイ中は距離も向きも毎フレーム大きく変わるので、緩和を通さず
-  // frame() の描画直前に現在値へ直接書き込む。
-  // ただし切り替わった直後だけは、引きの画から探査機まで一気に寄る動きを
-  // 見せたいので緩和で追う (距離は比が大きいので対数で補間する)。
+  //
+  // カメラは (注視点 + 距離 + 角度) で持っているが、ここで緩和させるのは
+  // 「カメラの位置」と「向き・距離」で、注視点はそこから逆算する。
+  // 注視点を直接緩和すると、乗ったまま別の天体へ向き直るとき (タイタン → 土星)
+  // に注視点だけが 120万km 先へ飛び、距離が古いままなのでカメラが一瞬ワープする。
+  // 位置を主にすれば、探査機に乗ったままの回はカメラが 1mm も動かない。
+  //
   // 追いついたら以後は完全一致させ、最接近付近でも遅れが出ないようにする
   function tourRideCam(dt) {
     if (!tourRide || groundView) return;
@@ -7526,27 +7532,36 @@
     const dx = e[0] - f[0], dy = e[1] - f[1], dz = e[2] - f[2];
     const d = Math.hypot(dx, dy, dz);
     if (d < 1e-12) return;
+    // 直前のカメラ位置から始める (cam.pos は前フレームの実際の視点。パンの分も
+    // 入っているので、ここを起点にすればパンを 0 に戻しても視点は跳ねない)
+    if (!tourRideEye) tourRideEye = [cam.pos[0], cam.pos[1], cam.pos[2]];
     const yawT = Math.atan2(dz, dx);
     const pitchT = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, Math.asin(dy / d)));
     const eYaw = Math.atan2(Math.sin(yawT - cam.yaw), Math.cos(yawT - cam.yaw));
     const eDist = Math.log(d / (cam.dist || d));
+    const ePos = Math.hypot(e[0] - tourRideEye[0], e[1] - tourRideEye[1], e[2] - tourRideEye[2]);
     const close = Math.abs(eDist) < 0.02 && Math.abs(eYaw) < 0.02 &&
-                  Math.abs(pitchT - cam.pitch) < 0.02;
+                  Math.abs(pitchT - cam.pitch) < 0.02 && ePos < d * 0.01;
     // 引きから乗り移るときは一気に、乗ったまま次の天体へ向き直るときは
     // 「振り向いて飛んでいく」動きに見えるよう、ゆっくりめに回す
     const k = close || !(dt > 0) ? 1 : 1 - Math.exp(-dt * (tourRideFly ? 4 : 2.5));
-    cam.focus[0] += (f[0] - cam.focus[0]) * k;
-    cam.focus[1] += (f[1] - cam.focus[1]) * k;
-    cam.focus[2] += (f[2] - cam.focus[2]) * k;
-    cam.focusTgt[0] = f[0]; cam.focusTgt[1] = f[1]; cam.focusTgt[2] = f[2];
     for (let i = 0; i < 3; i++) {
-      cam.panOff[i] -= cam.panOff[i] * k;
+      tourRideEye[i] += (e[i] - tourRideEye[i]) * k;
+      cam.panOff[i] = 0;
       cam.panOffTgt[i] = 0;
     }
     cam.dist *= Math.exp(eDist * k);
     cam.yaw += eYaw * k;
     cam.pitch += (pitchT - cam.pitch) * k;
+    // 注視点はカメラ位置と向き・距離から逆算する (render の eye の逆算)
+    const cp = Math.cos(cam.pitch);
+    cam.focus[0] = tourRideEye[0] - cam.dist * cp * Math.cos(cam.yaw);
+    cam.focus[1] = tourRideEye[1] - cam.dist * Math.sin(cam.pitch);
+    cam.focus[2] = tourRideEye[2] - cam.dist * cp * Math.sin(cam.yaw);
     // 次フレームの緩和 (frame) が二重に効かないよう、目標は現在値に揃える
+    cam.focusTgt[0] = cam.focus[0];
+    cam.focusTgt[1] = cam.focus[1];
+    cam.focusTgt[2] = cam.focus[2];
     cam.distTgt = cam.dist;
     cam.yawTgt = cam.yaw;
     cam.pitchTgt = cam.pitch;
@@ -7686,6 +7701,7 @@
     tourStay = false;
     tourRideFly = false;
     tourProbeHold = false;
+    tourRideEye = null;
     const keepScene = !!(tour && tour.keep);
     tour = null;
     tourActive = false;
