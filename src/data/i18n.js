@@ -173,6 +173,9 @@
     titan: {
       rows:[["Diameter","5,150 km"],["Orbital radius","1,221,870 km"],["Orbital period","15.9 days"],["Rotation","synchronous"]],
       fact:"The only moon with a dense nitrogen atmosphere, with lakes and rivers of methane. The Huygens probe landed here in 2005." },
+    miranda: {
+      rows:[["Diameter","472 km"],["Orbital radius","129,900 km"],["Orbital period","1.41 days"],["Rotation","synchronous"]],
+      fact:"A small moon with the 20 km Verona Rupes, the tallest cliff in the Solar System. Its patchwork terrain suggests it may have been broken apart and reassembled." },
     titania: {
       rows:[["Diameter","1,577 km"],["Orbital radius","435,910 km"],["Orbital period","8.71 days"],["Rotation","synchronous"]],
       fact:"The largest moon of Uranus, discovered by William Herschel in 1787. Its orbit is tipped on its side along with Uranus." },

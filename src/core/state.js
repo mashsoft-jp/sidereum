@@ -186,17 +186,28 @@
         // via 天体の、中心天体に対する位置 [km]
         const c1 = keplerAU(body, tv, [0, 0, 0]);
         const P1 = vSub(wayAU(h.via.at, tv, tmp), c1).map((x) => x * AU_KM);
-        const r1 = vLen(P1);
-        // 離心率: 近点までの所要時間が合う値を二分法で (e が大きいほど速く着く)
-        const want = Math.abs(tp - tv) * 86400;
-        let lo = 1.0001, hi = 40;
-        for (let i = 0; i < 120; i++) {
-          const e = (lo + hi) / 2, A = h.q / (e - 1);
-          const H = Math.acosh(Math.max(1, (r1 / A + 1) / e));
-          const t = (e * Math.sinh(H) - H) * Math.sqrt(A * A * A / h.mu);
-          if (t > want) lo = e; else hi = e;
+        // 軌道の大きさ (離心率):
+        //   vinf があればそれから直に。通過点の距離が衛星の軌道半径に対して
+        //   大きすぎて手がかりにならない回に使う (via は向きだけを担う)
+        //   無ければ「通過点の距離から近点までの所要時間が合う値」を二分法で
+        //   (e が大きいほど速く着く)
+        let e, r1;
+        if (h.vinf) {
+          e = 1 + h.q * h.vinf * h.vinf / h.mu;
+          r1 = hypR(h.q / (e - 1), e, h.mu, (tv - tp) * 86400);
+        } else {
+          r1 = vLen(P1);
+          const want = Math.abs(tp - tv) * 86400;
+          let lo = 1.0001, hi = 60;
+          for (let i = 0; i < 160; i++) {
+            const ee = (lo + hi) / 2, AA = h.q / (ee - 1);
+            const HH = Math.acosh(Math.max(1, (r1 / AA + 1) / ee));
+            const t = (ee * Math.sinh(HH) - HH) * Math.sqrt(AA * AA * AA / h.mu);
+            if (t > want) lo = ee; else hi = ee;
+          }
+          e = (lo + hi) / 2;
         }
-        const e = (lo + hi) / 2, A = h.q / (e - 1);
+        const A = h.q / (e - 1);
         const nu1 = (after ? 1 : -1) *
           Math.acos(Math.max(-1, Math.min(1, (h.q * (1 + e) / r1 - 1) / e)));
         const nuInf = Math.acos(-1 / e);
@@ -233,17 +244,23 @@
       pr.pts.sort((a, b) => a.t - b.t);
     }
   }
-  // 双曲線軌道上の位置 (黄道 au)。中心天体の位置に相対位置を足す
-  function hypAU(H, days, out) {
-    const M = Math.sqrt(H.mu / (H.A * H.A * H.A)) * (days - H.tp) * 86400;
-    // 双曲線ケプラー方程式 M = e sinh F - F を Newton で解く
-    let F = Math.abs(M) > 6 ? Math.sign(M) * Math.log(2 * Math.abs(M) / H.e + 1.8)
-                            : M / (H.e - 1);
+  // 双曲線ケプラー方程式 M = e sinh F - F を Newton で解いて離心近点角を返す
+  function hypF(A, e, mu, sec) {
+    const M = Math.sqrt(mu / (A * A * A)) * sec;
+    let F = Math.abs(M) > 6 ? Math.sign(M) * Math.log(2 * Math.abs(M) / e + 1.8)
+                            : M / (e - 1);
     for (let i = 0; i < 40; i++) {
-      const d = (H.e * Math.sinh(F) - F - M) / (H.e * Math.cosh(F) - 1);
+      const d = (e * Math.sinh(F) - F - M) / (e * Math.cosh(F) - 1);
       F -= d;
       if (Math.abs(d) < 1e-12) break;
     }
+    return F;
+  }
+  // 経過秒から中心天体までの距離 [km] (上の構築ブロックから呼ぶので関数宣言で)
+  function hypR(A, e, mu, sec) { return A * (e * Math.cosh(hypF(A, e, mu, sec)) - 1); }
+  // 双曲線軌道上の位置 (黄道 au)。中心天体の位置に相対位置を足す
+  function hypAU(H, days, out) {
+    const F = hypF(H.A, H.e, H.mu, (days - H.tp) * 86400);
     const r = H.A * (H.e * Math.cosh(F) - 1) / AU_KM;
     const nu = 2 * Math.atan2(Math.sqrt(H.e + 1) * Math.tanh(F / 2), Math.sqrt(H.e - 1));
     const cn = r * Math.cos(nu), sn = r * Math.sin(nu);
