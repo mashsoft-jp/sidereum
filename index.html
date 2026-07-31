@@ -1272,9 +1272,10 @@
   //   mesh: 3Dモデルのキー (data/models.js)   col: 描画色
   //
   // 太陽系離脱後の向きは実際の脱出方向 (V1 は黄緯 +35°、V2 は −48°) に合わせた。
-  // 画面上での見かけの差し渡し [px]。実寸比では常に不可視なので、記号として
-  // 一定の大きさで描く。ブーム類まで含めた全長が この値になる
-  const PROBE_PX = 96;
+  // 画面上での見かけの差し渡し [px] (ズーム等倍のとき)。実寸比では常に不可視
+  // なので、記号として一定の大きさで描く。ブーム類まで含めた全長が この値になる。
+  // ズーム倍率を掛けるので、拡大すれば実物のように大きく見える
+  const PROBE_PX = 44;
   // この距離 [km] より遠ざかったら見かけの大きさを固定するのをやめ、
   // ワールドサイズ一定にして小さくしていく (引きの画では点になる)
   const PROBE_NEAR = 3e6;
@@ -1554,6 +1555,8 @@
   //   ride  探査機ツアー専用。カメラを探査機の位置に置き、この天体を見続ける。
   //         sel・km・角度の指定より優先する (毎フレーム計算し直す)
   //   path  探査機の軌跡を描く。通ってきたところだけを引く (先は描かない)
+  //   probeIn true なら、カメラが目標に落ち着くまで探査機を出さない
+  //         (寄っていく画の途中から機体が居座ると、寄る動きが台無しになる)
   //   site  地上ビューの観測地 [緯度, 経度]。ビューを開く前に適用する
   //   aim   true なら地上ビューで sel の天体に照準を合わせ、追尾する
   //   sight 宇宙ビューで、注視天体からこの天体へ向かう視線ガイド (破線) を出す
@@ -2102,7 +2105,7 @@
       id: "voyager1",
       manual: true,
       probe: "voyager1",
-      ver: 6,
+      ver: 7,
       title: { ja: "ボイジャー1号の旅", en: "The Voyage of Voyager 1" },
       lead: {
         ja: "1977年の打ち上げから、木星・土星を経て星間空間へ。人類が最も遠くへ送った機体を追います。",
@@ -2113,6 +2116,7 @@
           // 地球が画面いっぱいになる距離まで寄り、その手前に機体を小さく置く
           view: "space", sel: "earth", km: 17000, front: "voyager1", mag: 1,
           d: "1977-09-05T00:05", play: false, constel: false, spot: "voyager1",
+          probeIn: true,
           text: {
             ja: "1977年9月5日、ボイジャー1号がタイタン3Eで打ち上げられました。" +
                 "重さ 800kg 足らず、直径 3.7m のパラボラアンテナを地球へ向けたまま、" +
@@ -3348,6 +3352,8 @@
   // 近づくほど見かけの変化が速くなるので、開始時の距離を基準に再生速度を落とす
   let tourRide = null;
   let tourRideRef = 0, tourRideSpd = 0;
+  // カメラが目標に落ち着くまで探査機を出さない (寄っている最中は隠す)
+  let tourProbeHold = false;
   // 探査機の軌跡 (通過済みは濃く、未通過は淡く) を描くか
   let tourPath = false;
   const FOV = 45 * DEG;
@@ -4695,6 +4701,11 @@
     return best;
   }
 
+  // 探査機を描くか。乗っている機体 (カメラ位置) と、カメラが寄っている最中は出さない
+  const probeVisible = (pr) =>
+    pr.live && (!tourProbe || pr.key === tourProbe) &&
+    !(tourRide && pr.key === tourProbe) && !tourProbeHold;
+
   function render(nowSec) {
     if (groundView) { renderGround(nowSec); return; }
     // --- カメラ (注視点 = focus + パンの平行移動分) ---
@@ -4944,16 +4955,16 @@
     // サイズ固定に切り替える。引きの画で機体が惑星より大きく描かれるのを防ぐ。
     // 3px を切ったらメッシュはやめ、下のマーカーの節で点として描く
     {
-      const shown = (pr) => pr.live && (!tourProbe || pr.key === tourProbe) && !(tourRide && pr.key === tourProbe);
       const mfpx = (H / 2) / Math.tan(eFov() / 2);
       const near = PROBE_NEAR * KM2W;
       let any = false;
       for (const pr of PROBES) {
         pr.px = 0;
-        if (!shown(pr)) continue;
+        if (!probeVisible(pr)) continue;
         const t = posW.get(pr.key);
         const dx = t[0] - eye[0], dy = t[1] - eye[1], dz = t[2] - eye[2];
-        const px = PROBE_PX * Math.min(1, near / (Math.hypot(dx, dy, dz) || 1));
+        // camZoom を掛けるので見かけの角度が一定になる = 拡大すれば大きく見える
+        const px = PROBE_PX * camZoom * Math.min(1, near / (Math.hypot(dx, dy, dz) || 1));
         if (px < 3) continue;
         pr.px = px;
         any = true;
@@ -5016,8 +5027,7 @@
     screenPos.clear();
     const fpx = (H / 2) / Math.tan(eFov() / 2);
     let nMark = 0;
-    const marked = [SUN, ...PLANETS, ...SATELLITES,
-                    ...PROBES.filter((p) => p.live && (!tourProbe || p.key === tourProbe) && !(tourRide && p.key === tourProbe))];
+    const marked = [SUN, ...PLANETS, ...SATELLITES, ...PROBES.filter(probeVisible)];
     for (const b of marked) {
       const pr = project(posW.get(b.key));
       if (!pr) continue;
@@ -7303,6 +7313,13 @@
     tourDoneTimer = setTimeout(() => tourGo(tourIdx + 1), 900);
   }
   function tourWatch() {
+    // probeIn のステップ: カメラが目標に落ち着いてから探査機を出す
+    // (寄っている最中に画面の真ん中で待たれていると、寄る動きが台無しになる)
+    if (tourProbeHold &&
+        Math.abs(Math.log(cam.dist / (cam.distTgt || cam.dist))) < 0.03 &&
+        Math.abs(wrapPi(cam.yaw - cam.yawTgt)) < 0.03) {
+      tourProbeHold = false;
+    }
     // 早送りのステップ: 指定日時に達したら止める。rAF が止まっていた時間は
     // 復帰フレームで一気に進むので、行き過ぎないよう日時も丸める
     if (tourUntil !== null && simDays >= tourUntil) {
@@ -7360,6 +7377,7 @@
     // 引きの画から乗り移るときだけ、寄り切るまで時間を止める。探査機視点の
     // まま次の天体へ向き直る回 (タイタン → 土星) は止めずに飛び続けさせる
     tourRideFly = !!s.ride && !tourRide;
+    tourProbeHold = !!s.probeIn;
     tourRide = s.ride || null;
     tourPath = !!s.path;
     tourStay = !!s.stay;
@@ -7430,6 +7448,9 @@
         gFov = gFovTgt;
       }
     }
+    // ride のステップはカメラを tourRideCam が毎フレーム決める。ここで目標を
+    // 書き換えると、次のフレームの緩和が先に効いてカメラが一瞬飛んでしまう
+    if (s.ride) return;
     // fit は俯角を使って距離を出すので、角度を先に確定させる
     if (isFinite(s.a)) cam.pitchTgt = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, s.a));
     if (isFinite(s.y)) cam.yawTgt = s.y;
@@ -7531,14 +7552,12 @@
     cam.pitchTgt = cam.pitch;
     if (close) tourRideFly = false;
     if (tourRideSpd > 0 && tourRideRef > 0) {
-      // 引きの画から乗り移る回は、寄り切るまで時間を止める (寄っている最中に
-      // 通り過ぎてしまわないように)。探査機視点のまま次の天体へ向き直る回では
-      // 止めず、カメラが追いつくのに合わせて再生を立ち上げる。
+      // カメラを合わせている最中も時計は進める。ただしカメラが追いつく前に
+      // 通り過ぎてしまわないよう、距離の食い違いが大きい間は速度を落とす。
       // 追いついたあとは距離に比例して遅くする — 見かけの大きさは 1/距離 なので、
       // 一定速度だと遠くが長く、最接近が一瞬で終わってしまう
-      const conv = Math.max(0, Math.min(1, 1.5 - Math.abs(eDist)));
-      daysPerSec = tourRideFly ? 0
-        : tourRideSpd * Math.max(0.06, Math.min(1, d / tourRideRef)) * conv;
+      const conv = Math.max(0.25, Math.min(1, 1.5 - Math.abs(eDist)));
+      daysPerSec = tourRideSpd * Math.max(0.06, Math.min(1, d / tourRideRef)) * conv;
     }
   }
 
@@ -7666,6 +7685,7 @@
     tourPath = false;
     tourStay = false;
     tourRideFly = false;
+    tourProbeHold = false;
     const keepScene = !!(tour && tour.keep);
     tour = null;
     tourActive = false;

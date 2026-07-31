@@ -20,6 +20,8 @@
   // 近づくほど見かけの変化が速くなるので、開始時の距離を基準に再生速度を落とす
   let tourRide = null;
   let tourRideRef = 0, tourRideSpd = 0;
+  // カメラが目標に落ち着くまで探査機を出さない (寄っている最中は隠す)
+  let tourProbeHold = false;
   // 探査機の軌跡 (通過済みは濃く、未通過は淡く) を描くか
   let tourPath = false;
   const FOV = 45 * DEG;

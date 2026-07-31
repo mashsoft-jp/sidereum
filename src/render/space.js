@@ -9,6 +9,11 @@
     return best;
   }
 
+  // 探査機を描くか。乗っている機体 (カメラ位置) と、カメラが寄っている最中は出さない
+  const probeVisible = (pr) =>
+    pr.live && (!tourProbe || pr.key === tourProbe) &&
+    !(tourRide && pr.key === tourProbe) && !tourProbeHold;
+
   function render(nowSec) {
     if (groundView) { renderGround(nowSec); return; }
     // --- カメラ (注視点 = focus + パンの平行移動分) ---
@@ -258,16 +263,16 @@
     // サイズ固定に切り替える。引きの画で機体が惑星より大きく描かれるのを防ぐ。
     // 3px を切ったらメッシュはやめ、下のマーカーの節で点として描く
     {
-      const shown = (pr) => pr.live && (!tourProbe || pr.key === tourProbe) && !(tourRide && pr.key === tourProbe);
       const mfpx = (H / 2) / Math.tan(eFov() / 2);
       const near = PROBE_NEAR * KM2W;
       let any = false;
       for (const pr of PROBES) {
         pr.px = 0;
-        if (!shown(pr)) continue;
+        if (!probeVisible(pr)) continue;
         const t = posW.get(pr.key);
         const dx = t[0] - eye[0], dy = t[1] - eye[1], dz = t[2] - eye[2];
-        const px = PROBE_PX * Math.min(1, near / (Math.hypot(dx, dy, dz) || 1));
+        // camZoom を掛けるので見かけの角度が一定になる = 拡大すれば大きく見える
+        const px = PROBE_PX * camZoom * Math.min(1, near / (Math.hypot(dx, dy, dz) || 1));
         if (px < 3) continue;
         pr.px = px;
         any = true;
@@ -330,8 +335,7 @@
     screenPos.clear();
     const fpx = (H / 2) / Math.tan(eFov() / 2);
     let nMark = 0;
-    const marked = [SUN, ...PLANETS, ...SATELLITES,
-                    ...PROBES.filter((p) => p.live && (!tourProbe || p.key === tourProbe) && !(tourRide && p.key === tourProbe))];
+    const marked = [SUN, ...PLANETS, ...SATELLITES, ...PROBES.filter(probeVisible)];
     for (const b of marked) {
       const pr = project(posW.get(b.key));
       if (!pr) continue;
