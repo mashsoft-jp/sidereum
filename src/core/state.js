@@ -16,8 +16,10 @@
   let tourSpot = null;
   // 探査機ツアー中はこの1機だけを描く (他機が画面に混ざると主役が分からない)
   let tourProbe = null;
-  // 探査機視点。カメラを探査機の位置に置き、この天体を見る (キー文字列)
+  // 探査機視点。カメラを探査機の位置に置き、この天体を見る (キー文字列)。
+  // 近づくほど見かけの変化が速くなるので、開始時の距離を基準に再生速度を落とす
   let tourRide = null;
+  let tourRideRef = 0, tourRideSpd = 0;
   // 探査機の軌跡 (通過済みは濃く、未通過は淡く) を描くか
   let tourPath = false;
   const FOV = 45 * DEG;
@@ -106,20 +108,41 @@
   // 経由点は日付が決まっているので、位置も起動時に一度だけ確定させる。
   // 区間は時間で径数付けした Hermite 補間 (区間の長さが大きく違うので、
   // 一様な Catmull-Rom だと短い区間で行き過ぎる)
+  // 経由点に置ける天体の黄道座標 [au]。衛星は updatePositions と同じ近似を使い、
+  // ワールド座標で出た母天体からの相対位置を黄道へ戻す (toWorld の逆)
+  function wayAU(key, days, out) {
+    const p = PLANETS.find((x) => x.key === key);
+    if (p) return keplerAU(p, days, out);
+    const s = SATELLITES.find((x) => x.key === key);
+    keplerAU(PLANETS.find((x) => x.key === s.parent), days, out);
+    if (s === MOON) {
+      const m = [0, 0, 0];
+      moonGeoEclKm(days, m);
+      out[0] += m[0] / AU_KM; out[1] += m[1] / AU_KM; out[2] += m[2] / AU_KM;
+      return out;
+    }
+    const r = s.aKm / AU_KM;
+    const th = s.dir * 2 * Math.PI * days / s.T + s.ph;
+    const lx = Math.cos(th) * r, lz = Math.sin(th) * r;
+    const ox = s.M[0] * lx + s.M[8] * lz;
+    const oy = s.M[1] * lx + s.M[9] * lz;
+    const oz = s.M[2] * lx + s.M[10] * lz;
+    out[0] += ox; out[1] += -oz; out[2] += oy;
+    return out;
+  }
   {
-    const tmp = [0, 0, 0];
+    const tmp = [0, 0, 0], v0 = [0, 0, 0], v1 = [0, 0, 0];
     for (const pr of PROBES) {
       pr.pts = pr.way.map((w) => {
-        const t = (Date.parse(w.d + "T00:00:00Z") - J2000) / DAY_MS;
+        const t = (Date.parse(w.d.indexOf("T") > 0 ? w.d + ":00Z" : w.d + "T00:00:00Z") - J2000) / DAY_MS;
         if (w.au) return { t, au: w.au };
-        const b = PLANETS.find((x) => x.key === w.at);
-        keplerAU(b, t, tmp);
+        wayAU(w.at, t, tmp);
         const au = [tmp[0], tmp[1], tmp[2]];
         if (w.miss) {
-          // 最接近距離ぶん、惑星の公転運動の後ろ側へずらす (probes.js の miss)
-          const a = keplerAU(b, t - 0.01, [0, 0, 0]);
-          const c = keplerAU(b, t + 0.01, [0, 0, 0]);
-          const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+          // 最接近距離ぶん、その天体の進行方向の後ろ側へずらす (probes.js の miss)
+          wayAU(w.at, t - 0.01, v0);
+          wayAU(w.at, t + 0.01, v1);
+          const vx = v1[0] - v0[0], vy = v1[1] - v0[1], vz = v1[2] - v0[2];
           const s = w.miss / AU_KM / (Math.hypot(vx, vy, vz) || 1);
           au[0] -= vx * s; au[1] -= vy * s; au[2] -= vz * s;
         }

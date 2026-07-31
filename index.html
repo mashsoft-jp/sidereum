@@ -1262,6 +1262,7 @@
   // 通過イベントの日時と場所は常にアプリの計算と一致する。
   //
   //   way: [{ d: "YYYY-MM-DD", at: <天体キー> }] または { d, au: [x,y,z] }
+  //        d は "YYYY-MM-DDThh:mm" (UTC) も書ける。at には衛星も指定できる
   //        au は黄道直交座標 [au]。太陽系を離れる区間など、経由できる天体が
   //        無いところに置く
   //   miss: 経由点を天体の中心から この距離 [km] だけずらす (実際の最接近距離)。
@@ -1274,6 +1275,9 @@
   // 画面上での見かけの差し渡し [px]。実寸比では常に不可視なので、記号として
   // 一定の大きさで描く。ブーム類まで含めた全長が この値になる
   const PROBE_PX = 96;
+  // この距離 [km] より遠ざかったら見かけの大きさを固定するのをやめ、
+  // ワールドサイズ一定にして小さくしていく (引きの画では点になる)
+  const PROBE_NEAR = 3e6;
   const PROBES = [
     {
       key: "voyager1", name: "ボイジャー1号", en: "VOYAGER 1", mesh: "voyager", rkm: 0.01,
@@ -1282,8 +1286,9 @@
       col: [0.82, 0.85, 0.90], ph0: 0.0,
       way: [
         { d: "1977-09-05", at: "earth" },     // 打ち上げ
-        { d: "1979-03-05", at: "jupiter", miss: 348890 },   // 木星最接近
-        { d: "1980-11-12", at: "saturn", miss: 184300 },    // 土星最接近 (タイタンへ寄るため黄道面を離れる)
+        { d: "1979-03-05", at: "jupiter", miss: 348890 },        // 木星最接近
+        { d: "1980-11-12T05:41", at: "titan", miss: 6490 },      // タイタン最接近
+        { d: "1980-11-12T23:46", at: "saturn", miss: 184300 },   // 土星最接近 (タイタンへ寄るため黄道面を離れる)
         { d: "2012-08-25", au: [-25.6, -95.7, 69.4] },   // 太陽圏を離脱 (約121 au)
       ],
     },
@@ -1557,7 +1562,10 @@
   //   gfov  地上ビューの画角 [度]
   //   spd   再生速度 [日/秒]   play 再生するか
   //   until play: true のとき、この日時 (UTC) まで再生したら停止して次へ
+  //   stay  true なら until に達しても次へ進まない (着いた場面を眺めさせる)
   //   constel 星座 (と黄道) を出すか。ツアー中だけの一時変更で設定は保存しない
+  //   orbits  軌道線を出すか。同じく一時変更。探査機視点など「写真」として
+  //         見せる場面では、画面を横切る線が邪魔になるので落とす
   //   mark  sel の天体に選択マーク (オレンジのリング) を出すか。既定は false
   //   hold  自動送りでの滞留秒 (既定 12)
   //   text  ナレーション
@@ -2094,7 +2102,7 @@
       id: "voyager1",
       manual: true,
       probe: "voyager1",
-      ver: 2,
+      ver: 3,
       title: { ja: "ボイジャー1号の旅", en: "The Voyage of Voyager 1" },
       lead: {
         ja: "1977年の打ち上げから、木星・土星を経て星間空間へ。人類が最も遠くへ送った機体を追います。",
@@ -2102,8 +2110,9 @@
       },
       steps: [
         {
-          view: "space", sel: "earth", km: 24000, front: "voyager1", mag: 1,
-          d: "1977-09-05T00:11", play: false, constel: false, spot: "voyager1",
+          // 地球が画面いっぱいになる距離まで寄り、その手前に機体を小さく置く
+          view: "space", sel: "earth", km: 17000, front: "voyager1", mag: 1,
+          d: "1977-09-05T00:05", play: false, constel: false, spot: "voyager1",
           text: {
             ja: "1977年9月5日、ボイジャー1号がタイタン3Eで打ち上げられました。" +
                 "重さ 800kg 足らず、直径 3.7m のパラボラアンテナを地球へ向けたまま、" +
@@ -2113,7 +2122,7 @@
           },
         },
         {
-          sel: null, fit: 6, a: 0.5, y: 0.9, spot: "voyager1",
+          sel: null, fit: 6, a: 0.5, y: 0.9, spot: "voyager1", front: null,
           spd: 12, play: true, until: "1979-03-03",
           text: {
             ja: "火星軌道を越え、小惑星帯を抜けて木星へ。18か月の巡航です。" +
@@ -2125,10 +2134,11 @@
           },
         },
         {
-          // 探査機視点で木星の脇を通り抜ける。最接近 (中心から 34.9万km) では
-          // 木星の視直径が 23° になり、画面の半分を占める
-          sel: "jupiter", ride: "jupiter", spot: null, mark: false,
-          d: "1979-03-03", spd: 0.25, play: true, until: "1979-03-05T07:00",
+          // 探査機視点で木星の脇を通り抜ける。最接近 (中心から 34.9万km) の
+          // 視直径は 23°、画角は 45°/2.2 = 20° なので画面からはみ出す。
+          // 再生速度は距離に比例して落ちる (tourRideCam) ので、最後はゆっくり
+          sel: "jupiter", ride: "jupiter", spot: null, mark: false, mag: 2.2, orbits: false,
+          d: "1979-03-03", spd: 0.4, play: true, until: "1979-03-05T07:00", stay: true,
           text: {
             ja: "ここからはボイジャー1号に乗って見てみます。1979年3月5日、木星最接近。" +
                 "中心から 34万9千km — 木星の半径の5倍のところをかすめ、" +
@@ -2141,30 +2151,47 @@
           },
         },
         {
-          sel: "voyager1", ride: null, km: 1400000, lit: true, apart: "saturn", play: false, d: "1980-11-12",
+          // タイタンへの最終進入。6時間で 37万km → 6千km まで詰める
+          sel: "titan", ride: "titan", mag: 1,
+          d: "1980-11-11T23:41", spd: 0.09, play: true, until: "1980-11-12T05:41", stay: true,
           text: {
-            ja: "1980年11月12日、土星最接近。厚い大気を持つタイタンを間近で調べるため、" +
-                "軌道を大きく曲げて黄道面を離れました。この選択で、以後どの惑星にも" +
-                "行けなくなりましたが、太陽系の外へ最も速く向かう機体になりました。",
-            en: "12 November 1980: closest approach to Saturn. To study Titan and its thick atmosphere " +
-                "up close, the trajectory was bent hard out of the ecliptic plane. That choice ruled out " +
-                "any further planets — and made it the fastest thing leaving the Solar System.",
+            ja: "1980年11月12日、まず向かったのはタイタンでした。" +
+                "厚い大気を持つ唯一の衛星を間近で調べるため、土星本体より先に、" +
+                "中心から 6,490km まで寄ります。オレンジ色の霞に覆われていて、" +
+                "地表は最後まで見えませんでした。",
+            en: "12 November 1980: Titan came first. To study the only moon with a thick atmosphere, " +
+                "Voyager 1 closed to 6,490 km of its centre before reaching Saturn itself. " +
+                "The orange haze never cleared — the surface stayed hidden.",
           },
         },
         {
-          sel: null, fit: 42, a: 0.85, y: 0.9, spot: "voyager1",
+          sel: "voyager1", ride: null, km: 1400000, lit: true, apart: "saturn", play: false,
+          d: "1980-11-12T23:46", mag: 1, orbits: true,
+          text: {
+            ja: "その18時間後、土星最接近。タイタンへ寄るために軌道を大きく曲げたので、" +
+                "そのまま黄道面を離れることになりました。以後どの惑星にも行けなく" +
+                "なりましたが、太陽系の外へ最も速く向かう機体になりました。",
+            en: "Eighteen hours later, closest approach to Saturn. The detour to Titan had bent the " +
+                "trajectory hard out of the ecliptic plane. That ruled out any further planets — " +
+                "and made it the fastest thing leaving the Solar System.",
+          },
+        },
+        {
+          // 実際に撮った構図: 40 au の彼方から振り返って地球を見る
+          sel: "earth", ride: "earth", mag: 12, lit: false, apart: null, spot: "earth", orbits: false,
           d: "1990-02-14", play: false,
           text: {
-            ja: "1990年2月14日、太陽から 40 au。カメラを切る前に振り返って撮った" +
-                "太陽系の集合写真に、地球は 0.12 ピクセルの淡い点として写りました " +
-                "— 「ペイル・ブルー・ドット」です。",
+            ja: "1990年2月14日、太陽から 40 au。カメラを切る前に振り返り、" +
+                "自分が出てきた方を撮りました。地球は 0.12 ピクセルの淡い点 " +
+                "— 「ペイル・ブルー・ドット」です。これがボイジャー1号から見た地球です。",
             en: "14 February 1990, 40 au from the Sun. Before its cameras were switched off it turned " +
-                "around for a family portrait of the Solar System. Earth came out as a pale dot " +
-                "0.12 pixels across — the Pale Blue Dot.",
+                "around and photographed where it had come from. Earth came out as a pale dot " +
+                "0.12 pixels across — the Pale Blue Dot. This is Earth as Voyager 1 sees it.",
           },
         },
         {
-          sel: "voyager1", fit: 130, a: 0.9, path: true, spd: 400, play: true, until: "2012-08-25",
+          sel: "voyager1", ride: null, mag: 1, spot: null, orbits: true, fit: 130, a: 0.9, y: 0.9,
+          path: true, spd: 400, play: true, until: "2012-08-25",
           text: {
             ja: "そのまま外へ。2012年8月25日、太陽風が星間物質に押し返される境界 " +
                 "— ヘリオポーズ — を越え、太陽から約121 au で星間空間に入りました。" +
@@ -3301,8 +3328,10 @@
   let tourSpot = null;
   // 探査機ツアー中はこの1機だけを描く (他機が画面に混ざると主役が分からない)
   let tourProbe = null;
-  // 探査機視点。カメラを探査機の位置に置き、この天体を見る (キー文字列)
+  // 探査機視点。カメラを探査機の位置に置き、この天体を見る (キー文字列)。
+  // 近づくほど見かけの変化が速くなるので、開始時の距離を基準に再生速度を落とす
   let tourRide = null;
+  let tourRideRef = 0, tourRideSpd = 0;
   // 探査機の軌跡 (通過済みは濃く、未通過は淡く) を描くか
   let tourPath = false;
   const FOV = 45 * DEG;
@@ -3391,20 +3420,41 @@
   // 経由点は日付が決まっているので、位置も起動時に一度だけ確定させる。
   // 区間は時間で径数付けした Hermite 補間 (区間の長さが大きく違うので、
   // 一様な Catmull-Rom だと短い区間で行き過ぎる)
+  // 経由点に置ける天体の黄道座標 [au]。衛星は updatePositions と同じ近似を使い、
+  // ワールド座標で出た母天体からの相対位置を黄道へ戻す (toWorld の逆)
+  function wayAU(key, days, out) {
+    const p = PLANETS.find((x) => x.key === key);
+    if (p) return keplerAU(p, days, out);
+    const s = SATELLITES.find((x) => x.key === key);
+    keplerAU(PLANETS.find((x) => x.key === s.parent), days, out);
+    if (s === MOON) {
+      const m = [0, 0, 0];
+      moonGeoEclKm(days, m);
+      out[0] += m[0] / AU_KM; out[1] += m[1] / AU_KM; out[2] += m[2] / AU_KM;
+      return out;
+    }
+    const r = s.aKm / AU_KM;
+    const th = s.dir * 2 * Math.PI * days / s.T + s.ph;
+    const lx = Math.cos(th) * r, lz = Math.sin(th) * r;
+    const ox = s.M[0] * lx + s.M[8] * lz;
+    const oy = s.M[1] * lx + s.M[9] * lz;
+    const oz = s.M[2] * lx + s.M[10] * lz;
+    out[0] += ox; out[1] += -oz; out[2] += oy;
+    return out;
+  }
   {
-    const tmp = [0, 0, 0];
+    const tmp = [0, 0, 0], v0 = [0, 0, 0], v1 = [0, 0, 0];
     for (const pr of PROBES) {
       pr.pts = pr.way.map((w) => {
-        const t = (Date.parse(w.d + "T00:00:00Z") - J2000) / DAY_MS;
+        const t = (Date.parse(w.d.indexOf("T") > 0 ? w.d + ":00Z" : w.d + "T00:00:00Z") - J2000) / DAY_MS;
         if (w.au) return { t, au: w.au };
-        const b = PLANETS.find((x) => x.key === w.at);
-        keplerAU(b, t, tmp);
+        wayAU(w.at, t, tmp);
         const au = [tmp[0], tmp[1], tmp[2]];
         if (w.miss) {
-          // 最接近距離ぶん、惑星の公転運動の後ろ側へずらす (probes.js の miss)
-          const a = keplerAU(b, t - 0.01, [0, 0, 0]);
-          const c = keplerAU(b, t + 0.01, [0, 0, 0]);
-          const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+          // 最接近距離ぶん、その天体の進行方向の後ろ側へずらす (probes.js の miss)
+          wayAU(w.at, t - 0.01, v0);
+          wayAU(w.at, t + 0.01, v1);
+          const vx = v1[0] - v0[0], vy = v1[1] - v0[1], vz = v1[2] - v0[2];
           const s = w.miss / AU_KM / (Math.hypot(vx, vy, vz) || 1);
           au[0] -= vx * s; au[1] -= vy * s; au[2] -= vz * s;
         }
@@ -4876,13 +4926,25 @@
     // 実寸比だと 3m の機体は常に不可視なので、画面上の見かけの大きさを固定した
     // 記号として描く。位置と日時は正確、大きさだけが実寸比から外れる
     // (探査機視点のステップでは、乗っている機体自体はカメラ位置なので描かない)
+    // PROBE_NEAR より遠ざかったら、画面上の大きさを固定するのをやめてワールド
+    // サイズ固定に切り替える。引きの画で機体が惑星より大きく描かれるのを防ぐ。
+    // 3px を切ったらメッシュはやめ、下のマーカーの節で点として描く
     {
       const shown = (pr) => pr.live && (!tourProbe || pr.key === tourProbe) && !(tourRide && pr.key === tourProbe);
+      const mfpx = (H / 2) / Math.tan(eFov() / 2);
+      const near = PROBE_NEAR * KM2W;
       let any = false;
-      for (const pr of PROBES) if (shown(pr)) { any = true; break; }
+      for (const pr of PROBES) {
+        pr.px = 0;
+        if (!shown(pr)) continue;
+        const t = posW.get(pr.key);
+        const dx = t[0] - eye[0], dy = t[1] - eye[1], dz = t[2] - eye[2];
+        const px = PROBE_PX * Math.min(1, near / (Math.hypot(dx, dy, dz) || 1));
+        if (px < 3) continue;
+        pr.px = px;
+        any = true;
+      }
       if (any) {
-        // fpx はこの下の画面座標の節で作るが、ここでも必要なので個別に出す
-        const mfpx = (H / 2) / Math.tan(eFov() / 2);
         gl.useProgram(meshP.pr);
         gl.enable(gl.DEPTH_TEST);
         gl.depthMask(true);
@@ -4890,13 +4952,13 @@
         gl.enableVertexAttribArray(meshP.a.aPos);
         gl.uniform1f(meshP.u.uFlat, hasDeriv ? 1 : 0);
         for (const pr of PROBES) {
-          if (!shown(pr)) continue;
+          if (!pr.px) continue;
           const me = meshByKey.get(pr.mesh);
           if (!me) continue;
           const t = posW.get(pr.key);
           SCR.t[0] = t[0] - eye[0]; SCR.t[1] = t[1] - eye[1]; SCR.t[2] = t[2] - eye[2];
           const d = Math.hypot(SCR.t[0], SCR.t[1], SCR.t[2]) || 1;
-          const r = d * PROBE_PX / mfpx;              // 見かけ半径を一定に保つ
+          const r = d * pr.px / mfpx;
           mRotY(nowSec * 0.10 + pr.ph0, SCR.ry);      // ゆっくり回して立体だと分かるように
           mTRS(SCR.t, SCR.ry, r, SCR.model);
           gl.uniformMatrix4fv(meshP.u.uMVP, false, mMul(VP, SCR.model, SCR.mvp));
@@ -4940,13 +5002,31 @@
     screenPos.clear();
     const fpx = (H / 2) / Math.tan(eFov() / 2);
     let nMark = 0;
-    for (const b of [SUN, ...PLANETS, ...SATELLITES,
-                     ...PROBES.filter((p) => p.live && (!tourProbe || p.key === tourProbe) && !(tourRide && p.key === tourProbe))]) {
+    const marked = [SUN, ...PLANETS, ...SATELLITES,
+                    ...PROBES.filter((p) => p.live && (!tourProbe || p.key === tourProbe) && !(tourRide && p.key === tourProbe))];
+    for (const b of marked) {
       const pr = project(posW.get(b.key));
       if (!pr) continue;
       const rpx = bodyR(b) * fpx / pr.w;
-      screenPos.set(b.key, { x: pr.x, y: pr.y, r: rpx });
-      if (b.mesh) continue;        // 探査機はメッシュで描くのでマーカーは出さない
+      screenPos.set(b.key, { x: pr.x, y: pr.y, r: rpx, w: pr.w });
+    }
+    // 手前の大きな天体の円盤に隠れる位置にあるものは、印も名前も出さない
+    // (接近して見せる場面で、遠くの惑星の名前が円盤の上に載ってしまうため)
+    for (const b of marked) {
+      const sp = screenPos.get(b.key);
+      if (!sp) continue;
+      for (const f of marked) {
+        if (f === b) continue;
+        const fp = screenPos.get(f.key);
+        if (!fp || fp.r < 3 || fp.w >= sp.w) continue;
+        if (Math.hypot(sp.x - fp.x, sp.y - fp.y) < fp.r) { sp.hidden = true; break; }
+      }
+    }
+    for (const b of marked) {
+      const pr = screenPos.get(b.key);
+      if (!pr || pr.hidden) continue;
+      const rpx = pr.r;
+      if (b.mesh && b.px) continue;   // メッシュで描いた探査機にマーカーは要らない
       if (rpx < 2.2) {
         // 衛星は画面上で母天体と重なっている間はマーカーを出さない
         if (b.parent) {
@@ -4955,9 +5035,10 @@
         }
         const o = nMark * 7;
         const wp = posW.get(b.key);
+        const c = b.colA || b.col;      // 探査機は colA を持たない (col が機体色)
         markArr[o] = wp[0] - eye[0]; markArr[o+1] = wp[1] - eye[1]; markArr[o+2] = wp[2] - eye[2];
-        markArr[o+3] = 4.0;
-        markArr[o+4] = b.colA[0]; markArr[o+5] = b.colA[1]; markArr[o+6] = b.colA[2];
+        markArr[o+3] = b.mesh ? 5.0 : 4.0;
+        markArr[o+4] = c[0]; markArr[o+5] = c[1]; markArr[o+6] = c[2];
         nMark++;
       }
     }
@@ -5247,7 +5328,8 @@
 
     for (const b of [SUN, ...PLANETS]) {
       const s = screenPos.get(b.key);
-      if (!s || s.x < -40 || s.x > W + 40 || s.y < -40 || s.y > H + 40) continue;
+      if (!s || s.hidden) continue;   // 手前の天体の円盤に隠れている
+      if (s.x < -40 || s.x > W + 40 || s.y < -40 || s.y > H + 40) continue;
       if (s.r > H * 0.6) continue;
       if (marked === b || spotB === b) {
         octx.beginPath();
@@ -5265,7 +5347,7 @@
     // 衛星ラベル (母天体から画面上で離れている、または十分拡大している時のみ)
     for (const s of SATELLITES) {
       const sp = screenPos.get(s.key);
-      if (!sp || sp.r >= H * 0.6) continue;
+      if (!sp || sp.hidden || sp.r >= H * 0.6) continue;
       if (sp.x < -40 || sp.x > W + 40 || sp.y < -40 || sp.y > H + 40) continue;
       const pp = screenPos.get(s.parent);
       const away = pp ? Math.hypot(sp.x - pp.x, sp.y - pp.y) > 16 : true;
@@ -5286,10 +5368,11 @@
     for (const pr of PROBES) {
       if (!pr.live || (tourProbe && pr.key !== tourProbe)) continue;
       const sp = screenPos.get(pr.key);
-      if (!sp || sp.x < -40 || sp.x > W + 40 || sp.y < -40 || sp.y > H + 40) continue;
+      if (!sp || sp.hidden) continue;
+      if (sp.x < -40 || sp.x > W + 40 || sp.y < -40 || sp.y > H + 40) continue;
       octx.fillStyle = (marked === pr || spotB === pr)
         ? "rgba(242,178,62,0.95)" : "rgba(180,205,240,0.85)";
-      octx.fillText(bName(pr), sp.x, sp.y - PROBE_PX * 0.5 - 8);
+      octx.fillText(bName(pr), sp.x, sp.y - (pr.px ? pr.px * 0.5 : 4) - 8);
     }
 
     // ツアーの視線ガイド。注視している天体から、指定した天体の方向へ破線を引く。
@@ -7097,6 +7180,7 @@
   let tourHiEl = null;        // ハイライト中の要素
   let tourSceneDone = false;  // このツアーでシーンを一度でも適用したか
   let tourUntil = null;       // 早送りステップの停止日時 (simDays)
+  let tourStay = false;       // until に達しても次へ進まない
 
   const tourText = (o) => (o ? (lang === "ja" ? o.ja : o.en) : "");
 
@@ -7210,7 +7294,8 @@
       simDays = tourUntil;
       setPlaying(false);
       tourUntil = null;
-      if (tourIdx < tour.steps.length - 1) tourAdvance(false);
+      // stay のステップは止まるだけ。着いた場面をそのまま眺めさせたいときに使う
+      if (!tourStay && tourIdx < tour.steps.length - 1) tourAdvance(false);
       return;
     }
     if (!tourAwaitTest || !tourAwaitTest()) return;
@@ -7247,12 +7332,19 @@
       showConst = !!s.constel;
       constBtn.classList.toggle("on", showConst);
     }
+    // 軌道線の一時的な出し分け。探査機視点のように「写真」として見せる場面では、
+    // 画面を横切る線が邪魔になる。localStorage は書き換えない
+    if (s.orbits !== undefined) {
+      for (const b of ALL_BODIES) b.showOrbit = !!s.orbits;
+      orbitsBtn.classList.toggle("on", !!s.orbits);
+    }
     // selected はカメラの注視先として使うだけなので、既定では選択マークを出さない
     showSelMark = !!s.mark;
     tourSight = s.sight || null;
     tourSpot = s.spot || null;
     tourRide = s.ride || null;
     tourPath = !!s.path;
+    tourStay = !!s.stay;
     tourTouched = false;
     tourResumeBtn.hidden = true;
     // 情報パネルはナレーションと重なるので、ステップが変わったら必ず閉じる
@@ -7301,6 +7393,14 @@
     } else {
       cam.focusTgt[0] = 0; cam.focusTgt[1] = 0; cam.focusTgt[2] = 0;
       lastCenter = null;             // 注視点が太陽へ戻るのでズーム下限も太陽サイズに
+    }
+    // 探査機視点の減速に使う基準距離 (このステップの開始時点の距離)
+    tourRideSpd = 0;
+    tourRideRef = 0;
+    if (s.ride && tourProbe && isFinite(s.spd)) {
+      const e = posW.get(tourProbe), f = posW.get(s.ride);
+      tourRideRef = Math.hypot(e[0] - f[0], e[1] - f[1], e[2] - f[2]);
+      tourRideSpd = s.spd;
     }
     // 地上・月面ビュー: 今の日時で観測者基底を作り直してから照準を合わせる。
     // aimGroundAt は gTrack を立てるので、時間を進めても天体が中央に留まる
@@ -7384,6 +7484,11 @@
     const dx = e[0] - f[0], dy = e[1] - f[1], dz = e[2] - f[2];
     const d = Math.hypot(dx, dy, dz);
     if (d < 1e-12) return;
+    // 距離に比例して再生を遅くする。遠くは飛ばし、最接近付近はじっくり見せる
+    // (見かけの大きさは 1/距離 なので、一定速度だと最後だけ一瞬で終わる)
+    if (tourRideSpd > 0 && tourRideRef > 0) {
+      daysPerSec = tourRideSpd * Math.max(0.06, Math.min(1, d / tourRideRef));
+    }
     cam.focus[0] = cam.focusTgt[0] = f[0];
     cam.focus[1] = cam.focusTgt[1] = f[1];
     cam.focus[2] = cam.focusTgt[2] = f[2];
@@ -7444,6 +7549,7 @@
   function captureTourState() {
     return {
       showConst, showSelMark,
+      orbits: ALL_BODIES.map((b) => b.showOrbit),
       simDays, daysPerSec, playing,
       groundView, surfaceBody,
       selected, lastCenter,
@@ -7458,6 +7564,8 @@
     // 表示設定 (星座・選択マーク) はツアー中だけの一時変更なので必ず戻す
     showConst = v.showConst;
     constBtn.classList.toggle("on", showConst);
+    ALL_BODIES.forEach((b, i) => { b.showOrbit = v.orbits[i]; });
+    orbitsBtn.classList.toggle("on", ALL_BODIES.some((b) => b.showOrbit));
     showSelMark = v.showSelMark;
     if (keepScene) return;
     simDays = v.simDays;
@@ -7513,6 +7621,7 @@
     tourProbe = null;
     tourRide = null;
     tourPath = false;
+    tourStay = false;
     const keepScene = !!(tour && tour.keep);
     tour = null;
     tourActive = false;

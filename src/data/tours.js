@@ -30,7 +30,10 @@
   //   gfov  地上ビューの画角 [度]
   //   spd   再生速度 [日/秒]   play 再生するか
   //   until play: true のとき、この日時 (UTC) まで再生したら停止して次へ
+  //   stay  true なら until に達しても次へ進まない (着いた場面を眺めさせる)
   //   constel 星座 (と黄道) を出すか。ツアー中だけの一時変更で設定は保存しない
+  //   orbits  軌道線を出すか。同じく一時変更。探査機視点など「写真」として
+  //         見せる場面では、画面を横切る線が邪魔になるので落とす
   //   mark  sel の天体に選択マーク (オレンジのリング) を出すか。既定は false
   //   hold  自動送りでの滞留秒 (既定 12)
   //   text  ナレーション
@@ -567,7 +570,7 @@
       id: "voyager1",
       manual: true,
       probe: "voyager1",
-      ver: 2,
+      ver: 3,
       title: { ja: "ボイジャー1号の旅", en: "The Voyage of Voyager 1" },
       lead: {
         ja: "1977年の打ち上げから、木星・土星を経て星間空間へ。人類が最も遠くへ送った機体を追います。",
@@ -575,8 +578,9 @@
       },
       steps: [
         {
-          view: "space", sel: "earth", km: 24000, front: "voyager1", mag: 1,
-          d: "1977-09-05T00:11", play: false, constel: false, spot: "voyager1",
+          // 地球が画面いっぱいになる距離まで寄り、その手前に機体を小さく置く
+          view: "space", sel: "earth", km: 17000, front: "voyager1", mag: 1,
+          d: "1977-09-05T00:05", play: false, constel: false, spot: "voyager1",
           text: {
             ja: "1977年9月5日、ボイジャー1号がタイタン3Eで打ち上げられました。" +
                 "重さ 800kg 足らず、直径 3.7m のパラボラアンテナを地球へ向けたまま、" +
@@ -586,7 +590,7 @@
           },
         },
         {
-          sel: null, fit: 6, a: 0.5, y: 0.9, spot: "voyager1",
+          sel: null, fit: 6, a: 0.5, y: 0.9, spot: "voyager1", front: null,
           spd: 12, play: true, until: "1979-03-03",
           text: {
             ja: "火星軌道を越え、小惑星帯を抜けて木星へ。18か月の巡航です。" +
@@ -598,10 +602,11 @@
           },
         },
         {
-          // 探査機視点で木星の脇を通り抜ける。最接近 (中心から 34.9万km) では
-          // 木星の視直径が 23° になり、画面の半分を占める
-          sel: "jupiter", ride: "jupiter", spot: null, mark: false,
-          d: "1979-03-03", spd: 0.25, play: true, until: "1979-03-05T07:00",
+          // 探査機視点で木星の脇を通り抜ける。最接近 (中心から 34.9万km) の
+          // 視直径は 23°、画角は 45°/2.2 = 20° なので画面からはみ出す。
+          // 再生速度は距離に比例して落ちる (tourRideCam) ので、最後はゆっくり
+          sel: "jupiter", ride: "jupiter", spot: null, mark: false, mag: 2.2, orbits: false,
+          d: "1979-03-03", spd: 0.4, play: true, until: "1979-03-05T07:00", stay: true,
           text: {
             ja: "ここからはボイジャー1号に乗って見てみます。1979年3月5日、木星最接近。" +
                 "中心から 34万9千km — 木星の半径の5倍のところをかすめ、" +
@@ -614,30 +619,47 @@
           },
         },
         {
-          sel: "voyager1", ride: null, km: 1400000, lit: true, apart: "saturn", play: false, d: "1980-11-12",
+          // タイタンへの最終進入。6時間で 37万km → 6千km まで詰める
+          sel: "titan", ride: "titan", mag: 1,
+          d: "1980-11-11T23:41", spd: 0.09, play: true, until: "1980-11-12T05:41", stay: true,
           text: {
-            ja: "1980年11月12日、土星最接近。厚い大気を持つタイタンを間近で調べるため、" +
-                "軌道を大きく曲げて黄道面を離れました。この選択で、以後どの惑星にも" +
-                "行けなくなりましたが、太陽系の外へ最も速く向かう機体になりました。",
-            en: "12 November 1980: closest approach to Saturn. To study Titan and its thick atmosphere " +
-                "up close, the trajectory was bent hard out of the ecliptic plane. That choice ruled out " +
-                "any further planets — and made it the fastest thing leaving the Solar System.",
+            ja: "1980年11月12日、まず向かったのはタイタンでした。" +
+                "厚い大気を持つ唯一の衛星を間近で調べるため、土星本体より先に、" +
+                "中心から 6,490km まで寄ります。オレンジ色の霞に覆われていて、" +
+                "地表は最後まで見えませんでした。",
+            en: "12 November 1980: Titan came first. To study the only moon with a thick atmosphere, " +
+                "Voyager 1 closed to 6,490 km of its centre before reaching Saturn itself. " +
+                "The orange haze never cleared — the surface stayed hidden.",
           },
         },
         {
-          sel: null, fit: 42, a: 0.85, y: 0.9, spot: "voyager1",
+          sel: "voyager1", ride: null, km: 1400000, lit: true, apart: "saturn", play: false,
+          d: "1980-11-12T23:46", mag: 1, orbits: true,
+          text: {
+            ja: "その18時間後、土星最接近。タイタンへ寄るために軌道を大きく曲げたので、" +
+                "そのまま黄道面を離れることになりました。以後どの惑星にも行けなく" +
+                "なりましたが、太陽系の外へ最も速く向かう機体になりました。",
+            en: "Eighteen hours later, closest approach to Saturn. The detour to Titan had bent the " +
+                "trajectory hard out of the ecliptic plane. That ruled out any further planets — " +
+                "and made it the fastest thing leaving the Solar System.",
+          },
+        },
+        {
+          // 実際に撮った構図: 40 au の彼方から振り返って地球を見る
+          sel: "earth", ride: "earth", mag: 12, lit: false, apart: null, spot: "earth", orbits: false,
           d: "1990-02-14", play: false,
           text: {
-            ja: "1990年2月14日、太陽から 40 au。カメラを切る前に振り返って撮った" +
-                "太陽系の集合写真に、地球は 0.12 ピクセルの淡い点として写りました " +
-                "— 「ペイル・ブルー・ドット」です。",
+            ja: "1990年2月14日、太陽から 40 au。カメラを切る前に振り返り、" +
+                "自分が出てきた方を撮りました。地球は 0.12 ピクセルの淡い点 " +
+                "— 「ペイル・ブルー・ドット」です。これがボイジャー1号から見た地球です。",
             en: "14 February 1990, 40 au from the Sun. Before its cameras were switched off it turned " +
-                "around for a family portrait of the Solar System. Earth came out as a pale dot " +
-                "0.12 pixels across — the Pale Blue Dot.",
+                "around and photographed where it had come from. Earth came out as a pale dot " +
+                "0.12 pixels across — the Pale Blue Dot. This is Earth as Voyager 1 sees it.",
           },
         },
         {
-          sel: "voyager1", fit: 130, a: 0.9, path: true, spd: 400, play: true, until: "2012-08-25",
+          sel: "voyager1", ride: null, mag: 1, spot: null, orbits: true, fit: 130, a: 0.9, y: 0.9,
+          path: true, spd: 400, play: true, until: "2012-08-25",
           text: {
             ja: "そのまま外へ。2012年8月25日、太陽風が星間物質に押し返される境界 " +
                 "— ヘリオポーズ — を越え、太陽から約121 au で星間空間に入りました。" +

@@ -11,7 +11,8 @@
 
     for (const b of [SUN, ...PLANETS]) {
       const s = screenPos.get(b.key);
-      if (!s || s.x < -40 || s.x > W + 40 || s.y < -40 || s.y > H + 40) continue;
+      if (!s || s.hidden) continue;   // 手前の天体の円盤に隠れている
+      if (s.x < -40 || s.x > W + 40 || s.y < -40 || s.y > H + 40) continue;
       if (s.r > H * 0.6) continue;
       if (marked === b || spotB === b) {
         octx.beginPath();
@@ -29,7 +30,7 @@
     // 衛星ラベル (母天体から画面上で離れている、または十分拡大している時のみ)
     for (const s of SATELLITES) {
       const sp = screenPos.get(s.key);
-      if (!sp || sp.r >= H * 0.6) continue;
+      if (!sp || sp.hidden || sp.r >= H * 0.6) continue;
       if (sp.x < -40 || sp.x > W + 40 || sp.y < -40 || sp.y > H + 40) continue;
       const pp = screenPos.get(s.parent);
       const away = pp ? Math.hypot(sp.x - pp.x, sp.y - pp.y) > 16 : true;
@@ -50,10 +51,11 @@
     for (const pr of PROBES) {
       if (!pr.live || (tourProbe && pr.key !== tourProbe)) continue;
       const sp = screenPos.get(pr.key);
-      if (!sp || sp.x < -40 || sp.x > W + 40 || sp.y < -40 || sp.y > H + 40) continue;
+      if (!sp || sp.hidden) continue;
+      if (sp.x < -40 || sp.x > W + 40 || sp.y < -40 || sp.y > H + 40) continue;
       octx.fillStyle = (marked === pr || spotB === pr)
         ? "rgba(242,178,62,0.95)" : "rgba(180,205,240,0.85)";
-      octx.fillText(bName(pr), sp.x, sp.y - PROBE_PX * 0.5 - 8);
+      octx.fillText(bName(pr), sp.x, sp.y - (pr.px ? pr.px * 0.5 : 4) - 8);
     }
 
     // ツアーの視線ガイド。注視している天体から、指定した天体の方向へ破線を引く。

@@ -36,6 +36,7 @@
   let tourHiEl = null;        // ハイライト中の要素
   let tourSceneDone = false;  // このツアーでシーンを一度でも適用したか
   let tourUntil = null;       // 早送りステップの停止日時 (simDays)
+  let tourStay = false;       // until に達しても次へ進まない
 
   const tourText = (o) => (o ? (lang === "ja" ? o.ja : o.en) : "");
 
@@ -149,7 +150,8 @@
       simDays = tourUntil;
       setPlaying(false);
       tourUntil = null;
-      if (tourIdx < tour.steps.length - 1) tourAdvance(false);
+      // stay のステップは止まるだけ。着いた場面をそのまま眺めさせたいときに使う
+      if (!tourStay && tourIdx < tour.steps.length - 1) tourAdvance(false);
       return;
     }
     if (!tourAwaitTest || !tourAwaitTest()) return;
@@ -186,12 +188,19 @@
       showConst = !!s.constel;
       constBtn.classList.toggle("on", showConst);
     }
+    // 軌道線の一時的な出し分け。探査機視点のように「写真」として見せる場面では、
+    // 画面を横切る線が邪魔になる。localStorage は書き換えない
+    if (s.orbits !== undefined) {
+      for (const b of ALL_BODIES) b.showOrbit = !!s.orbits;
+      orbitsBtn.classList.toggle("on", !!s.orbits);
+    }
     // selected はカメラの注視先として使うだけなので、既定では選択マークを出さない
     showSelMark = !!s.mark;
     tourSight = s.sight || null;
     tourSpot = s.spot || null;
     tourRide = s.ride || null;
     tourPath = !!s.path;
+    tourStay = !!s.stay;
     tourTouched = false;
     tourResumeBtn.hidden = true;
     // 情報パネルはナレーションと重なるので、ステップが変わったら必ず閉じる
@@ -240,6 +249,14 @@
     } else {
       cam.focusTgt[0] = 0; cam.focusTgt[1] = 0; cam.focusTgt[2] = 0;
       lastCenter = null;             // 注視点が太陽へ戻るのでズーム下限も太陽サイズに
+    }
+    // 探査機視点の減速に使う基準距離 (このステップの開始時点の距離)
+    tourRideSpd = 0;
+    tourRideRef = 0;
+    if (s.ride && tourProbe && isFinite(s.spd)) {
+      const e = posW.get(tourProbe), f = posW.get(s.ride);
+      tourRideRef = Math.hypot(e[0] - f[0], e[1] - f[1], e[2] - f[2]);
+      tourRideSpd = s.spd;
     }
     // 地上・月面ビュー: 今の日時で観測者基底を作り直してから照準を合わせる。
     // aimGroundAt は gTrack を立てるので、時間を進めても天体が中央に留まる
@@ -323,6 +340,11 @@
     const dx = e[0] - f[0], dy = e[1] - f[1], dz = e[2] - f[2];
     const d = Math.hypot(dx, dy, dz);
     if (d < 1e-12) return;
+    // 距離に比例して再生を遅くする。遠くは飛ばし、最接近付近はじっくり見せる
+    // (見かけの大きさは 1/距離 なので、一定速度だと最後だけ一瞬で終わる)
+    if (tourRideSpd > 0 && tourRideRef > 0) {
+      daysPerSec = tourRideSpd * Math.max(0.06, Math.min(1, d / tourRideRef));
+    }
     cam.focus[0] = cam.focusTgt[0] = f[0];
     cam.focus[1] = cam.focusTgt[1] = f[1];
     cam.focus[2] = cam.focusTgt[2] = f[2];
@@ -383,6 +405,7 @@
   function captureTourState() {
     return {
       showConst, showSelMark,
+      orbits: ALL_BODIES.map((b) => b.showOrbit),
       simDays, daysPerSec, playing,
       groundView, surfaceBody,
       selected, lastCenter,
@@ -397,6 +420,8 @@
     // 表示設定 (星座・選択マーク) はツアー中だけの一時変更なので必ず戻す
     showConst = v.showConst;
     constBtn.classList.toggle("on", showConst);
+    ALL_BODIES.forEach((b, i) => { b.showOrbit = v.orbits[i]; });
+    orbitsBtn.classList.toggle("on", ALL_BODIES.some((b) => b.showOrbit));
     showSelMark = v.showSelMark;
     if (keepScene) return;
     simDays = v.simDays;
@@ -452,6 +477,7 @@
     tourProbe = null;
     tourRide = null;
     tourPath = false;
+    tourStay = false;
     const keepScene = !!(tour && tour.keep);
     tour = null;
     tourActive = false;

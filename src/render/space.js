@@ -256,13 +256,25 @@
     // 実寸比だと 3m の機体は常に不可視なので、画面上の見かけの大きさを固定した
     // 記号として描く。位置と日時は正確、大きさだけが実寸比から外れる
     // (探査機視点のステップでは、乗っている機体自体はカメラ位置なので描かない)
+    // PROBE_NEAR より遠ざかったら、画面上の大きさを固定するのをやめてワールド
+    // サイズ固定に切り替える。引きの画で機体が惑星より大きく描かれるのを防ぐ。
+    // 3px を切ったらメッシュはやめ、下のマーカーの節で点として描く
     {
       const shown = (pr) => pr.live && (!tourProbe || pr.key === tourProbe) && !(tourRide && pr.key === tourProbe);
+      const mfpx = (H / 2) / Math.tan(eFov() / 2);
+      const near = PROBE_NEAR * KM2W;
       let any = false;
-      for (const pr of PROBES) if (shown(pr)) { any = true; break; }
+      for (const pr of PROBES) {
+        pr.px = 0;
+        if (!shown(pr)) continue;
+        const t = posW.get(pr.key);
+        const dx = t[0] - eye[0], dy = t[1] - eye[1], dz = t[2] - eye[2];
+        const px = PROBE_PX * Math.min(1, near / (Math.hypot(dx, dy, dz) || 1));
+        if (px < 3) continue;
+        pr.px = px;
+        any = true;
+      }
       if (any) {
-        // fpx はこの下の画面座標の節で作るが、ここでも必要なので個別に出す
-        const mfpx = (H / 2) / Math.tan(eFov() / 2);
         gl.useProgram(meshP.pr);
         gl.enable(gl.DEPTH_TEST);
         gl.depthMask(true);
@@ -270,13 +282,13 @@
         gl.enableVertexAttribArray(meshP.a.aPos);
         gl.uniform1f(meshP.u.uFlat, hasDeriv ? 1 : 0);
         for (const pr of PROBES) {
-          if (!shown(pr)) continue;
+          if (!pr.px) continue;
           const me = meshByKey.get(pr.mesh);
           if (!me) continue;
           const t = posW.get(pr.key);
           SCR.t[0] = t[0] - eye[0]; SCR.t[1] = t[1] - eye[1]; SCR.t[2] = t[2] - eye[2];
           const d = Math.hypot(SCR.t[0], SCR.t[1], SCR.t[2]) || 1;
-          const r = d * PROBE_PX / mfpx;              // 見かけ半径を一定に保つ
+          const r = d * pr.px / mfpx;
           mRotY(nowSec * 0.10 + pr.ph0, SCR.ry);      // ゆっくり回して立体だと分かるように
           mTRS(SCR.t, SCR.ry, r, SCR.model);
           gl.uniformMatrix4fv(meshP.u.uMVP, false, mMul(VP, SCR.model, SCR.mvp));
@@ -320,13 +332,31 @@
     screenPos.clear();
     const fpx = (H / 2) / Math.tan(eFov() / 2);
     let nMark = 0;
-    for (const b of [SUN, ...PLANETS, ...SATELLITES,
-                     ...PROBES.filter((p) => p.live && (!tourProbe || p.key === tourProbe) && !(tourRide && p.key === tourProbe))]) {
+    const marked = [SUN, ...PLANETS, ...SATELLITES,
+                    ...PROBES.filter((p) => p.live && (!tourProbe || p.key === tourProbe) && !(tourRide && p.key === tourProbe))];
+    for (const b of marked) {
       const pr = project(posW.get(b.key));
       if (!pr) continue;
       const rpx = bodyR(b) * fpx / pr.w;
-      screenPos.set(b.key, { x: pr.x, y: pr.y, r: rpx });
-      if (b.mesh) continue;        // 探査機はメッシュで描くのでマーカーは出さない
+      screenPos.set(b.key, { x: pr.x, y: pr.y, r: rpx, w: pr.w });
+    }
+    // 手前の大きな天体の円盤に隠れる位置にあるものは、印も名前も出さない
+    // (接近して見せる場面で、遠くの惑星の名前が円盤の上に載ってしまうため)
+    for (const b of marked) {
+      const sp = screenPos.get(b.key);
+      if (!sp) continue;
+      for (const f of marked) {
+        if (f === b) continue;
+        const fp = screenPos.get(f.key);
+        if (!fp || fp.r < 3 || fp.w >= sp.w) continue;
+        if (Math.hypot(sp.x - fp.x, sp.y - fp.y) < fp.r) { sp.hidden = true; break; }
+      }
+    }
+    for (const b of marked) {
+      const pr = screenPos.get(b.key);
+      if (!pr || pr.hidden) continue;
+      const rpx = pr.r;
+      if (b.mesh && b.px) continue;   // メッシュで描いた探査機にマーカーは要らない
       if (rpx < 2.2) {
         // 衛星は画面上で母天体と重なっている間はマーカーを出さない
         if (b.parent) {
@@ -335,9 +365,10 @@
         }
         const o = nMark * 7;
         const wp = posW.get(b.key);
+        const c = b.colA || b.col;      // 探査機は colA を持たない (col が機体色)
         markArr[o] = wp[0] - eye[0]; markArr[o+1] = wp[1] - eye[1]; markArr[o+2] = wp[2] - eye[2];
-        markArr[o+3] = 4.0;
-        markArr[o+4] = b.colA[0]; markArr[o+5] = b.colA[1]; markArr[o+6] = b.colA[2];
+        markArr[o+3] = b.mesh ? 5.0 : 4.0;
+        markArr[o+4] = c[0]; markArr[o+5] = c[1]; markArr[o+6] = c[2];
         nMark++;
       }
     }
