@@ -322,7 +322,7 @@
     },
     {
       id: "halley1910",
-      ver: 2,
+      ver: 3,
       manual: true,
       title: { ja: "ハレー彗星 1910年の大接近", en: "Halley's Comet: the 1910 Approach" },
       lead: {
@@ -383,19 +383,22 @@
           },
         },
         {
-          view: "space", sel: "earth", fit: 0.3, a: 1.4, d: "1910-05-19",
+          view: "space", sel: "earth", fit: 0.3, a: 1.4,
+          d: "1910-05-16", spd: 0.6, play: true, until: "1910-05-23",
           text: {
-            ja: "5月19日、彗星が地球と太陽のあいだを通過。尾は太陽と反対、つまり地球の側へ向いていて、" +
-                "地球はこの日その中を通り抜けました。当時は尾に含まれるシアンで人類が滅ぶという噂が流れ、" +
+            ja: "地球を中心に据えて、5月16日から1週間を進めてみましょう。彗星が地球と太陽のあいだを" +
+                "横切り、太陽と反対 — つまり地球の側 — へ伸びた尾の中を、19日から20日にかけて" +
+                "地球が通り抜けていきます。当時は尾に含まれるシアンで人類が滅ぶという噂が流れ、" +
                 "実際には何も起きませんでした。",
-            en: "19 May: the comet passes between Earth and the Sun. Its tail points away from the Sun — " +
-                "straight at us — and Earth passed right through it. Newspapers warned that cyanogen in the tail " +
-                "would poison the planet. Nothing happened.",
+            en: "Centred on Earth, let a week run from 16 May. The comet crosses between Earth and the Sun, " +
+                "and on the 19th and 20th Earth passes right through the tail streaming away from the Sun — " +
+                "straight at us. Newspapers warned that cyanogen in the tail would poison the planet. " +
+                "Nothing happened.",
           },
         },
         {
           view: "ground", dLocal: "1910-05-21T20:00", aim: true, gfov: 85,
-          sel: "halley",
+          sel: "halley", play: false,
           text: {
             ja: "5月21日、地球最接近 0.152 au。月までの距離の約60倍です。" +
                 "尾のすぐ横をかすめて進むため、遠近の効果で尾は空を大きく横切って見えます。" +
