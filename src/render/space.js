@@ -220,8 +220,9 @@
     // 実寸比だと 3m の機体は常に不可視なので、画面上の見かけの大きさを固定した
     // 記号として描く。位置と日時は正確、大きさだけが実寸比から外れる
     {
+      const shown = (pr) => pr.live && (!tourProbe || pr.key === tourProbe);
       let any = false;
-      for (const pr of PROBES) if (pr.live) { any = true; break; }
+      for (const pr of PROBES) if (shown(pr)) { any = true; break; }
       if (any) {
         // fpx はこの下の画面座標の節で作るが、ここでも必要なので個別に出す
         const mfpx = (H / 2) / Math.tan(eFov() / 2);
@@ -232,7 +233,7 @@
         gl.enableVertexAttribArray(meshP.a.aPos);
         gl.uniform1f(meshP.u.uFlat, hasDeriv ? 1 : 0);
         for (const pr of PROBES) {
-          if (!pr.live) continue;
+          if (!shown(pr)) continue;
           const me = meshByKey.get(pr.mesh);
           if (!me) continue;
           const t = posW.get(pr.key);
@@ -282,7 +283,7 @@
     screenPos.clear();
     const fpx = (H / 2) / Math.tan(eFov() / 2);
     let nMark = 0;
-    for (const b of [SUN, ...PLANETS, ...SATELLITES, ...PROBES.filter((p) => p.live)]) {
+    for (const b of [SUN, ...PLANETS, ...SATELLITES, ...PROBES.filter((p) => p.live && (!tourProbe || p.key === tourProbe))]) {
       const pr = project(posW.get(b.key));
       if (!pr) continue;
       const rpx = bodyR(b) * fpx / pr.w;

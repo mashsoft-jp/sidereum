@@ -16,6 +16,7 @@
   //   mag   ズーム倍率   a 俯角 [rad]   y 方位 [rad]
   //   lit   true なら太陽光の当たる側へ回り込む (a・y より優先)
   //   side  true なら彗星の尾を横から見る向きへ回り込む (y より優先)
+  //   apart 中心天体とこの天体が画面上で重ならない向きへ回り込む (lit より優先)
   //   site  地上ビューの観測地 [緯度, 経度]。ビューを開く前に適用する
   //   aim   true なら地上ビューで sel の天体に照準を合わせ、追尾する
   //   sight 宇宙ビューで、注視天体からこの天体へ向かう視線ガイド (破線) を出す
@@ -40,6 +41,7 @@
   // ツアー単位:
   //   platform "touch" | "desktop" — 一覧に出す端末。未指定は常に出す
   //   manual   true なら「自動送り」ボタンを隠す (検知式のツアー用)
+  //   probe    探査機ツアー。この1機だけを描き、他機は隠す
   //   keep     true なら終了時にシーンを戻さない
   //   ver      内容の版 (既定 1)。中身を直したらここを +1 する。視聴済みの記録
   //            (localStorage の ssTourSeen) より新しいと、一覧で未視聴側へ戻り
@@ -552,6 +554,235 @@
             en: "Finally, Earth seen from the Moon. It goes through phases too — and always the opposite " +
                 "of the Moon's. While someone on Earth watches a first-quarter Moon, someone on the Moon " +
                 "is looking up at a half-lit Earth.",
+          },
+        },
+      ],
+    },
+    {
+      id: "voyager1",
+      manual: true,
+      probe: "voyager1",
+      title: { ja: "ボイジャー1号の旅", en: "The Voyage of Voyager 1" },
+      lead: {
+        ja: "1977年の打ち上げから、木星・土星を経て星間空間へ。人類が最も遠くへ送った機体を追います。",
+        en: "From launch in 1977 past Jupiter and Saturn into interstellar space — the farthest human-made object.",
+      },
+      steps: [
+        {
+          view: "space", sel: "earth", km: 115000, lit: true, apart: "voyager1", mag: 1,
+          d: "1977-09-05T00:11", play: false, constel: false, spot: "voyager1",
+          text: {
+            ja: "1977年9月5日、ボイジャー1号がタイタン3Eで打ち上げられました。" +
+                "重さ 800kg 足らず、直径 3.7m のパラボラアンテナを地球へ向けたまま、" +
+                "外惑星へ向かいます。",
+            en: "5 September 1977: Voyager 1 lifts off on a Titan IIIE. Under 800 kg, it heads for the " +
+                "outer planets with its 3.7 m dish kept pointed back at Earth.",
+          },
+        },
+        {
+          sel: null, fit: 6, a: 0.5, y: 0.9,
+          spd: 12, play: true, until: "1979-03-04T18:30",
+          text: {
+            ja: "火星軌道を越え、小惑星帯を抜けて木星へ。18か月の巡航です。" +
+                "軌跡はフライバイの日付と場所を経由点にした近似ですが、" +
+                "各惑星に到達する日時は実際の記録どおりです。",
+            en: "Past Mars, through the asteroid belt, on to Jupiter — eighteen months of cruise. " +
+                "The path here is an interpolation through the flyby waypoints, but the dates and " +
+                "places of each encounter are the real ones.",
+          },
+        },
+        {
+          sel: "voyager1", km: 1260000, lit: true, apart: "jupiter", play: false, spot: null,
+          d: "1979-03-04T18:30",
+          text: {
+            ja: "1979年3月5日、木星最接近。イオの火山噴火と、木星に薄い環があることを" +
+                "見つけたのはこのときです。木星の重力で加速し、進路を土星へ振り向けます。",
+            en: "5 March 1979: closest approach to Jupiter. This is the flyby that found volcanoes " +
+                "erupting on Io and a faint ring around Jupiter. Jupiter's gravity slings it on toward Saturn.",
+          },
+        },
+        {
+          km: 1400000, lit: true, apart: "saturn", d: "1980-11-11T19:18",
+          text: {
+            ja: "1980年11月12日、土星最接近。厚い大気を持つタイタンを間近で調べるため、" +
+                "軌道を大きく曲げて黄道面を離れました。この選択で、以後どの惑星にも" +
+                "行けなくなりましたが、太陽系の外へ最も速く向かう機体になりました。",
+            en: "12 November 1980: closest approach to Saturn. To study Titan and its thick atmosphere " +
+                "up close, the trajectory was bent hard out of the ecliptic plane. That choice ruled out " +
+                "any further planets — and made it the fastest thing leaving the Solar System.",
+          },
+        },
+        {
+          sel: null, fit: 42, a: 0.85, y: 0.9, spot: "voyager1",
+          d: "1990-02-14", play: false,
+          text: {
+            ja: "1990年2月14日、太陽から 40 au。カメラを切る前に振り返って撮った" +
+                "太陽系の集合写真に、地球は 0.12 ピクセルの淡い点として写りました " +
+                "— 「ペイル・ブルー・ドット」です。",
+            en: "14 February 1990, 40 au from the Sun. Before its cameras were switched off it turned " +
+                "around for a family portrait of the Solar System. Earth came out as a pale dot " +
+                "0.12 pixels across — the Pale Blue Dot.",
+          },
+        },
+        {
+          sel: "voyager1", fit: 130, a: 0.9, spd: 400, play: true, until: "2012-08-25",
+          text: {
+            ja: "そのまま外へ。2012年8月25日、太陽風が星間物質に押し返される境界 " +
+                "— ヘリオポーズ — を越え、太陽から約121 au で星間空間に入りました。" +
+                "電波が届くまで片道17時間かかります。",
+            en: "Outward it goes. On 25 August 2012, at about 121 au, it crossed the heliopause where " +
+                "the solar wind gives way to the interstellar medium. A radio signal now takes " +
+                "17 hours to reach it.",
+          },
+        },
+      ],
+    },
+    {
+      id: "voyager2",
+      manual: true,
+      probe: "voyager2",
+      title: { ja: "ボイジャー2号の旅", en: "The Voyage of Voyager 2" },
+      lead: {
+        ja: "176年に一度の惑星配列を使い、木星・土星・天王星・海王星を続けて訪れた唯一の機体です。",
+        en: "The only spacecraft to visit Jupiter, Saturn, Uranus and Neptune — riding an alignment that comes once in 176 years.",
+      },
+      steps: [
+        {
+          view: "space", sel: "earth", km: 115000, lit: true, apart: "voyager2", mag: 1,
+          d: "1977-08-20T00:09", play: false, constel: false, spot: "voyager2",
+          text: {
+            ja: "1977年8月20日、ボイジャー2号は1号より16日早く打ち上げられました。" +
+                "1970年代後半にだけ現れる4惑星の並びを使い、重力アシストを繋いで" +
+                "外惑星を一筆書きで回る計画です。",
+            en: "20 August 1977: Voyager 2 launches, sixteen days ahead of Voyager 1. The plan is to " +
+                "chain gravity assists across an alignment of four giant planets that only occurs " +
+                "in the late 1970s.",
+          },
+        },
+        {
+          sel: "voyager2", km: 1260000, lit: true, apart: "jupiter", play: false, spot: null,
+          d: "1979-07-08T17:55",
+          text: {
+            ja: "1979年7月9日、木星。エウロパの氷の表面を初めて詳しく写し、" +
+                "その下に海がある可能性を示しました。",
+            en: "9 July 1979, Jupiter. It returned the first detailed images of Europa's icy shell — " +
+                "and the first hints of an ocean beneath it.",
+          },
+        },
+        {
+          km: 1400000, lit: true, apart: "saturn", d: "1981-08-24T16:26",
+          text: {
+            ja: "1981年8月25日、土星。1号と違ってタイタンへは寄らず、" +
+                "黄道面に残ったまま土星の重力で天王星へ向かいます。",
+            en: "25 August 1981, Saturn. Unlike Voyager 1 it skips Titan, staying near the ecliptic " +
+                "so Saturn's gravity can send it on to Uranus.",
+          },
+        },
+        {
+          km: 460000, lit: true, apart: "uranus", d: "1986-01-23T22:49",
+          text: {
+            ja: "1986年1月24日、天王星。横倒しの自転軸を持つこの惑星を訪れた" +
+                "唯一の探査機です。10個の新しい衛星と2本の環を見つけました。",
+            en: "24 January 1986, Uranus — the only spacecraft ever to visit the tipped-over planet. " +
+                "It found ten new moons and two more rings.",
+          },
+        },
+        {
+          km: 440000, lit: true, apart: "neptune", d: "1989-08-24T22:54",
+          text: {
+            ja: "1989年8月25日、海王星。時速2000kmの風と大暗斑を捉え、" +
+                "衛星トリトンでは窒素の間欠泉を発見しました。12年におよぶ惑星巡りの終点です。",
+            en: "25 August 1989, Neptune. Winds of 2,000 km/h, the Great Dark Spot, and nitrogen " +
+                "geysers on Triton. The end of a twelve-year tour of the planets.",
+          },
+        },
+        {
+          sel: "voyager2", fit: 130, a: 0.9, y: 0.9, spot: null,
+          spd: 400, play: true, until: "2018-11-05",
+          text: {
+            ja: "海王星の重力で黄道面の下へ押し出され、そのまま南へ抜けていきます。" +
+                "2018年11月5日、約119 au でヘリオポーズを越えました。" +
+                "1号とはまったく違う方向へ、2機はいまも遠ざかり続けています。",
+            en: "Neptune's gravity pushed it below the ecliptic, and south it went. On 5 November 2018, " +
+                "at about 119 au, it too crossed the heliopause. The two Voyagers are still receding — " +
+                "in completely different directions.",
+          },
+        },
+      ],
+    },
+    {
+      id: "cassini",
+      manual: true,
+      probe: "cassini",
+      title: { ja: "カッシーニの土星", en: "Cassini at Saturn" },
+      lead: {
+        ja: "金星・地球・木星でスイングバイを重ねて土星へ。13年間の周回と、最後の突入までを辿ります。",
+        en: "Swing past Venus, Earth and Jupiter to reach Saturn — then thirteen years in orbit, and a final plunge.",
+      },
+      steps: [
+        {
+          view: "space", sel: "earth", km: 115000, lit: true, apart: "cassini", mag: 1,
+          d: "1997-10-15T00:08", play: false, constel: false, spot: "cassini",
+          text: {
+            ja: "1997年10月15日打ち上げ。5.7トンの探査機を土星まで直接送れるロケットは" +
+                "当時なく、内側の惑星で重力アシストを重ねて速度を稼ぐ計画が組まれました。",
+            en: "Launched 15 October 1997. No rocket of the day could send 5.7 tonnes straight to Saturn, " +
+                "so the plan was to borrow speed from the inner planets instead.",
+          },
+        },
+        {
+          sel: null, fit: 1.7, a: 0.6, y: 0.9, spot: "cassini",
+          spd: 6, play: true, until: "1999-08-18",
+          text: {
+            ja: "金星を2回、そして地球を1回かすめます。すれ違うたびに惑星の公転運動を" +
+                "少しだけ借りて加速し、内側の太陽系で2年近くかけて外へ向かう勢いを溜めました。",
+            en: "Twice past Venus, then once past Earth. Each pass borrows a little of the planet's " +
+                "orbital motion, and over nearly two years in the inner Solar System it builds up " +
+                "the speed to head outward.",
+          },
+        },
+        {
+          sel: "cassini", km: 1260000, lit: true, apart: "jupiter", play: false, spot: null,
+          d: "2000-12-29T19:03",
+          text: {
+            ja: "2000年12月30日、木星。最後の重力アシストです。" +
+                "このとき木星の周回軌道にはガリレオ探査機がいて、" +
+                "通り過ぎるカッシーニと2機で同時に木星を観測しました。",
+            en: "30 December 2000, Jupiter — the last gravity assist. Cassini observed the planet " +
+                "alongside the Galileo orbiter already in Jovian orbit.",
+          },
+        },
+        {
+          km: 1400000, lit: true, apart: "saturn", d: "2004-06-30T16:26",
+          text: {
+            ja: "2004年7月1日、土星周回軌道へ投入。環の隙間を通り抜けながら逆噴射し、" +
+                "土星の重力に捕まりました。打ち上げから6年9か月、35億kmの道のりでした。",
+            en: "1 July 2004: orbit insertion. It threaded a gap in the rings, fired its engine, " +
+                "and let Saturn capture it — six years nine months and 3.5 billion km after launch.",
+          },
+        },
+        {
+          sel: "titan", km: 40000, lit: true, d: "2005-01-14",
+          text: {
+            ja: "2005年1月14日、切り離された小型機ホイヘンスがタイタンの厚い大気を降下し、" +
+                "地表に着陸しました。外惑星系での着陸はこれが唯一です。" +
+                "液体メタンが流れた跡のある、石ころだらけの河原が写っていました。",
+            en: "14 January 2005: the Huygens probe parachuted through Titan's thick atmosphere and " +
+                "landed — still the only landing in the outer Solar System. It photographed a rounded, " +
+                "pebble-strewn floodplain carved by liquid methane.",
+          },
+        },
+        {
+          sel: "saturn", km: 700000, lit: true, spd: 90, play: true, until: "2017-09-15",
+          text: {
+            ja: "13年の周回。エンケラドスの氷の裂け目から水が噴き出しているのを見つけ、" +
+                "その海に生命の条件が揃っている可能性を示しました。" +
+                "燃料が尽きる前に、その海を汚さないよう2017年9月15日に土星の大気へ突入 " +
+                "— 最後の瞬間までデータを送り続けました。",
+            en: "Thirteen years in orbit. It found water jetting from cracks in the ice of Enceladus, " +
+                "and evidence that the ocean beneath could support life. Rather than risk contaminating " +
+                "it once the fuel ran out, Cassini was steered into Saturn's atmosphere on " +
+                "15 September 2017 — transmitting to the last second.",
           },
         },
       ],

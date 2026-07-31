@@ -260,6 +260,27 @@
       cam.yawTgt = Math.atan2(-w[2] / l, -w[0] / l) + 0.5;
       cam.pitchTgt = Math.asin(Math.max(-1, Math.min(1, -w[1] / l))) + 0.22;
     }
+    // apart: 中心天体と指定天体を画面上で離して見せる。探査機のフライバイでは
+    // 両者が視線方向に重なることがあるので、結ぶ線と視線が直交する向きへ回り込む。
+    // 直交する向きは無数にあるので、いまの向き (lit や a・y で決めたもの) を
+    // その平面へ落とした方向 — つまり最も近い直交方向 — を採る
+    if (s.apart && b) {
+      const o = posW.get(s.apart), w = posW.get(b.key);
+      let ux = o[0] - w[0], uy = o[1] - w[1], uz = o[2] - w[2];
+      const ul = Math.hypot(ux, uy, uz);
+      if (ul > 1e-12) {
+        ux /= ul; uy /= ul; uz /= ul;
+        const cp = Math.cos(cam.pitchTgt);
+        let vx = cp * Math.cos(cam.yawTgt), vy = Math.sin(cam.pitchTgt), vz = cp * Math.sin(cam.yawTgt);
+        const d = vx * ux + vy * uy + vz * uz;
+        vx -= d * ux; vy -= d * uy; vz -= d * uz;
+        const vl = Math.hypot(vx, vy, vz);
+        if (vl > 1e-6) {
+          cam.yawTgt = Math.atan2(vz / vl, vx / vl);
+          cam.pitchTgt = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, Math.asin(vy / vl)));
+        }
+      }
+    }
     // side: 彗星の尾を横から見る向きへ回り込む。尾は反太陽方向 (= 太陽から見た
     // 天体の方向) に伸びるリボンなので、軸を正面から見ると潰れて消えてしまう
     if (s.side && b) {
@@ -374,6 +395,7 @@
     if (!tourSaved) tourSaved = captureTourState();   // 再入時は最初の状態を保つ
     tour = t;
     tourActive = true;
+    tourProbe = t.probe || null;
     tourSceneDone = false;
     if (t.manual) tourAuto = false;   // ボタンを隠すので、前のツアーの ON を持ち込まない
     hideModals();
@@ -391,6 +413,7 @@
     tourUntil = null;
     tourSight = null;
     tourSpot = null;
+    tourProbe = null;
     const keepScene = !!(tour && tour.keep);
     tour = null;
     tourActive = false;

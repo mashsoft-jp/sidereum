@@ -48,7 +48,7 @@
 
     // 探査機 (実寸比では点にもならないので、常に名前を出す)
     for (const pr of PROBES) {
-      if (!pr.live) continue;
+      if (!pr.live || (tourProbe && pr.key !== tourProbe)) continue;
       const sp = screenPos.get(pr.key);
       if (!sp || sp.x < -40 || sp.x > W + 40 || sp.y < -40 || sp.y > H + 40) continue;
       octx.fillStyle = (marked === pr || spotB === pr)

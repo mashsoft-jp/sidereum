@@ -14,6 +14,8 @@
   let tourSight = null;
   // ツアーの注目天体。選択とは別に、名前と輪郭を強調して見つけやすくする
   let tourSpot = null;
+  // 探査機ツアー中はこの1機だけを描く (他機が画面に混ざると主役が分からない)
+  let tourProbe = null;
   const FOV = 45 * DEG;
   // 宇宙ビューのズーム (拡大率)。距離とは別に、画角を狭めて望遠的に拡大する
   const MAG_MAX = 100;
