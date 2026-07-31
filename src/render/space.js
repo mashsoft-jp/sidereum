@@ -216,6 +216,43 @@
     for (const s of SATELLITES) drawBody(s, SCR.sun);
     bodyRenderer.endPass();
 
+    // --- 探査機 (NASA のモデル) ---
+    // 実寸比だと 3m の機体は常に不可視なので、画面上の見かけの大きさを固定した
+    // 記号として描く。位置と日時は正確、大きさだけが実寸比から外れる
+    {
+      let any = false;
+      for (const pr of PROBES) if (pr.live) { any = true; break; }
+      if (any) {
+        // fpx はこの下の画面座標の節で作るが、ここでも必要なので個別に出す
+        const mfpx = (H / 2) / Math.tan(eFov() / 2);
+        gl.useProgram(meshP.pr);
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthMask(true);
+        gl.disable(gl.BLEND);
+        gl.enableVertexAttribArray(meshP.a.aPos);
+        gl.uniform1f(meshP.u.uFlat, hasDeriv ? 1 : 0);
+        for (const pr of PROBES) {
+          if (!pr.live) continue;
+          const me = meshByKey.get(pr.mesh);
+          if (!me) continue;
+          const t = posW.get(pr.key);
+          SCR.t[0] = t[0] - eye[0]; SCR.t[1] = t[1] - eye[1]; SCR.t[2] = t[2] - eye[2];
+          const d = Math.hypot(SCR.t[0], SCR.t[1], SCR.t[2]) || 1;
+          const r = d * PROBE_PX / mfpx;              // 見かけ半径を一定に保つ
+          mRotY(nowSec * 0.10 + pr.ph0, SCR.ry);      // ゆっくり回して立体だと分かるように
+          mTRS(SCR.t, SCR.ry, r, SCR.model);
+          gl.uniformMatrix4fv(meshP.u.uMVP, false, mMul(VP, SCR.model, SCR.mvp));
+          gl.uniformMatrix4fv(meshP.u.uModel, false, SCR.model);
+          gl.uniform3f(meshP.u.uSun, -eye[0], -eye[1], -eye[2]);
+          gl.uniform3fv(meshP.u.uCol, pr.col);
+          gl.bindBuffer(gl.ARRAY_BUFFER, me.vb);
+          gl.vertexAttribPointer(meshP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, me.ib);
+          gl.drawElements(gl.TRIANGLES, me.n, gl.UNSIGNED_SHORT, 0);
+        }
+      }
+    }
+
     // --- 自転軸 (各天体の軌道表示に連動。深度テストで天体の裏側は隠れる) ---
     if (ALL_BODIES.some((b) => b.showOrbit)) {
       gl.enable(gl.BLEND);
@@ -245,11 +282,12 @@
     screenPos.clear();
     const fpx = (H / 2) / Math.tan(eFov() / 2);
     let nMark = 0;
-    for (const b of [SUN, ...PLANETS, ...SATELLITES]) {
+    for (const b of [SUN, ...PLANETS, ...SATELLITES, ...PROBES.filter((p) => p.live)]) {
       const pr = project(posW.get(b.key));
       if (!pr) continue;
       const rpx = bodyR(b) * fpx / pr.w;
       screenPos.set(b.key, { x: pr.x, y: pr.y, r: rpx });
+      if (b.mesh) continue;        // 探査機はメッシュで描くのでマーカーは出さない
       if (rpx < 2.2) {
         // 衛星は画面上で母天体と重なっている間はマーカーを出さない
         if (b.parent) {

@@ -99,7 +99,7 @@
     },
   };
   const T = () => UI[lang];
-  for (const b of [SUN, ...PLANETS, ...SATELLITES]) b.nameEn = b.en.charAt(0) + b.en.slice(1).toLowerCase();
+  for (const b of [SUN, ...PLANETS, ...SATELLITES, ...PROBES]) b.nameEn = b.en.charAt(0) + b.en.slice(1).toLowerCase();
   const bName = (b) => (lang === "ja" ? b.name : b.nameEn);
 
   // 情報パネルの英語データ

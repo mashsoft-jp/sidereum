@@ -34,10 +34,12 @@ const SRC = path.join(ROOT, "src");
 // ★ 連結順 (並べ替え禁止)
 const MANIFEST = [
   "data/bodies.js",      // 基本定数・天体/太陽/月・衛星
+  "data/probes.js",      // 探査機の軌跡 (i18n が英語名を作るのでその前に)
   "data/i18n.js",        // UI 辞書・EN_DATA・画像クレジット
   "data/tours.js",       // ガイドツアーのシーン定義
   "core/math.js",        // 表示スケール・ケプラー軌道・mat4
   "gl/setup.js",         // canvas/gl・シェーダ・プログラム・ジオメトリ  ※return を含む
+  "data/models.js",      // 探査機の 3D モデル (base64, NASA 3D Resources)
   "data/textures.js",    // テクスチャ (base64)
   "gl/resources.js",     // テクスチャの GL ロード・星空宣言・小惑星帯・軌道線
   "core/state.js",       // 実行時状態・月の位置 (ELP-2000)・位置更新

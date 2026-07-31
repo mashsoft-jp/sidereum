@@ -35,7 +35,7 @@
 
   // ワールド位置キャッシュ
   const posAU = new Map(), posW = new Map();
-  for (const b of [SUN, ...PLANETS, ...SATELLITES]) { posAU.set(b.key, [0,0,0]); posW.set(b.key, [0,0,0]); }
+  for (const b of [SUN, ...PLANETS, ...SATELLITES, ...PROBES]) { posAU.set(b.key, [0,0,0]); posW.set(b.key, [0,0,0]); }
   const COMETS = PLANETS.filter((p) => p.comet);
 
   // ---------- 月の位置 (ELP-2000 の主要項による短縮理論, Meeus 第47章由来) ----------
@@ -96,6 +96,42 @@
     return out;   // 地心黄道 J2000 [km]
   }
 
+  // ---------- 探査機の軌跡 ----------
+  // 経由点は日付が決まっているので、位置も起動時に一度だけ確定させる。
+  // 区間は時間で径数付けした Hermite 補間 (区間の長さが大きく違うので、
+  // 一様な Catmull-Rom だと短い区間で行き過ぎる)
+  {
+    const tmp = [0, 0, 0];
+    for (const pr of PROBES) {
+      pr.pts = pr.way.map((w) => {
+        const t = (Date.parse(w.d + "T00:00:00Z") - J2000) / DAY_MS;
+        if (w.au) return { t, au: w.au };
+        const b = PLANETS.find((x) => x.key === w.at);
+        keplerAU(b, t, tmp);
+        return { t, au: [tmp[0], tmp[1], tmp[2]] };
+      });
+    }
+  }
+  // 打ち上げ前・最後の経由点より後は null (描かない)
+  function probeAU(pr, days, out) {
+    const p = pr.pts;
+    if (days < p[0].t || days > p[p.length - 1].t) return null;
+    let i = 0;
+    while (i < p.length - 2 && days > p[i + 1].t) i++;
+    const p1 = p[i], p2 = p[i + 1];
+    const p0 = p[i - 1] || p1, p3 = p[i + 2] || p2;
+    const dt = p2.t - p1.t || 1;
+    const u = (days - p1.t) / dt, u2 = u * u, u3 = u2 * u;
+    const h00 = 2*u3 - 3*u2 + 1, h10 = u3 - 2*u2 + u, h01 = -2*u3 + 3*u2, h11 = u3 - u2;
+    for (let k = 0; k < 3; k++) {
+      // 接線は前後の経由点からの差分を時間で正規化する
+      const m1 = (p2.au[k] - p0.au[k]) / ((p2.t - p0.t) || 1) * dt;
+      const m2 = (p3.au[k] - p1.au[k]) / ((p3.t - p1.t) || 1) * dt;
+      out[k] = h00 * p1.au[k] + h10 * m1 + h01 * p2.au[k] + h11 * m2;
+    }
+    return out;
+  }
+
   function updatePositions() {
     const tmp = [0, 0, 0];
     for (const p of PLANETS) {
@@ -120,6 +156,14 @@
       w[0] = par[0] + s.M[0] * lx + s.M[8] * lz;
       w[1] = par[1] + s.M[1] * lx + s.M[9] * lz;
       w[2] = par[2] + s.M[2] * lx + s.M[10] * lz;
+    }
+    // 探査機
+    for (const pr of PROBES) {
+      pr.live = !!probeAU(pr, simDays, tmp);
+      if (!pr.live) continue;
+      const a = posAU.get(pr.key);
+      a[0] = tmp[0]; a[1] = tmp[1]; a[2] = tmp[2];
+      toWorld(tmp, posW.get(pr.key));
     }
   }
 

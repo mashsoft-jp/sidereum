@@ -124,3 +124,28 @@
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, -AXIS_LEN, 0, 0, AXIS_LEN, 0]), gl.STATIC_DRAW);
 
 
+
+  // ---------- 探査機のメッシュ ----------
+  // base64 → 型付き配列。位置は Int16 (最大寸法 32000) なので、シェーダへ渡す前に
+  // 単位長へ戻しておく (モデル行列側で実サイズを掛ける)
+  function b64ToBytes(s) {
+    const bin = atob(s), n = bin.length, out = new Uint8Array(n);
+    for (let i = 0; i < n; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  const meshByKey = new Map();
+  for (const key in PROBE_MESHES) {
+    const m = PROBE_MESHES[key];
+    const qb = b64ToBytes(m.v), ib = b64ToBytes(m.i);
+    const q = new Int16Array(qb.buffer, qb.byteOffset, qb.byteLength / 2);
+    const pos = new Float32Array(q.length);
+    for (let i = 0; i < q.length; i++) pos[i] = q[i] / 32000;
+    const vb = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vb);
+    gl.bufferData(gl.ARRAY_BUFFER, pos, gl.STATIC_DRAW);
+    const ib2 = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib2);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
+      new Uint16Array(ib.buffer, ib.byteOffset, ib.byteLength / 2), gl.STATIC_DRAW);
+    meshByKey.set(key, { vb: vb, ib: ib2, n: m.t * 3 });
+  }

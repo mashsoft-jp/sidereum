@@ -72,10 +72,16 @@
   const ringVS = `@@glsl:ring.vert@@`;
   const ringFS = PRE + `@@glsl:ring.frag@@`;
 
+  // ---- 探査機のメッシュ (法線は持たず面の微分から求めるので拡張が要る) ----
+  const meshVS = `@@glsl:mesh.vert@@`;
+  const hasDeriv = !!gl.getExtension("OES_standard_derivatives");
+  const meshFS = (hasDeriv ? "#extension GL_OES_standard_derivatives : enable\n" : "")
+    + PRE + `@@glsl:mesh.frag@@`;
+
   // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
   // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
   let bodyRenderer;
-  let lineP, pointP, billP, ringP, tailP, comaP, terrainP;
+  let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP;
   try {
     bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
     lineP = program(lineVS, lineFS);
@@ -85,6 +91,7 @@
     tailP = program(tailVS, tailFS);
     comaP = program(comaVS, comaFS);
     terrainP = program(terrainVS, terrainFS);
+    meshP = program(meshVS, meshFS);
   } catch (err) {
     console.error(err);
     document.getElementById("noGL").style.display = "grid";

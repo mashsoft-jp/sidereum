@@ -366,7 +366,9 @@
   // ナビ (惑星の衛星、小惑星帯・彗星カテゴリは展開式)
   const NAV_BODIES = [SUN, ...PLANETS];
   const ALL_BODIES = [...NAV_BODIES, ...SATELLITES];
-  const BODY_BY_KEY = new Map(ALL_BODIES.map((b) => [b.key, b]));
+  // 探査機は天体リストや表示トグルの対象ではないが、ツアーの sel / spot /
+  // sight から引けるようにキー表には入れる
+  const BODY_BY_KEY = new Map([...ALL_BODIES, ...PROBES].map((b) => [b.key, b]));
   const SAT_BY_PARENT = new Map();
   for (const s of SATELLITES) {
     if (!SAT_BY_PARENT.has(s.parent)) SAT_BY_PARENT.set(s.parent, []);

@@ -46,6 +46,16 @@
       }
     }
 
+    // 探査機 (実寸比では点にもならないので、常に名前を出す)
+    for (const pr of PROBES) {
+      if (!pr.live) continue;
+      const sp = screenPos.get(pr.key);
+      if (!sp || sp.x < -40 || sp.x > W + 40 || sp.y < -40 || sp.y > H + 40) continue;
+      octx.fillStyle = (marked === pr || spotB === pr)
+        ? "rgba(242,178,62,0.95)" : "rgba(180,205,240,0.85)";
+      octx.fillText(bName(pr), sp.x, sp.y - PROBE_PX * 0.5 - 8);
+    }
+
     // ツアーの視線ガイド。注視している天体から、指定した天体の方向へ破線を引く。
     // 実寸比では相手がほぼ必ず画面外なので、枠の内側で止めて名前と矢じりを出す
     if (tourSight && !groundView && selected) {
