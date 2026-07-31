@@ -37,6 +37,7 @@
   let tourSceneDone = false;  // このツアーでシーンを一度でも適用したか
   let tourUntil = null;       // 早送りステップの停止日時 (simDays)
   let tourStay = false;       // until に達しても次へ進まない
+  let tourRideFly = false;    // 引きの画から探査機視点へ寄っている最中
 
   const tourText = (o) => (o ? (lang === "ja" ? o.ja : o.en) : "");
 
@@ -198,6 +199,9 @@
     showSelMark = !!s.mark;
     tourSight = s.sight || null;
     tourSpot = s.spot || null;
+    // 引きの画から乗り移るときだけ、寄り切るまで時間を止める。探査機視点の
+    // まま次の天体へ向き直る回 (タイタン → 土星) は止めずに飛び続けさせる
+    tourRideFly = !!s.ride && !tourRide;
     tourRide = s.ride || null;
     tourPath = !!s.path;
     tourStay = !!s.stay;
@@ -349,7 +353,9 @@
     const eDist = Math.log(d / (cam.dist || d));
     const close = Math.abs(eDist) < 0.02 && Math.abs(eYaw) < 0.02 &&
                   Math.abs(pitchT - cam.pitch) < 0.02;
-    const k = close || !(dt > 0) ? 1 : 1 - Math.exp(-dt * 4);
+    // 引きから乗り移るときは一気に、乗ったまま次の天体へ向き直るときは
+    // 「振り向いて飛んでいく」動きに見えるよう、ゆっくりめに回す
+    const k = close || !(dt > 0) ? 1 : 1 - Math.exp(-dt * (tourRideFly ? 4 : 2.5));
     cam.focus[0] += (f[0] - cam.focus[0]) * k;
     cam.focus[1] += (f[1] - cam.focus[1]) * k;
     cam.focus[2] += (f[2] - cam.focus[2]) * k;
@@ -365,11 +371,16 @@
     cam.distTgt = cam.dist;
     cam.yawTgt = cam.yaw;
     cam.pitchTgt = cam.pitch;
+    if (close) tourRideFly = false;
     if (tourRideSpd > 0 && tourRideRef > 0) {
-      // カメラが寄り切るまでは時間を止める (寄っている最中に通り過ぎないように)。
-      // 着いたあとは距離に比例して再生を遅くする — 見かけの大きさは 1/距離 なので、
+      // 引きの画から乗り移る回は、寄り切るまで時間を止める (寄っている最中に
+      // 通り過ぎてしまわないように)。探査機視点のまま次の天体へ向き直る回では
+      // 止めず、カメラが追いつくのに合わせて再生を立ち上げる。
+      // 追いついたあとは距離に比例して遅くする — 見かけの大きさは 1/距離 なので、
       // 一定速度だと遠くが長く、最接近が一瞬で終わってしまう
-      daysPerSec = close ? tourRideSpd * Math.max(0.06, Math.min(1, d / tourRideRef)) : 0;
+      const conv = Math.max(0, Math.min(1, 1.5 - Math.abs(eDist)));
+      daysPerSec = tourRideFly ? 0
+        : tourRideSpd * Math.max(0.06, Math.min(1, d / tourRideRef)) * conv;
     }
   }
 
@@ -496,6 +507,7 @@
     tourRide = null;
     tourPath = false;
     tourStay = false;
+    tourRideFly = false;
     const keepScene = !!(tour && tour.keep);
     tour = null;
     tourActive = false;

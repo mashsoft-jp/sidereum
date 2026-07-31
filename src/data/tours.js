@@ -570,7 +570,7 @@
       id: "voyager1",
       manual: true,
       probe: "voyager1",
-      ver: 5,
+      ver: 6,
       title: { ja: "ボイジャー1号の旅", en: "The Voyage of Voyager 1" },
       lead: {
         ja: "1977年の打ち上げから、木星・土星を経て星間空間へ。人類が最も遠くへ送った機体を追います。",
@@ -648,7 +648,7 @@
           // カメラは探査機に乗ったまま土星へ向き直る。最接近 18.4万km で
           // 視直径 39°、環は画面からはみ出す
           sel: "saturn", ride: "saturn", d: "1980-11-12T05:41",
-          spd: 0.15, play: true, until: "1980-11-12T23:46", stay: true,
+          spd: 0.25, play: true, until: "1980-11-12T23:46", stay: true,
           text: {
             ja: "そのまま振り返らずに土星へ。18時間後、中心から 18万4千km まで寄ります。" +
                 "タイタンへ寄るために軌道を大きく曲げたので、ここで黄道面を離れることに" +
