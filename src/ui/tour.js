@@ -330,8 +330,11 @@
 
   // ride: 探査機の位置にカメラを置き、指定天体を見続ける (探査機視点)。
   // フライバイ中は距離も向きも毎フレーム大きく変わるので、緩和を通さず
-  // frame() の描画直前に現在値へ直接書き込む
-  function tourRideCam() {
+  // frame() の描画直前に現在値へ直接書き込む。
+  // ただし切り替わった直後だけは、引きの画から探査機まで一気に寄る動きを
+  // 見せたいので緩和で追う (距離は比が大きいので対数で補間する)。
+  // 追いついたら以後は完全一致させ、最接近付近でも遅れが出ないようにする
+  function tourRideCam(dt) {
     if (!tourRide || groundView) return;
     const pr = tourProbe ? BODY_BY_KEY.get(tourProbe) : null;
     const tb = BODY_BY_KEY.get(tourRide);
@@ -340,19 +343,34 @@
     const dx = e[0] - f[0], dy = e[1] - f[1], dz = e[2] - f[2];
     const d = Math.hypot(dx, dy, dz);
     if (d < 1e-12) return;
-    // 距離に比例して再生を遅くする。遠くは飛ばし、最接近付近はじっくり見せる
-    // (見かけの大きさは 1/距離 なので、一定速度だと最後だけ一瞬で終わる)
-    if (tourRideSpd > 0 && tourRideRef > 0) {
-      daysPerSec = tourRideSpd * Math.max(0.06, Math.min(1, d / tourRideRef));
+    const yawT = Math.atan2(dz, dx);
+    const pitchT = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, Math.asin(dy / d)));
+    const eYaw = Math.atan2(Math.sin(yawT - cam.yaw), Math.cos(yawT - cam.yaw));
+    const eDist = Math.log(d / (cam.dist || d));
+    const close = Math.abs(eDist) < 0.02 && Math.abs(eYaw) < 0.02 &&
+                  Math.abs(pitchT - cam.pitch) < 0.02;
+    const k = close || !(dt > 0) ? 1 : 1 - Math.exp(-dt * 4);
+    cam.focus[0] += (f[0] - cam.focus[0]) * k;
+    cam.focus[1] += (f[1] - cam.focus[1]) * k;
+    cam.focus[2] += (f[2] - cam.focus[2]) * k;
+    cam.focusTgt[0] = f[0]; cam.focusTgt[1] = f[1]; cam.focusTgt[2] = f[2];
+    for (let i = 0; i < 3; i++) {
+      cam.panOff[i] -= cam.panOff[i] * k;
+      cam.panOffTgt[i] = 0;
     }
-    cam.focus[0] = cam.focusTgt[0] = f[0];
-    cam.focus[1] = cam.focusTgt[1] = f[1];
-    cam.focus[2] = cam.focusTgt[2] = f[2];
-    cam.panOff[0] = cam.panOff[1] = cam.panOff[2] = 0;
-    cam.panOffTgt[0] = cam.panOffTgt[1] = cam.panOffTgt[2] = 0;
-    cam.dist = cam.distTgt = d;
-    cam.yaw = cam.yawTgt = Math.atan2(dz, dx);
-    cam.pitch = cam.pitchTgt = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, Math.asin(dy / d)));
+    cam.dist *= Math.exp(eDist * k);
+    cam.yaw += eYaw * k;
+    cam.pitch += (pitchT - cam.pitch) * k;
+    // 次フレームの緩和 (frame) が二重に効かないよう、目標は現在値に揃える
+    cam.distTgt = cam.dist;
+    cam.yawTgt = cam.yaw;
+    cam.pitchTgt = cam.pitch;
+    if (tourRideSpd > 0 && tourRideRef > 0) {
+      // カメラが寄り切るまでは時間を止める (寄っている最中に通り過ぎないように)。
+      // 着いたあとは距離に比例して再生を遅くする — 見かけの大きさは 1/距離 なので、
+      // 一定速度だと遠くが長く、最接近が一瞬で終わってしまう
+      daysPerSec = close ? tourRideSpd * Math.max(0.06, Math.min(1, d / tourRideRef)) : 0;
+    }
   }
 
   function clearTourTimer() {

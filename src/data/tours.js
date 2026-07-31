@@ -570,7 +570,7 @@
       id: "voyager1",
       manual: true,
       probe: "voyager1",
-      ver: 3,
+      ver: 4,
       title: { ja: "ボイジャー1号の旅", en: "The Voyage of Voyager 1" },
       lead: {
         ja: "1977年の打ち上げから、木星・土星を経て星間空間へ。人類が最も遠くへ送った機体を追います。",
@@ -591,7 +591,7 @@
         },
         {
           sel: null, fit: 6, a: 0.5, y: 0.9, spot: "voyager1", front: null,
-          spd: 12, play: true, until: "1979-03-03",
+          spd: 45, play: true, until: "1979-03-03",
           text: {
             ja: "火星軌道を越え、小惑星帯を抜けて木星へ。18か月の巡航です。" +
                 "軌跡はフライバイの日付と場所を経由点にした近似ですが、" +
@@ -619,8 +619,20 @@
           },
         },
         {
+          // 引きの画に戻して土星系まで運ぶ。着いたら自動で次 (探査機視点) へ
+          sel: null, ride: null, fit: 11, a: 0.5, y: 0.9, mag: 1, orbits: true,
+          spot: "voyager1", stay: false, d: "1979-03-05T07:00",
+          spd: 55, play: true, until: "1980-11-11T23:41",
+          text: {
+            ja: "木星の重力で加速し、進路は土星へ。もう一度引いて眺めます。" +
+                "20か月かけて 5.2 au から 9.5 au へ、太陽系の外側半分を渡っていきます。",
+            en: "Jupiter's gravity has flung it on toward Saturn. Pulling back again: twenty months " +
+                "to cross from 5.2 au to 9.5 au, out through the far half of the Solar System.",
+          },
+        },
+        {
           // タイタンへの最終進入。6時間で 37万km → 6千km まで詰める
-          sel: "titan", ride: "titan", mag: 1,
+          sel: "titan", ride: "titan", mag: 1, spot: null, orbits: false,
           d: "1980-11-11T23:41", spd: 0.09, play: true, until: "1980-11-12T05:41", stay: true,
           text: {
             ja: "1980年11月12日、まず向かったのはタイタンでした。" +
@@ -633,15 +645,19 @@
           },
         },
         {
-          sel: "voyager1", ride: null, km: 1400000, lit: true, apart: "saturn", play: false,
-          d: "1980-11-12T23:46", mag: 1, orbits: true,
+          // カメラは探査機に乗ったまま土星へ向き直る。最接近 18.4万km で
+          // 視直径 39°、環は画面からはみ出す
+          sel: "saturn", ride: "saturn", d: "1980-11-12T05:41",
+          spd: 0.15, play: true, until: "1980-11-12T23:46", stay: true,
           text: {
-            ja: "その18時間後、土星最接近。タイタンへ寄るために軌道を大きく曲げたので、" +
-                "そのまま黄道面を離れることになりました。以後どの惑星にも行けなく" +
-                "なりましたが、太陽系の外へ最も速く向かう機体になりました。",
-            en: "Eighteen hours later, closest approach to Saturn. The detour to Titan had bent the " +
-                "trajectory hard out of the ecliptic plane. That ruled out any further planets — " +
-                "and made it the fastest thing leaving the Solar System.",
+            ja: "そのまま振り返らずに土星へ。18時間後、中心から 18万4千km まで寄ります。" +
+                "タイタンへ寄るために軌道を大きく曲げたので、ここで黄道面を離れることに" +
+                "なりました。以後どの惑星にも行けなくなりましたが、" +
+                "太陽系の外へ最も速く向かう機体になりました。",
+            en: "On to Saturn without looking back — eighteen hours later it passes 184,000 km from " +
+                "the planet's centre. The detour to Titan had bent the trajectory hard out of the " +
+                "ecliptic plane. That ruled out any further planets, and made it the fastest thing " +
+                "leaving the Solar System.",
           },
         },
         {
