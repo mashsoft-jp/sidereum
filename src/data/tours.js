@@ -572,7 +572,7 @@
       id: "voyager1",
       manual: true,
       probe: "voyager1",
-      ver: 7,
+      ver: 8,
       title: { ja: "ボイジャー1号の旅", en: "The Voyage of Voyager 1" },
       lead: {
         ja: "1977年の打ち上げから、木星・土星を経て星間空間へ。人類が最も遠くへ送った機体を追います。",
@@ -654,13 +654,15 @@
           spd: 0.25, play: true, until: "1980-11-12T23:46", stay: true,
           text: {
             ja: "そのまま振り返らずに土星へ。18時間後、中心から 18万4千km まで寄ります。" +
-                "タイタンへ寄るために軌道を大きく曲げたので、ここで黄道面を離れることに" +
-                "なりました。以後どの惑星にも行けなくなりましたが、" +
+                "落ちていくにつれて加速し、最接近では秒速 25km — この区間だけは" +
+                "土星の重力で解いた実際の軌道です。タイタンへ寄るために大きく曲げた" +
+                "軌道は、ここで黄道面を離れました。以後どの惑星にも行けなくなりましたが、" +
                 "太陽系の外へ最も速く向かう機体になりました。",
             en: "On to Saturn without looking back — eighteen hours later it passes 184,000 km from " +
-                "the planet's centre. The detour to Titan had bent the trajectory hard out of the " +
-                "ecliptic plane. That ruled out any further planets, and made it the fastest thing " +
-                "leaving the Solar System.",
+                "the planet's centre, falling faster all the way: 25 km/s at closest approach. " +
+                "This stretch is a real two-body orbit solved from Saturn's gravity. The detour to " +
+                "Titan had bent the trajectory hard out of the ecliptic plane. That ruled out any " +
+                "further planets, and made it the fastest thing leaving the Solar System.",
           },
         },
         {
@@ -696,10 +698,12 @@
           text: {
             ja: "たどってきた道のりです。木星と土星ですれ違いざまに進路を曲げてもらい、" +
                 "土星では黄道面を大きく外れて北へ抜けました。" +
-                "この線は経由点を繋いだ近似で、実際の軌道そのものではありません。",
+                "惑星間の区間は通過イベントを繋いだ近似ですが、土星のまわりだけは" +
+                "重力から解いた本物の軌道です。",
             en: "The route it took. Jupiter and Saturn each bent its path as it swept past, and " +
-                "Saturn threw it far north out of the plane of the planets. The line is an " +
-                "interpolation through the waypoints, not the true trajectory.",
+                "Saturn threw it far north out of the plane of the planets. The interplanetary " +
+                "stretches are interpolated between the encounters; the pass around Saturn is a " +
+                "real orbit solved from its gravity.",
           },
         },
       ],

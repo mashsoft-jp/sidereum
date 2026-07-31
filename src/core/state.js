@@ -134,11 +134,13 @@
     out[0] += ox; out[1] += -oz; out[2] += oy;
     return out;
   }
+  const wayDays = (d) =>
+    (Date.parse(d.indexOf("T") > 0 ? d + ":00Z" : d + "T00:00:00Z") - J2000) / DAY_MS;
   {
     const tmp = [0, 0, 0], v0 = [0, 0, 0], v1 = [0, 0, 0];
     for (const pr of PROBES) {
       pr.pts = pr.way.map((w) => {
-        const t = (Date.parse(w.d.indexOf("T") > 0 ? w.d + ":00Z" : w.d + "T00:00:00Z") - J2000) / DAY_MS;
+        const t = wayDays(w.d);
         if (w.au) return { t, au: w.au };
         wayAU(w.at, t, tmp);
         const au = [tmp[0], tmp[1], tmp[2]];
@@ -154,10 +156,107 @@
       });
     }
   }
+  // ---------- 惑星のすぐ近くだけは双曲線軌道 (2体問題) ----------
+  // 経由点を繋ぐ補間は「最接近に向かって減速する」など力学と逆の動きになるので、
+  // フライバイの前後だけ中心天体まわりのケプラー軌道に差し替える。
+  // 軌道は 最接近距離 q・最接近日時・通過点 (via) の3つで決まる:
+  //   離心率は「via の距離から近点までの所要時間が合う値」を逆算し、
+  //   軌道面は via の方向と、この区間より後の最初の経由点の方向が張る面に取る。
+  //   via の miss (最接近距離) は軌道面の法線方向へずらす — 面内でずらすと
+  //   中心天体からの距離が変わって所要時間の逆算が崩れるため
+  {
+    const vSub = (a, b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]];
+    const vLen = (a) => Math.hypot(a[0], a[1], a[2]);
+    const vUnit = (a) => { const l = vLen(a) || 1; return [a[0]/l, a[1]/l, a[2]/l]; };
+    const vDot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+    const vCross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+    // n まわりに th 回す (ロドリゲスの回転公式)
+    const vRot = (v, n, th) => {
+      const c = Math.cos(th), s = Math.sin(th), k = vDot(n, v) * (1 - c);
+      const x = vCross(n, v);
+      return [v[0]*c + x[0]*s + n[0]*k, v[1]*c + x[1]*s + n[1]*k, v[2]*c + x[2]*s + n[2]*k];
+    };
+    const tmp = [0, 0, 0];
+    for (const pr of PROBES) {
+      if (!pr.hyp) continue;
+      pr.hyps = pr.hyp.map((h) => {
+        const body = PLANETS.find((x) => x.key === h.at);
+        const tp = wayDays(h.peri), tv = wayDays(h.via.d);
+        // via 天体の、中心天体に対する位置 [km]
+        const c1 = keplerAU(body, tv, [0, 0, 0]);
+        const P1 = vSub(wayAU(h.via.at, tv, tmp), c1).map((x) => x * AU_KM);
+        const r1 = vLen(P1);
+        // 離心率: 近点までの所要時間が合う値を二分法で (e が大きいほど速く着く)
+        const want = (tp - tv) * 86400;
+        let lo = 1.0001, hi = 40;
+        for (let i = 0; i < 120; i++) {
+          const e = (lo + hi) / 2, A = h.q / (e - 1);
+          const H = Math.acosh(Math.max(1, (r1 / A + 1) / e));
+          const t = (e * Math.sinh(H) - H) * Math.sqrt(A * A * A / h.mu);
+          if (t > want) lo = e; else hi = e;
+        }
+        const e = (lo + hi) / 2, A = h.q / (e - 1);
+        const nu1 = -Math.acos(Math.max(-1, Math.min(1, (h.q * (1 + e) / r1 - 1) / e)));
+        const nuInf = Math.acos(-1 / e);
+        // 離脱方向 = この区間より後の最初の経由点の向き
+        const nx = pr.way.find((w) => wayDays(w.d) > tp);
+        const nxAU = nx.au || wayAU(nx.at, wayDays(nx.d), [0, 0, 0]);
+        const uOut = vUnit(vSub(nxAU, keplerAU(body, tp, [0, 0, 0])));
+        const shape = (v) => {
+          const n0 = vUnit(vCross(v, uOut));
+          const mk = (n) => {
+            const peri = vRot(vUnit(v), n, -nu1);
+            return { n, peri, asym: vRot(peri, n, nuInf) };
+          };
+          const a1 = mk(n0), a2 = mk([-n0[0], -n0[1], -n0[2]]);
+          return vDot(a1.asym, uOut) >= vDot(a2.asym, uOut) ? a1 : a2;
+        };
+        // miss は法線方向へ。法線は miss を入れる前の面から決めて一度だけ作り直す
+        const o0 = shape(P1);
+        const m = h.via.miss || 0;
+        const o = shape([P1[0] + o0.n[0]*m, P1[1] + o0.n[1]*m, P1[2] + o0.n[2]*m]);
+        return {
+          body, tp, e, A, mu: h.mu, peri: o.peri, side: vCross(o.n, o.peri),
+          ta: tp - h.span, tb: tp + h.span,
+        };
+      });
+      // 窓の両端を経由点として差し込み、外側の補間と位置を繋ぐ
+      for (const H of pr.hyps) {
+        for (const t of [H.ta, H.tb]) {
+          const au = hypAU(H, t, [0, 0, 0]);
+          pr.pts.push({ t, au: [au[0], au[1], au[2]] });
+        }
+      }
+      pr.pts.sort((a, b) => a.t - b.t);
+    }
+  }
+  // 双曲線軌道上の位置 (黄道 au)。中心天体の位置に相対位置を足す
+  function hypAU(H, days, out) {
+    const M = Math.sqrt(H.mu / (H.A * H.A * H.A)) * (days - H.tp) * 86400;
+    // 双曲線ケプラー方程式 M = e sinh F - F を Newton で解く
+    let F = Math.abs(M) > 6 ? Math.sign(M) * Math.log(2 * Math.abs(M) / H.e + 1.8)
+                            : M / (H.e - 1);
+    for (let i = 0; i < 40; i++) {
+      const d = (H.e * Math.sinh(F) - F - M) / (H.e * Math.cosh(F) - 1);
+      F -= d;
+      if (Math.abs(d) < 1e-12) break;
+    }
+    const r = H.A * (H.e * Math.cosh(F) - 1) / AU_KM;
+    const nu = 2 * Math.atan2(Math.sqrt(H.e + 1) * Math.tanh(F / 2), Math.sqrt(H.e - 1));
+    const cn = r * Math.cos(nu), sn = r * Math.sin(nu);
+    keplerAU(H.body, days, out);
+    out[0] += H.peri[0] * cn + H.side[0] * sn;
+    out[1] += H.peri[1] * cn + H.side[1] * sn;
+    out[2] += H.peri[2] * cn + H.side[2] * sn;
+    return out;
+  }
   // 打ち上げ前・最後の経由点より後は null (描かない)
   function probeAU(pr, days, out) {
     const p = pr.pts;
     if (days < p[0].t || days > p[p.length - 1].t) return null;
+    if (pr.hyps) {
+      for (const H of pr.hyps) if (days >= H.ta && days <= H.tb) return hypAU(H, days, out);
+    }
     let i = 0;
     while (i < p.length - 2 && days > p[i + 1].t) i++;
     const p1 = p[i], p2 = p[i + 1];
