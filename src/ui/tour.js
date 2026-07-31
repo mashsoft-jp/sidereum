@@ -136,8 +136,10 @@
     const t = s.play && s.until ? Date.parse(s.until + "Z") : NaN;
     tourUntil = isFinite(t) ? (t - J2000) / DAY_MS : null;
   }
-  function tourStepDone() {
-    tourBar.classList.add("done");
+  // 少し置いてから次のステップへ。「できました」は操作を検知したときの合図
+  // なので、until で時間が来ただけの早送りステップでは出さない
+  function tourAdvance(showDone) {
+    if (showDone) tourBar.classList.add("done");
     tourDoneTimer = setTimeout(() => tourGo(tourIdx + 1), 900);
   }
   function tourWatch() {
@@ -147,12 +149,12 @@
       simDays = tourUntil;
       setPlaying(false);
       tourUntil = null;
-      if (tourIdx < tour.steps.length - 1) tourStepDone();
+      if (tourIdx < tour.steps.length - 1) tourAdvance(false);
       return;
     }
     if (!tourAwaitTest || !tourAwaitTest()) return;
     tourAwaitTest = null;
-    tourStepDone();
+    tourAdvance(true);
   }
   // ツアー中でも、天体の選択を促しているステップだけはキャンバスのクリックを通す
   function tourAllowsSelect() {
