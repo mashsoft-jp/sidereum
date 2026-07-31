@@ -237,10 +237,8 @@
           gl.bindBuffer(gl.ARRAY_BUFFER, pr.pathVB);
         }
         gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+        // 通過済みの区間だけを引く (これから通る先は「まだ無い道」なので描かない)
         const n = pr.pathT.length;
-        gl.uniform4f(lineP.u.uColor, 0.95, 0.70, 0.30, 0.14);
-        gl.drawArrays(gl.LINE_STRIP, 0, n);
-        // 通過済みの区間を上から濃く重ねる
         let i = 0;
         while (i < n - 1 && pr.pathT[i + 1] <= simDays) i++;
         if (i > 0) {
