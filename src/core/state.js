@@ -182,12 +182,13 @@
       pr.hyps = pr.hyp.map((h) => {
         const body = PLANETS.find((x) => x.key === h.at);
         const tp = wayDays(h.peri), tv = wayDays(h.via.d);
+        const after = tv > tp;              // via は近点の前か後か
         // via 天体の、中心天体に対する位置 [km]
         const c1 = keplerAU(body, tv, [0, 0, 0]);
         const P1 = vSub(wayAU(h.via.at, tv, tmp), c1).map((x) => x * AU_KM);
         const r1 = vLen(P1);
         // 離心率: 近点までの所要時間が合う値を二分法で (e が大きいほど速く着く)
-        const want = (tp - tv) * 86400;
+        const want = Math.abs(tp - tv) * 86400;
         let lo = 1.0001, hi = 40;
         for (let i = 0; i < 120; i++) {
           const e = (lo + hi) / 2, A = h.q / (e - 1);
@@ -196,10 +197,12 @@
           if (t > want) lo = e; else hi = e;
         }
         const e = (lo + hi) / 2, A = h.q / (e - 1);
-        const nu1 = -Math.acos(Math.max(-1, Math.min(1, (h.q * (1 + e) / r1 - 1) / e)));
+        const nu1 = (after ? 1 : -1) *
+          Math.acos(Math.max(-1, Math.min(1, (h.q * (1 + e) / r1 - 1) / e)));
         const nuInf = Math.acos(-1 / e);
-        // 離脱方向 = この区間より後の最初の経由点の向き
-        const nx = pr.way.find((w) => wayDays(w.d) > tp);
+        // 離脱方向 (軌道面と、通る側を決めるのに使う)。
+        // to があればその天体の向き、無ければこの区間より後の最初の経由点の向き
+        const nx = h.to || pr.way.find((w) => wayDays(w.d) > tp);
         const nxAU = nx.au || wayAU(nx.at, wayDays(nx.d), [0, 0, 0]);
         const uOut = vUnit(vSub(nxAU, keplerAU(body, tp, [0, 0, 0])));
         const shape = (v) => {

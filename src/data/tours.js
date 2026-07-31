@@ -572,7 +572,7 @@
       id: "voyager1",
       manual: true,
       probe: "voyager1",
-      ver: 8,
+      ver: 9,
       title: { ja: "ボイジャー1号の旅", en: "The Voyage of Voyager 1" },
       lead: {
         ja: "1977年の打ち上げから、木星・土星を経て星間空間へ。人類が最も遠くへ送った機体を追います。",
@@ -607,24 +607,25 @@
         {
           // 探査機視点で木星の脇を通り抜ける。最接近 (中心から 34.9万km) の
           // 視直径は 23°、画角は 45°/2.2 = 20° なので画面からはみ出す。
-          // 再生速度は距離に比例して落ちる (tourRideCam) ので、最後はゆっくり
+          // 再生速度は距離に比例して落ちる (tourRideCam) ので、最後はゆっくり。
+          // 木星まわりも双曲線軌道なので、近点に向かって加速していく
           sel: "jupiter", ride: "jupiter", spot: null, mark: false, mag: 2.2, orbits: false, path: false,
-          d: "1979-03-03", spd: 0.4, play: true, until: "1979-03-05T07:00", stay: true,
+          d: "1979-03-03", spd: 0.4, play: true, until: "1979-03-05T17:00", stay: true,
           text: {
             ja: "ここからはボイジャー1号に乗って見てみます。1979年3月5日、木星最接近。" +
-                "中心から 34万9千km — 木星の半径の5倍のところをかすめ、" +
-                "イオの火山噴火と、木星に薄い環があることを見つけました。" +
-                "内側から近づいて外側へ抜けるので、通り過ぎたあとは細い月のように欠けて見えます。",
-            en: "Now ride along with Voyager 1. On 5 March 1979 it skims 349,000 km from Jupiter's " +
-                "centre — five Jupiter radii — and finds volcanoes erupting on Io and a faint " +
-                "ring around the planet. Arriving from the sunward side and leaving outward, it " +
-                "watches the planet thin to a crescent behind it.",
+                "重力に引かれて秒速13kmから28kmまで加速しながら、中心から 34万9千km — " +
+                "木星の半径の5倍のところをかすめます。その3時間後にはイオの脇 2万km を通り、" +
+                "火山が噴いているのを見つけました。抜けたあとは細い月のように欠けて見えます。",
+            en: "Now ride along with Voyager 1. On 5 March 1979, accelerating from 13 to 28 km/s " +
+                "as Jupiter pulls it in, it skims 349,000 km from the planet's centre — five " +
+                "Jupiter radii. Three hours later it passes 20,000 km from Io and catches its " +
+                "volcanoes erupting. Behind it, Jupiter thins to a crescent.",
           },
         },
         {
           // 引きの画に戻して土星系まで運ぶ。着いたら自動で次 (探査機視点) へ
           sel: null, ride: null, fit: 11, a: 0.5, y: 0.9, mag: 1, orbits: true, path: true,
-          spot: "voyager1", stay: false, d: "1979-03-05T07:00",
+          spot: "voyager1", stay: false, d: "1979-03-05T17:00",
           spd: 55, play: true, until: "1980-11-11T23:41",
           text: {
             ja: "木星の重力で加速し、進路は土星へ。もう一度引いて眺めます。" +
