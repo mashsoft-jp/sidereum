@@ -131,8 +131,12 @@
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIB);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, sphere.idx, gl.STATIC_DRAW);
 
-  // 環 (単位半径の平円環, aR = 半径)
-  const RING_SEG = 160, RING_IN = 1.35, RING_OUT = 2.5;
+  // 環 (単位半径の平円環, aR = 半径)。内外径は実測 (C環の内側 〜 F環の外側) を
+  // 土星の平均半径で割ったもの。半径ごとの濃さと色は RING_KNOTS から焼いた
+  // 1次元テクスチャで引く
+  const RING_SEG = 160;
+  const RING_RM = PLANETS.find((p) => p.key === "saturn").rkm;
+  const RING_IN = RING_R0 / RING_RM, RING_OUT = RING_R1 / RING_RM;
   {
     var ringData = new Float32Array((RING_SEG + 1) * 2 * 4);
     let o = 0;

@@ -42,6 +42,34 @@
   }
   // サンプラーとテクスチャユニットの指定は bodyRenderer.beginPass が毎回行う
 
+  // ---------- 土星の環の半径プロファイル ----------
+  // RING_KNOTS (実測の半径・光学的厚さ・色) を線形に繋いで 1次元テクスチャへ。
+  // アルファには τ ではなく透過率 exp(-τ) を入れる。τ をそのまま 8bit に
+  // 入れると、エンケの間隙 (τ=0.02) のような薄いところが 1段階で潰れるため
+  const RING_TEX_W = 2048;
+  const ringTex = gl.createTexture();
+  {
+    const px = new Uint8Array(RING_TEX_W * 4);
+    let k = 0;
+    for (let i = 0; i < RING_TEX_W; i++) {
+      const r = RING_R0 + (RING_R1 - RING_R0) * (i + 0.5) / RING_TEX_W;
+      while (k < RING_KNOTS.length - 2 && r > RING_KNOTS[k + 1][0]) k++;
+      const a0 = RING_KNOTS[k], a1 = RING_KNOTS[k + 1];
+      const t = Math.max(0, Math.min(1, (r - a0[0]) / ((a1[0] - a0[0]) || 1)));
+      const o = i * 4;
+      for (let c = 0; c < 3; c++) {
+        px[o + c] = Math.round(255 * (a0[c + 2] + (a1[c + 2] - a0[c + 2]) * t));
+      }
+      px[o + 3] = Math.round(255 * Math.exp(-(a0[1] + (a1[1] - a0[1]) * t)));
+    }
+    gl.bindTexture(gl.TEXTURE_2D, ringTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, RING_TEX_W, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  }
+
   // ---------- 星空 ----------
   // 宇宙ビューの背景恒星。以前は乱数配置の装飾だったが、現在はヨール輝星
   // 星表の実位置を使う (バッファ生成は恒星カタログ定義の直後で行う)

@@ -457,6 +457,13 @@
         gl.uniform3f(ringP.u.uAxis, Ag[0], Ag[1], Ag[2]);
         // 環も本体と同じ「土星 → 実際の太陽」方向の遠方光源で照らす
         gl.uniform3f(ringP.u.uSun, satLx * 1e6, satLy * 1e6, satLz * 1e6);
+        gl.uniform3f(ringP.u.uCam, 0.0, 0.0, 0.0);          // 観測者フレームの原点
+        gl.uniform3f(ringP.u.uCenter, satBB.px, satBB.py, satBB.pz);
+        gl.uniform2f(ringP.u.uRadii, s * satBB.b.rEq / satBB.b.rkm, s * satBB.b.rPol / satBB.b.rkm);
+        gl.uniform2f(ringP.u.uRingR, RING_IN, 1.0 / (RING_OUT - RING_IN));
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, ringTex);
+        gl.uniform1i(ringP.u.uProfile, 0);
         gl.bindBuffer(gl.ARRAY_BUFFER, ringVB);
         gl.enableVertexAttribArray(ringP.a.aPos);
         gl.enableVertexAttribArray(ringP.a.aR);
