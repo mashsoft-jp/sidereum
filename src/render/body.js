@@ -120,6 +120,8 @@
         // 雲は地表と別に、1日あたり 0.7° ほど東へ流す (偏西風のゆるい見立て)。
         // 実時間ではなく暦の時刻で決めるので、停止中は雲も止まる
         gl.uniform1f(u.uCloudRot, simDays * 0.0019 - Math.floor(simDays * 0.0019));
+        // 黒点の世代。f32 で桁が落ちない範囲へ畳んでおく (238日周期で群が一巡)
+        gl.uniform1f(u.uSunT, simDays - Math.floor(simDays / 238) * 238);
         gl.activeTexture(gl.TEXTURE0);
         gl.uniform1i(u.uTex, 0);
         gl.uniform1f(u.uTime, time);

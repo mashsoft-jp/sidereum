@@ -13,6 +13,7 @@
     uniform sampler2D uCloud;   // 地球の雲 (被覆率。グレースケール)
     uniform sampler2D uNight;   // 地球の夜景 (街灯りの強さ。グレースケール)
     uniform float uCloudRot;    // 雲の経度オフセット。地表と別に流すため
+    uniform float uSunT;        // 黒点の世代を決める暦の時刻 [日]
     uniform sampler2D uNrm;     // 実測標高から作った接空間の法線 (月・水星・火星)
     uniform float uNrmAmt;      // その強さ。0 = 法線マップを持たない天体
     uniform float uAtmos;       // 1 = 大気シェルとして描く (本体ではなく)
@@ -87,16 +88,61 @@
         // 光球は照らされる面ではなく自発光なので、アルベドではなく放射輝度を直に
         // 置く。赤だけトーンマップの肩を大きく超えさせるのがコツで、そうしないと
         // ACES が彩度を落として白い円盤になる (実際に露出過多の太陽は白く写る)。
-        // ここの2色は、従来の見た目 (画面上の (0.99,0.72,0.26) と (1.0,0.94,0.66))
-        // をトーンマップ後に再現するリニア値
+        // ここの2色は、画面上の (0.99,0.72,0.26) と (1.0,0.94,0.66) を
+        // トーンマップ後に再現するリニア値
         vec3 cA = vec3(3.729, 0.291, 0.050);
         vec3 cB = vec3(8.000, 1.239, 0.230);
-        float n = fbm(p * 4.0 + vec3(0.0, uTime * 0.05, uTime * 0.02));
-        float g = noise(p * 22.0 + uTime * 0.25);
-        vec3 c = mix(cA, cB, smoothstep(0.2, 0.85, n + g * 0.18));
         float mu = max(dot(N, V), 0.0);
-        c *= 0.22 + 0.78 * mu;                     // 周縁減光
-        c += cB * pow(1.0 - mu, 2.0) * 0.35;       // 縁の輝き
+
+        // ---- 粒状斑 ----
+        // 対流セルなので、明るいセルの中心と暗い境目でできている。大・中・小の
+        // 3スケールを重ね、細かいほど速く入れ替わるようにして沸き立たせる
+        float g1 = fbm(p * 5.0  + vec3(0.0, uTime * 0.020, uTime * 0.008));
+        float g2 = fbm(p * 26.0 + vec3(uTime * 0.05, 0.0, uTime * 0.03));
+        float g3 = noise(p * 90.0 + uTime * 0.30);
+        float gran = g1 * 0.46 + g2 * 0.34 + g3 * 0.20;
+        // 境目 (暗いレーン) を少し立たせる。遠目には効かないので縁では薄める
+        gran += (smoothstep(0.42, 0.5, g2) - smoothstep(0.5, 0.58, g2)) * -0.10 * mu;
+
+        // ---- 黒点と白斑 ----
+        // 群は緯度 ±30° あたりに現れ、数十日かけて出て消える。世代を暦の時刻から
+        // 決めるので、停止中は動かず、同じ日付なら同じ配置になる
+        float spot = 0.0, fac = 0.0;
+        for (int i = 0; i < 11; i++) {
+          float fi = float(i);
+          float ph = uSunT / 41.0 + fi * 0.43;
+          float gen = floor(ph), age = fract(ph);
+          float h1 = hash(vec3(fi, gen, 1.7));
+          float h2 = hash(vec3(fi, gen, 5.3));
+          float h3 = hash(vec3(fi, gen, 9.1));
+          float h4 = hash(vec3(fi, gen, 13.9));
+          // 出現から成長し、やがて崩れて消える。3割の世代は群ができない
+          float life = smoothstep(0.0, 0.15, age) * (1.0 - smoothstep(0.55, 1.0, age))
+                     * step(0.16, h3);
+          float lat = (h1 - 0.5) * 0.60;                 // ±約17°
+          float lon = h2 * 6.2831853;
+          float cl = cos(lat);
+          float d = distance(p, vec3(cl * cos(lon), sin(lat), cl * sin(lon)));
+          // life=0 のとき smoothstep の両端が一致すると結果が未定義になるので下限を置く
+          float sz = max((0.030 + 0.075 * h4) * life, 1e-4);
+          float umb = 1.0 - smoothstep(sz * 0.40, sz * 0.62, d);   // 暗部
+          float pen = 1.0 - smoothstep(sz * 0.95, sz * 1.20, d);   // 半暗部
+          spot = max(spot, umb * 0.90 + (pen - umb) * 0.52);
+          // 白斑は群のまわり。縁に近いほど目立つ (実際の観測と同じ)
+          fac = max(fac, (1.0 - smoothstep(sz * 1.3, sz * 2.6, d)) * (1.0 - pen) * life);
+        }
+
+        // 3スケールを足すと分散が下がるので、閾を狭めてコントラストを戻す
+        vec3 c = mix(cA, cB, smoothstep(0.33, 0.71, gran));
+        c *= 1.0 - spot * 0.88;
+        c += cB * fac * 0.28 * (1.0 - mu * 0.75);        // 白斑
+        c *= mix(0.30, 1.0, pow(mu, 0.55));              // 周縁減光
+        // ---- 彩層とプロミネンス ----
+        // 光球のすぐ外側の薄い層。縁だけに赤い縁取りとして出て、ところどころ
+        // 炎のように立ち上がる
+        float rim = 1.0 - smoothstep(0.0, 0.22, mu);
+        float flame = fbm(p * 9.0 + vec3(uTime * 0.03, 0.0, 0.0));
+        c += vec3(2.30, 0.30, 0.16) * pow(rim, 2.2) * (0.35 + 0.9 * flame);
         gl_FragColor = vec4(tonemap(c), 1.0);
         return;
       }
