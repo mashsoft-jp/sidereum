@@ -3430,6 +3430,16 @@
   const noTex = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, noTex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0]));
+  // 縮小時のちらつき対策。ミップマップは WebGL1 では2の累乗サイズが必須なので、
+  // 満たさない画像は従来どおり LINEAR のまま扱う (REPEAT も使えないので本来 NG)
+  const isPOT = (n) => n > 0 && (n & (n - 1)) === 0;
+  // 異方性フィルタ。斜めから見た地表・月面・環の解像感が上がる。
+  // 拡張が無い端末では単に効かない (エラーにはならない)
+  const anisoExt = gl.getExtension("EXT_texture_filter_anisotropic") ||
+                   gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic") ||
+                   gl.getExtension("MOZ_EXT_texture_filter_anisotropic");
+  const anisoMax = anisoExt
+    ? Math.min(8, gl.getParameter(anisoExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT)) : 0;
   for (const key in TEXTURES) {
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -3443,6 +3453,13 @@
     img.onload = () => {
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+      // MIN_FILTER をミップマップ付きにするのは生成した後 (先に変えると不完全な
+      // テクスチャ扱いになり、真っ黒で描かれる)
+      if (isPOT(img.width) && isPOT(img.height)) {
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        if (anisoMax > 1) gl.texParameterf(gl.TEXTURE_2D, anisoExt.TEXTURE_MAX_ANISOTROPY_EXT, anisoMax);
+      }
     };
     img.src = TEXTURES[key];
     texByKey.set(key, tex);
