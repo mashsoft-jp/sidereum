@@ -33,7 +33,7 @@
   let tourSaved = null;       // ツアーが一時的に変える表示設定の退避先
   let tourAwaitTest = null;   // 現在のステップの達成判定 (null = 待っていない)
   let tourDoneTimer = 0;
-  let tourHiEl = null;        // ハイライト中の要素
+  let tourHiEls = [];         // ハイライト中の要素 (hi は複数指定できる)
   let tourSceneDone = false;  // このツアーでシーンを一度でも適用したか
   let tourUntil = null;       // 早送りステップの停止日時 (simDays)
   let tourRideFly = false;    // 引きの画から探査機視点へ寄っている最中
@@ -109,9 +109,9 @@
     for (const k in TOUR_UI_EL) {
       TOUR_UI_EL[k].classList.toggle("tourShow", !!s.ui && s.ui.indexOf(k) >= 0);
     }
-    if (tourHiEl) tourHiEl.classList.remove("tourHi");
-    tourHiEl = s.hi ? document.querySelector(s.hi) : null;
-    if (tourHiEl) tourHiEl.classList.add("tourHi");
+    for (const el of tourHiEls) el.classList.remove("tourHi");
+    tourHiEls = s.hi ? [...document.querySelectorAll(s.hi)] : [];
+    for (const el of tourHiEls) el.classList.add("tourHi");
     // 操作パネルを出すステップはナレーションバーと重なるので、実高さぶん持ち上げる。
     // パネルの高さはビュー (宇宙/地上) で変わり、クラスを付けた直後はまだ確定して
     // いないことがあるので、次のフレームで測り直す
@@ -538,7 +538,8 @@
     tourActive = false;
     if (tourSaved) { restoreTourState(tourSaved, keepScene); tourSaved = null; }
     for (const k in TOUR_UI_EL) TOUR_UI_EL[k].classList.remove("tourShow");
-    if (tourHiEl) { tourHiEl.classList.remove("tourHi"); tourHiEl = null; }
+    for (const el of tourHiEls) el.classList.remove("tourHi");
+    tourHiEls = [];
     tourBar.style.bottom = "";
     tourBar.classList.remove("done", "open");
     tourApp.classList.remove("tourMode");

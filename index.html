@@ -1634,7 +1634,7 @@
   //         畳み込みで前の設定が毎回再適用されるため、利用者に操作させる
   //         チュートリアルではこれが無いとカメラが巻き戻る
   //   ui    一時的に出す UI: "controls" / "nav" / "menu" / "view" / "clock"
-  //   hi    ハイライトする要素の CSS セレクタ
+  //   hi    ハイライトする要素の CSS セレクタ (カンマ区切りで複数可)
   //   wide  画面が広い端末 (タブレット等) 用の差し替え。ビュー切替は狭い画面
   //         でだけハンバーガーメニューへ入るので、案内する場所と文言を変える
   //   await 促した操作の検知。「できました」を出す (次へ進むのは自動送り時のみ):
@@ -1731,7 +1731,7 @@
           },
         },
         {
-          scene: false, ui: ["controls"], hi: "#play", await: "play",
+          scene: false, ui: ["controls"], hi: "#play, #speed", await: "play",
           text: {
             ja: "下のパネルの再生ボタンで時間を進められます。速度は隣のスライダーで、" +
                 "1秒 = 1秒 から約240年まで変えられます。押してみてください。",
@@ -1836,7 +1836,7 @@
           },
         },
         {
-          scene: false, ui: ["controls"], hi: "#play", await: "play",
+          scene: false, ui: ["controls"], hi: "#play, #speed", await: "play",
           text: {
             ja: "下のパネルの再生ボタンで時間を進められます。速度は隣のスライダーで、" +
                 "1秒 = 1秒 から約240年まで変えられます。押してみてください。",
@@ -7543,7 +7543,7 @@
   let tourSaved = null;       // ツアーが一時的に変える表示設定の退避先
   let tourAwaitTest = null;   // 現在のステップの達成判定 (null = 待っていない)
   let tourDoneTimer = 0;
-  let tourHiEl = null;        // ハイライト中の要素
+  let tourHiEls = [];         // ハイライト中の要素 (hi は複数指定できる)
   let tourSceneDone = false;  // このツアーでシーンを一度でも適用したか
   let tourUntil = null;       // 早送りステップの停止日時 (simDays)
   let tourRideFly = false;    // 引きの画から探査機視点へ寄っている最中
@@ -7619,9 +7619,9 @@
     for (const k in TOUR_UI_EL) {
       TOUR_UI_EL[k].classList.toggle("tourShow", !!s.ui && s.ui.indexOf(k) >= 0);
     }
-    if (tourHiEl) tourHiEl.classList.remove("tourHi");
-    tourHiEl = s.hi ? document.querySelector(s.hi) : null;
-    if (tourHiEl) tourHiEl.classList.add("tourHi");
+    for (const el of tourHiEls) el.classList.remove("tourHi");
+    tourHiEls = s.hi ? [...document.querySelectorAll(s.hi)] : [];
+    for (const el of tourHiEls) el.classList.add("tourHi");
     // 操作パネルを出すステップはナレーションバーと重なるので、実高さぶん持ち上げる。
     // パネルの高さはビュー (宇宙/地上) で変わり、クラスを付けた直後はまだ確定して
     // いないことがあるので、次のフレームで測り直す
@@ -8048,7 +8048,8 @@
     tourActive = false;
     if (tourSaved) { restoreTourState(tourSaved, keepScene); tourSaved = null; }
     for (const k in TOUR_UI_EL) TOUR_UI_EL[k].classList.remove("tourShow");
-    if (tourHiEl) { tourHiEl.classList.remove("tourHi"); tourHiEl = null; }
+    for (const el of tourHiEls) el.classList.remove("tourHi");
+    tourHiEls = [];
     tourBar.style.bottom = "";
     tourBar.classList.remove("done", "open");
     tourApp.classList.remove("tourMode");
