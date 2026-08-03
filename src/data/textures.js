@@ -21,4 +21,11 @@
     ceres:   "ceres.jpg",
     vesta:   "vesta.jpg",
   };
-  const texURL = (key) => TEX_DIR + TEXTURES[key];
+  // 地表以外に地球だけが持つ2枚。天体のキーではないので TEXTURES とは分ける
+  //   雲   Blue Marble: Clouds (NASA Earth Observatory) — 被覆率としてグレースケールで持つ
+  //   夜景 Black Marble 2016 (NASA Earth Observatory) — 下地の海陸を落として街灯りだけ残した
+  const TEXTURES_EXTRA = {
+    cloud: "earth-clouds.jpg",
+    night: "earth-night.jpg",
+  };
+  const texURL = (key) => TEX_DIR + (TEXTURES[key] || TEXTURES_EXTRA[key]);

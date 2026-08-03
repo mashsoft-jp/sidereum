@@ -99,11 +99,21 @@
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIB);
         gl.enableVertexAttribArray(a.aPos);
         gl.vertexAttribPointer(a.aPos, 3, gl.FLOAT, false, 0, 0);
-        // 環の影に使うプロファイルはユニット1に据え置き (天体テクスチャは0)
+        // 天体テクスチャだけがユニット0で入れ替わる。環のプロファイルと
+        // 地球の雲・夜景はパスの間ずっと同じなので 1〜3 に据え置く
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_2D, ringTex);
         gl.uniform1i(u.uRing, 1);
         gl.uniform2f(u.uRingR, RING_IN, 1.0 / (RING_OUT - RING_IN));
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, cloudTex);
+        gl.uniform1i(u.uCloud, 2);
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, nightTex);
+        gl.uniform1i(u.uNight, 3);
+        // 雲は地表と別に、1日あたり 0.7° ほど東へ流す (偏西風のゆるい見立て)。
+        // 実時間ではなく暦の時刻で決めるので、停止中は雲も止まる
+        gl.uniform1f(u.uCloudRot, simDays * 0.0019 - Math.floor(simDays * 0.0019));
         gl.activeTexture(gl.TEXTURE0);
         gl.uniform1i(u.uTex, 0);
         gl.uniform1f(u.uTime, time);

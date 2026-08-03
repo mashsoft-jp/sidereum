@@ -10,6 +10,9 @@
     uniform float uRingOn;      // 環を持つ天体 (土星) だけ 1
     uniform vec2 uRingR;        // 環プロファイルの参照範囲 (内径, 1/(外径-内径))
     uniform sampler2D uRing;
+    uniform sampler2D uCloud;   // 地球の雲 (被覆率。グレースケール)
+    uniform sampler2D uNight;   // 地球の夜景 (街灯りの強さ。グレースケール)
+    uniform float uCloudRot;    // 雲の経度オフセット。地表と別に流すため
 
     float hash(vec3 p) {
       p = fract(p * 0.1031);
@@ -84,6 +87,10 @@
       // テクスチャと即値だけここで戻す
       vec3 alb = vec3(0.5);
       float spec = 0.0;
+      // 地球だけ、地表のあとに雲・夜景・大気を重ねる。そのぶんの持ち回り
+      float isEarth = step(3.5, uType) * step(uType, 4.5) * uHasTex;
+      float cloud = 0.0;
+      vec2 uv = vec2(0.0);
 
       if (uComet > 0.5) {
         // ---- 彗星核: 自発光しない、煤と有機物に覆われた非常に暗い表面 ----
@@ -94,8 +101,8 @@
         alb *= 0.58 + 0.52 * smoothstep(0.28, 0.76, pits);
       } else if (uHasTex > 0.5) {
         // ---- 実テクスチャ (NASA/USGS 全球マップ) ----
-        vec2 uv = vec2(0.5 - atan(p.z, p.x) / 6.2831853,
-                       acos(clamp(p.y, -1.0, 1.0)) / 3.14159265);
+        uv = vec2(0.5 - atan(p.z, p.x) / 6.2831853,
+                  acos(clamp(p.y, -1.0, 1.0)) / 3.14159265);
 #ifdef TEXLOD
         // 経度は継ぎ目 (atan の折り返し) で 1→0 に飛ぶ。そのままだと継ぎ目を
         // またぐ画素の微分が 1周ぶんになり、ミップ段が最粗まで落ちて縦縞が出る。
@@ -110,11 +117,29 @@
         alb = srgbToLinear(texture2D(uTex, uv).rgb);
 #endif
         if (uType > 3.5 && uType < 4.5) {
-          // 地球のみ: 雲と海面の鏡面反射を重ねる
+          // ---- 地球: 雲・雲の影・海面の反射 ----
+          // 雲は地表とは別に、ゆっくり東へ流す
+          vec2 cuv = vec2(fract(uv.x + uCloudRot), uv.y);
+          cloud = texture2D(uCloud, cuv).r;
+
+          // 雲が地表へ落とす影。雲層は地表より CLOUD_H だけ高いので、地表の点から
+          // 太陽へ伸ばした線が雲層を横切る位置は接平面方向へ CLOUD_H/cosθ ずれる。
+          // 太陽が低いほど影が長く伸びる (朝夕の斜光と同じ)
+          float ndl = max(dot(p, L), 0.08);
+          vec3 Lt = L - p * dot(L, p);                        // 太陽方向の接平面成分
+          vec3 east = normalize(cross(vec3(0.0, 1.0, 0.0), p));
+          vec3 north = cross(p, east);
+          float k = 0.0016 / ndl;                             // 弧長 (地球半径 = 1)
+          float cosLat = max(sqrt(max(1.0 - p.y * p.y, 0.0)), 0.15);
+          vec2 suv = vec2(fract(cuv.x + dot(Lt, east) * k / cosLat / 6.2831853),
+                          clamp(cuv.y - dot(Lt, north) * k / 3.14159265, 0.0, 1.0));
+          alb *= 1.0 - 0.55 * texture2D(uCloud, suv).r;
+
+          // 海面。雲より先に、地表の色が青く偏っているかで判定する
           float ocean = smoothstep(0.004, 0.03, alb.b - alb.r) * smoothstep(0.004, 0.03, alb.b - alb.g);
-          float cl = smoothstep(0.55, 0.78, fbm(p * 4.5 + vec3(uTime * 0.02, 0.0, uTime * 0.007)));
-          alb = mix(alb, vec3(1.0), cl * 0.7);
-          spec = pow(max(dot(reflect(-L, N), V), 0.0), 42.0) * ocean * (1.0 - cl) * 0.55;
+          spec = pow(max(dot(reflect(-L, N), V), 0.0), 60.0) * ocean * (1.0 - cloud) * 1.1;
+
+          alb = mix(alb, vec3(0.90), cloud);
         }
       } else if (uType < 1.5) {
         // ---- 岩石 (テクスチャ無し小天体) ----
@@ -158,6 +183,25 @@
       float ambient = uAmb * dayFade;
       float direct = mix(1.0, 1.03, uComet) - ambient;
       vec3 c = alb * (ambient + dif * direct) + vec3(spec) * dif;
+
+      if (isEarth > 0.5) {
+        float ndl = dot(N, L);
+        // ---- 大気 ----
+        // 縁ほど大気を長く見通すので青みが強い。太陽が向こう側にあるとき
+        // (視線と太陽が同じ側 = 前方散乱) は明け方の空のように暖色へ振れる
+        float limb = pow(1.0 - max(dot(N, V), 0.0), 3.2);
+        float fwd = pow(max(dot(-V, L), 0.0), 6.0);
+        vec3 air = mix(vec3(0.052, 0.135, 0.360),    // レイリー (青)
+                       vec3(0.420, 0.180, 0.070),    // 前方散乱 (夕焼け色)
+                       fwd * 0.75);
+        c += air * limb * smoothstep(-0.28, 0.22, ndl) * (1.0 - uAirDay);
+
+        // ---- 夜景 ----
+        // 昼夜境界の内側だけ。雲の下は遮られ、地上ビューの昼空では見えない
+        float night = smoothstep(0.10, -0.12, ndl);
+        c += vec3(1.0, 0.78, 0.45) * texture2D(uNight, uv).r
+             * night * (1.0 - cloud * 0.85) * 0.55 * (1.0 - uAirDay);
+      }
       // 地上ビューの昼間は、天体との間の大気そのものが光っている (エアライト)。
       // 大気は天体より手前にあるので色を上乗せする。これが無いと、新月ごろの月が
       // 青空に黒い円盤として浮いてしまう (実際は夜側は空と見分けがつかない)。

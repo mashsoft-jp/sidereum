@@ -76,6 +76,8 @@ tex/               天体テクスチャ (ビルド対象外。index.html と一
 | 水星 | MESSENGER MDIS Basemap MD3Color 全球モザイク (32 ppd) | NASA/Johns Hopkins University APL/Carnegie Institution of Washington |
 | 金星 | Magellan レーダー全球図 (地表) | NASA/JPL |
 | 地球 | Blue Marble: Land Surface, Shallow Water, and Shaded Topography ([57752](https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57752/land_shallow_topo_2048.jpg)) | NASA Earth Observatory (Reto Stöckli, NASA/GSFC / Robert Simmon) |
+| 地球 (雲) | Blue Marble: Clouds | NASA Earth Observatory |
+| 地球 (夜景) | Black Marble 2016 (VIIRS DNB) | NASA Earth Observatory |
 | 月 | LRO LROC WAC 全球モザイク (CGI Moon Kit) | NASA/GSFC/Arizona State University, NASA Scientific Visualization Studio |
 | 火星 | Viking MDIM 2.1 カラーモザイク | NASA/USGS |
 | 木星 | Cassini 円筒図法マップ (PIA07782) | NASA/JPL/Space Science Institute |

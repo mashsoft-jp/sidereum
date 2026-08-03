@@ -21,7 +21,7 @@
   const texWarn = (key, why) =>
     console.warn(`テクスチャ ${texURL(key)} を使えませんでした: ${why}` +
       (location.protocol === "file:" ? " — file:// では画像を読み込めません。HTTP で配信してください" : ""));
-  for (const key in TEXTURES) {
+  function loadTex(key) {
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
     // 読み込み完了までの仮色
@@ -52,8 +52,12 @@
     // tex/ を index.html と一緒に置き忘れた場合にここへ来る
     img.onerror = () => texWarn(key, "取得できませんでした");
     img.src = texURL(key);
-    texByKey.set(key, tex);
+    return tex;
   }
+  for (const key in TEXTURES) texByKey.set(key, loadTex(key));
+  // 地球の雲と夜景。天体テクスチャとは別のユニットに常駐させる
+  const cloudTex = loadTex("cloud");
+  const nightTex = loadTex("night");
   // サンプラーとテクスチャユニットの指定は bodyRenderer.beginPass が毎回行う
 
   // ---------- 土星の環の半径プロファイル ----------
