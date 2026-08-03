@@ -58,6 +58,9 @@
   // 地球の雲と夜景。天体テクスチャとは別のユニットに常駐させる
   const cloudTex = loadTex("cloud");
   const nightTex = loadTex("night");
+  // 法線図。天体ごとに差し替わるので、地表テクスチャと同じくキーで引く
+  const nrmByKey = new Map();
+  for (const key in NORMALS) nrmByKey.set(key, loadTex("nrm:" + key));
   // サンプラーとテクスチャユニットの指定は bodyRenderer.beginPass が毎回行う
 
   // ---------- 土星の環の半径プロファイル ----------

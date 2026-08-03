@@ -85,6 +85,9 @@ tex/               天体テクスチャ (ビルド対象外。index.html と一
 | 冥王星 | New Horizons 全球モザイク | NASA/JHUAPL/SwRI |
 | ケレス | Dawn FC 全球モザイク (DLR, 20 ppd) | NASA/JPL-Caltech/UCLA/MPS/DLR/IDA |
 | ベスタ | Dawn FC HAMO 全球モザイク (74 ppd) | NASA/JPL-Caltech/UCLA/MPS/DLR/IDA |
+| 月 (法線) | LOLA 標高 (LDEM 16 ppd, CGI Moon Kit) | NASA/GSFC/Arizona State University, NASA Scientific Visualization Studio |
+| 火星 (法線) | MOLA MEGDR 標高 (16 ppd) | NASA/JPL/GSFC (MGS MOLA Science Team) |
+| 水星 (法線) | MESSENGER 全球 DEM v2 (665 m) | NASA/Johns Hopkins University APL/Carnegie Institution of Washington/USGS |
 
 画像は USGS Astrogeology、NASA SVS、NASA Earth Observatory、および Wikimedia Commons 経由で取得し、いずれも 2048×1024 の正距円筒図法へ縮小・JPEG 再圧縮のうえ `tex/` に置いています (地球のみ NASA 配布の 2048×1024 をそのまま)。
 

@@ -13,6 +13,8 @@
     uniform sampler2D uCloud;   // 地球の雲 (被覆率。グレースケール)
     uniform sampler2D uNight;   // 地球の夜景 (街灯りの強さ。グレースケール)
     uniform float uCloudRot;    // 雲の経度オフセット。地表と別に流すため
+    uniform sampler2D uNrm;     // 実測標高から作った接空間の法線 (月・水星・火星)
+    uniform float uNrmAmt;      // その強さ。0 = 法線マップを持たない天体
     uniform float uAtmos;       // 1 = 大気シェルとして描く (本体ではなく)
     uniform float uAtmosT;      // シェルの厚み (天体半径を 1 とした比)
 
@@ -99,6 +101,38 @@
         return;
       }
 
+      // ---- 全球マップの uv と、その折り返しを含まない微分 ----
+      // 法線マップを照明より先に当てたいので、テクスチャの分岐より上で作る
+      vec2 uv = vec2(0.5 - atan(p.z, p.x) / 6.2831853,
+                     acos(clamp(p.y, -1.0, 1.0)) / 3.14159265);
+      vec2 dux = vec2(0.0), duy = vec2(0.0);
+#ifdef TEXLOD
+      // 経度は継ぎ目 (atan の折り返し) で 1→0 に飛ぶ。連続な p の微分から
+      // 連鎖律で uv の微分を出し、折り返しを含まない値を SAMPLE へ渡す
+      {
+        vec3 px = dFdx(p), py = dFdy(p);
+        float r2 = max(p.x * p.x + p.z * p.z, 1e-8);                // ∂atan の分母
+        float sv = 3.14159265 * sqrt(max(1.0 - p.y * p.y, 1e-8));   // ∂acos の分母
+        dux = vec2(-(p.x * px.z - p.z * px.x) / (r2 * 6.2831853), -px.y / sv);
+        duy = vec2(-(p.x * py.z - p.z * py.x) / (r2 * 6.2831853), -py.y / sv);
+      }
+#endif
+
+      // ---- 法線マップ (月・水星・火星) ----
+      // 実測の標高から作った接空間の法線を、球の法線へ乗せる。アルベド図は
+      // 一定の照明で正規化されていて起伏が焼き込まれているため、これが無いと
+      // 太陽が動いてもクレーターの陰影が変わらず、のっぺりして見える
+      if (uNrmAmt > 0.0) {
+        vec3 t = SAMPLE(uNrm, uv).rgb * 2.0 - 1.0;
+        // 接基底。極では東西方向が縮退するので、そこは素の法線のままにする
+        vec3 e = cross(vec3(0.0, 1.0, 0.0), p);
+        float el = length(e);
+        if (el > 0.02) {
+          e /= el;
+          N = normalize(N + (e * t.x + cross(p, e) * t.y) * uNrmAmt);
+        }
+      }
+
       vec3 L = normalize(uSun - vW);                // 光源 = 太陽 (カメラ相対座標)
       float dif = max(dot(N, L), 0.0);
 
@@ -132,9 +166,6 @@
       // 地球だけ、地表のあとに雲・夜景・大気を重ねる。そのぶんの持ち回り
       float isEarth = step(3.5, uType) * step(uType, 4.5) * uHasTex;
       float cloud = 0.0;
-      vec2 uv = vec2(0.0);
-      // SAMPLE が使う微分。雲・夜景も同じ球の同じ uv 系なので使い回せる
-      vec2 dux = vec2(0.0), duy = vec2(0.0);
 
       if (uComet > 0.5) {
         // ---- 彗星核: 自発光しない、煤と有機物に覆われた非常に暗い表面 ----
@@ -145,17 +176,6 @@
         alb *= 0.58 + 0.52 * smoothstep(0.28, 0.76, pits);
       } else if (uHasTex > 0.5) {
         // ---- 実テクスチャ (NASA/USGS 全球マップ) ----
-        uv = vec2(0.5 - atan(p.z, p.x) / 6.2831853,
-                  acos(clamp(p.y, -1.0, 1.0)) / 3.14159265);
-#ifdef TEXLOD
-        // 経度は継ぎ目 (atan の折り返し) で 1→0 に飛ぶ。連続な p の微分から
-        // 連鎖律で uv の微分を出し、折り返しを含まない値を SAMPLE へ渡す
-        vec3 px = dFdx(p), py = dFdy(p);
-        float r2 = max(p.x * p.x + p.z * p.z, 1e-8);                // ∂atan の分母
-        float sv = 3.14159265 * sqrt(max(1.0 - p.y * p.y, 1e-8));   // ∂acos の分母
-        dux = vec2(-(p.x * px.z - p.z * px.x) / (r2 * 6.2831853), -px.y / sv);
-        duy = vec2(-(p.x * py.z - p.z * py.x) / (r2 * 6.2831853), -py.y / sv);
-#endif
         alb = srgbToLinear(SAMPLE(uTex, uv).rgb);
         if (uType > 3.5 && uType < 4.5) {
           // ---- 地球: 雲・雲の影・海面の反射 ----

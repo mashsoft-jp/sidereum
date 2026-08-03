@@ -1104,7 +1104,7 @@
   // ============================================================
   const PLANETS = [
     { key:"mercury", name:"水星", en:"MERCURY", a:0.3871, e:0.2056, T:87.969, i:7.005, node:48.331, peri:77.46, L0:252.25,
-      tilt:0.03, rot:58.65, rkm:2440, type:1,
+      tilt:0.03, rot:58.65, rkm:2440, type:1, nrm:0.9,
       colA:[0.62,0.58,0.54], colB:[0.45,0.42,0.40], colC:[0,0,0], rim:[0,0,0], params:[0,0,0,0],
       rows:[["直径","4,879 km"],["質量","3.30×10²³ kg"],["平均距離","0.39 au"],["公転周期","88.0 日"],["自転周期","58.6 日"],["平均温度","167 ℃"],["衛星","0"]],
       fact:"大気がほとんどないため昼は約430℃、夜は−180℃。太陽系で最も温度差が激しい惑星です。" },
@@ -1121,7 +1121,7 @@
       rows:[["直径","12,742 km"],["質量","5.97×10²⁴ kg"],["平均距離","1.00 au"],["公転周期","365.25 日"],["自転周期","23.9 時間"],["平均温度","15 ℃"],["衛星","1 (月)"]],
       fact:"表面の約7割が液体の水に覆われた、生命の存在が確認されている唯一の天体。接近すると月も見えます。" },
     { key:"mars", name:"火星", en:"MARS", a:1.5237, e:0.0934, T:686.980, i:1.850, node:49.558, peri:336.04, L0:355.45,
-      tilt:25.19, rot:1.026, rkm:3390, type:2,
+      tilt:25.19, rot:1.026, rkm:3390, type:2, nrm:0.7,
       colA:[0.72,0.36,0.20], colB:[0.52,0.26,0.15], colC:[0,0,0], rim:[0.8,0.5,0.3], params:[0,0,0,0],
       rows:[["直径","6,779 km"],["質量","6.42×10²³ kg"],["平均距離","1.52 au"],["公転周期","687.0 日"],["自転周期","24.6 時間"],["平均温度","−63 ℃"],["衛星","2"]],
       fact:"酸化鉄の砂に覆われた「赤い惑星」。太陽系最大の火山オリンポス山 (高さ約22 km) があります。" },
@@ -1188,6 +1188,7 @@
 
   const MOON = {
     key:"moon", name:"月", en:"MOON", type:1, tilt:6.7, rot:27.322, rkm:1737,
+    nrm:1.0,     // 法線マップの強さ (焼き込みが実寸の3倍なので、ここは 1 で約3倍の起伏)
     colA:[0.72,0.71,0.69], colB:[0.5,0.5,0.5], colC:[0,0,0], rim:[0,0,0], params:[0,0,0,0],
     rows:[["直径","3,475 km"],["質量","7.35×10²² kg"],["平均距離","38.4万 km"],["公転周期","27.3 日"],["自転周期","27.3 日 (同期)"],["平均温度","−23 ℃"]],
     fact:"地球の唯一の衛星。自転と公転が同期しているため、地球からは常に同じ面だけが見えます。"
@@ -2981,6 +2982,8 @@
     uniform sampler2D uCloud;   // 地球の雲 (被覆率。グレースケール)
     uniform sampler2D uNight;   // 地球の夜景 (街灯りの強さ。グレースケール)
     uniform float uCloudRot;    // 雲の経度オフセット。地表と別に流すため
+    uniform sampler2D uNrm;     // 実測標高から作った接空間の法線 (月・水星・火星)
+    uniform float uNrmAmt;      // その強さ。0 = 法線マップを持たない天体
     uniform float uAtmos;       // 1 = 大気シェルとして描く (本体ではなく)
     uniform float uAtmosT;      // シェルの厚み (天体半径を 1 とした比)
 
@@ -3067,6 +3070,38 @@
         return;
       }
 
+      // ---- 全球マップの uv と、その折り返しを含まない微分 ----
+      // 法線マップを照明より先に当てたいので、テクスチャの分岐より上で作る
+      vec2 uv = vec2(0.5 - atan(p.z, p.x) / 6.2831853,
+                     acos(clamp(p.y, -1.0, 1.0)) / 3.14159265);
+      vec2 dux = vec2(0.0), duy = vec2(0.0);
+#ifdef TEXLOD
+      // 経度は継ぎ目 (atan の折り返し) で 1→0 に飛ぶ。連続な p の微分から
+      // 連鎖律で uv の微分を出し、折り返しを含まない値を SAMPLE へ渡す
+      {
+        vec3 px = dFdx(p), py = dFdy(p);
+        float r2 = max(p.x * p.x + p.z * p.z, 1e-8);                // ∂atan の分母
+        float sv = 3.14159265 * sqrt(max(1.0 - p.y * p.y, 1e-8));   // ∂acos の分母
+        dux = vec2(-(p.x * px.z - p.z * px.x) / (r2 * 6.2831853), -px.y / sv);
+        duy = vec2(-(p.x * py.z - p.z * py.x) / (r2 * 6.2831853), -py.y / sv);
+      }
+#endif
+
+      // ---- 法線マップ (月・水星・火星) ----
+      // 実測の標高から作った接空間の法線を、球の法線へ乗せる。アルベド図は
+      // 一定の照明で正規化されていて起伏が焼き込まれているため、これが無いと
+      // 太陽が動いてもクレーターの陰影が変わらず、のっぺりして見える
+      if (uNrmAmt > 0.0) {
+        vec3 t = SAMPLE(uNrm, uv).rgb * 2.0 - 1.0;
+        // 接基底。極では東西方向が縮退するので、そこは素の法線のままにする
+        vec3 e = cross(vec3(0.0, 1.0, 0.0), p);
+        float el = length(e);
+        if (el > 0.02) {
+          e /= el;
+          N = normalize(N + (e * t.x + cross(p, e) * t.y) * uNrmAmt);
+        }
+      }
+
       vec3 L = normalize(uSun - vW);                // 光源 = 太陽 (カメラ相対座標)
       float dif = max(dot(N, L), 0.0);
 
@@ -3100,9 +3135,6 @@
       // 地球だけ、地表のあとに雲・夜景・大気を重ねる。そのぶんの持ち回り
       float isEarth = step(3.5, uType) * step(uType, 4.5) * uHasTex;
       float cloud = 0.0;
-      vec2 uv = vec2(0.0);
-      // SAMPLE が使う微分。雲・夜景も同じ球の同じ uv 系なので使い回せる
-      vec2 dux = vec2(0.0), duy = vec2(0.0);
 
       if (uComet > 0.5) {
         // ---- 彗星核: 自発光しない、煤と有機物に覆われた非常に暗い表面 ----
@@ -3113,17 +3145,6 @@
         alb *= 0.58 + 0.52 * smoothstep(0.28, 0.76, pits);
       } else if (uHasTex > 0.5) {
         // ---- 実テクスチャ (NASA/USGS 全球マップ) ----
-        uv = vec2(0.5 - atan(p.z, p.x) / 6.2831853,
-                  acos(clamp(p.y, -1.0, 1.0)) / 3.14159265);
-#ifdef TEXLOD
-        // 経度は継ぎ目 (atan の折り返し) で 1→0 に飛ぶ。連続な p の微分から
-        // 連鎖律で uv の微分を出し、折り返しを含まない値を SAMPLE へ渡す
-        vec3 px = dFdx(p), py = dFdy(p);
-        float r2 = max(p.x * p.x + p.z * p.z, 1e-8);                // ∂atan の分母
-        float sv = 3.14159265 * sqrt(max(1.0 - p.y * p.y, 1e-8));   // ∂acos の分母
-        dux = vec2(-(p.x * px.z - p.z * px.x) / (r2 * 6.2831853), -px.y / sv);
-        duy = vec2(-(p.x * py.z - p.z * py.x) / (r2 * 6.2831853), -py.y / sv);
-#endif
         alb = srgbToLinear(SAMPLE(uTex, uv).rgb);
         if (uType > 3.5 && uType < 4.5) {
           // ---- 地球: 雲・雲の影・海面の反射 ----
@@ -3791,7 +3812,16 @@
     cloud: "earth-clouds.jpg",
     night: "earth-night.jpg",
   };
-  const texURL = (key) => TEX_DIR + (TEXTURES[key] || TEXTURES_EXTRA[key]);
+  // 実測の標高から起こした接空間の法線図。アルベド図は一定の照明で正規化されて
+  // いて起伏が焼き込まれているため、これが無いと太陽が動いても陰影が変わらない。
+  //   月   LOLA (NASA SVS) / 火星 MOLA (PDS) / 水星 MESSENGER DEM (USGS)
+  // 起伏は実寸の 3倍で焼いてある (8bit に収めるため。強さは uNrmAmt で調整)
+  const NORMALS = {
+    moon:    "moon-nrm.jpg",
+    mars:    "mars-nrm.jpg",
+    mercury: "mercury-nrm.jpg",
+  };
+  const texURL = (key) => TEX_DIR + (TEXTURES[key] || TEXTURES_EXTRA[key] || NORMALS[key.replace(/^nrm:/, "")]);
   //#endregion
   //#region src/gl/resources.js
   const texByKey = new Map();
@@ -3854,6 +3884,9 @@
   // 地球の雲と夜景。天体テクスチャとは別のユニットに常駐させる
   const cloudTex = loadTex("cloud");
   const nightTex = loadTex("night");
+  // 法線図。天体ごとに差し替わるので、地表テクスチャと同じくキーで引く
+  const nrmByKey = new Map();
+  for (const key in NORMALS) nrmByKey.set(key, loadTex("nrm:" + key));
   // サンプラーとテクスチャユニットの指定は bodyRenderer.beginPass が毎回行う
 
   // ---------- 土星の環の半径プロファイル ----------
@@ -4628,6 +4661,7 @@
         gl.activeTexture(gl.TEXTURE3);
         gl.bindTexture(gl.TEXTURE_2D, nightTex);
         gl.uniform1i(u.uNight, 3);
+        gl.uniform1i(u.uNrm, 4);   // ユニット4 は天体ごとに draw() が差し替える
         // 雲は地表と別に、1日あたり 0.7° ほど東へ流す (偏西風のゆるい見立て)。
         // 実時間ではなく暦の時刻で決めるので、停止中は雲も止まる
         gl.uniform1f(u.uCloudRot, simDays * 0.0019 - Math.floor(simDays * 0.0019));
@@ -4673,6 +4707,13 @@
       draw({ body, model, mvp, sunPosition, radiusPx }) {
         if (!inPass) throw new Error("bodyRenderer: beginPass より前に draw が呼ばれました");
         const tx = texByKey.get(body.key);
+        // 法線図を持つ天体だけユニット4を差し替える。持たない天体でも
+        // 「持っていない」ことを毎回伝える (前の天体の値を引き継がせない)
+        const nx = nrmByKey.get(body.key);
+        gl.activeTexture(gl.TEXTURE4);
+        gl.bindTexture(gl.TEXTURE_2D, nx || noTex);
+        gl.uniform1f(u.uNrmAmt, nx ? body.nrm : 0);
+        gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, tx || noTex);
         gl.uniform1f(u.uHasTex, tx ? 1 : 0);
         gl.uniform1f(u.uAmb, nightAmbient(body, radiusPx));

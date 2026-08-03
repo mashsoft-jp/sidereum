@@ -116,6 +116,7 @@
         gl.activeTexture(gl.TEXTURE3);
         gl.bindTexture(gl.TEXTURE_2D, nightTex);
         gl.uniform1i(u.uNight, 3);
+        gl.uniform1i(u.uNrm, 4);   // ユニット4 は天体ごとに draw() が差し替える
         // 雲は地表と別に、1日あたり 0.7° ほど東へ流す (偏西風のゆるい見立て)。
         // 実時間ではなく暦の時刻で決めるので、停止中は雲も止まる
         gl.uniform1f(u.uCloudRot, simDays * 0.0019 - Math.floor(simDays * 0.0019));
@@ -161,6 +162,13 @@
       draw({ body, model, mvp, sunPosition, radiusPx }) {
         if (!inPass) throw new Error("bodyRenderer: beginPass より前に draw が呼ばれました");
         const tx = texByKey.get(body.key);
+        // 法線図を持つ天体だけユニット4を差し替える。持たない天体でも
+        // 「持っていない」ことを毎回伝える (前の天体の値を引き継がせない)
+        const nx = nrmByKey.get(body.key);
+        gl.activeTexture(gl.TEXTURE4);
+        gl.bindTexture(gl.TEXTURE_2D, nx || noTex);
+        gl.uniform1f(u.uNrmAmt, nx ? body.nrm : 0);
+        gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, tx || noTex);
         gl.uniform1f(u.uHasTex, tx ? 1 : 0);
         gl.uniform1f(u.uAmb, nightAmbient(body, radiusPx));

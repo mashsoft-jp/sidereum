@@ -28,4 +28,13 @@
     cloud: "earth-clouds.jpg",
     night: "earth-night.jpg",
   };
-  const texURL = (key) => TEX_DIR + (TEXTURES[key] || TEXTURES_EXTRA[key]);
+  // 実測の標高から起こした接空間の法線図。アルベド図は一定の照明で正規化されて
+  // いて起伏が焼き込まれているため、これが無いと太陽が動いても陰影が変わらない。
+  //   月   LOLA (NASA SVS) / 火星 MOLA (PDS) / 水星 MESSENGER DEM (USGS)
+  // 起伏は実寸の 3倍で焼いてある (8bit に収めるため。強さは uNrmAmt で調整)
+  const NORMALS = {
+    moon:    "moon-nrm.jpg",
+    mars:    "mars-nrm.jpg",
+    mercury: "mercury-nrm.jpg",
+  };
+  const texURL = (key) => TEX_DIR + (TEXTURES[key] || TEXTURES_EXTRA[key] || NORMALS[key.replace(/^nrm:/, "")]);
