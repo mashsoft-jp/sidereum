@@ -198,6 +198,6 @@
   {
     const mimg = new Image();
     mimg.onload = () => buildMoonDisc(mimg);
-    mimg.src = TEXTURES.moon;
+    mimg.src = texURL("moon");
   }
 

@@ -16,6 +16,11 @@
                    gl.getExtension("MOZ_EXT_texture_filter_anisotropic");
   const anisoMax = anisoExt
     ? Math.min(8, gl.getParameter(anisoExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT)) : 0;
+  // 失敗の理由は端末によって違う (ファイルが無い / file:// のオリジン制限) ので、
+  // 天体ごとに1回だけ理由を添えて出す
+  const texWarn = (key, why) =>
+    console.warn(`テクスチャ ${texURL(key)} を使えませんでした: ${why}` +
+      (location.protocol === "file:" ? " — file:// では画像を読み込めません。HTTP で配信してください" : ""));
   for (const key in TEXTURES) {
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -27,8 +32,15 @@
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     const img = new Image();
     img.onload = () => {
-      gl.bindTexture(gl.TEXTURE_2D, tex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+      // file:// で開くと画像自体は読めても不透明オリジン扱いになり、ここが
+      // SecurityError で落ちる。取り込めなかったぶんは仮色のまま描く
+      try {
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+      } catch (e) {
+        texWarn(key, e.message);
+        return;
+      }
       // MIN_FILTER をミップマップ付きにするのは生成した後 (先に変えると不完全な
       // テクスチャ扱いになり、真っ黒で描かれる)
       if (useMipmap && isPOT(img.width) && isPOT(img.height)) {
@@ -37,7 +49,9 @@
         if (anisoMax > 1) gl.texParameterf(gl.TEXTURE_2D, anisoExt.TEXTURE_MAX_ANISOTROPY_EXT, anisoMax);
       }
     };
-    img.src = TEXTURES[key];
+    // tex/ を index.html と一緒に置き忘れた場合にここへ来る
+    img.onerror = () => texWarn(key, "取得できませんでした");
+    img.src = texURL(key);
     texByKey.set(key, tex);
   }
   // サンプラーとテクスチャユニットの指定は bodyRenderer.beginPass が毎回行う

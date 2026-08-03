@@ -2,5 +2,5 @@
 # (バイナリ扱いにはしないので、必要なら展開して中身を確認できる)
 index.html            linguist-generated=true
 
-# 1.1MB の base64。差分に意味がない
-src/data/textures.js  -diff linguist-generated=true
+# 探査機モデルの base64。差分に意味がない
+src/data/models.js    -diff linguist-generated=true
