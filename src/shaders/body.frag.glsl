@@ -13,6 +13,8 @@
     uniform sampler2D uCloud;   // 地球の雲 (被覆率。グレースケール)
     uniform sampler2D uNight;   // 地球の夜景 (街灯りの強さ。グレースケール)
     uniform float uCloudRot;    // 雲の経度オフセット。地表と別に流すため
+    uniform float uAtmos;       // 1 = 大気シェルとして描く (本体ではなく)
+    uniform float uAtmosT;      // シェルの厚み (天体半径を 1 とした比)
 
     float hash(vec3 p) {
       p = fract(p * 0.1031);
@@ -37,6 +39,37 @@
       vec3 p = normalize(vL);
       vec3 N = normalize(vN);
       vec3 V = normalize(uCam - vW);
+
+      if (uAtmos > 0.5) {
+        // ---- 大気シェル ----
+        // 本体より一回り大きい球を加算で重ね、円盤の外へはみ出す光の輪を出す。
+        // 描くのはシェルの手前側の面だけで、視線が大気の中を通る長さはここで
+        // 解析的に求める (天体半径を 1 とした単位で計算する)
+        vec3 ctr = uModel[3].xyz;
+        float ro = 1.0 + uAtmosT;                     // シェルの外径
+        float R = length(uModel[0].xyz) / ro;         // 天体の半径 (ワールド)
+        vec3 P = (vW - ctr) / R;
+        vec3 C = P - V * dot(P, V);                   // 視線の最接近点
+        float b = length(C);                          // 最接近距離 (= 見かけの高度)
+        float outer = sqrt(max(ro * ro - b * b, 0.0));
+        float inner = sqrt(max(1.0 - b * b, 0.0));
+        // 円盤に重なる視線は地表で止まる。外れる視線は大気を貫いて反対側へ抜ける
+        float path = b < 1.0 ? outer - inner : 2.0 * outer;
+        // 実際の大気は上へ行くほど薄い。指数で落として縁に張り付く輪にする
+        float tau = path * 5.5 * exp(-max(b - 1.0, 0.0) / 0.006);
+        // 円盤の内側は本体側でもエアライトを足しているので、二重に乗らないよう薄く
+        tau *= mix(0.30, 1.0, smoothstep(0.97, 1.02, b));
+
+        vec3 Ld = normalize(uSun - vW);
+        float sun = smoothstep(-0.30, 0.25, dot(normalize(C + vec3(1e-6)), Ld));
+        float fwd = pow(max(dot(-V, Ld), 0.0), 8.0);  // 太陽が向こう側にあるほど強い
+        vec3 col = mix(vec3(0.055, 0.145, 0.400),     // レイリー (青)
+                       vec3(0.520, 0.220, 0.080),     // 前方散乱 (朝焼け色)
+                       fwd * 0.7)
+                 * (1.0 - exp(-tau)) * sun;
+        gl_FragColor = vec4(tonemap(col), 0.0);       // 乗算済みアルファでの加算
+        return;
+      }
 
       if (uType < 0.5) {
         // ---- 太陽 ----

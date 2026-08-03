@@ -395,6 +395,7 @@
         airSun: _sunG, airDay: dayF,
       });
       let satLx = 0, satLy = 0, satLz = 0;   // 土星の環の照射方向 (ループ内で確定)
+      let airBody = null;                    // 大気シェルを重ねる天体 (地球のみ)
       for (const bb of bigBodies) {
         const b = bb.b, R = bb.wr;
         // 天体の実際の自転姿勢 (宇宙ビューと同じ回転) をローカル観測者フレームへ
@@ -430,6 +431,21 @@
         const mvp = mMul(gVP, m, SCR.mvp);
         SCR.model.set(m);   // uModel は f32 で十分 (法線用)。f64 配列を直接渡さない
         bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun, radiusPx: bb.rpx });
+        if (b.air) {
+          // 行列とやりたいことは本体と同じで、大きさだけ (1 + air) 倍にする。
+          // gM64 は次の天体で上書きされるので、ここで取っておく
+          const s = 1 + b.air;
+          for (let i = 0; i < 12; i++) SCR.air64[i] = m[i] * s;
+          SCR.air64[12] = m[12]; SCR.air64[13] = m[13]; SCR.air64[14] = m[14]; SCR.air64[15] = 1;
+          SCR.airSun[0] = SCR.sun[0]; SCR.airSun[1] = SCR.sun[1]; SCR.airSun[2] = SCR.sun[2];
+          airBody = b;
+        }
+      }
+      // 大気は加算で重ねるので、本体をすべて描き終えてから最後に足す
+      if (airBody) {
+        const airMvp = mMul(gVP, SCR.air64, SCR.airMvp);
+        SCR.airModel.set(SCR.air64);
+        bodyRenderer.drawAtmos({ body: airBody, model: SCR.airModel, mvp: airMvp, sunPosition: SCR.airSun });
       }
       bodyRenderer.endPass();
       // 土星の環 (球として描かれる倍率のときのみ。軸の向きを地上フレームへ変換)

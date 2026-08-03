@@ -41,6 +41,8 @@ WebGL の状態 (uniform・blend・depth・cull) はグローバルなので、�
 
 天体の描画は `bodyRenderer.beginPass / draw / endPass` を通す。`draw()` は呼ばれるたびに天体単位の uniform を**すべて**設定する — 条件分岐で省かない。
 
+`drawAtmos()` (地球の大気シェル) だけはパスの途中でブレンド・深度書き込み・カリングを変える。**本体をすべて描き終えてから最後に呼ぶ**こと (加算合成なので順序が効く)。変えた状態は `drawAtmos()` 内で `beginPass` の設定へ戻している。
+
 ### 色はリニアで計算する
 
 `src/gl/setup.js` の `PRE` に `srgbToLinear` / `linearToSrgb` / `acesToneMap` / `tonemap` がある。照明を計算するシェーダは次の順で書く。

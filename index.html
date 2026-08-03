@@ -1115,6 +1115,7 @@
     { key:"earth", name:"地球", en:"EARTH", a:1.0000, e:0.0167, T:365.256, i:0.0, node:0.0, peri:102.94, L0:100.46,
       // rot は恒星日。spin0 は「J2000 元期 12:00 UTC に経度0°がほぼ太陽直下」となる校正位相
       tilt:23.44, rot:0.99727, spin0:-1.3898, rkm:6371, type:4,
+      air:0.025,          // 大気シェルの厚み (半径比)。約160km 相当
       colA:[0,0,0], colB:[0,0,0], colC:[0,0,0], rim:[0.35,0.55,1.0], params:[0,0,0,0],
       rows:[["直径","12,742 km"],["質量","5.97×10²⁴ kg"],["平均距離","1.00 au"],["公転周期","365.25 日"],["自転周期","23.9 時間"],["平均温度","15 ℃"],["衛星","1 (月)"]],
       fact:"表面の約7割が液体の水に覆われた、生命の存在が確認されている唯一の天体。接近すると月も見えます。" },
@@ -2975,6 +2976,8 @@
     uniform sampler2D uCloud;   // 地球の雲 (被覆率。グレースケール)
     uniform sampler2D uNight;   // 地球の夜景 (街灯りの強さ。グレースケール)
     uniform float uCloudRot;    // 雲の経度オフセット。地表と別に流すため
+    uniform float uAtmos;       // 1 = 大気シェルとして描く (本体ではなく)
+    uniform float uAtmosT;      // シェルの厚み (天体半径を 1 とした比)
 
     float hash(vec3 p) {
       p = fract(p * 0.1031);
@@ -2999,6 +3002,37 @@
       vec3 p = normalize(vL);
       vec3 N = normalize(vN);
       vec3 V = normalize(uCam - vW);
+
+      if (uAtmos > 0.5) {
+        // ---- 大気シェル ----
+        // 本体より一回り大きい球を加算で重ね、円盤の外へはみ出す光の輪を出す。
+        // 描くのはシェルの手前側の面だけで、視線が大気の中を通る長さはここで
+        // 解析的に求める (天体半径を 1 とした単位で計算する)
+        vec3 ctr = uModel[3].xyz;
+        float ro = 1.0 + uAtmosT;                     // シェルの外径
+        float R = length(uModel[0].xyz) / ro;         // 天体の半径 (ワールド)
+        vec3 P = (vW - ctr) / R;
+        vec3 C = P - V * dot(P, V);                   // 視線の最接近点
+        float b = length(C);                          // 最接近距離 (= 見かけの高度)
+        float outer = sqrt(max(ro * ro - b * b, 0.0));
+        float inner = sqrt(max(1.0 - b * b, 0.0));
+        // 円盤に重なる視線は地表で止まる。外れる視線は大気を貫いて反対側へ抜ける
+        float path = b < 1.0 ? outer - inner : 2.0 * outer;
+        // 実際の大気は上へ行くほど薄い。指数で落として縁に張り付く輪にする
+        float tau = path * 5.5 * exp(-max(b - 1.0, 0.0) / 0.006);
+        // 円盤の内側は本体側でもエアライトを足しているので、二重に乗らないよう薄く
+        tau *= mix(0.30, 1.0, smoothstep(0.97, 1.02, b));
+
+        vec3 Ld = normalize(uSun - vW);
+        float sun = smoothstep(-0.30, 0.25, dot(normalize(C + vec3(1e-6)), Ld));
+        float fwd = pow(max(dot(-V, Ld), 0.0), 8.0);  // 太陽が向こう側にあるほど強い
+        vec3 col = mix(vec3(0.055, 0.145, 0.400),     // レイリー (青)
+                       vec3(0.520, 0.220, 0.080),     // 前方散乱 (朝焼け色)
+                       fwd * 0.7)
+                 * (1.0 - exp(-tau)) * sun;
+        gl_FragColor = vec4(tonemap(col), 0.0);       // 乗算済みアルファでの加算
+        return;
+      }
 
       if (uType < 0.5) {
         // ---- 太陽 ----
@@ -4300,6 +4334,9 @@
     A: new Float32Array(16),    // 汎用
     rx: new Float32Array(16), ry: new Float32Array(16), rot: new Float32Array(16),
     model: new Float32Array(16), mvp: new Float32Array(16),
+    // 大気シェル用 (本体を全部描いたあとに使うので、本体側と別に持つ)
+    airModel: new Float32Array(16), airMvp: new Float32Array(16),
+    air64: new Float64Array(16), airSun: [0, 0, 0],
     t: [0, 0, 0], tgt: [0, 0, 0],
     v: [0, 0, 0], v2: [0, 0, 0],
     sun: [0, 0, 0],             // bodyRenderer.draw へ渡す光源位置
@@ -4353,6 +4390,8 @@
   function createBodyRenderer(prog) {
     const { pr, u, a } = prog;
     let inPass = false;
+    // 大気シェルは深度書き込みとカリングを一時的に変えるので、パスの設定を控える
+    let passDepthWrite = true, passCull = null;
     return {
       // program・バッファ・頂点属性・テクスチャユニット・depth/cull を確定させる。
       // cullFace は gl.FRONT / gl.BACK、不要なら null
@@ -4388,9 +4427,35 @@
         gl.uniform1f(u.uTime, time);
         gl.uniform3f(u.uCam, cameraPosition[0], cameraPosition[1], cameraPosition[2]);
         if (depthTest) gl.enable(gl.DEPTH_TEST); else gl.disable(gl.DEPTH_TEST);
-        gl.depthMask(!!depthWrite);
+        passDepthWrite = !!depthWrite;
+        gl.depthMask(passDepthWrite);
+        passCull = cullFace;
         if (cullFace !== null) { gl.enable(gl.CULL_FACE); gl.cullFace(cullFace); }
         else gl.disable(gl.CULL_FACE);
+      },
+      // 大気シェル。本体より一回り大きい球を加算で重ね、円盤の外へはみ出す光の
+      // 輪を出す。本体をすべて描き終えてから呼ぶ (深度は書かない)。
+      // model は本体の (1 + body.air) 倍にスケールしたもの
+      drawAtmos({ body, model, mvp, sunPosition }) {
+        if (!inPass) throw new Error("bodyRenderer: beginPass より前に drawAtmos が呼ばれました");
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.depthMask(false);
+        // シェルは手前側の半球だけ描く。この球の巻き方向では FRONT を落とすと
+        // 観測者側が残る (地上ビューの本体描画と同じ)
+        gl.enable(gl.CULL_FACE);
+        gl.cullFace(gl.FRONT);
+        gl.uniform1f(u.uAtmos, 1);
+        gl.uniform1f(u.uAtmosT, body.air);
+        gl.uniformMatrix4fv(u.uMVP, false, mvp);
+        gl.uniformMatrix4fv(u.uModel, false, model);
+        gl.uniform3f(u.uSun, sunPosition[0], sunPosition[1], sunPosition[2]);
+        gl.drawElements(gl.TRIANGLES, sphere.idx.length, gl.UNSIGNED_SHORT, 0);
+        // パスの状態へ戻す。ここを戻し忘れると後続の天体が透けたり消えたりする
+        gl.uniform1f(u.uAtmos, 0);
+        gl.disable(gl.BLEND);
+        gl.depthMask(passDepthWrite);
+        if (passCull !== null) gl.cullFace(passCull); else gl.disable(gl.CULL_FACE);
       },
       // sunPosition は方向ではなく「シェーダが使う座標系での光源位置」。
       // 宇宙ビューは全天体で同一 (カメラ相対の太陽位置)、地上ビューは天体ごとに
@@ -4409,6 +4474,7 @@
         // 扁平は天体ごと。真球は 1,1,1 (条件分岐で省くと前の天体の値が残る)
         gl.uniform3fv(u.uOblate, body.obl || NO_OBL);
         gl.uniform1f(u.uRingOn, body.ring ? 1 : 0);
+        gl.uniform1f(u.uAtmos, 0);      // 直前が大気シェルでも本体として描く
         gl.uniform1f(u.uType, body.type);
         // 色はリニアに直したもの (bodies.js で一度だけ変換済み) を渡す。
         // シェーダ側で毎画素 pow を回さないため
@@ -4433,6 +4499,12 @@
     const d = Math.hypot(SCR.t[0], SCR.t[1], SCR.t[2]) || 1;
     const radiusPx = r / d * (H / 2) / Math.tan(eFov() / 2);
     bodyRenderer.draw({ body: b, model, mvp: mMul(VP, model, SCR.mvp), sunPosition, radiusPx });
+  }
+
+  // 宇宙ビュー用。大気を持つ天体のシェルを1つ描く (本体をすべて描いたあとに呼ぶ)
+  function drawBodyAtmos(b, sunPosition) {
+    const model = bodyModel(b, bodyR(b) * (1 + b.air));
+    bodyRenderer.drawAtmos({ body: b, model, mvp: mMul(VP, model, SCR.mvp), sunPosition });
   }
 
   function project(w) {
@@ -5005,6 +5077,7 @@
         airSun: _sunG, airDay: dayF,
       });
       let satLx = 0, satLy = 0, satLz = 0;   // 土星の環の照射方向 (ループ内で確定)
+      let airBody = null;                    // 大気シェルを重ねる天体 (地球のみ)
       for (const bb of bigBodies) {
         const b = bb.b, R = bb.wr;
         // 天体の実際の自転姿勢 (宇宙ビューと同じ回転) をローカル観測者フレームへ
@@ -5040,6 +5113,21 @@
         const mvp = mMul(gVP, m, SCR.mvp);
         SCR.model.set(m);   // uModel は f32 で十分 (法線用)。f64 配列を直接渡さない
         bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun, radiusPx: bb.rpx });
+        if (b.air) {
+          // 行列とやりたいことは本体と同じで、大きさだけ (1 + air) 倍にする。
+          // gM64 は次の天体で上書きされるので、ここで取っておく
+          const s = 1 + b.air;
+          for (let i = 0; i < 12; i++) SCR.air64[i] = m[i] * s;
+          SCR.air64[12] = m[12]; SCR.air64[13] = m[13]; SCR.air64[14] = m[14]; SCR.air64[15] = 1;
+          SCR.airSun[0] = SCR.sun[0]; SCR.airSun[1] = SCR.sun[1]; SCR.airSun[2] = SCR.sun[2];
+          airBody = b;
+        }
+      }
+      // 大気は加算で重ねるので、本体をすべて描き終えてから最後に足す
+      if (airBody) {
+        const airMvp = mMul(gVP, SCR.air64, SCR.airMvp);
+        SCR.airModel.set(SCR.air64);
+        bodyRenderer.drawAtmos({ body: airBody, model: SCR.airModel, mvp: airMvp, sunPosition: SCR.airSun });
       }
       bodyRenderer.endPass();
       // 土星の環 (球として描かれる倍率のときのみ。軸の向きを地上フレームへ変換)
@@ -5638,6 +5726,8 @@
     drawBody(SUN, SCR.sun);
     for (const p of PLANETS) drawBody(p, SCR.sun);
     for (const s of SATELLITES) drawBody(s, SCR.sun);
+    // 大気は加算で重ねるので、本体をすべて描き終えてから最後に足す
+    for (const p of PLANETS) if (p.air) drawBodyAtmos(p, SCR.sun);
     bodyRenderer.endPass();
 
     // --- 探査機の軌跡 ---

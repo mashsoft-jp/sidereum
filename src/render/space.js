@@ -219,6 +219,8 @@
     drawBody(SUN, SCR.sun);
     for (const p of PLANETS) drawBody(p, SCR.sun);
     for (const s of SATELLITES) drawBody(s, SCR.sun);
+    // 大気は加算で重ねるので、本体をすべて描き終えてから最後に足す
+    for (const p of PLANETS) if (p.air) drawBodyAtmos(p, SCR.sun);
     bodyRenderer.endPass();
 
     // --- 探査機の軌跡 ---

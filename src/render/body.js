@@ -31,6 +31,9 @@
     A: new Float32Array(16),    // 汎用
     rx: new Float32Array(16), ry: new Float32Array(16), rot: new Float32Array(16),
     model: new Float32Array(16), mvp: new Float32Array(16),
+    // 大気シェル用 (本体を全部描いたあとに使うので、本体側と別に持つ)
+    airModel: new Float32Array(16), airMvp: new Float32Array(16),
+    air64: new Float64Array(16), airSun: [0, 0, 0],
     t: [0, 0, 0], tgt: [0, 0, 0],
     v: [0, 0, 0], v2: [0, 0, 0],
     sun: [0, 0, 0],             // bodyRenderer.draw へ渡す光源位置
@@ -84,6 +87,8 @@
   function createBodyRenderer(prog) {
     const { pr, u, a } = prog;
     let inPass = false;
+    // 大気シェルは深度書き込みとカリングを一時的に変えるので、パスの設定を控える
+    let passDepthWrite = true, passCull = null;
     return {
       // program・バッファ・頂点属性・テクスチャユニット・depth/cull を確定させる。
       // cullFace は gl.FRONT / gl.BACK、不要なら null
@@ -119,9 +124,35 @@
         gl.uniform1f(u.uTime, time);
         gl.uniform3f(u.uCam, cameraPosition[0], cameraPosition[1], cameraPosition[2]);
         if (depthTest) gl.enable(gl.DEPTH_TEST); else gl.disable(gl.DEPTH_TEST);
-        gl.depthMask(!!depthWrite);
+        passDepthWrite = !!depthWrite;
+        gl.depthMask(passDepthWrite);
+        passCull = cullFace;
         if (cullFace !== null) { gl.enable(gl.CULL_FACE); gl.cullFace(cullFace); }
         else gl.disable(gl.CULL_FACE);
+      },
+      // 大気シェル。本体より一回り大きい球を加算で重ね、円盤の外へはみ出す光の
+      // 輪を出す。本体をすべて描き終えてから呼ぶ (深度は書かない)。
+      // model は本体の (1 + body.air) 倍にスケールしたもの
+      drawAtmos({ body, model, mvp, sunPosition }) {
+        if (!inPass) throw new Error("bodyRenderer: beginPass より前に drawAtmos が呼ばれました");
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.depthMask(false);
+        // シェルは手前側の半球だけ描く。この球の巻き方向では FRONT を落とすと
+        // 観測者側が残る (地上ビューの本体描画と同じ)
+        gl.enable(gl.CULL_FACE);
+        gl.cullFace(gl.FRONT);
+        gl.uniform1f(u.uAtmos, 1);
+        gl.uniform1f(u.uAtmosT, body.air);
+        gl.uniformMatrix4fv(u.uMVP, false, mvp);
+        gl.uniformMatrix4fv(u.uModel, false, model);
+        gl.uniform3f(u.uSun, sunPosition[0], sunPosition[1], sunPosition[2]);
+        gl.drawElements(gl.TRIANGLES, sphere.idx.length, gl.UNSIGNED_SHORT, 0);
+        // パスの状態へ戻す。ここを戻し忘れると後続の天体が透けたり消えたりする
+        gl.uniform1f(u.uAtmos, 0);
+        gl.disable(gl.BLEND);
+        gl.depthMask(passDepthWrite);
+        if (passCull !== null) gl.cullFace(passCull); else gl.disable(gl.CULL_FACE);
       },
       // sunPosition は方向ではなく「シェーダが使う座標系での光源位置」。
       // 宇宙ビューは全天体で同一 (カメラ相対の太陽位置)、地上ビューは天体ごとに
@@ -140,6 +171,7 @@
         // 扁平は天体ごと。真球は 1,1,1 (条件分岐で省くと前の天体の値が残る)
         gl.uniform3fv(u.uOblate, body.obl || NO_OBL);
         gl.uniform1f(u.uRingOn, body.ring ? 1 : 0);
+        gl.uniform1f(u.uAtmos, 0);      // 直前が大気シェルでも本体として描く
         gl.uniform1f(u.uType, body.type);
         // 色はリニアに直したもの (bodies.js で一度だけ変換済み) を渡す。
         // シェーダ側で毎画素 pow を回さないため
@@ -164,6 +196,12 @@
     const d = Math.hypot(SCR.t[0], SCR.t[1], SCR.t[2]) || 1;
     const radiusPx = r / d * (H / 2) / Math.tan(eFov() / 2);
     bodyRenderer.draw({ body: b, model, mvp: mMul(VP, model, SCR.mvp), sunPosition, radiusPx });
+  }
+
+  // 宇宙ビュー用。大気を持つ天体のシェルを1つ描く (本体をすべて描いたあとに呼ぶ)
+  function drawBodyAtmos(b, sunPosition) {
+    const model = bodyModel(b, bodyR(b) * (1 + b.air));
+    bodyRenderer.drawAtmos({ body: b, model, mvp: mMul(VP, model, SCR.mvp), sunPosition });
   }
 
   function project(w) {
