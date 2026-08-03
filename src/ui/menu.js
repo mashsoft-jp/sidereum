@@ -29,6 +29,18 @@
     setMenu(false);
   });
 
+  // 明るいところの滲み (Bloom)。描画負荷が上がるので切れるようにしておく
+  const menuBloomBtn = document.getElementById("menuBloom");
+  function updateBloomLabel() {
+    menuBloomBtn.textContent = bloomOn ? T().menuBloomOff : T().menuBloomOn;
+  }
+  menuBloomBtn.addEventListener("click", () => {
+    bloomOn = !bloomOn;
+    try { localStorage.setItem("ssBloom", bloomOn ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
+    updateBloomLabel();
+    setMenu(false);
+  });
+
   // 全画面表示 (Fullscreen API)。iPhone の Safari は非対応のためボタン自体を隠す
   const menuFsBtn = document.getElementById("menuFullscreen");
   const docEl = document.documentElement;

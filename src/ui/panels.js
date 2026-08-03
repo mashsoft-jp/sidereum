@@ -164,6 +164,7 @@
     menuTourBtn.textContent = t.menuTour;
     menuAboutBtn.textContent = t.menuAbout;
     updateTerrainLabel();
+    updateBloomLabel();
     updateUnitLabel();
     applyNavVisible();
     for (const el of navEl.querySelectorAll("button.body")) {

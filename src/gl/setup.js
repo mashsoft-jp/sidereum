@@ -104,10 +104,17 @@
   const meshFS = EXT_DERIV
     + PRE + `@@glsl:mesh.frag@@`;
 
+  // ---- ポストエフェクト (Bloom)。画面全体を覆う三角形へ描く ----
+  const postVS = `@@glsl:post.vert@@`;
+  const threshFS = PRE + `@@glsl:post-thresh.frag@@`;
+  const blurFS = PRE + `@@glsl:post-blur.frag@@`;
+  const addFS = PRE + `@@glsl:post-add.frag@@`;
+
   // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
   // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
   let bodyRenderer;
   let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP;
+  let threshP, blurP, addP;
   try {
     bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
     lineP = program(lineVS, lineFS);
@@ -118,6 +125,9 @@
     comaP = program(comaVS, comaFS);
     terrainP = program(terrainVS, terrainFS);
     meshP = program(meshVS, meshFS);
+    threshP = program(postVS, threshFS);
+    blurP = program(postVS, blurFS);
+    addP = program(postVS, addFS);
   } catch (err) {
     console.error(err);
     document.getElementById("noGL").style.display = "grid";

@@ -47,6 +47,12 @@ WebGL の状態 (uniform・blend・depth・cull) はグローバルなので、�
 
 `body.frag` で正距円筒のテクスチャを読むときは、`texture2D` を直に呼ばず `SAMPLE(tex, uv)` を使う。経度方向は必ずどこかで折り返すので、微分を自動で取らせるとその1列だけミップ段が最粗まで落ち、天体を縦に切る縞が出る (地表で1回、雲でもう1回やらかしている)。uv を `fract()` で畳むのも同じ理由で禁止 — 折り返しは `REPEAT` に任せる。
 
+### Bloom は画面を取り込んでから
+
+`src/gl/post.js` の `bloomPass()` は、シーンを描き終えた既定のフレームバッファを `copyTexSubImage2D` で取り込み、明るいところをぼかして加算で戻す。**オフスクリーンへ描く方式にしないこと** — canvas の `antialias: true` (MSAA) が効かなくなり、軌道線と天体の輪郭がギザギザになる。
+
+取り込み先のテクスチャは `gl.RGB`。canvas が `alpha: false` なので既定のフレームバッファにアルファが無く、`gl.RGBA` へコピーすると `INVALID_OPERATION` になる。
+
 ### 色はリニアで計算する
 
 `src/gl/setup.js` の `PRE` に `srgbToLinear` / `linearToSrgb` / `acesToneMap` / `tonemap` がある。照明を計算するシェーダは次の順で書く。

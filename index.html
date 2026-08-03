@@ -929,6 +929,7 @@
     <button id="menuHelp" role="menuitem"></button>
     <button id="menuTour" role="menuitem"></button>
     <button id="menuTerrain" role="menuitem"></button>
+    <button id="menuBloom" role="menuitem"></button>
     <button id="menuFullscreen" role="menuitem"></button>
     <button id="menuShare" role="menuitem"></button>
     <button id="menuUnit" role="menuitem"></button>
@@ -1464,6 +1465,8 @@
       tourUpdated: "Update!", tourAgain: "もう一度見る", tagNew: "New",
       menuTerrainOn: "風景を表示",
       menuTerrainOff: "風景を隠す",
+      menuBloomOn: "光の滲みを入れる",
+      menuBloomOff: "光の滲みを切る",
       menuAbout: "ライセンス・クレジット",
       menuUnitToMi: "距離をマイル表示",
       menuUnitToKm: "距離を km 表示",
@@ -1511,6 +1514,8 @@
       tourUpdated: "Update!", tourAgain: "Watch again", tagNew: "New",
       menuTerrainOn: "Show scenery",
       menuTerrainOff: "Hide scenery",
+      menuBloomOn: "Enable glow",
+      menuBloomOff: "Disable glow",
       menuAbout: "License & Credits",
       menuUnitToMi: "Distances in miles",
       menuUnitToKm: "Distances in km",
@@ -3583,10 +3588,71 @@
     }
 `;
 
+  // ---- ポストエフェクト (Bloom)。画面全体を覆う三角形へ描く ----
+  const postVS = `
+    // 画面全体を覆う三角形1枚 (2枚の四角より速く、継ぎ目も出ない)。
+    // はみ出した部分はラスタライザが切るので、実際に塗られるのは画面内だけ
+    attribute vec2 aPos;
+    varying vec2 vUv;
+    void main() {
+      vUv = aPos * 0.5 + 0.5;
+      gl_Position = vec4(aPos, 0.0, 1.0);
+    }
+`;
+  const threshFS = PRE + `
+    // 明るいところだけを抜き出しながら 1/4 に縮小する。
+    // 4点をまとめて取るのは、縮小でこぼれた明点がちらつかないようにするため
+    varying vec2 vUv;
+    uniform sampler2D uTex;
+    uniform vec2 uTexel;     // 元画像の 1テクセル
+    uniform float uThresh;   // これ以下の明るさは光らせない
+
+    void main() {
+      vec3 c = texture2D(uTex, vUv + uTexel * vec2(-1.0, -1.0)).rgb
+             + texture2D(uTex, vUv + uTexel * vec2( 1.0, -1.0)).rgb
+             + texture2D(uTex, vUv + uTexel * vec2(-1.0,  1.0)).rgb
+             + texture2D(uTex, vUv + uTexel * vec2( 1.0,  1.0)).rgb;
+      c *= 0.25;
+      // 明るさは最大成分で見る。輝度で見ると、青い大気の縁のように
+      // 「特定の色だけが強い」ところを取りこぼす
+      float l = max(max(c.r, c.g), c.b);
+      // しきい値の前後を滑らかに立ち上げる (硬く切ると滲みの縁が階段状になる)
+      gl_FragColor = vec4(c * smoothstep(uThresh, min(uThresh + 0.25, 1.0), l), 1.0);
+    }
+`;
+  const blurFS = PRE + `
+    // ガウシアンぼかし。横と縦に分けて2回かける。
+    // 補間を使って 9タップぶんを 5回の取得で済ませる (係数と位置は既知の組)
+    varying vec2 vUv;
+    uniform sampler2D uTex;
+    uniform vec2 uDir;       // (1/幅, 0) か (0, 1/高さ)
+
+    void main() {
+      vec3 c = texture2D(uTex, vUv).rgb * 0.2270270270;
+      c += (texture2D(uTex, vUv + uDir * 1.3846153846).rgb
+          + texture2D(uTex, vUv - uDir * 1.3846153846).rgb) * 0.3162162162;
+      c += (texture2D(uTex, vUv + uDir * 3.2307692308).rgb
+          + texture2D(uTex, vUv - uDir * 3.2307692308).rgb) * 0.0702702703;
+      gl_FragColor = vec4(c, 1.0);
+    }
+`;
+  const addFS = PRE + `
+    // ぼかした光を画面へ加算で戻す。アルファ 0 は、このアプリの合成規約
+    // (乗算済みアルファ) で「背景をそのまま残して足すだけ」を意味する
+    varying vec2 vUv;
+    uniform sampler2D uTex;
+    uniform float uAmount;
+
+    void main() {
+      gl_FragColor = vec4(texture2D(uTex, vUv).rgb * uAmount, 0.0);
+    }
+`;
+
   // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
   // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
   let bodyRenderer;
   let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP;
+  let threshP, blurP, addP;
   try {
     bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
     lineP = program(lineVS, lineFS);
@@ -3597,6 +3663,9 @@
     comaP = program(comaVS, comaFS);
     terrainP = program(terrainVS, terrainFS);
     meshP = program(meshVS, meshFS);
+    threshP = program(postVS, threshFS);
+    blurP = program(postVS, blurFS);
+    addP = program(postVS, addFS);
   } catch (err) {
     console.error(err);
     document.getElementById("noGL").style.display = "grid";
@@ -3942,6 +4011,137 @@
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
       new Uint16Array(ib.buffer, ib.byteOffset, ib.byteLength / 2), gl.STATIC_DRAW);
     meshByKey.set(key, { vb: vb, ib: ib2, n: m.t * 3 });
+  }
+  //#endregion
+  //#region src/gl/post.js
+
+  // ---------- Bloom (明るいところの滲み) ----------
+  // シーンは既定のフレームバッファへ描いたまま、描き終わってから
+  // copyTexSubImage2D で取り込む。オフスクリーンへ描くと MSAA (canvas の
+  // antialias) が効かなくなり、軌道線や天体の輪郭がギザギザになるため。
+  //
+  // 取り込む → しきい値で明るいところだけ抜きつつ 1/4 に縮小 → 横と縦に
+  // ぼかす → 画面へ加算。UI と天体名は別のキャンバスなので最初から対象外
+  const BLOOM_DIV = 4;
+  const BLOOM_THRESH = 0.72;   // これ以下の明るさは滲ませない
+  const BLOOM_AMOUNT = 0.45;   // 戻すときの強さ
+
+  let bloomOn = localStorage.getItem("ssBloom") !== "0";   // 既定 ON
+  let bloomReady = false;      // 確保に失敗した端末では以後あきらめる
+  let bloomFailed = false;
+  let bloomSrcW = 0, bloomSrcH = 0, bloomW = 0, bloomH = 0;
+  let sceneTex = null;
+  const bloomTex = [null, null], bloomFB = [null, null];
+
+  // 画面いっぱいを覆う三角形1枚
+  const postVB = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, postVB);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+
+  // fmt: 画面の取り込み先は RGB でなければならない。canvas を alpha:false で
+  // 作っているので既定のフレームバッファにアルファが無く、RGBA へ
+  // copyTexSubImage2D すると INVALID_OPERATION になる。
+  // ぼかし用はレンダーターゲットなので、確実に描ける RGBA にする
+  function postTex(w, h, fmt) {
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, fmt, w, h, 0, fmt, gl.UNSIGNED_BYTE, null);
+    // 2の累乗とは限らないので、ミップマップと REPEAT は使えない
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return t;
+  }
+
+  // 画面寸法が変わったら作り直す。resize() から呼ぶと初期化順に縛られるので、
+  // 描く直前に自分で見に行く
+  function bloomTargets() {
+    if (bloomFailed) return false;
+    const w = glc.width, h = glc.height;
+    if (w < 8 || h < 8) return false;
+    if (bloomReady && w === bloomSrcW && h === bloomSrcH) return true;
+    for (const t of [sceneTex, bloomTex[0], bloomTex[1]]) if (t) gl.deleteTexture(t);
+    for (const f of bloomFB) if (f) gl.deleteFramebuffer(f);
+    bloomSrcW = w; bloomSrcH = h;
+    bloomW = Math.max(2, Math.floor(w / BLOOM_DIV));
+    bloomH = Math.max(2, Math.floor(h / BLOOM_DIV));
+    sceneTex = postTex(w, h, gl.RGB);
+    for (let i = 0; i < 2; i++) {
+      bloomTex[i] = postTex(bloomW, bloomH, gl.RGBA);
+      bloomFB[i] = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, bloomFB[i]);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, bloomTex[i], 0);
+      if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        bloomFailed = true;
+        console.warn("Bloom 用のフレームバッファを作れませんでした。無効にします");
+        return false;
+      }
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    bloomReady = true;
+    return true;
+  }
+
+  // 三角形を1枚描く。プログラムごとに aPos の場所が違うので毎回張り直す
+  function postDraw(p) {
+    gl.enableVertexAttribArray(p.a.aPos);
+    gl.vertexAttribPointer(p.a.aPos, 2, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.disableVertexAttribArray(p.a.aPos);
+  }
+
+  // シーンを描き終えたあとに呼ぶ
+  function bloomPass() {
+    if (!bloomOn || !bloomTargets()) return;
+    const w = bloomSrcW, h = bloomSrcH;
+
+    gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(false);
+    gl.disable(gl.BLEND);
+    gl.disable(gl.CULL_FACE);
+    gl.bindBuffer(gl.ARRAY_BUFFER, postVB);
+    gl.activeTexture(gl.TEXTURE0);
+
+    // 1) 画面をテクスチャへ取り込む
+    gl.bindTexture(gl.TEXTURE_2D, sceneTex);
+    gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, w, h);
+
+    // 2) 明るいところを抜きながら 1/4 へ
+    gl.viewport(0, 0, bloomW, bloomH);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, bloomFB[0]);
+    gl.useProgram(threshP.pr);
+    gl.uniform1i(threshP.u.uTex, 0);
+    gl.uniform2f(threshP.u.uTexel, 1 / w, 1 / h);
+    gl.uniform1f(threshP.u.uThresh, BLOOM_THRESH);
+    postDraw(threshP);
+
+    // 3) 横 → 縦の順にぼかす (bloomFB[0] → [1] → [0])
+    gl.useProgram(blurP.pr);
+    gl.uniform1i(blurP.u.uTex, 0);
+    for (let i = 0; i < 2; i++) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, bloomFB[1 - i]);
+      gl.bindTexture(gl.TEXTURE_2D, bloomTex[i]);
+      if (i === 0) gl.uniform2f(blurP.u.uDir, 1 / bloomW, 0);
+      else gl.uniform2f(blurP.u.uDir, 0, 1 / bloomH);
+      postDraw(blurP);
+    }
+
+    // 4) 画面へ加算して戻す
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, w, h);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.useProgram(addP.pr);
+    gl.bindTexture(gl.TEXTURE_2D, bloomTex[0]);
+    gl.uniform1i(addP.u.uTex, 0);
+    gl.uniform1f(addP.u.uAmount, BLOOM_AMOUNT);
+    postDraw(addP);
+
+    gl.disable(gl.BLEND);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(true);
   }
   //#endregion
   //#region src/core/state.js
@@ -6493,6 +6693,7 @@
 
     tourRideCam(dtc);     // ガイドツアー: 探査機視点のステップはカメラを直接置く
     render(now / 1000);
+    bloomPass();          // 明るいところの滲み (シーンを描き終えてから)
     updateClock();
     tourWatch();          // ガイドツアー: 促した操作をされたら次のステップへ
     updateZoomUI();
@@ -7566,6 +7767,18 @@
     setMenu(false);
   });
 
+  // 明るいところの滲み (Bloom)。描画負荷が上がるので切れるようにしておく
+  const menuBloomBtn = document.getElementById("menuBloom");
+  function updateBloomLabel() {
+    menuBloomBtn.textContent = bloomOn ? T().menuBloomOff : T().menuBloomOn;
+  }
+  menuBloomBtn.addEventListener("click", () => {
+    bloomOn = !bloomOn;
+    try { localStorage.setItem("ssBloom", bloomOn ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
+    updateBloomLabel();
+    setMenu(false);
+  });
+
   // 全画面表示 (Fullscreen API)。iPhone の Safari は非対応のためボタン自体を隠す
   const menuFsBtn = document.getElementById("menuFullscreen");
   const docEl = document.documentElement;
@@ -7956,6 +8169,7 @@
     menuTourBtn.textContent = t.menuTour;
     menuAboutBtn.textContent = t.menuAbout;
     updateTerrainLabel();
+    updateBloomLabel();
     updateUnitLabel();
     applyNavVisible();
     for (const el of navEl.querySelectorAll("button.body")) {
