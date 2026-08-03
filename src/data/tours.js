@@ -68,7 +68,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 2,
+      ver: 3,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -119,6 +119,20 @@
                 "中心から外れた天体を追いたいときに使います。",
             en: "Right-drag to slide the view sideways — handy for following " +
                 "something that has drifted off centre.",
+          },
+        },
+        {
+          scene: false, ui: ["controls"], hi: "#camSelect, #angleCell",
+          text: {
+            ja: "「カメラ」からは決まった視点へ一度で移れます。" +
+                "「真上」は軌道面を真上から、「真横」は真横から。" +
+                "「デフォルト」は火星軌道までが収まる位置、「全体表示」は最初の引きの画に戻します。" +
+                "右の「角度」スライダーでも、同じように見おろす角度を変えられます。" +
+                "見失ったらここで立て直せます。",
+            en: "The “Camera” menu jumps straight to a fixed viewpoint: Top looks down on the " +
+                "orbital plane, Side views it edge-on, Default frames the inner planets out to " +
+                "Mars, and Overview returns to the opening wide shot. The “Angle” slider on the " +
+                "right tilts the view the same way. Use these whenever you lose your bearings.",
           },
         },
         {
@@ -173,7 +187,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 3,
+      ver: 4,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -224,6 +238,20 @@
                 "中心から外れた天体を追いたいときに使います。",
             en: "Drag with two fingers to slide the view sideways — handy for following " +
                 "something that has drifted off centre.",
+          },
+        },
+        {
+          scene: false, ui: ["controls"], hi: "#camSelect, #angleCell",
+          text: {
+            ja: "「カメラ」からは決まった視点へ一度で移れます。" +
+                "「真上」は軌道面を真上から、「真横」は真横から。" +
+                "「デフォルト」は火星軌道までが収まる位置、「全体表示」は最初の引きの画に戻します。" +
+                "右の「角度」スライダーでも、同じように見おろす角度を変えられます。" +
+                "見失ったらここで立て直せます。",
+            en: "The “Camera” menu jumps straight to a fixed viewpoint: Top looks down on the " +
+                "orbital plane, Side views it edge-on, Default frames the inner planets out to " +
+                "Mars, and Overview returns to the opening wide shot. The “Angle” slider on the " +
+                "right tilts the view the same way. Use these whenever you lose your bearings.",
           },
         },
         {
