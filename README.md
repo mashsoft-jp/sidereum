@@ -73,17 +73,17 @@ tex/               天体テクスチャ (ビルド対象外。index.html と一
 
 | 天体 | 元データ | クレジット |
 |---|---|---|
-| 水星 | MESSENGER MDIS 全球モザイク | NASA/Johns Hopkins University APL/Carnegie Institution of Washington |
+| 水星 | MESSENGER MDIS Basemap MD3Color 全球モザイク (32 ppd) | NASA/Johns Hopkins University APL/Carnegie Institution of Washington |
 | 金星 | Magellan レーダー全球図 (地表) | NASA/JPL |
-| 地球 | Blue Marble: Land Surface, Ocean Color and Sea Ice | NASA Earth Observatory (Reto Stöckli, NASA/GSFC) |
+| 地球 | Blue Marble: Land Surface, Shallow Water, and Shaded Topography ([57752](https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57752/land_shallow_topo_2048.jpg)) | NASA Earth Observatory (Reto Stöckli, NASA/GSFC / Robert Simmon) |
 | 月 | LRO LROC WAC 全球モザイク (CGI Moon Kit) | NASA/GSFC/Arizona State University, NASA Scientific Visualization Studio |
 | 火星 | Viking MDIM 2.1 カラーモザイク | NASA/USGS |
 | 木星 | Cassini 円筒図法マップ (PIA07782) | NASA/JPL/Space Science Institute |
 | 冥王星 | New Horizons 全球モザイク | NASA/JHUAPL/SwRI |
-| ケレス | Dawn 全球マップ (PIA19625) | NASA/JPL-Caltech/UCLA/MPS/DLR/IDA |
-| ベスタ | Dawn 全球モザイク | NASA/JPL-Caltech/UCLA/MPS/DLR/IDA |
+| ケレス | Dawn FC 全球モザイク (DLR, 20 ppd) | NASA/JPL-Caltech/UCLA/MPS/DLR/IDA |
+| ベスタ | Dawn FC HAMO 全球モザイク (74 ppd) | NASA/JPL-Caltech/UCLA/MPS/DLR/IDA |
 
-画像は USGS Astrogeology、JPL Photojournal、NASA SVS、および Wikimedia Commons 経由で取得し、縮小・JPEG 再圧縮のうえ `tex/` に置いています。
+画像は USGS Astrogeology、NASA SVS、NASA Earth Observatory、および Wikimedia Commons 経由で取得し、いずれも 2048×1024 の正距円筒図法へ縮小・JPEG 再圧縮のうえ `tex/` に置いています (地球のみ NASA 配布の 2048×1024 をそのまま)。
 
 太陽・土星・天王星・海王星・パラス・ジュノーは、実測の全球マップが存在しない(または動的表現の方が適する)ため、シェーダによるプロシージャル生成です。実写ではありません。土星の環も同様です。
 
