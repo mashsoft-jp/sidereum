@@ -184,6 +184,9 @@
       if (s.fit !== undefined) { delete st.km; delete st.z; }
       if (s.z !== undefined) { delete st.km; delete st.fit; }
       Object.assign(st, s);
+      // ビュー切替などが画面上に出ている端末 (タブレット等) 向けの差し替え。
+      // 狭い画面ではハンバーガーメニューの中に入るので、案内する場所が変わる
+      if (!mqNarrow.matches && s.wide) Object.assign(st, s.wide);
     }
     return st;
   }

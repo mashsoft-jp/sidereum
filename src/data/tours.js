@@ -44,6 +44,8 @@
   //         チュートリアルではこれが無いとカメラが巻き戻る
   //   ui    一時的に出す UI: "controls" / "nav" / "menu" / "view" / "clock"
   //   hi    ハイライトする要素の CSS セレクタ
+  //   wide  画面が広い端末 (タブレット等) 用の差し替え。ビュー切替は狭い画面
+  //         でだけハンバーガーメニューへ入るので、案内する場所と文言を変える
   //   await 促した操作の検知。「できました」を出す (次へ進むのは自動送り時のみ):
   //         "rotate" / "zoom" / "dist" / "pan" / "select" / "play" / "view" / "menu"
   //         (日時は再生中に勝手に動いて誤検知するので対象にしない)
@@ -166,6 +168,7 @@
     {
       id: "basics-touch",
       platform: "touch",
+      ver: 2,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -249,6 +252,15 @@
             en: "Open the menu at the top left to switch between Space, Ground and Moon. " +
                 "Ground and Moon show the real sky from that place. Try switching.",
           },
+          wide: {
+            ui: ["view"], hi: "#viewMode",
+            text: {
+              ja: "上のタブで宇宙・地上・月面を切り替えられます。" +
+                  "地上と月面は、その場所から見た実際の空になります。切り替えてみてください。",
+              en: "The tabs at the top switch between Space, Ground and Moon. Ground and " +
+                  "Moon show the real sky from that place. Try switching.",
+            },
+          },
         },
         {
           scene: false, ui: ["menu"], hi: "#menuBtn",
@@ -258,6 +270,17 @@
                 "ほかのガイドツアーも同じメニューから開けます。",
             en: "The same menu holds share links, scenery, units, language and the full " +
                 "control list. That's the basics — the other guided tours live there too.",
+          },
+          wide: {
+            ui: ["menu"], hi: "#menuBtn",
+            text: {
+              ja: "左上のメニューには、共有リンク・風景の表示・単位や言語の切替・" +
+                  "操作方法があります。基本操作はここまでです。" +
+                  "ほかのガイドツアーも同じメニューから開けます。",
+              en: "The menu at the top left holds share links, scenery, units, language and " +
+                  "the full control list. That's the basics — the other guided tours live " +
+                  "in the same menu.",
+            },
           },
         },
       ],
