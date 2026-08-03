@@ -339,7 +339,8 @@
     for (const b of marked) {
       const pr = project(posW.get(b.key));
       if (!pr) continue;
-      const rpx = bodyR(b) * fpx / pr.w;
+      // 扁平な天体は赤道がいちばん外側なので、印やリングはそちらに合わせる
+      const rpx = bodyR(b) * (b.obl ? b.obl[0] : 1) * fpx / pr.w;
       screenPos.set(b.key, { x: pr.x, y: pr.y, r: rpx, w: pr.w });
     }
     // 手前の大きな天体の円盤に隠れる位置にあるものは、印も名前も出さない

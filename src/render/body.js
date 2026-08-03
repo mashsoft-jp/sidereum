@@ -25,6 +25,7 @@
 
   // 毎フレームの行列・ベクトルはスクラッチを使い回す (GC 停止対策)
   const ZERO3 = [0, 0, 0], UP3 = [0, 1, 0];
+  const NO_OBL = [1, 1, 1];   // 扁平を持たない天体 (真球) 用
   const SCR = {
     P: new Float32Array(16),    // 射影
     A: new Float32Array(16),    // 汎用
@@ -115,6 +116,8 @@
         gl.uniformMatrix4fv(u.uModel, false, model);
         gl.uniform3f(u.uSun, sunPosition[0], sunPosition[1], sunPosition[2]);
         gl.uniform1f(u.uComet, body.comet ? 1 : 0);
+        // 扁平は天体ごと。真球は 1,1,1 (条件分岐で省くと前の天体の値が残る)
+        gl.uniform3fv(u.uOblate, body.obl || NO_OBL);
         gl.uniform1f(u.uType, body.type);
         gl.uniform3fv(u.uColA, body.colA);
         gl.uniform3fv(u.uColB, body.colB);
