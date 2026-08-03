@@ -2821,6 +2821,11 @@
   }
 
   const PRE = "precision highp float;\n";
+  // 画素ごとの微分と、微分を指定したテクスチャ取得。どちらも天体テクスチャの
+  // 継ぎ目対策に要る (下の bodyFS)
+  const hasDeriv = !!gl.getExtension("OES_standard_derivatives");
+  const hasTexLod = hasDeriv && !!gl.getExtension("EXT_shader_texture_lod");
+  const EXT_DERIV = hasDeriv ? "#extension GL_OES_standard_derivatives : enable\n" : "";
 
   // ---- 天体シェーダ (全種別を uType で分岐) ----
   const bodyVS = `
@@ -2871,7 +2876,9 @@
       return c * day;
     }
 `;
-  const bodyFS = PRE + SKY_FN + `
+  const bodyFS = EXT_DERIV
+    + (hasTexLod ? "#extension GL_EXT_shader_texture_lod : enable\n#define TEXLOD 1\n" : "")
+    + PRE + SKY_FN + `
     varying vec3 vL, vW, vN;
     uniform float uType, uTime, uHasTex, uComet, uAmb;
     uniform vec3 uCam, uSun, uColA, uColB, uColC, uRim;
@@ -2932,7 +2939,19 @@
         // ---- 実テクスチャ (NASA/USGS 全球マップ) ----
         vec2 uv = vec2(0.5 - atan(p.z, p.x) / 6.2831853,
                        acos(clamp(p.y, -1.0, 1.0)) / 3.14159265);
+#ifdef TEXLOD
+        // 経度は継ぎ目 (atan の折り返し) で 1→0 に飛ぶ。そのままだと継ぎ目を
+        // またぐ画素の微分が 1周ぶんになり、ミップ段が最粗まで落ちて縦縞が出る。
+        // 連続な p の微分から連鎖律で uv の微分を出し、折り返しを避けて渡す
+        vec3 px = dFdx(p), py = dFdy(p);
+        float r2 = max(p.x * p.x + p.z * p.z, 1e-8);                // ∂atan の分母
+        float sv = 3.14159265 * sqrt(max(1.0 - p.y * p.y, 1e-8));   // ∂acos の分母
+        vec2 dux = vec2(-(p.x * px.z - p.z * px.x) / (r2 * 6.2831853), -px.y / sv);
+        vec2 duy = vec2(-(p.x * py.z - p.z * py.x) / (r2 * 6.2831853), -py.y / sv);
+        alb = texture2DGradEXT(uTex, uv, dux, duy).rgb;
+#else
         alb = texture2D(uTex, uv).rgb;
+#endif
         if (uType > 3.5 && uType < 4.5) {
           // 地球のみ: 雲と海面の鏡面反射を重ねる
           float ocean = smoothstep(0.02, 0.12, alb.b - alb.r) * smoothstep(0.02, 0.12, alb.b - alb.g);
@@ -3287,8 +3306,7 @@
       gl_Position = uMVP * vec4(aPos, 1.0);
     }
 `;
-  const hasDeriv = !!gl.getExtension("OES_standard_derivatives");
-  const meshFS = (hasDeriv ? "#extension GL_OES_standard_derivatives : enable\n" : "")
+  const meshFS = EXT_DERIV
     + PRE + `
     varying vec3 vW;
     uniform vec3 uSun, uCol;
@@ -3431,7 +3449,11 @@
   gl.bindTexture(gl.TEXTURE_2D, noTex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0]));
   // 縮小時のちらつき対策。ミップマップは WebGL1 では2の累乗サイズが必須なので、
-  // 満たさない画像は従来どおり LINEAR のまま扱う (REPEAT も使えないので本来 NG)
+  // 満たさない画像は従来どおり LINEAR のまま扱う (REPEAT も使えないので本来 NG)。
+  // また経度の継ぎ目でミップ段が落ちないよう、天体シェーダは微分を自前で渡す。
+  // それができない端末 (EXT_shader_texture_lod 非対応) では継ぎ目に縦縞が出て
+  // しまうので、ミップマップ自体を使わない
+  const useMipmap = hasTexLod;
   const isPOT = (n) => n > 0 && (n & (n - 1)) === 0;
   // 異方性フィルタ。斜めから見た地表・月面・環の解像感が上がる。
   // 拡張が無い端末では単に効かない (エラーにはならない)
@@ -3455,7 +3477,7 @@
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
       // MIN_FILTER をミップマップ付きにするのは生成した後 (先に変えると不完全な
       // テクスチャ扱いになり、真っ黒で描かれる)
-      if (isPOT(img.width) && isPOT(img.height)) {
+      if (useMipmap && isPOT(img.width) && isPOT(img.height)) {
         gl.generateMipmap(gl.TEXTURE_2D);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
         if (anisoMax > 1) gl.texParameterf(gl.TEXTURE_2D, anisoExt.TEXTURE_MAX_ANISOTROPY_EXT, anisoMax);

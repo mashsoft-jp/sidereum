@@ -59,7 +59,19 @@
         // ---- 実テクスチャ (NASA/USGS 全球マップ) ----
         vec2 uv = vec2(0.5 - atan(p.z, p.x) / 6.2831853,
                        acos(clamp(p.y, -1.0, 1.0)) / 3.14159265);
+#ifdef TEXLOD
+        // 経度は継ぎ目 (atan の折り返し) で 1→0 に飛ぶ。そのままだと継ぎ目を
+        // またぐ画素の微分が 1周ぶんになり、ミップ段が最粗まで落ちて縦縞が出る。
+        // 連続な p の微分から連鎖律で uv の微分を出し、折り返しを避けて渡す
+        vec3 px = dFdx(p), py = dFdy(p);
+        float r2 = max(p.x * p.x + p.z * p.z, 1e-8);                // ∂atan の分母
+        float sv = 3.14159265 * sqrt(max(1.0 - p.y * p.y, 1e-8));   // ∂acos の分母
+        vec2 dux = vec2(-(p.x * px.z - p.z * px.x) / (r2 * 6.2831853), -px.y / sv);
+        vec2 duy = vec2(-(p.x * py.z - p.z * py.x) / (r2 * 6.2831853), -py.y / sv);
+        alb = texture2DGradEXT(uTex, uv, dux, duy).rgb;
+#else
         alb = texture2D(uTex, uv).rgb;
+#endif
         if (uType > 3.5 && uType < 4.5) {
           // 地球のみ: 雲と海面の鏡面反射を重ねる
           float ocean = smoothstep(0.02, 0.12, alb.b - alb.r) * smoothstep(0.02, 0.12, alb.b - alb.g);

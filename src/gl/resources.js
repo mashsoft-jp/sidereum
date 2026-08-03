@@ -3,7 +3,11 @@
   gl.bindTexture(gl.TEXTURE_2D, noTex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0]));
   // 縮小時のちらつき対策。ミップマップは WebGL1 では2の累乗サイズが必須なので、
-  // 満たさない画像は従来どおり LINEAR のまま扱う (REPEAT も使えないので本来 NG)
+  // 満たさない画像は従来どおり LINEAR のまま扱う (REPEAT も使えないので本来 NG)。
+  // また経度の継ぎ目でミップ段が落ちないよう、天体シェーダは微分を自前で渡す。
+  // それができない端末 (EXT_shader_texture_lod 非対応) では継ぎ目に縦縞が出て
+  // しまうので、ミップマップ自体を使わない
+  const useMipmap = hasTexLod;
   const isPOT = (n) => n > 0 && (n & (n - 1)) === 0;
   // 異方性フィルタ。斜めから見た地表・月面・環の解像感が上がる。
   // 拡張が無い端末では単に効かない (エラーにはならない)
@@ -27,7 +31,7 @@
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
       // MIN_FILTER をミップマップ付きにするのは生成した後 (先に変えると不完全な
       // テクスチャ扱いになり、真っ黒で描かれる)
-      if (isPOT(img.width) && isPOT(img.height)) {
+      if (useMipmap && isPOT(img.width) && isPOT(img.height)) {
         gl.generateMipmap(gl.TEXTURE_2D);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
         if (anisoMax > 1) gl.texParameterf(gl.TEXTURE_2D, anisoExt.TEXTURE_MAX_ANISOTROPY_EXT, anisoMax);

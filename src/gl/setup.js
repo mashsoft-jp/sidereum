@@ -34,6 +34,11 @@
   }
 
   const PRE = "precision highp float;\n";
+  // 画素ごとの微分と、微分を指定したテクスチャ取得。どちらも天体テクスチャの
+  // 継ぎ目対策に要る (下の bodyFS)
+  const hasDeriv = !!gl.getExtension("OES_standard_derivatives");
+  const hasTexLod = hasDeriv && !!gl.getExtension("EXT_shader_texture_lod");
+  const EXT_DERIV = hasDeriv ? "#extension GL_OES_standard_derivatives : enable\n" : "";
 
   // ---- 天体シェーダ (全種別を uType で分岐) ----
   const bodyVS = `@@glsl:body.vert@@`;
@@ -41,7 +46,9 @@
   // 空の色は空ドームと天体のエアライトで共有する (GLSL は入れ子 include できないので
   // ここで前置きして両方に持たせる)
   const SKY_FN = `@@glsl:sky-color@@`;
-  const bodyFS = PRE + SKY_FN + `@@glsl:body.frag@@`;
+  const bodyFS = EXT_DERIV
+    + (hasTexLod ? "#extension GL_EXT_shader_texture_lod : enable\n#define TEXLOD 1\n" : "")
+    + PRE + SKY_FN + `@@glsl:body.frag@@`;
 
   // ---- 線 (軌道) ----
   const lineVS = `@@glsl:line.vert@@`;
@@ -74,8 +81,7 @@
 
   // ---- 探査機のメッシュ (法線は持たず面の微分から求めるので拡張が要る) ----
   const meshVS = `@@glsl:mesh.vert@@`;
-  const hasDeriv = !!gl.getExtension("OES_standard_derivatives");
-  const meshFS = (hasDeriv ? "#extension GL_OES_standard_derivatives : enable\n" : "")
+  const meshFS = EXT_DERIV
     + PRE + `@@glsl:mesh.frag@@`;
 
   // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
