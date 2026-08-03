@@ -65,7 +65,9 @@
             float u = (length(P + L * t) / scl - uRingR.x) * uRingR.y;
             if (u > 0.0 && u < 1.0) {
               float tr = texture2D(uRing, vec2(u, 0.5)).a;
-              dif *= pow(max(tr, 0.0015), 1.0 / abs(la));
+              // 環と同じく、影は真っ黒にせず 3割の明るさを残す。B環の影は
+              // 実際にはほぼ完全な暗黒だが、雲の模様が見えなくなってしまう
+              dif *= mix(0.30, 1.0, pow(max(tr, 0.0015), 1.0 / abs(la)));
             }
           }
         }

@@ -33,7 +33,9 @@
         float b = dot(O, D);
         if (b < 0.0) {                            // 太陽の方へ近づいていく場合だけ
           float miss = dot(O, O) - b * b / dot(D, D);   // 最接近距離² (球の半径 = 1)
-          shadow = smoothstep(0.90, 1.10, miss);
+          // 実際はほぼ真っ黒になるが、それだと環の構造が読めなくなる。
+          // 影と分かる程度に落として、3割の明るさを残す (見やすさを優先)
+          shadow = mix(0.30, 1.0, smoothstep(0.90, 1.10, miss));
         }
       }
 
