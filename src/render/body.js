@@ -93,6 +93,11 @@
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIB);
         gl.enableVertexAttribArray(a.aPos);
         gl.vertexAttribPointer(a.aPos, 3, gl.FLOAT, false, 0, 0);
+        // 環の影に使うプロファイルはユニット1に据え置き (天体テクスチャは0)
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, ringTex);
+        gl.uniform1i(u.uRing, 1);
+        gl.uniform2f(u.uRingR, RING_IN, 1.0 / (RING_OUT - RING_IN));
         gl.activeTexture(gl.TEXTURE0);
         gl.uniform1i(u.uTex, 0);
         gl.uniform1f(u.uTime, time);
@@ -118,6 +123,7 @@
         gl.uniform1f(u.uComet, body.comet ? 1 : 0);
         // 扁平は天体ごと。真球は 1,1,1 (条件分岐で省くと前の天体の値が残る)
         gl.uniform3fv(u.uOblate, body.obl || NO_OBL);
+        gl.uniform1f(u.uRingOn, body.ring ? 1 : 0);
         gl.uniform1f(u.uType, body.type);
         gl.uniform3fv(u.uColA, body.colA);
         gl.uniform3fv(u.uColB, body.colB);

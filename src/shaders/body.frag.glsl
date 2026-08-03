@@ -6,6 +6,10 @@
     uniform float uAirDay;  // 昼夜係数。宇宙ビューは 0 (大気が無い)
     uniform vec4 uParams;
     uniform sampler2D uTex;
+    uniform mat4 uModel;        // 中心・極方向・スケールを取り出すのに使う
+    uniform float uRingOn;      // 環を持つ天体 (土星) だけ 1
+    uniform vec2 uRingR;        // 環プロファイルの参照範囲 (内径, 1/(外径-内径))
+    uniform sampler2D uRing;
 
     float hash(vec3 p) {
       p = fract(p * 0.1031);
@@ -45,6 +49,27 @@
 
       vec3 L = normalize(uSun - vW);                // 光源 = 太陽 (カメラ相対座標)
       float dif = max(dot(N, L), 0.0);
+
+      // ---- 環が本体へ落とす影 (土星のみ) ----
+      // 地表の点から太陽へ線を伸ばし、環面 (赤道面) との交点の半径を求めて、
+      // その半径の透過率で日射を弱める。斜めに抜けるぶん経路長は 1/|cos| 倍
+      if (uRingOn > 0.5 && dif > 0.0) {
+        vec3 ctr = uModel[3].xyz;                   // 天体の中心
+        vec3 axis = normalize(uModel[1].xyz);       // 自転軸 = 環面の法線
+        float scl = length(uModel[0].xyz);          // ワールド単位での平均半径
+        vec3 P = vW - ctr;
+        float pa = dot(P, axis), la = dot(L, axis);
+        if (abs(la) > 0.002) {
+          float t = -pa / la;                       // 環面まで太陽方向に伸ばす長さ
+          if (t > 0.0) {
+            float u = (length(P + L * t) / scl - uRingR.x) * uRingR.y;
+            if (u > 0.0 && u < 1.0) {
+              float tr = texture2D(uRing, vec2(u, 0.5)).a;
+              dif *= pow(max(tr, 0.0015), 1.0 / abs(la));
+            }
+          }
+        }
+      }
       float lat = p.y;
       vec3 alb = vec3(0.5);
       float spec = 0.0;
