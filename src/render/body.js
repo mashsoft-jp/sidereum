@@ -58,10 +58,16 @@
   // 夜側の明るさ。点にしか見えない遠くの天体は、真っ暗にすると細い時期に
   // 見失うので明るく保つ。円盤として分解できる大きさになったら暗くして、
   // 月や金星の満ち欠けがはっきり出るようにする
+  // 返す値は「画面上でどれくらいの明るさに見せたいか」なので、シェーダへ渡す
+  // 前にリニアへ直す (照明の計算はリニアで行う)
   function nightAmbient(b, radiusPx) {
-    if (b.comet) return 0.15;              // 彗星核は宇宙空間らしく常に暗い
-    const t = Math.min(1, Math.max(0, ((radiusPx || 0) - 3) / 14));
-    return 0.30 - 0.26 * (t * t * (3 - 2 * t));
+    const v = b.comet
+      ? 0.15                               // 彗星核は宇宙空間らしく常に暗い
+      : (() => {
+          const t = Math.min(1, Math.max(0, ((radiusPx || 0) - 3) / 14));
+          return 0.30 - 0.26 * (t * t * (3 - 2 * t));
+        })();
+    return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
   }
 
   // WebGL のプログラムと uniform はグローバルな状態なので、設定漏れがあると
@@ -125,10 +131,12 @@
         gl.uniform3fv(u.uOblate, body.obl || NO_OBL);
         gl.uniform1f(u.uRingOn, body.ring ? 1 : 0);
         gl.uniform1f(u.uType, body.type);
-        gl.uniform3fv(u.uColA, body.colA);
-        gl.uniform3fv(u.uColB, body.colB);
-        gl.uniform3fv(u.uColC, body.colC);
-        gl.uniform3fv(u.uRim, body.rim);
+        // 色はリニアに直したもの (bodies.js で一度だけ変換済み) を渡す。
+        // シェーダ側で毎画素 pow を回さないため
+        gl.uniform3fv(u.uColA, body.colAL);
+        gl.uniform3fv(u.uColB, body.colBL);
+        gl.uniform3fv(u.uColC, body.colCL);
+        gl.uniform3fv(u.uRim, body.rimL);
         gl.uniform4fv(u.uParams, body.params);
         gl.drawElements(gl.TRIANGLES, sphere.idx.length, gl.UNSIGNED_SHORT, 0);
       },

@@ -55,7 +55,8 @@
       I = max(I, 0.0) * shadow;
 
       float alpha = 1.0 - exp(-tau / mu);         // 背景をどれだけ隠すか
-      // 影の中でも真っ黒にはならない (土星本体からの照り返し)
-      vec3 c = prof.rgb * (I * 1.9 + 0.012 * alpha);
-      gl_FragColor = vec4(c, alpha);
+      // 影の中でも真っ黒にはならない (土星本体からの照り返し)。
+      // プロファイルの色だけ sRGB なのでリニアへ戻す (a の透過率はリニア値)
+      vec3 c = srgbToLinear(prof.rgb) * (I * 1.3 + 0.010 * alpha);
+      gl_FragColor = vec4(tonemap(c), alpha);
     }

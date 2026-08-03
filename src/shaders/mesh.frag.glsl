@@ -11,5 +11,5 @@
       vec3 l = normalize(uSun - vW);
       // 裏返っても暗くならないよう、法線の向きは絶対値で扱う
       float d = uFlat > 0.5 ? abs(dot(n, l)) : 1.0;
-      gl_FragColor = vec4(uCol * (0.28 + 0.85 * d), 1.0);
+      gl_FragColor = vec4(tonemap(srgbToLinear(uCol) * (0.28 + 0.85 * d)), 1.0);
     }

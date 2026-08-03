@@ -41,6 +41,19 @@ WebGL の状態 (uniform・blend・depth・cull) はグローバルなので、�
 
 天体の描画は `bodyRenderer.beginPass / draw / endPass` を通す。`draw()` は呼ばれるたびに天体単位の uniform を**すべて**設定する — 条件分岐で省かない。
 
+### 色はリニアで計算する
+
+`src/gl/setup.js` の `PRE` に `srgbToLinear` / `linearToSrgb` / `acesToneMap` / `tonemap` がある。照明を計算するシェーダは次の順で書く。
+
+```
+sRGB のテクスチャ・定数 → リニア → 照明・大気・発光を加算 → tonemap() → gl_FragColor
+```
+
+- **アルベド** (テクスチャ、天体の色) は `srgbToLinear`。天体の `colA/colB/colC/rim` は `bodies.js` で変換済みの `colAL/colBL/colCL/rimL` を渡す (画素ごとに `pow` を回さないため)。シェーダ内の即値も、リニア値を直に書いてコメントに元の sRGB を残す
+- **見た目を決め打ちした色** (空の色、霞、地球照) は「`tonemap` を通すと狙った画面色になる」逆算値を書く。EXPOSURE を変えたら計算し直す
+- **透過率・光学的厚さ・マスク**はもともとリニアなので変換しない (環プロファイルの `.a` など)
+- 加算合成だけの発光パス (`point` / `bill` / `coma` / `tail` / `line`) は画面色を直に書いており、トーンマップを通していない
+
 ## その他
 
 - コミットメッセージは日本語。何をなぜ変えたかを本文に書く

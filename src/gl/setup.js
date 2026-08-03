@@ -33,7 +33,27 @@
     return { pr, u, a };
   }
 
-  const PRE = "precision highp float;\n";
+  // 全シェーダ共通の前置き。色は「sRGB のテクスチャ・定数 → リニアへ戻す →
+  // リニアのまま照明を計算 → 露出 → トーンマップ → sRGB へ書き戻す」の順で扱う。
+  // 以前は sRGB 値をそのまま掛けていたため、昼夜の境界が不自然に硬く、明るい
+  // 面ほど暗く沈んでいた。EXPOSURE は「真正面から照らされた面が元テクスチャと
+  // ほぼ同じ明るさで出る」ように決めてある
+  const PRE = `precision highp float;
+    const float EXPOSURE = 1.15;
+    vec3 srgbToLinear(vec3 c) {
+      return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
+    }
+    vec3 linearToSrgb(vec3 c) {
+      c = max(c, vec3(0.0));
+      return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(vec3(0.0031308), c));
+    }
+    // ACES のフィルミックカーブ。白飛びを滑らかに丸める
+    vec3 acesToneMap(vec3 x) {
+      return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
+    }
+    // リニアの放射輝度 → 画面へ出す sRGB
+    vec3 tonemap(vec3 lin) { return linearToSrgb(acesToneMap(lin * EXPOSURE)); }
+`;
   // 画素ごとの微分と、微分を指定したテクスチャ取得。どちらも天体テクスチャの
   // 継ぎ目対策に要る (下の bodyFS)
   const hasDeriv = !!gl.getExtension("OES_standard_derivatives");

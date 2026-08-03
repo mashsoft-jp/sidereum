@@ -193,6 +193,15 @@
   for (const p of PLANETS) {
     p.obl = p.rEq ? [p.rEq / p.rkm, p.rPol / p.rkm, p.rEq / p.rkm] : null;
   }
+
+  // 天体の色は sRGB で書いてあるが、シェーダはリニアで照明を計算する。
+  // 変換に pow が要るので、画素ごとに毎回やらずここで一度だけ済ませておく
+  const s2l1 = (v) => (v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+  const s2l = (c) => c.map(s2l1);
+  for (const b of [SUN, ...PLANETS, ...SATELLITES]) {
+    b.colAL = s2l(b.colA); b.colBL = s2l(b.colB);
+    b.colCL = s2l(b.colC); b.rimL = s2l(b.rim);
+  }
   for (const s of SATELLITES) {
     s.dir = s.retro ? 1 : -1;
     s.ph = s.ph || 0;

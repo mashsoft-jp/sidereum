@@ -37,13 +37,20 @@
 
       if (uType < 0.5) {
         // ---- 太陽 ----
+        // 光球は照らされる面ではなく自発光なので、アルベドではなく放射輝度を直に
+        // 置く。赤だけトーンマップの肩を大きく超えさせるのがコツで、そうしないと
+        // ACES が彩度を落として白い円盤になる (実際に露出過多の太陽は白く写る)。
+        // ここの2色は、従来の見た目 (画面上の (0.99,0.72,0.26) と (1.0,0.94,0.66))
+        // をトーンマップ後に再現するリニア値
+        vec3 cA = vec3(3.729, 0.291, 0.050);
+        vec3 cB = vec3(8.000, 1.239, 0.230);
         float n = fbm(p * 4.0 + vec3(0.0, uTime * 0.05, uTime * 0.02));
         float g = noise(p * 22.0 + uTime * 0.25);
-        vec3 c = mix(uColA, uColB, smoothstep(0.2, 0.85, n + g * 0.18));
+        vec3 c = mix(cA, cB, smoothstep(0.2, 0.85, n + g * 0.18));
         float mu = max(dot(N, V), 0.0);
-        c *= 0.5 + 0.6 * mu;                       // 周縁減光
-        c += uColB * pow(1.0 - mu, 2.0) * 0.6;     // 縁の輝き
-        gl_FragColor = vec4(c * 1.25, 1.0);
+        c *= 0.22 + 0.78 * mu;                     // 周縁減光
+        c += cB * pow(1.0 - mu, 2.0) * 0.35;       // 縁の輝き
+        gl_FragColor = vec4(tonemap(c), 1.0);
         return;
       }
 
@@ -73,6 +80,8 @@
         }
       }
       float lat = p.y;
+      // アルベドは以降すべてリニア。uColA/B/C・uRim・uAmb は CPU 側で変換済み、
+      // テクスチャと即値だけここで戻す
       vec3 alb = vec3(0.5);
       float spec = 0.0;
 
@@ -80,7 +89,8 @@
         // ---- 彗星核: 自発光しない、煤と有機物に覆われた非常に暗い表面 ----
         float rock = fbm(p * 6.0 + 2.0);
         float pits = fbm(p * 18.0 - 4.0);
-        alb = mix(vec3(0.040, 0.043, 0.046), vec3(0.240, 0.195, 0.145), rock);
+        alb = mix(vec3(0.00310, 0.00334, 0.00359),    // sRGB (0.040,0.043,0.046)
+                  vec3(0.04696, 0.03157, 0.01848), rock);  //      (0.240,0.195,0.145)
         alb *= 0.58 + 0.52 * smoothstep(0.28, 0.76, pits);
       } else if (uHasTex > 0.5) {
         // ---- 実テクスチャ (NASA/USGS 全球マップ) ----
@@ -95,13 +105,13 @@
         float sv = 3.14159265 * sqrt(max(1.0 - p.y * p.y, 1e-8));   // ∂acos の分母
         vec2 dux = vec2(-(p.x * px.z - p.z * px.x) / (r2 * 6.2831853), -px.y / sv);
         vec2 duy = vec2(-(p.x * py.z - p.z * py.x) / (r2 * 6.2831853), -py.y / sv);
-        alb = texture2DGradEXT(uTex, uv, dux, duy).rgb;
+        alb = srgbToLinear(texture2DGradEXT(uTex, uv, dux, duy).rgb);
 #else
-        alb = texture2D(uTex, uv).rgb;
+        alb = srgbToLinear(texture2D(uTex, uv).rgb);
 #endif
         if (uType > 3.5 && uType < 4.5) {
           // 地球のみ: 雲と海面の鏡面反射を重ねる
-          float ocean = smoothstep(0.02, 0.12, alb.b - alb.r) * smoothstep(0.02, 0.12, alb.b - alb.g);
+          float ocean = smoothstep(0.004, 0.03, alb.b - alb.r) * smoothstep(0.004, 0.03, alb.b - alb.g);
           float cl = smoothstep(0.55, 0.78, fbm(p * 4.5 + vec3(uTime * 0.02, 0.0, uTime * 0.007)));
           alb = mix(alb, vec3(1.0), cl * 0.7);
           spec = pow(max(dot(reflect(-L, N), V), 0.0), 42.0) * ocean * (1.0 - cl) * 0.55;
@@ -116,7 +126,8 @@
         // ---- 火星 ----
         alb = mix(uColA, uColB, fbm(p * 4.0));
         alb *= 0.8 + 0.4 * fbm(p * 9.0 + 2.0);
-        alb = mix(alb, vec3(0.93, 0.94, 0.95), smoothstep(0.84, 0.92, abs(lat) + 0.05 * fbm(p * 6.0)));
+        alb = mix(alb, vec3(0.84809, 0.86890, 0.89001),   // sRGB (0.93,0.94,0.95)
+                  smoothstep(0.84, 0.92, abs(lat) + 0.05 * fbm(p * 6.0)));
       } else if (uType < 3.5) {
         // ---- 金星 (雲) ----
         float sw = fbm(vec3(p.x * 2.2, p.y * 6.5, p.z * 2.2) + vec3(uTime * 0.02, 0.0, 0.0));
@@ -130,7 +141,8 @@
         if (uParams.z > 0.5) {
           // 大赤斑
           float sd = distance(p, normalize(vec3(0.78, -0.32, 0.53)));
-          alb = mix(vec3(0.71, 0.30, 0.18), alb, smoothstep(0.07, 0.17, sd));
+          alb = mix(vec3(0.46236, 0.07324, 0.02721),      // sRGB (0.71,0.30,0.18)
+                    alb, smoothstep(0.07, 0.17, sd));
         }
       }
 
@@ -144,11 +156,12 @@
       // 見えない遠くの天体は見失わないよう明るく、円盤として分解できる大きさ
       // では暗くして満ち欠けを見せる。昼側の明るさは uAmb によらず一定に保つ
       float ambient = uAmb * dayFade;
-      float direct = mix(1.20, 1.23, uComet) - ambient;
+      float direct = mix(1.0, 1.03, uComet) - ambient;
       vec3 c = alb * (ambient + dif * direct) + vec3(spec) * dif;
       // 地上ビューの昼間は、天体との間の大気そのものが光っている (エアライト)。
       // 大気は天体より手前にあるので色を上乗せする。これが無いと、新月ごろの月が
       // 青空に黒い円盤として浮いてしまう (実際は夜側は空と見分けがつかない)。
-      // 空ドームはガンマを掛けないので、こちらもガンマの後に足して色を揃える
-      gl_FragColor = vec4(pow(c, vec3(0.92)) + skyDayColor(normalize(vW), uAirSun, uAirDay), 1.0);
+      // 空ドームと同じリニア値のまま足し、最後にまとめてトーンマップする
+      c += skyDayColor(normalize(vW), uAirSun, uAirDay);
+      gl_FragColor = vec4(tonemap(c), 1.0);
     }

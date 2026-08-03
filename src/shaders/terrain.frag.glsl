@@ -47,8 +47,8 @@
 
       if (uSky > 0.5) {
         // ---- 大気 (地球のみ)。色は天体のエアライトと共有 (skyDayColor) ----
-        vec3 night = vec3(0.015, 0.02, 0.045);
-        gl_FragColor = vec4(night * (1.0 - uDay) + skyDayColor(d, uSun, uDay), 1.0);
+        vec3 night = vec3(0.0036, 0.0045, 0.0082);   // 画面上の (0.015, 0.02, 0.045)
+        gl_FragColor = vec4(tonemap(night * (1.0 - uDay) + skyDayColor(d, uSun, uDay)), 1.0);
         return;
       }
 
@@ -70,18 +70,18 @@
         // 太陽が低いほどクレーターの陰影が強く出る (実際の月面写真と同じ)
         float relief = mix(1.5, 0.75, smoothstep(0.0, 0.5, uSun.y));
         float sh = 0.62 + 0.15 * base + 0.18 * grain + (0.30 * k1 + 0.16 * k2) * relief;
-        col = vec3(0.56, 0.545, 0.52) * clamp(sh, 0.04, 1.5);
+        col = srgbToLinear(vec3(0.56, 0.545, 0.52)) * clamp(sh, 0.04, 1.5);
         // 大気が無いので影は漆黒、日向はコントラストが強い
         float lit = smoothstep(-0.03, 0.06, uSun.y);
         col *= mix(0.04, 1.0, lit);
-        col += vec3(0.03, 0.05, 0.09) * (1.0 - lit);      // 地球照のうっすらした青み
+        col += vec3(0.0061, 0.0090, 0.0152) * (1.0 - lit);   // 地球照のうっすらした青み
       } else {
         // 地上: 土と草地のまだら
         float base = fbm(g * 0.05);
         float patch = fbm(g * 0.22 + 13.0);
         float grain = fbm(g * 1.1) * fade;
-        vec3 soil = vec3(0.20, 0.17, 0.13);
-        vec3 gras = vec3(0.13, 0.19, 0.11);
+        vec3 soil = srgbToLinear(vec3(0.20, 0.17, 0.13));
+        vec3 gras = srgbToLinear(vec3(0.13, 0.19, 0.11));
         col = mix(soil, gras, smoothstep(0.35, 0.65, patch));
         col *= 0.72 + 0.34 * base + 0.20 * grain;
         col *= mix(0.12, 1.0, uDay);                       // 夜は暗く、昼は明るく
@@ -89,8 +89,10 @@
       }
       // 地上は大気で地平線へ向かって霞む。月面は大気が無いので霞ませず輪郭を鋭いままにする
       if (uMoon < 0.5) {
-        vec3 haze = mix(vec3(0.03, 0.035, 0.06), vec3(0.42, 0.47, 0.56), uDay);
+        vec3 haze = mix(vec3(0.0061, 0.0069, 0.0104),    // 画面上の (0.03, 0.035, 0.06)
+                        vec3(0.0974, 0.1167, 0.1602),    //           (0.42, 0.47, 0.56)
+                        uDay);
         col = mix(col, haze, 1.0 - smoothstep(0.0, 0.030, dy));
       }
-      gl_FragColor = vec4(col, 1.0);
+      gl_FragColor = vec4(tonemap(col), 1.0);
     }
