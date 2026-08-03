@@ -68,6 +68,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
+      ver: 2,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -92,19 +93,23 @@
           },
         },
         {
-          scene: false, await: "zoom",
+          scene: false, await: "zoom", ui: ["controls"], hi: "#mag",
           text: {
-            ja: "マウスホイールを回すと拡大・縮小できます。回してみてください。",
-            en: "Scroll the mouse wheel to zoom in and out. Give it a try.",
+            ja: "マウスホイールを回すと拡大・縮小できます。" +
+                "下のパネルの「ズーム」が いま何倍かを示しています。回してみてください。",
+            en: "Scroll the mouse wheel to zoom in and out. The “Zoom” readout in the panel " +
+                "below shows the current magnification. Give it a try.",
           },
         },
         {
-          scene: false, await: "dist",
+          scene: false, await: "dist", ui: ["controls"], hi: "#zoom",
           text: {
             ja: "Shift を押しながらホイールを回すと、拡大率ではなく" +
-                "太陽系との距離そのものが変わります。",
-            en: "Hold Shift while scrolling to change your distance from the " +
-                "Solar System itself, rather than the magnification.",
+                "太陽系との距離そのものが変わります。" +
+                "「ズーム」は ×1.0 のまま、「距離」の数字だけが動くのが分かります。",
+            en: "Hold Shift while scrolling to change your distance from the Solar System " +
+                "itself, rather than the magnification: “Zoom” stays at ×1.0 while only the " +
+                "“Distance” readout moves.",
           },
         },
         {
@@ -168,7 +173,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 2,
+      ver: 3,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -193,19 +198,23 @@
           },
         },
         {
-          scene: false, await: "zoom",
+          scene: false, await: "zoom", ui: ["controls"], hi: "#mag",
           text: {
-            ja: "2本の指でつまむように広げたり縮めたり (ピンチ) すると拡大・縮小できます。",
-            en: "Pinch with two fingers to zoom in and out.",
+            ja: "2本の指でつまむように広げたり縮めたり (ピンチ) すると拡大・縮小できます。" +
+                "下のパネルの「ズーム」が いま何倍かを示しています。",
+            en: "Pinch with two fingers to zoom in and out. The “Zoom” readout in the panel " +
+                "below shows the current magnification.",
           },
         },
         {
           scene: false, await: "dist", ui: ["controls"], hi: "#zoom",
           text: {
             ja: "下のパネルの「距離」スライダーでは、拡大率ではなく" +
-                "太陽系との距離そのものが変わります。動かしてみてください。",
-            en: "The “Distance” slider in the panel below changes how far you are from " +
-                "the Solar System itself, rather than the magnification. Try moving it.",
+                "太陽系との距離そのものが変わります。動かすと「ズーム」は ×1.0 のまま、" +
+                "「距離」の数字だけが変わります。",
+            en: "The “Distance” slider in the panel below changes how far you are from the " +
+                "Solar System itself, rather than the magnification: “Zoom” stays at ×1.0 " +
+                "while only the “Distance” readout moves. Try it.",
           },
         },
         {
