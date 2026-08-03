@@ -120,7 +120,10 @@
     }
     return { pos: new Float32Array(pos), idx: new Uint16Array(idx) };
   }
-  const sphere = makeSphere(56, 36);
+  // 弦と弧のずれは (半角)² で効くので、56分割でも半径の 0.16%。惑星が
+  // 画面いっぱいでも 1080p なら 0.6px で見えない。4K で画面いっぱいにすると
+  // 1.7px になるので、そこだけ余裕を持たせて 96分割にしてある
+  const sphere = makeSphere(96, 60);
   const sphereVB = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, sphereVB);
   gl.bufferData(gl.ARRAY_BUFFER, sphere.pos, gl.STATIC_DRAW);
