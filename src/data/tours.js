@@ -31,8 +31,8 @@
   //         引きの画では点になって見つけられないので、注目させたい回に使う
   //   gfov  地上ビューの画角 [度]
   //   spd   再生速度 [日/秒]   play 再生するか
-  //   until play: true のとき、この日時 (UTC) まで再生したら停止して次へ
-  //   stay  true なら until に達しても次へ進まない (着いた場面を眺めさせる)
+  //   until play: true のとき、この日時 (UTC) まで再生したら停止する。
+  //         次へ進むのは自動送りが ON のときだけ (OFF ならその場で待つ)
   //   constel 星座 (と黄道) を出すか。ツアー中だけの一時変更で設定は保存しない
   //   orbits  軌道線を出すか。同じく一時変更。探査機視点など「写真」として
   //         見せる場面では、画面を横切る線が邪魔になるので落とす
@@ -44,13 +44,12 @@
   //         チュートリアルではこれが無いとカメラが巻き戻る
   //   ui    一時的に出す UI: "controls" / "nav" / "menu" / "view" / "clock"
   //   hi    ハイライトする要素の CSS セレクタ
-  //   await 検知したら自動で次へ進む操作:
+  //   await 促した操作の検知。「できました」を出す (次へ進むのは自動送り時のみ):
   //         "rotate" / "zoom" / "dist" / "pan" / "select" / "play" / "view" / "menu"
   //         (日時は再生中に勝手に動いて誤検知するので対象にしない)
   //
   // ツアー単位:
   //   platform "touch" | "desktop" — 一覧に出す端末。未指定は常に出す
-  //   manual   true なら「自動送り」ボタンを隠す (検知式のツアー用)
   //   probe    探査機ツアー。この1機だけを描き、他機は隠す
   //   keep     true なら終了時にシーンを戻さない
   //   ver      内容の版 (既定 1)。中身を直したらここを +1 する。視聴済みの記録
@@ -67,7 +66,6 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      manual: true,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -168,7 +166,6 @@
     {
       id: "basics-touch",
       platform: "touch",
-      manual: true,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -335,7 +332,6 @@
     {
       id: "halley1910",
       ver: 3,
-      manual: true,
       title: { ja: "ハレー彗星 1910年の大接近", en: "Halley's Comet: the 1910 Approach" },
       lead: {
         ja: "太陽系の外から落ちてきて、地球のすぐ横をかすめ、また去っていくまでを辿ります。",
@@ -570,7 +566,6 @@
     },
     {
       id: "voyager1",
-      manual: true,
       probe: "voyager1",
       ver: 10,
       title: { ja: "ボイジャー1号の旅", en: "The Voyage of Voyager 1" },
@@ -610,7 +605,7 @@
           // 再生速度は距離に比例して落ちる (tourRideCam) ので、最後はゆっくり。
           // 木星まわりも双曲線軌道なので、近点に向かって加速していく
           sel: "jupiter", ride: "jupiter", spot: null, mark: false, mag: 2.2, orbits: false, path: false,
-          d: "1979-03-03", spd: 0.4, play: true, until: "1979-03-05T17:00", stay: true,
+          d: "1979-03-03", spd: 0.4, play: true, until: "1979-03-05T17:00",
           text: {
             ja: "ここからはボイジャー1号に乗って見てみます。1979年3月5日、木星最接近。" +
                 "重力に引かれて秒速13kmから28kmまで加速しながら、中心から 34万9千km — " +
@@ -625,7 +620,7 @@
         {
           // 引きの画に戻して土星系まで運ぶ。着いたら自動で次 (探査機視点) へ
           sel: null, ride: null, fit: 11, a: 0.5, y: 0.9, mag: 1, orbits: true, path: true,
-          spot: "voyager1", stay: false, d: "1979-03-05T17:00",
+          spot: "voyager1", d: "1979-03-05T17:00",
           spd: 55, play: true, until: "1980-11-11T23:41",
           text: {
             ja: "木星の重力で加速し、進路は土星へ。もう一度引いて眺めます。" +
@@ -637,7 +632,7 @@
         {
           // タイタンへの最終進入。6時間で 37万km → 6千km まで詰める
           sel: "titan", ride: "titan", mag: 1, spot: null, orbits: false, path: false,
-          d: "1980-11-11T23:41", spd: 0.09, play: true, until: "1980-11-12T05:41", stay: true,
+          d: "1980-11-11T23:41", spd: 0.09, play: true, until: "1980-11-12T05:41",
           text: {
             ja: "1980年11月12日、まず向かったのはタイタンでした。" +
                 "厚い大気を持つ唯一の衛星を間近で調べるため、土星本体より先に、" +
@@ -652,7 +647,7 @@
           // カメラは探査機に乗ったまま土星へ向き直る。最接近 18.4万km で
           // 視直径 39°、環は画面からはみ出す
           sel: "saturn", ride: "saturn", d: "1980-11-12T05:41",
-          spd: 0.25, play: true, until: "1980-11-12T23:46", stay: true,
+          spd: 0.25, play: true, until: "1980-11-12T23:46",
           text: {
             ja: "そのまま振り返らずに土星へ。18時間後、中心から 18万4千km まで寄ります。" +
                 "落ちていくにつれて加速し、最接近では秒速 25km — ここは" +
@@ -714,7 +709,6 @@
     },
     {
       id: "voyager2",
-      manual: true,
       probe: "voyager2",
       ver: 2,
       title: { ja: "ボイジャー2号の旅", en: "The Voyage of Voyager 2" },
@@ -749,7 +743,7 @@
         {
           sel: "jupiter", ride: "jupiter", spot: null, mark: false, mag: 2.2,
           orbits: false, path: false,
-          d: "1979-07-07", spd: 0.6, play: true, until: "1979-07-10T10:00", stay: true,
+          d: "1979-07-07", spd: 0.6, play: true, until: "1979-07-10T10:00",
           text: {
             ja: "1979年7月9日、木星。1号より遠い 64万km を通ります。" +
                 "その15時間前にはガニメデの脇 6万2千km を抜け、" +
@@ -761,7 +755,7 @@
         },
         {
           sel: null, ride: null, fit: 11, a: 0.5, y: 0.9, mag: 1, orbits: true, path: true,
-          spot: "voyager2", stay: false, d: "1979-07-10T10:00",
+          spot: "voyager2", d: "1979-07-10T10:00",
           spd: 70, play: true, until: "1981-08-24T03:24",
           text: {
             ja: "木星の重力で加速して土星へ。2年余りの巡航です。" +
@@ -772,7 +766,7 @@
         },
         {
           sel: "saturn", ride: "saturn", spot: null, mag: 1, orbits: false, path: false,
-          d: "1981-08-24T03:24", spd: 0.4, play: true, until: "1981-08-26T09:24", stay: true,
+          d: "1981-08-24T03:24", spd: 0.4, play: true, until: "1981-08-26T09:24",
           text: {
             ja: "1981年8月26日、土星。中心から 16万1千km — 1号よりずっと内側を、" +
                 "秒速24kmまで加速しながら抜けます。ここで受けた曲がりが、" +
@@ -784,7 +778,7 @@
         },
         {
           sel: null, ride: null, fit: 21, a: 0.5, y: 0.9, mag: 1, orbits: true, path: true,
-          spot: "voyager2", stay: false, d: "1981-08-26T09:24",
+          spot: "voyager2", d: "1981-08-26T09:24",
           spd: 145, play: true, until: "1986-01-23T18:00",
           text: {
             ja: "ここからは誰も行ったことのない領域です。天王星まで4年半。" +
@@ -796,7 +790,7 @@
         },
         {
           sel: "uranus", ride: "uranus", spot: null, mag: 1, orbits: false, path: false,
-          d: "1986-01-23T18:00", spd: 0.22, play: true, until: "1986-01-25", stay: true,
+          d: "1986-01-23T18:00", spd: 0.22, play: true, until: "1986-01-25",
           text: {
             ja: "1986年1月24日、天王星。横倒しの自転軸を持つこの惑星を訪れた" +
                 "唯一の探査機です。最接近の1時間前にはミランダの脇 2万9千km を通り、" +
@@ -808,7 +802,7 @@
         },
         {
           sel: null, ride: null, fit: 32, a: 0.5, y: 0.9, mag: 1, orbits: true, path: true,
-          spot: "voyager2", stay: false, d: "1986-01-25",
+          spot: "voyager2", d: "1986-01-25",
           spd: 120, play: true, until: "1989-08-24T22:00",
           text: {
             ja: "最後の目的地、海王星へ。3年半かけて 30 au の彼方まで。" +
@@ -820,7 +814,7 @@
         },
         {
           sel: "neptune", ride: "neptune", spot: null, mag: 1, orbits: false, path: false,
-          d: "1989-08-24T22:00", spd: 0.09, play: true, until: "1989-08-25T09:56", stay: true,
+          d: "1989-08-24T22:00", spd: 0.09, play: true, until: "1989-08-25T09:56",
           text: {
             ja: "1989年8月25日、海王星。北極の雲頂わずか 4,950km 上を、" +
                 "秒速27kmでかすめます。12年の惑星巡りで最も近い接近でした。" +
@@ -860,7 +854,6 @@
     },
     {
       id: "cassini",
-      manual: true,
       probe: "cassini",
       ver: 2,
       title: { ja: "カッシーニの土星", en: "Cassini at Saturn" },
@@ -894,7 +887,7 @@
         },
         {
           sel: "earth", ride: "earth", spot: null, mag: 1, orbits: false, path: false,
-          d: "1999-08-18T02:00", spd: 0.012, play: true, until: "1999-08-18T03:24", stay: true,
+          d: "1999-08-18T02:00", spd: 0.012, play: true, until: "1999-08-18T03:24",
           text: {
             ja: "1999年8月18日、最後のスイングバイは地球でした。高度 1,171km — " +
                 "国際宇宙ステーションの3倍ほどの高さを、秒速19kmで駆け抜けます。" +
@@ -906,7 +899,7 @@
         },
         {
           sel: null, ride: null, fit: 5.6, a: 0.55, y: 0.9, mag: 1, orbits: true, path: true,
-          spot: "cassini", stay: false, d: "1999-08-18T03:24",
+          spot: "cassini", d: "1999-08-18T03:24",
           spd: 60, play: true, until: "2000-12-30T10:05",
           text: {
             ja: "ここからは一直線に外へ。16か月かけて木星まで、太陽から 5.2 au の距離へ。",
@@ -940,7 +933,7 @@
         },
         {
           sel: "saturn", ride: "saturn", spot: null, mag: 1, orbits: false, path: false,
-          d: "2004-06-20", spd: 1.2, play: true, until: "2004-06-29", stay: true,
+          d: "2004-06-20", spd: 1.2, play: true, until: "2004-06-29",
           text: {
             ja: "2004年7月1日、土星周回軌道へ投入。環の隙間を通り抜けてから96分間の逆噴射をかけ、" +
                 "雲頂から2万kmまで降りて土星の重力に捕まりました。" +
@@ -964,7 +957,7 @@
         },
         {
           sel: "saturn", km: 700000, lit: true, orbits: true, path: true,
-          spd: 90, play: true, until: "2017-09-15", stay: true,
+          spd: 90, play: true, until: "2017-09-15",
           text: {
             ja: "13年の周回。エンケラドスの氷の裂け目から水が噴き出しているのを見つけ、" +
                 "その海に生命の条件が揃っている可能性を示しました。" +

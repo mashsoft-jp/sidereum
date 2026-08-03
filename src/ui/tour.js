@@ -36,7 +36,6 @@
   let tourHiEl = null;        // ハイライト中の要素
   let tourSceneDone = false;  // このツアーでシーンを一度でも適用したか
   let tourUntil = null;       // 早送りステップの停止日時 (simDays)
-  let tourStay = false;       // until に達しても次へ進まない
   let tourRideFly = false;    // 引きの画から探査機視点へ寄っている最中
 
   const tourText = (o) => (o ? (lang === "ja" ? o.ja : o.en) : "");
@@ -138,10 +137,12 @@
     const t = s.play && s.until ? Date.parse(s.until + "Z") : NaN;
     tourUntil = isFinite(t) ? (t - J2000) / DAY_MS : null;
   }
-  // 少し置いてから次のステップへ。「できました」は操作を検知したときの合図
-  // なので、until で時間が来ただけの早送りステップでは出さない
+  // 「できました」は操作を検知したときの合図なので、until で時間が来ただけの
+  // 早送りステップでは出さない。
+  // 次へ進むのは自動送りが ON のときだけ — OFF なら着いた場面のまま待つ
   function tourAdvance(showDone) {
     if (showDone) tourBar.classList.add("done");
+    if (!tourAuto) return;
     tourDoneTimer = setTimeout(() => tourGo(tourIdx + 1), 900);
   }
   function tourWatch() {
@@ -158,8 +159,7 @@
       simDays = tourUntil;
       setPlaying(false);
       tourUntil = null;
-      // stay のステップは止まるだけ。着いた場面をそのまま眺めさせたいときに使う
-      if (!tourStay && tourIdx < tour.steps.length - 1) tourAdvance(false);
+      if (tourIdx < tour.steps.length - 1) tourAdvance(false);
       return;
     }
     if (!tourAwaitTest || !tourAwaitTest()) return;
@@ -213,7 +213,6 @@
     if (!s.ride) tourRideEye = null;   // 探査機視点を抜けたら次回は今の視点から
     tourRide = s.ride || null;
     tourPath = !!s.path;
-    tourStay = !!s.stay;
     tourTouched = false;
     tourResumeBtn.hidden = true;
     // 情報パネルはナレーションと重なるので、ステップが変わったら必ず閉じる
@@ -415,6 +414,8 @@
   function armTourTimer() {
     clearTourTimer();
     if (!tour || !tourAuto || tourIdx >= tour.steps.length - 1) return;
+    // 早送り中のステップは until が終点。滞留タイマーで途中で切らない
+    if (tourUntil !== null) return;
     const sec = tourStateAt(tourIdx).hold || 12;
     void tourProgEl.offsetWidth;     // 直前の width:0 を確定させ、遷移を必ず走らせる
     tourProgEl.style.transition = "width " + sec + "s linear";
@@ -433,7 +434,6 @@
     tourPrevBtn.disabled = tourIdx === 0;
     tourNextBtn.textContent = tourIdx === tour.steps.length - 1 ? t.tourDone : t.tourNext;
     // 操作の検知で進むツアーでは自動送りに意味がないので出さない
-    tourAutoBtn.hidden = !!tour.manual;
     tourAutoBtn.textContent = t.tourAuto;
     tourAutoBtn.classList.toggle("on", tourAuto);
     tourResumeBtn.textContent = t.tourResume;
@@ -509,7 +509,6 @@
     tourActive = true;
     tourProbe = t.probe || null;
     tourSceneDone = false;
-    if (t.manual) tourAuto = false;   // ボタンを隠すので、前のツアーの ON を持ち込まない
     hideModals();
     setMenu(false);
     if (welcomeEl.classList.contains("open")) closeWelcome();
@@ -528,7 +527,6 @@
     tourProbe = null;
     tourRide = null;
     tourPath = false;
-    tourStay = false;
     tourRideFly = false;
     tourProbeHold = false;
     tourRideEye = null;
