@@ -4580,37 +4580,11 @@
     }
   }
 
-  // カメラが天体へめり込まない最小距離。
-  //
-  // 以前は「注視点から天体半径の 1.7倍」という固定値だった。天体の中心を見て
-  // いる前提の式で、パンで注視点をずらしても同じだけ効いてしまう。そのため
-  // 「土星の環まで降りる」「地表すれすれを飛ぶ」といった見方ができなかった
-  // (土星なら 98,994 km が下限。環は 74,000〜140,600 km にある)。
-  //
-  // いまは実際にカメラが表面へ触れる距離を解く。注視点 F から向き D へ dist
-  // 進んだ点が中心 C・半径 R の球の外に出る条件
-  //     |F + D·dist − C|² ≥ R²
-  // の大きい方の根がそれ。その向きで天体に当たらないなら制限しない。
-  // 解除後も最後に中心だった天体を使う (解除の瞬間に下限が跳ね上がって
-  // ズームが一気に引かれるのを防ぐ)
-  const DIST_FLOOR = 1e-6;   // 約13km。これ以下はカメラ行列が破綻する
   function minDist() {
+    // 解除後も最後に中心だった天体のサイズを下限に使う (解除時に太陽サイズの下限へ
+    // 跳ね上がってズームが一気に引かれるのを防ぐ)。中心が太陽/原点のときは太陽サイズ。
     const b = selected || lastCenter;
-    if (!b) return bodyR(SUN) * 2.2;
-    // 太陽はコロナと本体の発光が画面を覆うので、他より余裕を持たせる
-    // 1.06倍 = 地球なら高度約380km (ISS と同じくらい) まで降りられる
-    const R = bodyR(b) * (b === SUN ? 2.2 : 1.06);
-    const c = posW.get(b.key);
-    if (!c) return R;
-    const ax = cam.focusTgt[0] + cam.panOffTgt[0] - c[0];
-    const ay = cam.focusTgt[1] + cam.panOffTgt[1] - c[1];
-    const az = cam.focusTgt[2] + cam.panOffTgt[2] - c[2];
-    const cp = Math.cos(cam.pitchTgt);
-    const dx = cp * Math.cos(cam.yawTgt), dy = Math.sin(cam.pitchTgt), dz = cp * Math.sin(cam.yawTgt);
-    const ad = ax * dx + ay * dy + az * dz;
-    const disc = ad * ad - (ax * ax + ay * ay + az * az - R * R);
-    if (disc <= 0) return DIST_FLOOR;               // この向きでは天体に当たらない
-    return Math.max(DIST_FLOOR, -ad + Math.sqrt(disc));
+    return b && b !== SUN ? bodyR(b) * 1.7 : bodyR(SUN) * 2.2;
   }
 
   //#endregion
