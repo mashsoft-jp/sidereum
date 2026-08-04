@@ -17,10 +17,18 @@
     setMenu(false);
   });
 
+  // ON/OFF を持つメニュー項目は、ラベルを状態で変えずチェックで表す。
+  // 「押すとどうなるか」を出す方式だと、今どちらなのかが読み取れないため
+  //(チェックの見た目は styles.css の menuitemcheckbox)
+  function setMenuCheck(btn, label, on) {
+    btn.textContent = label;
+    btn.setAttribute("aria-checked", on ? "true" : "false");
+  }
+
   // 風景 (地面の質感・地平の稜線・空の色) の表示切替。地上・月面ビューのみ効く
   const menuTerrainBtn = document.getElementById("menuTerrain");
   function updateTerrainLabel() {
-    menuTerrainBtn.textContent = showTerrain ? T().menuTerrainOff : T().menuTerrainOn;
+    setMenuCheck(menuTerrainBtn, T().menuTerrain, showTerrain);
   }
   menuTerrainBtn.addEventListener("click", () => {
     showTerrain = !showTerrain;
@@ -32,7 +40,7 @@
   // 明るいところの滲み (Bloom)。描画負荷が上がるので切れるようにしておく
   const menuBloomBtn = document.getElementById("menuBloom");
   function updateBloomLabel() {
-    menuBloomBtn.textContent = bloomOn ? T().menuBloomOff : T().menuBloomOn;
+    setMenuCheck(menuBloomBtn, T().menuBloom, bloomOn);
   }
   menuBloomBtn.addEventListener("click", () => {
     bloomOn = !bloomOn;
@@ -42,11 +50,10 @@
   });
 
   // テクスチャの解像度 (2048×1024 / 4096×2048)。既定は端末で決めている
-  // (PC = 高解像度、スマホ = 標準) ので、ここで上書きしたぶんだけ localStorage に残す。
-  // ラベルは「今どちらか」ではなく「押すとどうなるか」を出す
+  // (PC = 高解像度、スマホ = 標準) ので、ここで上書きしたぶんだけ localStorage に残す
   const menuHiResBtn = document.getElementById("menuHiRes");
   function updateHiResLabel() {
-    menuHiResBtn.textContent = texHiRes ? T().menuHiResOff : T().menuHiResOn;
+    setMenuCheck(menuHiResBtn, T().menuHiRes, texHiRes);
   }
   menuHiResBtn.addEventListener("click", () => {
     texHiRes = !texHiRes;

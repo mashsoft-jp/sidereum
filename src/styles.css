@@ -81,8 +81,27 @@
   }
   #menu button:hover { background: rgba(150, 178, 224, 0.12); }
   /* 中身が増えた・変わった項目の印 (New / Update!) */
-  #menu > button[role="menuitem"] {
+  #menu > button[role="menuitem"],
+  #menu > button[role="menuitemcheckbox"] {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  /* ON/OFF を持つ項目のチェックボックス。押すとどうなるかではなく、
+     いまどちらかを出す (ラベルは状態で変えない) */
+  #menu > button[role="menuitemcheckbox"]::after {
+    content: "";
+    flex: none;
+    box-sizing: border-box;
+    width: 14px; height: 14px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; line-height: 1;
+  }
+  #menu > button[aria-checked="true"]::after {
+    content: "✓";
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #0a0d16;
   }
   .menuTag {
     flex: none; padding: 1px 6px; border-radius: 3px;
