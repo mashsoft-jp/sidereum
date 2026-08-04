@@ -538,8 +538,10 @@
         gl.uniform3f(billP.u.uCol1, 0.55 * fade, 0.32 * fade * gm, 0.12 * fade * bm);
         gl.uniform3f(billP.u.uCol2, 1.00 * fade, 0.86 * fade * gm, 0.66 * fade * bm);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        gl.uniform1f(billP.u.uFall, 0.6);
-        gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide * 0.30);
+        // 芯の落ち方を平らにしない。加算で 1.0 に張り付いた領域が広がると、
+        // その縁が輪郭として読めて「太陽が大きくなった」に見えてしまう
+        gl.uniform1f(billP.u.uFall, 1.5);
+        gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide * 0.22);
         gl.uniform3f(billP.u.uCol1, 1.0 * fade, 0.80 * fade * gm, 0.45 * fade * bm);
         gl.uniform3f(billP.u.uCol2, 1.0 * fade, 1.00 * fade * gm, 1.00 * fade * bm);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

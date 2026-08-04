@@ -474,9 +474,13 @@
         gl.uniform3f(billP.u.uCol2, 1.00, 0.86, 0.66);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         // 白熱した芯。Bloom のしきい値 (0.72) を大きく超えさせて滲ませる。
-        // 太陽の色ではなく白に寄せる — 眩しさは色が飛ぶことで伝わる
-        gl.uniform1f(billP.u.uFall, 0.6);
-        gl.uniform1f(billP.u.uSize, Math.max(bodyR(SUN) * 2.4, dSun * GLARE_TAN * 0.16) * k);
+        // 太陽の色ではなく白に寄せる — 眩しさは色が飛ぶことで伝わる。
+        //
+        // 落ち方を平らにしない (以前 0.6 にしていた)。加算で 1.0 に張り付いた
+        // 領域が広がると、その縁が輪郭として読めてしまい、眩しさではなく
+        // 「太陽が大きくなった」に見える。飛ぶ範囲は狭く、外へは滑らかに
+        gl.uniform1f(billP.u.uFall, 1.5);
+        gl.uniform1f(billP.u.uSize, Math.max(bodyR(SUN) * 2.4, dSun * GLARE_TAN * 0.09) * k);
         gl.uniform3f(billP.u.uCol1, 1.0, 0.80, 0.45);
         gl.uniform3f(billP.u.uCol2, 1.0, 1.0, 1.0);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
