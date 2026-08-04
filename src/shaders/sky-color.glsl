@@ -57,7 +57,7 @@
       const int SUN_N = 4;
       float segLen = tMax / float(VIEW_N);
       float odR = 0.0, odM = 0.0;                 // 視線に沿った光学的厚さ
-      vec3 sumR = vec3(0.0), sumM = vec3(0.0);
+      vec3 sumR = vec3(0.0), sumM = vec3(0.0), sumMS = vec3(0.0);
 
       for (int i = 0; i < VIEW_N; i++) {
         vec3 p = o + d * (segLen * (float(i) + 0.5));
@@ -86,6 +86,11 @@
         vec3 att = exp(-(ATM_BR * (odR + odRs) + ATM_BM * 1.1 * (odM + odMs)));
         sumR += att * hr;
         sumM += att * hm;
+        // 多重散乱ぶんの積算。単散乱と同じ減衰を掛けると同じだけ赤くなり、
+        // 肝心の「青を戻す」働きをしなくなる (地平がいつ見ても黄色くなる)。
+        // 何度も散乱した光は大気の中を巡ってから届くので、行き帰りの光路に
+        // 沿った減衰はずっと弱い。指数を寝かせて近似する
+        sumMS += pow(att, vec3(0.30)) * hr;
       }
 
       // 位相関数 (散乱角ごとの配分)
@@ -99,6 +104,6 @@
       // 多重散乱の近似。単散乱だけだと地平がいつも金色に寄る — 実際は何度も
       // 散乱した光が青を戻し、昼の地平は白っぽい霞になる。きちんと解くには
       // 事前計算テーブルが要るので、単散乱と同じ形の等方成分を足して代える
-      c += sumR * ATM_BR * 0.0796 * ATM_MULT * ATM_SUN;   // 1/(4π) = 等方
+      c += sumMS * ATM_BR * 0.0796 * ATM_MULT * ATM_SUN;   // 1/(4π) = 等方
       return c * day;
     }
