@@ -1,3 +1,6 @@
+  // 太陽のグレアの角度の下限 (視半径。太陽そのものは 1au で 0.27°)
+  const GLARE_TAN = Math.tan(9.0 * Math.PI / 180);
+
   function hitTestGround(px, py) {
     let best = null, bd = 30 * 30;
     for (const v of groundVis) {
@@ -436,13 +439,47 @@
       gl.uniform3f(billP.u.uCenter, -eye[0], -eye[1], -eye[2]);   // 太陽 (カメラ相対)
       gl.uniform3f(billP.u.uRight, Vm[0], Vm[4], Vm[8]);
       gl.uniform3f(billP.u.uUp, Vm[1], Vm[5], Vm[9]);
-      gl.uniform1f(billP.u.uSize, bodyR(SUN) * 5.5);
-      gl.uniform3f(billP.u.uCol1, 1.0, 0.45, 0.1);
-      gl.uniform3f(billP.u.uCol2, 1.0, 0.85, 0.5);
       gl.bindBuffer(gl.ARRAY_BUFFER, billVB);
       gl.enableVertexAttribArray(billP.a.aCorner);
       gl.vertexAttribPointer(billP.a.aCorner, 2, gl.FLOAT, false, 0, 0);
+      // 本物のコロナ。太陽半径基準なので、離れれば太陽と同じ割合で小さくなる
+      gl.uniform1f(billP.u.uFall, 2.4);
+      gl.uniform1f(billP.u.uSize, bodyR(SUN) * 5.5);
+      gl.uniform3f(billP.u.uCol1, 1.0, 0.45, 0.1);
+      gl.uniform3f(billP.u.uCol2, 1.0, 0.85, 0.5);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      // 眩しさ (グレア)。Bloom を入れているときだけ足す。
+      //
+      // Bloom はトーンマップ済みの画面を取り込むので、太陽の円盤は「日向の雲」と
+      // 同じ 1.0 に潰れている。実際の太陽は雲より 5桁ほど明るいのに、その差は
+      // 取り込む時点で失われていて、Bloom だけでは太陽を特別扱いできない。
+      // グレアは光源の絶対輝度で決まり、光源の見かけの大きさでは決まらないので、
+      // 距離によらない角度の下限を入れて足し戻す。
+      // (Bloom = カメラ・目のグレアの模擬なので、切っているときは素の絵に戻す)
+      if (bloomOn) {
+        const dSun = Math.hypot(eye[0], eye[1], eye[2]);
+        // 板は太陽の中心に置かれるので、深度テストで太陽自身の円盤に芯を
+        // 削られてしまう (コロナが輪にしか見えないのはこのため)。グレアは
+        // 円盤の上にも乗ってほしいので、表面のすぐ手前へ出す。深度テストは
+        // 効いたままなので、太陽が惑星の裏に回れば正しく消える
+        const k = Math.max(0.02, (dSun - bodyR(SUN) * 1.02) / (dSun || 1));
+        gl.uniform3f(billP.u.uCenter, -eye[0] * k, -eye[1] * k, -eye[2] * k);
+        // 広く薄い裾。落ち方を緩くして画面の広い範囲まで届かせ、周りの星を
+        // 飲み込ませる。「そちらを見ていられない」感じはこの裾が作る
+        gl.uniform1f(billP.u.uFall, 1.6);
+        gl.uniform1f(billP.u.uSize, Math.max(bodyR(SUN) * 5.5, dSun * GLARE_TAN) * k);
+        gl.uniform3f(billP.u.uCol1, 0.55, 0.32, 0.12);
+        gl.uniform3f(billP.u.uCol2, 1.00, 0.86, 0.66);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        // 白熱した芯。Bloom のしきい値 (0.72) を大きく超えさせて滲ませる。
+        // 太陽の色ではなく白に寄せる — 眩しさは色が飛ぶことで伝わる
+        gl.uniform1f(billP.u.uFall, 0.6);
+        gl.uniform1f(billP.u.uSize, Math.max(bodyR(SUN) * 2.4, dSun * GLARE_TAN * 0.16) * k);
+        gl.uniform3f(billP.u.uCol1, 1.0, 0.80, 0.45);
+        gl.uniform3f(billP.u.uCol2, 1.0, 1.0, 1.0);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
     }
 
     // --- 彗星の尾・コマ (太陽接近時のみ, 加算) ---
