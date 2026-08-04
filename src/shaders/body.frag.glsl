@@ -243,9 +243,19 @@
                           clamp(cuv.y - dot(Lt, north) * k / 3.14159265, 0.0, 1.0));
           alb *= 1.0 - 0.55 * SAMPLE(uCloud, suv).r;
 
-          // 海面。雲より先に、地表の色が青く偏っているかで判定する
+          // 海面の太陽反射 (サングリント)。実物の写真にも写るが、水の正面反射率は
+          // 2% しかないので、正面から見ているうちはほとんど光らない。フレネルを
+          // 入れずに強度だけで出すと、満に近い画で円盤の真ん中に大きな艶が乗り、
+          // 地球儀の照り返しのような見た目になる。
+          //   - フレネルは Schlick 近似 (水の F0 = 0.02)。斜めから見るほど強い
+          //   - ローブ幅は Cox-Munk の波面傾斜 (σ ≒ 10°) 相当。Blinn の指数は
+          //     Phong のおよそ4倍で同じ広さになるので 240
+          //   - 最大でもリニア 0.08 程度に収める。Bloom の閾値 (画面輝度 0.72) を
+          //     超えると滲みに拾われ、円盤の 1/3 を覆う白い靄になる
           float ocean = smoothstep(0.004, 0.03, alb.b - alb.r) * smoothstep(0.004, 0.03, alb.b - alb.g);
-          spec = pow(max(dot(reflect(-L, N), V), 0.0), 60.0) * ocean * (1.0 - cloud) * 1.1;
+          vec3 Hv = normalize(L + V);
+          float fWater = 0.02 + 0.98 * pow(1.0 - max(dot(L, Hv), 0.0), 5.0);
+          spec = pow(max(dot(N, Hv), 0.0), 240.0) * fWater * ocean * (1.0 - cloud) * 4.0;
 
           alb = mix(alb, vec3(0.90), cloud);
         }
