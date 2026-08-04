@@ -52,7 +52,8 @@
   }
 
   // ステップ開始時にスナップショットを取り、毎フレーム「操作されたか」を見る述語を返す。
-  // 入力ハンドラ側には手を入れない (操作の経路が増えたときに拾い漏らすため)
+  // 原則として入力ハンドラ側には手を入れない (操作の経路が増えたときに拾い漏らすため)。
+  // 日時だけは結果の値から操作を見分けられないので、例外的に入力側で数えている
   const wrapPi = (a) => ((a + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
   const TOUR_AWAIT = {
     rotate: () => {
@@ -84,7 +85,24 @@
       const g = groundView, s = surfaceBody;
       return () => groundView !== g || surfaceBody !== s;
     },
-    menu: () => () => menuEl.classList.contains("open"),
+    // 日時だけはスナップショットで見分けられない (再生でも simDays は動く)。
+    // 入力欄・現在時刻ボタンで数えている編集回数を見る
+    date: () => {
+      const n = clockEdits;
+      return () => clockEdits !== n;
+    },
+    // 開いた瞬間を捉える。開いたまま次のステップへ来ることがあるので、
+    // 現在の状態ではなく「閉じている状態から開いた」を条件にする
+    menu: () => {
+      let closed = !menuEl.classList.contains("open");
+      return () => {
+        if (!menuEl.classList.contains("open")) {
+          closed = true;
+          return false;
+        }
+        return closed;
+      };
+    },
   };
 
   // 「この軌道半径 [au] が画面に収まる」カメラ距離。
@@ -139,10 +157,11 @@
   }
   // 「できました」は操作を検知したときの合図なので、until で時間が来ただけの
   // 早送りステップでは出さない。
-  // 次へ進むのは自動送りが ON のときだけ — OFF なら着いた場面のまま待つ
+  // 次へ進むのは自動送りが ON のときだけ — OFF なら着いた場面のまま待つ。
+  // 最後のステップでは進めない (自動送りでツアーが勝手に終わってしまう)
   function tourAdvance(showDone) {
     if (showDone) tourBar.classList.add("done");
-    if (!tourAuto) return;
+    if (!tourAuto || tourIdx >= tour.steps.length - 1) return;
     tourDoneTimer = setTimeout(() => tourGo(tourIdx + 1), 900);
   }
   function tourWatch() {
@@ -159,7 +178,7 @@
       simDays = tourUntil;
       setPlaying(false);
       tourUntil = null;
-      if (tourIdx < tour.steps.length - 1) tourAdvance(false);
+      tourAdvance(false);
       return;
     }
     if (!tourAwaitTest || !tourAwaitTest()) return;

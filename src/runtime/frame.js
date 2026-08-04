@@ -186,6 +186,10 @@
   function setSimTime(t) {
     simDays = (Math.min(Math.max(t, MIN_T), MAX_T) - J2000) / DAY_MS;
   }
+  // ガイドツアーの「できました」判定用。simDays は再生でも勝手に動くので
+  // スナップショットでは操作を見分けられない。日時が変わる経路はこの3つ
+  // (日付欄・時刻欄・現在時刻ボタン) だけなので、ここで数える
+  let clockEdits = 0;
   // 年を4桁打ち終える前にも change は発火する ("1" の時点で 0001 年として発火)。
   // そこで確定・補正すると入力途中の年が勝手に書き換わってしまうため、
   // 4桁揃うまでは何もしない。フォーカスも奪わない (奪うと続きが打てない)
@@ -198,6 +202,7 @@
     const c = new Date(J2000 + simDays * DAY_MS);
     setSimTime(new Date(y, mo - 1, dd,
       c.getHours(), c.getMinutes(), c.getSeconds(), c.getMilliseconds()).getTime());
+    clockEdits++;
   });
   timeInput.addEventListener("change", () => {
     const v = timeInput.value;                // "HH:MM"
@@ -207,6 +212,7 @@
     // 時刻だけを差し替え。入力欄に秒が無いので秒以下は 0 に揃える
     const c = new Date(J2000 + simDays * DAY_MS);
     setSimTime(new Date(c.getFullYear(), c.getMonth(), c.getDate(), hh, mi, 0, 0).getTime());
+    clockEdits++;
   });
   // Enter で入力を終える
   dateInput.addEventListener("keydown", (e) => { if (e.key === "Enter") dateInput.blur(); });
@@ -216,6 +222,7 @@
   timeInput.addEventListener("blur", () => { lastTimeStr = ""; });
   document.getElementById("nowBtn").addEventListener("click", () => {
     simDays = (Date.now() - J2000) / DAY_MS;
+    clockEdits++;
   });
   function fmtDays(v) {
     const u = T().u;

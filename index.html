@@ -1749,7 +1749,7 @@
   //         でだけハンバーガーメニューへ入るので、案内する場所と文言を変える
   //   await 促した操作の検知。「できました」を出す (次へ進むのは自動送り時のみ):
   //         "rotate" / "zoom" / "dist" / "pan" / "select" / "play" / "view" / "menu"
-  //         (日時は再生中に勝手に動いて誤検知するので対象にしない)
+  //         / "date" (日時は再生でも動くので、入力欄を触った回数で見ている)
   //
   // ツアー単位:
   //   platform "touch" | "desktop" — 一覧に出す端末。未指定は常に出す
@@ -1769,7 +1769,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 3,
+      ver: 4,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -1846,12 +1846,12 @@
           },
         },
         {
-          scene: false, ui: ["clock"], hi: "#clock",
+          scene: false, await: "date", ui: ["clock"], hi: "#clock",
           text: {
             ja: "右上の日付・時刻を直接指定すると、任意の日時へジャンプできます。" +
-                "1900年から2199年まで指定できます。",
+                "1900年から2199年まで指定できます。変えてみてください。",
             en: "Type into the date and time at the top right to jump to any moment — " +
-                "anywhere from 1900 to 2199.",
+                "anywhere from 1900 to 2199. Give it a try.",
           },
         },
         {
@@ -1873,14 +1873,14 @@
           },
         },
         {
-          scene: false, ui: ["menu"], hi: "#menuBtn",
+          scene: false, await: "menu", ui: ["menu"], hi: "#menuBtn",
           text: {
             ja: "左上のメニューには、共有リンク・風景の表示・単位や言語の切替・" +
-                "操作方法があります。基本操作はここまでです。" +
+                "操作方法があります。開いてみてください。基本操作はここまでです。" +
                 "ほかのガイドツアーも同じメニューから開けます。",
             en: "The menu at the top left holds share links, scenery, units, language " +
-                "and the full control list. That's the basics — the other guided tours " +
-                "live in the same menu.",
+                "and the full control list — open it and see. That's the basics — the " +
+                "other guided tours live in the same menu.",
           },
         },
       ],
@@ -1888,7 +1888,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 4,
+      ver: 5,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -1965,12 +1965,12 @@
           },
         },
         {
-          scene: false, ui: ["clock"], hi: "#clock",
+          scene: false, await: "date", ui: ["clock"], hi: "#clock",
           text: {
             ja: "右上の日付・時刻を直接指定すると、任意の日時へジャンプできます。" +
-                "1900年から2199年まで指定できます。",
+                "1900年から2199年まで指定できます。変えてみてください。",
             en: "Type into the date and time at the top right to jump to any moment — " +
-                "anywhere from 1900 to 2199.",
+                "anywhere from 1900 to 2199. Give it a try.",
           },
         },
         {
@@ -2001,23 +2001,24 @@
           },
         },
         {
-          scene: false, ui: ["menu"], hi: "#menuBtn",
+          scene: false, await: "menu", ui: ["menu"], hi: "#menuBtn",
           text: {
             ja: "同じメニューに、共有リンク・風景の表示・単位や言語の切替・" +
-                "操作方法があります。基本操作はここまでです。" +
+                "操作方法があります。開いてみてください。基本操作はここまでです。" +
                 "ほかのガイドツアーも同じメニューから開けます。",
             en: "The same menu holds share links, scenery, units, language and the full " +
-                "control list. That's the basics — the other guided tours live there too.",
+                "control list — open it and see. That's the basics — the other guided " +
+                "tours live there too.",
           },
           wide: {
             ui: ["menu"], hi: "#menuBtn",
             text: {
               ja: "左上のメニューには、共有リンク・風景の表示・単位や言語の切替・" +
-                  "操作方法があります。基本操作はここまでです。" +
+                  "操作方法があります。開いてみてください。基本操作はここまでです。" +
                   "ほかのガイドツアーも同じメニューから開けます。",
               en: "The menu at the top left holds share links, scenery, units, language and " +
-                  "the full control list. That's the basics — the other guided tours live " +
-                  "in the same menu.",
+                  "the full control list — open it and see. That's the basics — the other " +
+                  "guided tours live in the same menu.",
             },
           },
         },
@@ -6959,6 +6960,10 @@
   function setSimTime(t) {
     simDays = (Math.min(Math.max(t, MIN_T), MAX_T) - J2000) / DAY_MS;
   }
+  // ガイドツアーの「できました」判定用。simDays は再生でも勝手に動くので
+  // スナップショットでは操作を見分けられない。日時が変わる経路はこの3つ
+  // (日付欄・時刻欄・現在時刻ボタン) だけなので、ここで数える
+  let clockEdits = 0;
   // 年を4桁打ち終える前にも change は発火する ("1" の時点で 0001 年として発火)。
   // そこで確定・補正すると入力途中の年が勝手に書き換わってしまうため、
   // 4桁揃うまでは何もしない。フォーカスも奪わない (奪うと続きが打てない)
@@ -6971,6 +6976,7 @@
     const c = new Date(J2000 + simDays * DAY_MS);
     setSimTime(new Date(y, mo - 1, dd,
       c.getHours(), c.getMinutes(), c.getSeconds(), c.getMilliseconds()).getTime());
+    clockEdits++;
   });
   timeInput.addEventListener("change", () => {
     const v = timeInput.value;                // "HH:MM"
@@ -6980,6 +6986,7 @@
     // 時刻だけを差し替え。入力欄に秒が無いので秒以下は 0 に揃える
     const c = new Date(J2000 + simDays * DAY_MS);
     setSimTime(new Date(c.getFullYear(), c.getMonth(), c.getDate(), hh, mi, 0, 0).getTime());
+    clockEdits++;
   });
   // Enter で入力を終える
   dateInput.addEventListener("keydown", (e) => { if (e.key === "Enter") dateInput.blur(); });
@@ -6989,6 +6996,7 @@
   timeInput.addEventListener("blur", () => { lastTimeStr = ""; });
   document.getElementById("nowBtn").addEventListener("click", () => {
     simDays = (Date.now() - J2000) / DAY_MS;
+    clockEdits++;
   });
   function fmtDays(v) {
     const u = T().u;
@@ -8735,7 +8743,8 @@
   }
 
   // ステップ開始時にスナップショットを取り、毎フレーム「操作されたか」を見る述語を返す。
-  // 入力ハンドラ側には手を入れない (操作の経路が増えたときに拾い漏らすため)
+  // 原則として入力ハンドラ側には手を入れない (操作の経路が増えたときに拾い漏らすため)。
+  // 日時だけは結果の値から操作を見分けられないので、例外的に入力側で数えている
   const wrapPi = (a) => ((a + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
   const TOUR_AWAIT = {
     rotate: () => {
@@ -8767,7 +8776,24 @@
       const g = groundView, s = surfaceBody;
       return () => groundView !== g || surfaceBody !== s;
     },
-    menu: () => () => menuEl.classList.contains("open"),
+    // 日時だけはスナップショットで見分けられない (再生でも simDays は動く)。
+    // 入力欄・現在時刻ボタンで数えている編集回数を見る
+    date: () => {
+      const n = clockEdits;
+      return () => clockEdits !== n;
+    },
+    // 開いた瞬間を捉える。開いたまま次のステップへ来ることがあるので、
+    // 現在の状態ではなく「閉じている状態から開いた」を条件にする
+    menu: () => {
+      let closed = !menuEl.classList.contains("open");
+      return () => {
+        if (!menuEl.classList.contains("open")) {
+          closed = true;
+          return false;
+        }
+        return closed;
+      };
+    },
   };
 
   // 「この軌道半径 [au] が画面に収まる」カメラ距離。
@@ -8822,10 +8848,11 @@
   }
   // 「できました」は操作を検知したときの合図なので、until で時間が来ただけの
   // 早送りステップでは出さない。
-  // 次へ進むのは自動送りが ON のときだけ — OFF なら着いた場面のまま待つ
+  // 次へ進むのは自動送りが ON のときだけ — OFF なら着いた場面のまま待つ。
+  // 最後のステップでは進めない (自動送りでツアーが勝手に終わってしまう)
   function tourAdvance(showDone) {
     if (showDone) tourBar.classList.add("done");
-    if (!tourAuto) return;
+    if (!tourAuto || tourIdx >= tour.steps.length - 1) return;
     tourDoneTimer = setTimeout(() => tourGo(tourIdx + 1), 900);
   }
   function tourWatch() {
@@ -8842,7 +8869,7 @@
       simDays = tourUntil;
       setPlaying(false);
       tourUntil = null;
-      if (tourIdx < tour.steps.length - 1) tourAdvance(false);
+      tourAdvance(false);
       return;
     }
     if (!tourAwaitTest || !tourAwaitTest()) return;

@@ -48,7 +48,7 @@
   //         でだけハンバーガーメニューへ入るので、案内する場所と文言を変える
   //   await 促した操作の検知。「できました」を出す (次へ進むのは自動送り時のみ):
   //         "rotate" / "zoom" / "dist" / "pan" / "select" / "play" / "view" / "menu"
-  //         (日時は再生中に勝手に動いて誤検知するので対象にしない)
+  //         / "date" (日時は再生でも動くので、入力欄を触った回数で見ている)
   //
   // ツアー単位:
   //   platform "touch" | "desktop" — 一覧に出す端末。未指定は常に出す
@@ -68,7 +68,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 3,
+      ver: 4,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -145,12 +145,12 @@
           },
         },
         {
-          scene: false, ui: ["clock"], hi: "#clock",
+          scene: false, await: "date", ui: ["clock"], hi: "#clock",
           text: {
             ja: "右上の日付・時刻を直接指定すると、任意の日時へジャンプできます。" +
-                "1900年から2199年まで指定できます。",
+                "1900年から2199年まで指定できます。変えてみてください。",
             en: "Type into the date and time at the top right to jump to any moment — " +
-                "anywhere from 1900 to 2199.",
+                "anywhere from 1900 to 2199. Give it a try.",
           },
         },
         {
@@ -172,14 +172,14 @@
           },
         },
         {
-          scene: false, ui: ["menu"], hi: "#menuBtn",
+          scene: false, await: "menu", ui: ["menu"], hi: "#menuBtn",
           text: {
             ja: "左上のメニューには、共有リンク・風景の表示・単位や言語の切替・" +
-                "操作方法があります。基本操作はここまでです。" +
+                "操作方法があります。開いてみてください。基本操作はここまでです。" +
                 "ほかのガイドツアーも同じメニューから開けます。",
             en: "The menu at the top left holds share links, scenery, units, language " +
-                "and the full control list. That's the basics — the other guided tours " +
-                "live in the same menu.",
+                "and the full control list — open it and see. That's the basics — the " +
+                "other guided tours live in the same menu.",
           },
         },
       ],
@@ -187,7 +187,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 4,
+      ver: 5,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -264,12 +264,12 @@
           },
         },
         {
-          scene: false, ui: ["clock"], hi: "#clock",
+          scene: false, await: "date", ui: ["clock"], hi: "#clock",
           text: {
             ja: "右上の日付・時刻を直接指定すると、任意の日時へジャンプできます。" +
-                "1900年から2199年まで指定できます。",
+                "1900年から2199年まで指定できます。変えてみてください。",
             en: "Type into the date and time at the top right to jump to any moment — " +
-                "anywhere from 1900 to 2199.",
+                "anywhere from 1900 to 2199. Give it a try.",
           },
         },
         {
@@ -300,23 +300,24 @@
           },
         },
         {
-          scene: false, ui: ["menu"], hi: "#menuBtn",
+          scene: false, await: "menu", ui: ["menu"], hi: "#menuBtn",
           text: {
             ja: "同じメニューに、共有リンク・風景の表示・単位や言語の切替・" +
-                "操作方法があります。基本操作はここまでです。" +
+                "操作方法があります。開いてみてください。基本操作はここまでです。" +
                 "ほかのガイドツアーも同じメニューから開けます。",
             en: "The same menu holds share links, scenery, units, language and the full " +
-                "control list. That's the basics — the other guided tours live there too.",
+                "control list — open it and see. That's the basics — the other guided " +
+                "tours live there too.",
           },
           wide: {
             ui: ["menu"], hi: "#menuBtn",
             text: {
               ja: "左上のメニューには、共有リンク・風景の表示・単位や言語の切替・" +
-                  "操作方法があります。基本操作はここまでです。" +
+                  "操作方法があります。開いてみてください。基本操作はここまでです。" +
                   "ほかのガイドツアーも同じメニューから開けます。",
               en: "The menu at the top left holds share links, scenery, units, language and " +
-                  "the full control list. That's the basics — the other guided tours live " +
-                  "in the same menu.",
+                  "the full control list — open it and see. That's the basics — the other " +
+                  "guided tours live in the same menu.",
             },
           },
         },
