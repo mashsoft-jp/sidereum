@@ -3896,12 +3896,10 @@
     } catch (e) { /* プライベートモード等 */ }
     return !matchMedia("(hover: none) and (pointer: coarse)").matches;
   })();
-  // 法線図は解像度を切り替えない (元の標高データから焼き直しになるので別作業)。
-  // アルベド図だけが 2組ある
   // 法線図かどうかは接頭辞だけで見る。NORMALS を先に引くと、法線図も持つ天体
   // (月・火星・水星) の地表テクスチャが法線図に化ける
   const texURL = (key) => {
-    if (key.indexOf("nrm:") === 0) return TEX_DIR + NORMALS[key.slice(4)];
+    if (key.indexOf("nrm:") === 0) return TEX_DIR + (texHiRes ? "4k/" : "") + NORMALS[key.slice(4)];
     return TEX_DIR + (texHiRes ? "4k/" : "") + (TEXTURES[key] || TEXTURES_EXTRA[key]);
   };
   //#endregion

@@ -85,9 +85,9 @@ tex/               天体テクスチャ (ビルド対象外。index.html と一
 | 冥王星 | New Horizons 全球モザイク | NASA/JHUAPL/SwRI |
 | ケレス | Dawn FC 全球モザイク (DLR, 20 ppd) | NASA/JPL-Caltech/UCLA/MPS/DLR/IDA |
 | ベスタ | Dawn FC HAMO 全球モザイク (74 ppd) | NASA/JPL-Caltech/UCLA/MPS/DLR/IDA |
-| 月 (法線) | LOLA 標高 (LDEM 16 ppd, CGI Moon Kit) | NASA/GSFC/Arizona State University, NASA Scientific Visualization Studio |
-| 火星 (法線) | MOLA MEGDR 標高 (16 ppd) | NASA/JPL/GSFC (MGS MOLA Science Team) |
-| 水星 (法線) | MESSENGER 全球 DEM v2 (665 m) | NASA/Johns Hopkins University APL/Carnegie Institution of Washington/USGS |
+| 月 (法線) | LOLA 標高 (LDEM 16 ppd = 5760×2880, CGI Moon Kit) | NASA/GSFC/Arizona State University, NASA Scientific Visualization Studio |
+| 火星 (法線) | MOLA MEGDR 標高 (16 ppd = 5760×2880) | NASA/JPL/GSFC (MGS MOLA Science Team) |
+| 水星 (法線) | MESSENGER 全球 DEM v2 (665 m = 23040×11520) | NASA/Johns Hopkins University APL/Carnegie Institution of Washington/USGS |
 
 画像は USGS Astrogeology、NASA SVS、NASA Earth Observatory、および Wikimedia Commons 経由で取得し、正距円筒図法へ縮小・JPEG 再圧縮のうえ `tex/` に置いています。
 
@@ -95,11 +95,13 @@ tex/               天体テクスチャ (ビルド対象外。index.html と一
 
 アルベド図は **2048×1024 を `tex/`、4096×2048 を `tex/4k/`** に同名で置き、ハンバーガーメニューの「高解像度テクスチャ」で切り替えます。既定は端末で変えていて、**PC は 4K、スマホ (ホバーできない粗いポインタ) は 2K** です。切り替えると `reloadTextures()` が同じ GL テクスチャへ読み直すので、描画側は解像度を意識しません。
 
-スマホを 2K のままにしているのは、4K は 1枚あたり 4096×2048×4バイト×1.33 (ミップ込み) ≒ **45 MB** で、常駐する11枚では **約 500 MB** になるためです。転送量も `tex/4k/` だけで 17 MB あります。
+スマホを 2K のままにしているのは、4K は 1枚あたり 4096×2048×4バイト×1.33 (ミップ込み) ≒ **45 MB** で、常駐する14枚では **約 625 MB** になるためです。転送量も `tex/4k/` だけで 24 MB あります。
 
 最接近時 (カメラ最小距離 = 半径の1.7倍) には天体の直径が画角より広くなり、見えている半球の経度180°ぶん — 2048 なら 1024 テクセル — を画面いっぱいへ引き伸ばすことになります。2K では解像度が先に尽きるので、4K でようやく等倍に近づきます。
 
-**法線図 (月・火星・水星) は 1024×512 のまま**で、この切り替えの対象外です。標高データから焼き直しになるため別作業として残しています。
+**法線図 (月・火星・水星) も同じ2組**です。実測の標高 (DEM) から `tools` の外で焼いています。傾きは「高さ÷水平距離」の物理量で出すので、出力解像度を変えても強さは変わりません — ただし細かい斜面を拾うぶん高解像度側がわずかに強く出るため、**4K 側が現行の強さになるよう** RG チャンネルの標準偏差を合わせています (既定が 4K なので、`bodies.js` の `body.nrm` が前提にしている強さをそちらで保つ)。
+
+元の焼き方の記録が残っていなかったため、旧 1024×512 との厳密な一致は再現できていません (旧ファイルは DEM とどの経度でも相関しませんでした)。符号は L2 最小化と粗いスケールでの相関の符号が一致した組み合わせ (東 = −、北 = +) を採り、実際の陰影がクレーターを窪みとして描くことを目視で確認しています。
 
 なお木星だけは元データ (Cassini PIA07782) が 3601×1801 しかなく、4K は 1.14 倍の拡大になります。それでも 2048 へ落とすより元の情報を保てるので 4K 側に含めています。木星は実際に見えている最小構造が約 120 km = 全周 3,700 px 相当なので、ここが素の上限です。
 
