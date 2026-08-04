@@ -524,13 +524,18 @@
         gl.enableVertexAttribArray(billP.a.aCorner);
         gl.vertexAttribPointer(billP.a.aCorner, 2, gl.FLOAT, false, 0, 0);
         // 裾 → 芯 の順。角度で決めるので、画角を狭めても見かけの比率は変わらない
+        // 大気のある地上では、太陽まわりの広い暈は skyDayColor のミー散乱が
+        // すでに作っている。ここで足すのは目やカメラの中で起きるグレアだけに
+        // 絞る — 両方を大きく出すと二重になって白い塊になる。
+        // 月面には大気が無く暈も出ないので、宇宙ビューと同じ広さで足す
+        const wide = surfaceBody === "moon" ? 1.0 : 0.34;
         gl.uniform1f(billP.u.uFall, 1.6);
-        gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN);
+        gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide);
         gl.uniform3f(billP.u.uCol1, 0.55 * fade, 0.32 * fade * gm, 0.12 * fade * bm);
         gl.uniform3f(billP.u.uCol2, 1.00 * fade, 0.86 * fade * gm, 0.66 * fade * bm);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         gl.uniform1f(billP.u.uFall, 0.6);
-        gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * 0.16);
+        gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide * 0.30);
         gl.uniform3f(billP.u.uCol1, 1.0 * fade, 0.80 * fade * gm, 0.45 * fade * bm);
         gl.uniform3f(billP.u.uCol2, 1.0 * fade, 1.00 * fade * gm, 1.00 * fade * bm);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
