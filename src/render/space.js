@@ -48,6 +48,7 @@
       }
     }
 
+    skyDayF = 0;   // 宇宙ビューに明るい空は無い (Bloom のしきい値を戻す)
     gl.clearColor(0.016, 0.023, 0.055, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);

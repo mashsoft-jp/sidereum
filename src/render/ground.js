@@ -29,6 +29,9 @@
   let ridgeVB = { earth: null, moon: null }, ridgeN = 0, skyVB = null, skyN = 0;
   let showTerrain = localStorage.getItem("ssTerrain") === "1";   // 既定 OFF
   let starVis = 1;   // 昼の空での星・星座の可視度 (0=昼で見えない)。オーバーレイ文字にも使う
+  // 昼の空の明るさ (0=夜/宇宙, 1=真昼)。Bloom のしきい値を持ち上げるのに使う。
+  // 明るい空では目も露出を絞るので、空そのものが滲むのはおかしい
+  let skyDayF = 0;
   // 地上ビューに出す天体: 太陽・月・全惑星 (準惑星・小惑星・彗星含む) と全衛星。
   // 地球以外の衛星は、画面上で母惑星から分離できる倍率になったら現れる
   const SKY_BODIES = [SUN, MOON]
@@ -208,6 +211,7 @@
     const dayF = (showTerrain && !isMoonSurf)
       ? Math.max(0, Math.min(1, (_sunG[1] + 0.12) / 0.22)) : 0;
     starVis = 1 - dayF * 0.98;   // 昼は星をほぼ消す
+    skyDayF = dayF;
 
     gl.clearColor(0.015, 0.02, 0.045, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);

@@ -98,7 +98,10 @@
     gl.useProgram(threshP.pr);
     gl.uniform1i(threshP.u.uTex, 0);
     gl.uniform2f(threshP.u.uTexel, 1 / w, 1 / h);
-    gl.uniform1f(threshP.u.uThresh, BLOOM_THRESH);
+    // 明るい昼の空では、空そのものが 0.72 を超えて広い範囲が滲みに拾われる。
+    // 目は明るい場面では露出を絞るので、空が丸ごと光るのはおかしい。
+    // 空の明るさぶんしきい値を持ち上げ、太陽の芯だけを滲ませる
+    gl.uniform1f(threshP.u.uThresh, Math.min(0.96, BLOOM_THRESH + skyDayF * 0.24));
     postDraw(threshP);
 
     // 3) 横 → 縦の順にぼかす (bloomFB[0] → [1] → [0])
