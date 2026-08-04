@@ -76,9 +76,9 @@ tex/               天体テクスチャ (ビルド対象外。index.html と一
 |---|---|---|
 | 水星 | MESSENGER MDIS Basemap MD3Color 全球モザイク (32 ppd) | NASA/Johns Hopkins University APL/Carnegie Institution of Washington |
 | 金星 | Magellan レーダー全球図 (地表) | NASA/JPL |
-| 地球 | Blue Marble: Land Surface, Shallow Water, and Shaded Topography ([57752](https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57752/land_shallow_topo_2048.jpg)) | NASA Earth Observatory (Reto Stöckli, NASA/GSFC / Robert Simmon) |
-| 地球 (雲) | Blue Marble: Clouds | NASA Earth Observatory |
-| 地球 (夜景) | Black Marble 2016 (VIIRS DNB) | NASA Earth Observatory |
+| 地球 | Blue Marble: Land Surface, Shallow Water, and Shaded Topography ([57752](https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57752/land_shallow_topo_8192.tif), 8192×4096) | NASA Earth Observatory (Reto Stöckli, NASA/GSFC / Robert Simmon) |
+| 地球 (雲) | Blue Marble: Clouds ([57747](https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57747/cloud_combined_8192.tif), 8192×4096) | NASA Earth Observatory |
+| 地球 (夜景) | Black Marble 2016 (VIIRS DNB) ([144898](https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144898/BlackMarble_2016_3km_geo.tif), 13500×6750) | NASA Earth Observatory |
 | 月 | LRO LROC WAC 全球モザイク (CGI Moon Kit) | NASA/GSFC/Arizona State University, NASA Scientific Visualization Studio |
 | 火星 | Viking MDIM 2.1 カラーモザイク | NASA/USGS |
 | 木星 | Cassini 円筒図法マップ (PIA07782) | NASA/JPL/Space Science Institute |
@@ -89,7 +89,9 @@ tex/               天体テクスチャ (ビルド対象外。index.html と一
 | 火星 (法線) | MOLA MEGDR 標高 (16 ppd) | NASA/JPL/GSFC (MGS MOLA Science Team) |
 | 水星 (法線) | MESSENGER 全球 DEM v2 (665 m) | NASA/Johns Hopkins University APL/Carnegie Institution of Washington/USGS |
 
-画像は USGS Astrogeology、NASA SVS、NASA Earth Observatory、および Wikimedia Commons 経由で取得し、いずれも 2048×1024 の正距円筒図法へ縮小・JPEG 再圧縮のうえ `tex/` に置いています (地球のみ NASA 配布の 2048×1024 をそのまま)。
+画像は USGS Astrogeology、NASA SVS、NASA Earth Observatory、および Wikimedia Commons 経由で取得し、正距円筒図法へ縮小・JPEG 再圧縮のうえ `tex/` に置いています。**地球の3枚 (地表・雲・夜景) だけ 4096×2048、他は 2048×1024** です。地球は最も寄って見る天体で、最接近時には 2048 では経度180°ぶんの 1024 テクセルを画面いっぱいへ引き伸ばすことになり、解像度が先に尽きるためです。
+
+地表はアルベド (シェーダが `srgbToLinear` で扱う) なのでリニア光で縮小し、雲 (被覆率) と夜景 (光量) はマスクなのでそのまま縮小しています。夜景は陸地の下地を落として街灯りだけ残すため、グレースケール化後に黒レベル 20% を切り上げています。
 
 太陽・土星・天王星・海王星・パラス・ジュノーは、実測の全球マップが存在しない(または動的表現の方が適する)ため、シェーダによるプロシージャル生成です。実写ではありません。土星の環も同様です。
 
