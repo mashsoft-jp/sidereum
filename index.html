@@ -5427,7 +5427,7 @@
       }
       azAltDir(azDeg, altDeg, _gp);
       const px = _gp[0]*SKYR, py = _gp[1]*SKYR, pz = _gp[2]*SKYR;
-      groundVis.push({ b, px, py, pz });
+      groundVis.push({ b, px, py, pz, rpx: spherePx });
       if (spherePx >= 5) {                          // 画面上で十分大きい → 球
         bigBodies.push({ b, dx: _gp[0], dy: _gp[1], dz: _gp[2], px, py, pz,
                          wr: SKYR * Math.tan(angR), rpx: spherePx });
@@ -5688,11 +5688,25 @@
       }
     }
     octx.font = '11px "Avenir Next","Hiragino Sans",sans-serif';
+    // 名前は天体リストの「名前」に従う (宇宙ビューと同じ)。名前を消すと選択天体の
+    // 目印が無くなってしまうので、選択マークは名前とは別に出す
+    const marked = showSelMark ? selected : null;
+    const spotB = tourSpot ? BODY_BY_KEY.get(tourSpot) : null;
     for (const v of groundVis) {
       const s = projGround([v.px, v.py, v.pz]);
       if (!s || s.x < -30 || s.x > W + 30) continue;
-      octx.fillStyle = v.b === selected ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.82)";
-      octx.fillText(bName(v.b), s.x, s.y - 11);
+      const hit = marked === v.b || spotB === v.b;
+      // 円盤が画面を覆うほど近い天体 (月面から見た地球など) にリングは要らない
+      if (hit && v.rpx < H * 0.3) {
+        octx.beginPath();
+        octx.arc(s.x, s.y, Math.max(v.rpx, 3) + 6, 0, 2 * Math.PI);
+        octx.strokeStyle = "rgba(242,178,62,0.9)";
+        octx.lineWidth = 1.2;
+        octx.stroke();
+      }
+      if (!v.b.showLabel) continue;
+      octx.fillStyle = hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.82)";
+      octx.fillText(bName(v.b), s.x, s.y - Math.max(v.rpx, 3) - 8);
     }
   }
   //#endregion
