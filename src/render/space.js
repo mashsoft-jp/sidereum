@@ -466,11 +466,19 @@
       // Bloom はトーンマップ済みの画面を取り込むので、太陽の円盤は「日向の雲」と
       // 同じ 1.0 に潰れている。実際の太陽は雲より 5桁ほど明るいのに、その差は
       // 取り込む時点で失われていて、Bloom だけでは太陽を特別扱いできない。
-      // グレアは光源の絶対輝度で決まり、光源の見かけの大きさでは決まらないので、
-      // 距離によらない角度の下限を入れて足し戻す。
+      // グレアの広がりは光源の見かけの大きさでは決まらないので、円盤とは別に
+      // 角度で足し戻す。ただし「距離によらない」ではない — 決めているのは
+      // 受ける光の量で、これは距離の2乗で落ちる。裾が r^-4 で落ちるとすると
+      // 見える半径は照度の 1/4 乗、つまり距離の -1/2 乗になる。
+      // 距離で絞らないと、太陽系全体を引きで見たときに 9° の塊が内惑星を軌道
+      // ごと飲み込んでしまう (海王星軌道の外から見ても木星軌道まで真っ白)。
       // (Bloom = カメラ・目のグレアの模擬なので、切っているときは素の絵に戻す)
       if (bloomOn) {
         const dSun = Math.hypot(eye[0], eye[1], eye[2]);
+        // 基準は 1 au で 9°。近づく側は 2.5倍 (22°) で頭打ちにする —
+        // 光球のすぐ上まで寄れるので、伸ばしきると画面が白一色になる
+        const glareTan = GLARE_TAN *
+          Math.min(2.5, Math.sqrt(K_REAL / Math.max(dSun, K_REAL * 0.16)));
         // 板は太陽の中心に置かれるので、深度テストで太陽自身の円盤に芯を
         // 削られてしまう (コロナが輪にしか見えないのはこのため)。グレアは
         // 円盤の上にも乗ってほしいので、表面のすぐ手前へ出す。深度テストは
@@ -480,7 +488,7 @@
         // 広く薄い裾。落ち方を緩くして画面の広い範囲まで届かせ、周りの星を
         // 飲み込ませる。「そちらを見ていられない」感じはこの裾が作る
         gl.uniform1f(billP.u.uFall, 1.6);
-        gl.uniform1f(billP.u.uSize, Math.max(bodyR(SUN) * 5.5, dSun * GLARE_TAN) * k);
+        gl.uniform1f(billP.u.uSize, Math.max(bodyR(SUN) * 5.5, dSun * glareTan) * k);
         gl.uniform3f(billP.u.uCol1, 0.55, 0.32, 0.12);
         gl.uniform3f(billP.u.uCol2, 1.00, 0.86, 0.66);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -491,7 +499,7 @@
         // 領域が広がると、その縁が輪郭として読めてしまい、眩しさではなく
         // 「太陽が大きくなった」に見える。飛ぶ範囲は狭く、外へは滑らかに
         gl.uniform1f(billP.u.uFall, 1.5);
-        gl.uniform1f(billP.u.uSize, Math.max(bodyR(SUN) * 2.4, dSun * GLARE_TAN * 0.09) * k);
+        gl.uniform1f(billP.u.uSize, Math.max(bodyR(SUN) * 2.4, dSun * glareTan * 0.09) * k);
         gl.uniform3f(billP.u.uCol1, 1.0, 0.80, 0.45);
         gl.uniform3f(billP.u.uCol2, 1.0, 1.0, 1.0);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
