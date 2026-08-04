@@ -930,6 +930,7 @@
     <button id="menuTour" role="menuitem"></button>
     <button id="menuTerrain" role="menuitem"></button>
     <button id="menuBloom" role="menuitem"></button>
+    <button id="menuHiRes" role="menuitem"></button>
     <button id="menuFullscreen" role="menuitem"></button>
     <button id="menuShare" role="menuitem"></button>
     <button id="menuUnit" role="menuitem"></button>
@@ -1468,6 +1469,8 @@
       menuTerrainOff: "風景を隠す",
       menuBloomOn: "光の滲みを入れる",
       menuBloomOff: "光の滲みを切る",
+      menuHiResOn: "高解像度テクスチャ",
+      menuHiResOff: "標準解像度テクスチャ",
       menuAbout: "ライセンス・クレジット",
       menuUnitToMi: "距離をマイル表示",
       menuUnitToKm: "距離を km 表示",
@@ -1517,6 +1520,8 @@
       menuTerrainOff: "Hide scenery",
       menuBloomOn: "Enable glow",
       menuBloomOff: "Disable glow",
+      menuHiResOn: "High-res textures",
+      menuHiResOff: "Standard-res textures",
       menuAbout: "License & Credits",
       menuUnitToMi: "Distances in miles",
       menuUnitToKm: "Distances in km",
@@ -3877,7 +3882,28 @@
     mars:    "mars-nrm.jpg",
     mercury: "mercury-nrm.jpg",
   };
-  const texURL = (key) => TEX_DIR + (TEXTURES[key] || TEXTURES_EXTRA[key] || NORMALS[key.replace(/^nrm:/, "")]);
+  // 解像度は2組を同名で持つ。2K が tex/ 直下、4K が tex/4k/。
+  //
+  // 既定は端末で変える。4K は 1枚あたり 4096×2048×4バイト×1.33 (ミップ込み) =
+  // 約 45MB で、常駐する 14枚ぶんでは 625MB になる。PC の GPU なら通るが、
+  // スマホでは確実に足りず、転送量も 4倍になるので 2K を既定にする。
+  // 判定はホバーできない粗いポインタ = タッチ端末かどうか (tour.js の mqTouch と同じ条件)
+  let texHiRes = (() => {
+    try {
+      const v = localStorage.getItem("ssHiRes");
+      if (v === "1") return true;
+      if (v === "0") return false;
+    } catch (e) { /* プライベートモード等 */ }
+    return !matchMedia("(hover: none) and (pointer: coarse)").matches;
+  })();
+  // 法線図は解像度を切り替えない (元の標高データから焼き直しになるので別作業)。
+  // アルベド図だけが 2組ある
+  // 法線図かどうかは接頭辞だけで見る。NORMALS を先に引くと、法線図も持つ天体
+  // (月・火星・水星) の地表テクスチャが法線図に化ける
+  const texURL = (key) => {
+    if (key.indexOf("nrm:") === 0) return TEX_DIR + NORMALS[key.slice(4)];
+    return TEX_DIR + (texHiRes ? "4k/" : "") + (TEXTURES[key] || TEXTURES_EXTRA[key]);
+  };
   //#endregion
   //#region src/gl/resources.js
   const texByKey = new Map();
@@ -3903,15 +3929,13 @@
   const texWarn = (key, why) =>
     console.warn(`テクスチャ ${texURL(key)} を使えませんでした: ${why}` +
       (location.protocol === "file:" ? " — file:// では画像を読み込めません。HTTP で配信してください" : ""));
-  function loadTex(key) {
-    const tex = gl.createTexture();
+  // 既存のテクスチャオブジェクトへ読み直す。解像度を切り替えても GL の
+  // ハンドルは変えないので、これを持っている描画側に手を入れる必要がない
+  function loadTexInto(tex, key) {
     gl.bindTexture(gl.TEXTURE_2D, tex);
-    // 読み込み完了までの仮色
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([70, 70, 74]));
+    // ミップ付きのまま differing サイズを入れると、生成し直すまでの間だけ
+    // 不完全なテクスチャ (真っ黒) になる。生成後に付け直すので一旦 LINEAR へ
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     const img = new Image();
     img.onload = () => {
       // file:// で開くと画像自体は読めても不透明オリジン扱いになり、ここが
@@ -3936,6 +3960,16 @@
     img.src = texURL(key);
     return tex;
   }
+  function loadTex(key) {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    // 読み込み完了までの仮色
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([70, 70, 74]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return loadTexInto(tex, key);
+  }
   for (const key in TEXTURES) texByKey.set(key, loadTex(key));
   // 地球の雲と夜景。天体テクスチャとは別のユニットに常駐させる
   const cloudTex = loadTex("cloud");
@@ -3944,6 +3978,15 @@
   const nrmByKey = new Map();
   for (const key in NORMALS) nrmByKey.set(key, loadTex("nrm:" + key));
   // サンプラーとテクスチャユニットの指定は bodyRenderer.beginPass が毎回行う
+
+  // 解像度を切り替えたときの読み直し。差し替わるまでは前の解像度で描き続ける
+  // (仮色へ戻すと、切り替えのたびに全天体が一瞬グレーになる)
+  function reloadTextures() {
+    for (const [key, tex] of texByKey) loadTexInto(tex, key);
+    loadTexInto(cloudTex, "cloud");
+    loadTexInto(nightTex, "night");
+    for (const [key, tex] of nrmByKey) loadTexInto(tex, "nrm:" + key);
+  }
 
   // ---------- 土星の環の半径プロファイル ----------
   // RING_KNOTS (実測の半径・光学的厚さ・色) を線形に繋いで 1次元テクスチャへ。
@@ -7878,6 +7921,21 @@
     setMenu(false);
   });
 
+  // テクスチャの解像度 (2048×1024 / 4096×2048)。既定は端末で決めている
+  // (PC = 高解像度、スマホ = 標準) ので、ここで上書きしたぶんだけ localStorage に残す。
+  // ラベルは「今どちらか」ではなく「押すとどうなるか」を出す
+  const menuHiResBtn = document.getElementById("menuHiRes");
+  function updateHiResLabel() {
+    menuHiResBtn.textContent = texHiRes ? T().menuHiResOff : T().menuHiResOn;
+  }
+  menuHiResBtn.addEventListener("click", () => {
+    texHiRes = !texHiRes;
+    try { localStorage.setItem("ssHiRes", texHiRes ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
+    updateHiResLabel();
+    reloadTextures();
+    setMenu(false);
+  });
+
   // 全画面表示 (Fullscreen API)。iPhone の Safari は非対応のためボタン自体を隠す
   const menuFsBtn = document.getElementById("menuFullscreen");
   const docEl = document.documentElement;
@@ -8269,6 +8327,7 @@
     menuAboutBtn.textContent = t.menuAbout;
     updateTerrainLabel();
     updateBloomLabel();
+    updateHiResLabel();
     updateUnitLabel();
     applyNavVisible();
     for (const el of navEl.querySelectorAll("button.body")) {

@@ -37,4 +37,25 @@
     mars:    "mars-nrm.jpg",
     mercury: "mercury-nrm.jpg",
   };
-  const texURL = (key) => TEX_DIR + (TEXTURES[key] || TEXTURES_EXTRA[key] || NORMALS[key.replace(/^nrm:/, "")]);
+  // 解像度は2組を同名で持つ。2K が tex/ 直下、4K が tex/4k/。
+  //
+  // 既定は端末で変える。4K は 1枚あたり 4096×2048×4バイト×1.33 (ミップ込み) =
+  // 約 45MB で、常駐する 14枚ぶんでは 625MB になる。PC の GPU なら通るが、
+  // スマホでは確実に足りず、転送量も 4倍になるので 2K を既定にする。
+  // 判定はホバーできない粗いポインタ = タッチ端末かどうか (tour.js の mqTouch と同じ条件)
+  let texHiRes = (() => {
+    try {
+      const v = localStorage.getItem("ssHiRes");
+      if (v === "1") return true;
+      if (v === "0") return false;
+    } catch (e) { /* プライベートモード等 */ }
+    return !matchMedia("(hover: none) and (pointer: coarse)").matches;
+  })();
+  // 法線図は解像度を切り替えない (元の標高データから焼き直しになるので別作業)。
+  // アルベド図だけが 2組ある
+  // 法線図かどうかは接頭辞だけで見る。NORMALS を先に引くと、法線図も持つ天体
+  // (月・火星・水星) の地表テクスチャが法線図に化ける
+  const texURL = (key) => {
+    if (key.indexOf("nrm:") === 0) return TEX_DIR + NORMALS[key.slice(4)];
+    return TEX_DIR + (texHiRes ? "4k/" : "") + (TEXTURES[key] || TEXTURES_EXTRA[key]);
+  };

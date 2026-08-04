@@ -21,15 +21,13 @@
   const texWarn = (key, why) =>
     console.warn(`テクスチャ ${texURL(key)} を使えませんでした: ${why}` +
       (location.protocol === "file:" ? " — file:// では画像を読み込めません。HTTP で配信してください" : ""));
-  function loadTex(key) {
-    const tex = gl.createTexture();
+  // 既存のテクスチャオブジェクトへ読み直す。解像度を切り替えても GL の
+  // ハンドルは変えないので、これを持っている描画側に手を入れる必要がない
+  function loadTexInto(tex, key) {
     gl.bindTexture(gl.TEXTURE_2D, tex);
-    // 読み込み完了までの仮色
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([70, 70, 74]));
+    // ミップ付きのまま differing サイズを入れると、生成し直すまでの間だけ
+    // 不完全なテクスチャ (真っ黒) になる。生成後に付け直すので一旦 LINEAR へ
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     const img = new Image();
     img.onload = () => {
       // file:// で開くと画像自体は読めても不透明オリジン扱いになり、ここが
@@ -54,6 +52,16 @@
     img.src = texURL(key);
     return tex;
   }
+  function loadTex(key) {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    // 読み込み完了までの仮色
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([70, 70, 74]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return loadTexInto(tex, key);
+  }
   for (const key in TEXTURES) texByKey.set(key, loadTex(key));
   // 地球の雲と夜景。天体テクスチャとは別のユニットに常駐させる
   const cloudTex = loadTex("cloud");
@@ -62,6 +70,15 @@
   const nrmByKey = new Map();
   for (const key in NORMALS) nrmByKey.set(key, loadTex("nrm:" + key));
   // サンプラーとテクスチャユニットの指定は bodyRenderer.beginPass が毎回行う
+
+  // 解像度を切り替えたときの読み直し。差し替わるまでは前の解像度で描き続ける
+  // (仮色へ戻すと、切り替えのたびに全天体が一瞬グレーになる)
+  function reloadTextures() {
+    for (const [key, tex] of texByKey) loadTexInto(tex, key);
+    loadTexInto(cloudTex, "cloud");
+    loadTexInto(nightTex, "night");
+    for (const [key, tex] of nrmByKey) loadTexInto(tex, "nrm:" + key);
+  }
 
   // ---------- 土星の環の半径プロファイル ----------
   // RING_KNOTS (実測の半径・光学的厚さ・色) を線形に繋いで 1次元テクスチャへ。

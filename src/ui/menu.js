@@ -41,6 +41,21 @@
     setMenu(false);
   });
 
+  // テクスチャの解像度 (2048×1024 / 4096×2048)。既定は端末で決めている
+  // (PC = 高解像度、スマホ = 標準) ので、ここで上書きしたぶんだけ localStorage に残す。
+  // ラベルは「今どちらか」ではなく「押すとどうなるか」を出す
+  const menuHiResBtn = document.getElementById("menuHiRes");
+  function updateHiResLabel() {
+    menuHiResBtn.textContent = texHiRes ? T().menuHiResOff : T().menuHiResOn;
+  }
+  menuHiResBtn.addEventListener("click", () => {
+    texHiRes = !texHiRes;
+    try { localStorage.setItem("ssHiRes", texHiRes ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
+    updateHiResLabel();
+    reloadTextures();
+    setMenu(false);
+  });
+
   // 全画面表示 (Fullscreen API)。iPhone の Safari は非対応のためボタン自体を隠す
   const menuFsBtn = document.getElementById("menuFullscreen");
   const docEl = document.documentElement;
