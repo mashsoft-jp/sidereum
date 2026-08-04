@@ -506,6 +506,12 @@
       if (sv && sinAlt > 0) {
         const fade = surfaceBody === "moon"
           ? 1 : Math.min(1, sinAlt / 0.10);
+        // 大気を長く通るほど青が抜けて赤くなる (夕日が赤い理由)。地平ぎわの
+        // 太陽を白いまま光らせると、周りが焼けているのにそこだけ昼の色になる。
+        // 月面には大気が無いので白のまま
+        const red = surfaceBody === "moon"
+          ? 1 : Math.min(1, Math.max(0, sinAlt) / 0.30);
+        const gm = 0.30 + 0.70 * red, bm = 0.08 + 0.92 * red * red;
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE);
         gl.depthMask(false);
@@ -520,13 +526,13 @@
         // 裾 → 芯 の順。角度で決めるので、画角を狭めても見かけの比率は変わらない
         gl.uniform1f(billP.u.uFall, 1.6);
         gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN);
-        gl.uniform3f(billP.u.uCol1, 0.55 * fade, 0.32 * fade, 0.12 * fade);
-        gl.uniform3f(billP.u.uCol2, 1.00 * fade, 0.86 * fade, 0.66 * fade);
+        gl.uniform3f(billP.u.uCol1, 0.55 * fade, 0.32 * fade * gm, 0.12 * fade * bm);
+        gl.uniform3f(billP.u.uCol2, 1.00 * fade, 0.86 * fade * gm, 0.66 * fade * bm);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         gl.uniform1f(billP.u.uFall, 0.6);
         gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * 0.16);
-        gl.uniform3f(billP.u.uCol1, 1.0 * fade, 0.80 * fade, 0.45 * fade);
-        gl.uniform3f(billP.u.uCol2, 1.0 * fade, 1.00 * fade, 1.00 * fade);
+        gl.uniform3f(billP.u.uCol1, 1.0 * fade, 0.80 * fade * gm, 0.45 * fade * bm);
+        gl.uniform3f(billP.u.uCol2, 1.0 * fade, 1.00 * fade * gm, 1.00 * fade * bm);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         gl.disable(gl.BLEND);
         gl.depthMask(true);
