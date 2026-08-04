@@ -963,6 +963,7 @@
   <div id="menu" class="hud" role="menu">
     <button id="menuHelp" role="menuitem"></button>
     <button id="menuTour" role="menuitem"></button>
+    <button id="menuGrid" role="menuitemcheckbox" aria-checked="false"></button>
     <button id="menuTerrain" role="menuitemcheckbox" aria-checked="false"></button>
     <button id="menuBloom" role="menuitemcheckbox" aria-checked="false"></button>
     <button id="menuHiRes" role="menuitemcheckbox" aria-checked="false"></button>
@@ -1510,6 +1511,7 @@
       tourResume: "シーンに戻す", tourExit: "ツアーを終了",
       tourGood: "できました", welcomeTour: "操作を試してみる",
       tourUpdated: "Update!", tourAgain: "もう一度見る", tagNew: "New",
+      menuGrid: "経緯線",
       menuTerrain: "風景",
       menuBloom: "光の滲み",
       menuHiRes: "高解像度テクスチャ",
@@ -1563,6 +1565,7 @@
       tourResume: "Reset view", tourExit: "Exit tour",
       tourGood: "Nice", welcomeTour: "Try the controls",
       tourUpdated: "Update!", tourAgain: "Watch again", tagNew: "New",
+      menuGrid: "Coordinate grid",
       menuTerrain: "Scenery",
       menuBloom: "Glow",
       menuHiRes: "High-res textures",
@@ -5172,6 +5175,56 @@
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(ECL_WORLD), gl.STATIC_DRAW);
   }
 
+  // ---------- 天球の経緯線 (赤道座標: 赤経・赤緯) ----------
+  // 赤経は 1時間 = 15° ごとの経線 (24本)、赤緯は 10° ごとの緯線 (±80°)。
+  // 経線は天の両極へ収束するので、北極星のあたりに線が集まって見える。
+  // 星座線・黄道と同じく、宇宙ビューは固定ワールド座標、地上ビューは
+  // 毎フレーム観測者フレームへ投影する (GRID_SEG がその元データ)。
+  let gridVB = null, gridN = 0, gridGVB = null;
+  const GRID_SEG = [];                      // 地上用: ワールド単位方向 ×2 / セグメント
+  {
+    const eps = 23.4393 * DEG, ce = Math.cos(eps), se = Math.sin(eps), R = 1895;
+    const space = [];
+    // 赤道 → ワールド単位方向 (dirW と同じ軸対応: x, z, -y)
+    const dir = (ra, dec) => {
+      const cd = Math.cos(dec);
+      const xq = cd * Math.cos(ra), yq = cd * Math.sin(ra), zq = Math.sin(dec);
+      return [xq, -yq * se + zq * ce, -(yq * ce + zq * se)];
+    };
+    const seg = (a, b) => {
+      GRID_SEG.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+      space.push(a[0]*R, a[1]*R, a[2]*R, b[0]*R, b[1]*R, b[2]*R);
+    };
+    // 赤緯線 (小円)。極に近い円ほど半径が小さく、同じ滑らかさに要る分割数も減る
+    for (let d = -80; d <= 80; d += 10) {
+      const dec = d * DEG;
+      const n = Math.max(24, Math.round(120 * Math.cos(dec)));
+      let p = dir(0, dec);
+      for (let i = 1; i <= n; i++) {
+        const q = dir(i / n * 2 * Math.PI, dec);
+        seg(p, q);
+        p = q;
+      }
+    }
+    // 赤経線 (大円の半分)。極まで引ききることで収束が見える
+    for (let h = 0; h < 24; h++) {
+      const ra = h * 15 * DEG;
+      const n = 45;                         // 4° 刻み (拡大しても折れ線に見えない程度)
+      let p = dir(ra, -Math.PI / 2);
+      for (let i = 1; i <= n; i++) {
+        const q = dir(ra, -Math.PI / 2 + Math.PI * i / n);
+        seg(p, q);
+        p = q;
+      }
+    }
+    gridN = space.length / 3;
+    gridVB = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, gridVB);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(space), gl.STATIC_DRAW);
+  }
+  const gridGroundBuf = new Float32Array(GRID_SEG.length);   // 地上ビュー用の可視セグメント端点
+  let showGrid = localStorage.getItem("ssGrid") === "1";     // 経緯線表示 (既定 OFF)
+
   //#endregion
   //#region src/render/ground.js
   // ---------- 地上ビュー (地球から空を見上げる) ----------
@@ -5460,6 +5513,36 @@
           gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
           gl.drawArrays(gl.LINES, 0, en / 3);
         }
+      }
+    }
+
+    // 天球の経緯線 (赤道座標。星座線と同じ投影・地平線カリング)。
+    // 星座線と違い昼でも消さない — 出しているのは目盛りなので、見えないと
+    // 切替が効いていないように見える。昼は下限まで落として控えめにする
+    if (showGrid && GRID_SEG.length) {
+      let gn = 0;
+      for (let i = 0; i + 5 < GRID_SEG.length; i += 6) {
+        const e0 = GRID_SEG[i]*obsE[0]+GRID_SEG[i+1]*obsE[1]+GRID_SEG[i+2]*obsE[2];
+        const u0 = GRID_SEG[i]*obsU[0]+GRID_SEG[i+1]*obsU[1]+GRID_SEG[i+2]*obsU[2];
+        const n0 = GRID_SEG[i]*obsN[0]+GRID_SEG[i+1]*obsN[1]+GRID_SEG[i+2]*obsN[2];
+        const e1 = GRID_SEG[i+3]*obsE[0]+GRID_SEG[i+4]*obsE[1]+GRID_SEG[i+5]*obsE[2];
+        const u1 = GRID_SEG[i+3]*obsU[0]+GRID_SEG[i+4]*obsU[1]+GRID_SEG[i+5]*obsU[2];
+        const n1 = GRID_SEG[i+3]*obsN[0]+GRID_SEG[i+4]*obsN[1]+GRID_SEG[i+5]*obsN[2];
+        if (u0 < -0.03 && u1 < -0.03) continue;      // 両端とも地平線下ならスキップ
+        gridGroundBuf[gn++] = e0 * SKYR; gridGroundBuf[gn++] = u0 * SKYR; gridGroundBuf[gn++] = -n0 * SKYR;
+        gridGroundBuf[gn++] = e1 * SKYR; gridGroundBuf[gn++] = u1 * SKYR; gridGroundBuf[gn++] = -n1 * SKYR;
+      }
+      if (gn) {
+        const gv = 0.4 + 0.6 * starVis;
+        gl.useProgram(lineP.pr);
+        gl.uniformMatrix4fv(lineP.u.uVP, false, gVP32);
+        gl.uniform4f(lineP.u.uColor, 0.11 * gv, 0.21 * gv, 0.23 * gv, 0.45 * gv);
+        if (!gridGVB) gridGVB = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, gridGVB);
+        gl.bufferData(gl.ARRAY_BUFFER, gridGroundBuf.subarray(0, gn), gl.DYNAMIC_DRAW);
+        gl.enableVertexAttribArray(lineP.a.aPos);
+        gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.LINES, 0, gn / 3);
       }
     }
 
@@ -6159,6 +6242,17 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, eclVB);
       gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
       gl.drawArrays(gl.LINE_LOOP, 0, ECL_N);
+    }
+
+    // --- 天球の経緯線 (赤道座標。星座線とは別の切替) ---
+    if (showGrid && gridN) {
+      gl.useProgram(lineP.pr);
+      gl.uniformMatrix4fv(lineP.u.uVP, false, VP);
+      gl.enableVertexAttribArray(lineP.a.aPos);
+      gl.uniform4f(lineP.u.uColor, 0.10, 0.19, 0.21, 0.42);
+      gl.bindBuffer(gl.ARRAY_BUFFER, gridVB);
+      gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.LINES, 0, gridN);
     }
 
     // --- 軌道線 (天体ごとの表示フラグ) ---
@@ -8169,6 +8263,18 @@
     btn.setAttribute("aria-checked", on ? "true" : "false");
   }
 
+  // 天球の経緯線 (赤経・赤緯)。星座線とは別の切替で、3ビューとも効く
+  const menuGridBtn = document.getElementById("menuGrid");
+  function updateGridLabel() {
+    setMenuCheck(menuGridBtn, T().menuGrid, showGrid);
+  }
+  menuGridBtn.addEventListener("click", () => {
+    showGrid = !showGrid;
+    try { localStorage.setItem("ssGrid", showGrid ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
+    updateGridLabel();
+    setMenu(false);
+  });
+
   // 風景 (地面の質感・地平の稜線・空の色) の表示切替。地上・月面ビューのみ効く
   const menuTerrainBtn = document.getElementById("menuTerrain");
   function updateTerrainLabel() {
@@ -8513,6 +8619,7 @@
         ["日時", "右上の日付・時刻をタップ・「現在時刻に合わせる」"],
         ["再生・速度", "下部パネル"],
         ["表示切替", "左上の 軌道 / 名前 / 星座 (黄道も連動)"],
+        ["経緯線", "メニュー「経緯線」(天球の赤経・赤緯)"],
         ["風景", "メニュー「風景を表示」(地面の質感・地平の稜線・空の色)"],
         ["共有・設定", "メニュー (共有リンク・単位・言語)"],
       ],
@@ -8539,6 +8646,7 @@
         ["Date & time", "Tap the date or time top-right · “Set to current time”"],
         ["Play & speed", "Bottom panel"],
         ["Toggles", "Orbits / Labels / Constellations (top-left)"],
+        ["Coordinate grid", "Menu “Coordinate grid” (RA & Dec on the sky)"],
         ["Scenery", "Menu “Show scenery” (ground texture, ridgeline, sky color)"],
         ["Share & settings", "Menu (share link · units · language)"],
       ],
@@ -8642,6 +8750,7 @@
     menuHelpBtn.textContent = t.menuHelp;
     menuTourBtn.textContent = t.menuTour;
     menuAboutBtn.textContent = t.menuAbout;
+    updateGridLabel();
     updateTerrainLabel();
     updateBloomLabel();
     updateHiResLabel();

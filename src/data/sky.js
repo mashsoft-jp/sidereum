@@ -157,3 +157,53 @@
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(ECL_WORLD), gl.STATIC_DRAW);
   }
 
+  // ---------- 天球の経緯線 (赤道座標: 赤経・赤緯) ----------
+  // 赤経は 1時間 = 15° ごとの経線 (24本)、赤緯は 10° ごとの緯線 (±80°)。
+  // 経線は天の両極へ収束するので、北極星のあたりに線が集まって見える。
+  // 星座線・黄道と同じく、宇宙ビューは固定ワールド座標、地上ビューは
+  // 毎フレーム観測者フレームへ投影する (GRID_SEG がその元データ)。
+  let gridVB = null, gridN = 0, gridGVB = null;
+  const GRID_SEG = [];                      // 地上用: ワールド単位方向 ×2 / セグメント
+  {
+    const eps = 23.4393 * DEG, ce = Math.cos(eps), se = Math.sin(eps), R = 1895;
+    const space = [];
+    // 赤道 → ワールド単位方向 (dirW と同じ軸対応: x, z, -y)
+    const dir = (ra, dec) => {
+      const cd = Math.cos(dec);
+      const xq = cd * Math.cos(ra), yq = cd * Math.sin(ra), zq = Math.sin(dec);
+      return [xq, -yq * se + zq * ce, -(yq * ce + zq * se)];
+    };
+    const seg = (a, b) => {
+      GRID_SEG.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+      space.push(a[0]*R, a[1]*R, a[2]*R, b[0]*R, b[1]*R, b[2]*R);
+    };
+    // 赤緯線 (小円)。極に近い円ほど半径が小さく、同じ滑らかさに要る分割数も減る
+    for (let d = -80; d <= 80; d += 10) {
+      const dec = d * DEG;
+      const n = Math.max(24, Math.round(120 * Math.cos(dec)));
+      let p = dir(0, dec);
+      for (let i = 1; i <= n; i++) {
+        const q = dir(i / n * 2 * Math.PI, dec);
+        seg(p, q);
+        p = q;
+      }
+    }
+    // 赤経線 (大円の半分)。極まで引ききることで収束が見える
+    for (let h = 0; h < 24; h++) {
+      const ra = h * 15 * DEG;
+      const n = 45;                         // 4° 刻み (拡大しても折れ線に見えない程度)
+      let p = dir(ra, -Math.PI / 2);
+      for (let i = 1; i <= n; i++) {
+        const q = dir(ra, -Math.PI / 2 + Math.PI * i / n);
+        seg(p, q);
+        p = q;
+      }
+    }
+    gridN = space.length / 3;
+    gridVB = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, gridVB);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(space), gl.STATIC_DRAW);
+  }
+  const gridGroundBuf = new Float32Array(GRID_SEG.length);   // 地上ビュー用の可視セグメント端点
+  let showGrid = localStorage.getItem("ssGrid") === "1";     // 経緯線表示 (既定 OFF)
+

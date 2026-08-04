@@ -287,6 +287,36 @@
       }
     }
 
+    // 天球の経緯線 (赤道座標。星座線と同じ投影・地平線カリング)。
+    // 星座線と違い昼でも消さない — 出しているのは目盛りなので、見えないと
+    // 切替が効いていないように見える。昼は下限まで落として控えめにする
+    if (showGrid && GRID_SEG.length) {
+      let gn = 0;
+      for (let i = 0; i + 5 < GRID_SEG.length; i += 6) {
+        const e0 = GRID_SEG[i]*obsE[0]+GRID_SEG[i+1]*obsE[1]+GRID_SEG[i+2]*obsE[2];
+        const u0 = GRID_SEG[i]*obsU[0]+GRID_SEG[i+1]*obsU[1]+GRID_SEG[i+2]*obsU[2];
+        const n0 = GRID_SEG[i]*obsN[0]+GRID_SEG[i+1]*obsN[1]+GRID_SEG[i+2]*obsN[2];
+        const e1 = GRID_SEG[i+3]*obsE[0]+GRID_SEG[i+4]*obsE[1]+GRID_SEG[i+5]*obsE[2];
+        const u1 = GRID_SEG[i+3]*obsU[0]+GRID_SEG[i+4]*obsU[1]+GRID_SEG[i+5]*obsU[2];
+        const n1 = GRID_SEG[i+3]*obsN[0]+GRID_SEG[i+4]*obsN[1]+GRID_SEG[i+5]*obsN[2];
+        if (u0 < -0.03 && u1 < -0.03) continue;      // 両端とも地平線下ならスキップ
+        gridGroundBuf[gn++] = e0 * SKYR; gridGroundBuf[gn++] = u0 * SKYR; gridGroundBuf[gn++] = -n0 * SKYR;
+        gridGroundBuf[gn++] = e1 * SKYR; gridGroundBuf[gn++] = u1 * SKYR; gridGroundBuf[gn++] = -n1 * SKYR;
+      }
+      if (gn) {
+        const gv = 0.4 + 0.6 * starVis;
+        gl.useProgram(lineP.pr);
+        gl.uniformMatrix4fv(lineP.u.uVP, false, gVP32);
+        gl.uniform4f(lineP.u.uColor, 0.11 * gv, 0.21 * gv, 0.23 * gv, 0.45 * gv);
+        if (!gridGVB) gridGVB = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, gridGVB);
+        gl.bufferData(gl.ARRAY_BUFFER, gridGroundBuf.subarray(0, gn), gl.DYNAMIC_DRAW);
+        gl.enableVertexAttribArray(lineP.a.aPos);
+        gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.LINES, 0, gn / 3);
+      }
+    }
+
     // 恒星 (実カタログ, 地平線より上のみ)。ワールド単位方向を観測者フレームへ投影
     if (N_CAT) {
       if (!starGVB) starGVB = gl.createBuffer();

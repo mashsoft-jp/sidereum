@@ -34,6 +34,7 @@
         ["日時", "右上の日付・時刻をタップ・「現在時刻に合わせる」"],
         ["再生・速度", "下部パネル"],
         ["表示切替", "左上の 軌道 / 名前 / 星座 (黄道も連動)"],
+        ["経緯線", "メニュー「経緯線」(天球の赤経・赤緯)"],
         ["風景", "メニュー「風景を表示」(地面の質感・地平の稜線・空の色)"],
         ["共有・設定", "メニュー (共有リンク・単位・言語)"],
       ],
@@ -60,6 +61,7 @@
         ["Date & time", "Tap the date or time top-right · “Set to current time”"],
         ["Play & speed", "Bottom panel"],
         ["Toggles", "Orbits / Labels / Constellations (top-left)"],
+        ["Coordinate grid", "Menu “Coordinate grid” (RA & Dec on the sky)"],
         ["Scenery", "Menu “Show scenery” (ground texture, ridgeline, sky color)"],
         ["Share & settings", "Menu (share link · units · language)"],
       ],
@@ -163,6 +165,7 @@
     menuHelpBtn.textContent = t.menuHelp;
     menuTourBtn.textContent = t.menuTour;
     menuAboutBtn.textContent = t.menuAbout;
+    updateGridLabel();
     updateTerrainLabel();
     updateBloomLabel();
     updateHiResLabel();

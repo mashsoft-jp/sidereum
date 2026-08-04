@@ -88,6 +88,17 @@
       gl.drawArrays(gl.LINE_LOOP, 0, ECL_N);
     }
 
+    // --- 天球の経緯線 (赤道座標。星座線とは別の切替) ---
+    if (showGrid && gridN) {
+      gl.useProgram(lineP.pr);
+      gl.uniformMatrix4fv(lineP.u.uVP, false, VP);
+      gl.enableVertexAttribArray(lineP.a.aPos);
+      gl.uniform4f(lineP.u.uColor, 0.10, 0.19, 0.21, 0.42);
+      gl.bindBuffer(gl.ARRAY_BUFFER, gridVB);
+      gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.LINES, 0, gridN);
+    }
+
     // --- 軌道線 (天体ごとの表示フラグ) ---
     {
       gl.useProgram(lineP.pr);

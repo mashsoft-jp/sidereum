@@ -25,6 +25,18 @@
     btn.setAttribute("aria-checked", on ? "true" : "false");
   }
 
+  // 天球の経緯線 (赤経・赤緯)。星座線とは別の切替で、3ビューとも効く
+  const menuGridBtn = document.getElementById("menuGrid");
+  function updateGridLabel() {
+    setMenuCheck(menuGridBtn, T().menuGrid, showGrid);
+  }
+  menuGridBtn.addEventListener("click", () => {
+    showGrid = !showGrid;
+    try { localStorage.setItem("ssGrid", showGrid ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
+    updateGridLabel();
+    setMenu(false);
+  });
+
   // 風景 (地面の質感・地平の稜線・空の色) の表示切替。地上・月面ビューのみ効く
   const menuTerrainBtn = document.getElementById("menuTerrain");
   function updateTerrainLabel() {
