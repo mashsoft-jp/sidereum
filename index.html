@@ -807,6 +807,22 @@
   }
   #hint.fade { opacity: 0; }
 
+  /* 高解像度テクスチャの保存確認。ツアーバーと同じ位置・幅に置く
+     (同時に出ることはない — ツアー中はメニューを開けない) */
+  #hiResConfirm {
+    left: 50%;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    width: min(520px, calc(100vw - 24px));
+    box-sizing: border-box;
+    padding: 14px 16px 12px;
+    z-index: 17;   /* 開いたメニュー(16)より前面 */
+    display: none;
+  }
+  #hiResConfirm.open { display: block; }
+  #hiResConfirm p { margin: 0 0 10px; font-size: 12px; line-height: 1.7; }
+  #hiResConfirm .row { display: flex; justify-content: flex-end; gap: 8px; }
+
   #noGL {
     position: absolute;
     inset: 0;
@@ -1020,6 +1036,16 @@
   </aside>
 
   <div id="hint">ドラッグで回転 ・ ホイール / ピンチでズーム (Shift+で距離) ・ 天体クリックで接近</div>
+
+  <!-- 高解像度テクスチャを ON にした直後の確認。先に適用してから「保存してよいか」を
+       聞く。端末が耐えられず落ちても、保存前なら次に開いたとき既定へ戻る -->
+  <div id="hiResConfirm" class="hud" role="alertdialog" aria-labelledby="hiResConfirmText">
+    <p id="hiResConfirmText"></p>
+    <div class="row">
+      <button id="hiResRevert"></button>
+      <button id="hiResKeep" class="primary"></button>
+    </div>
+  </div>
 
   <footer id="controls" class="hud">
     <button id="ctrlCollapse" aria-label="操作パネルを隠す">⌄</button>
@@ -1487,6 +1513,11 @@
       menuTerrain: "風景",
       menuBloom: "光の滲み",
       menuHiRes: "高解像度テクスチャ",
+      hiResConfirm: "高解像度テクスチャに切り替えました。追加の画像を読み込むぶん通信量が増え、" +
+                    "端末によっては表示が重くなったり不安定になることがあります。この設定を保存しますか。" +
+                    "保存しなければ、次に開いたときは元に戻ります。",
+      hiResKeep: "保存する",
+      hiResRevert: "元に戻す",
       menuAbout: "ライセンス・クレジット",
       menuUnitToMi: "距離をマイル表示",
       menuUnitToKm: "距離を km 表示",
@@ -1535,6 +1566,11 @@
       menuTerrain: "Scenery",
       menuBloom: "Glow",
       menuHiRes: "High-res textures",
+      hiResConfirm: "Switched to high-resolution textures. This downloads additional images and " +
+                    "can make the view heavy or unstable on some devices. Keep this setting? " +
+                    "If you don't, it reverts the next time you open the page.",
+      hiResKeep: "Keep",
+      hiResRevert: "Revert",
       menuAbout: "License & Credits",
       menuUnitToMi: "Distances in miles",
       menuUnitToKm: "Distances in km",
@@ -7941,17 +7977,63 @@
   });
 
   // テクスチャの解像度 (2048×1024 / 4096×2048)。既定は端末で決めている
-  // (PC = 高解像度、スマホ = 標準) ので、ここで上書きしたぶんだけ localStorage に残す
+  // (PC = 高解像度、スマホ = 標準) ので、ここで上書きしたぶんだけ localStorage に残す。
+  //
+  // ON にするときだけ「先に適用してから保存の可否を聞く」。追加の画像を読み込み、
+  // 常駐するテクスチャも4倍になるので、非力な端末では表示が重くなったり WebGL の
+  // コンテキストが落ちたりしうる。保存前に落ちれば、次に開いたときは既定へ戻る。
+  // OFF は安全な向きなので即座に保存する
   const menuHiResBtn = document.getElementById("menuHiRes");
+  const hiResConfirmEl = document.getElementById("hiResConfirm");
+  const hiResConfirmText = document.getElementById("hiResConfirmText");
+  const hiResKeepBtn = document.getElementById("hiResKeep");
+  const hiResRevertBtn = document.getElementById("hiResRevert");
   function updateHiResLabel() {
     setMenuCheck(menuHiResBtn, T().menuHiRes, texHiRes);
+    hiResConfirmText.textContent = T().hiResConfirm;
+    hiResKeepBtn.textContent = T().hiResKeep;
+    hiResRevertBtn.textContent = T().hiResRevert;
   }
-  menuHiResBtn.addEventListener("click", () => {
-    texHiRes = !texHiRes;
+  function saveHiRes() {
     try { localStorage.setItem("ssHiRes", texHiRes ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
+  }
+  function setHiRes(on) {
+    texHiRes = on;
     updateHiResLabel();
     reloadTextures();
+  }
+  menuHiResBtn.addEventListener("click", () => {
     setMenu(false);
+    if (texHiRes) {                       // ON → OFF は確認せず保存
+      hiResConfirmEl.classList.remove("open");
+      setHiRes(false);
+      saveHiRes();
+      return;
+    }
+    setHiRes(true);                       // 先に効かせて、見てから決めてもらう
+    hiResConfirmEl.classList.add("open");
+    liftHiResConfirm();
+  });
+  // 操作パネルの上へ逃がす。パネルの高さはビュー (宇宙/地上) と折りたたみ状態で
+  // 変わるので、出すたびに実測する (ツアーバーの liftTourBar と同じ考え方)
+  function liftHiResConfirm() {
+    const c = document.getElementById("controls");
+    const r = c.getBoundingClientRect();
+    const up = r.height > 0 ? Math.max(0, innerHeight - r.top) + 12 : 0;
+    hiResConfirmEl.style.bottom = up
+      ? "calc(" + (18 + up) + "px + env(safe-area-inset-bottom, 0px))" : "";
+  }
+  addEventListener("resize", () => {
+    if (hiResConfirmEl.classList.contains("open")) liftHiResConfirm();
+  });
+  hiResKeepBtn.addEventListener("click", () => {
+    hiResConfirmEl.classList.remove("open");
+    saveHiRes();
+  });
+  hiResRevertBtn.addEventListener("click", () => {
+    hiResConfirmEl.classList.remove("open");
+    setHiRes(false);
+    saveHiRes();
   });
 
   // 全画面表示 (Fullscreen API)。iPhone の Safari は非対応のためボタン自体を隠す

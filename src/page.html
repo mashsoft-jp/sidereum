@@ -109,6 +109,16 @@
 
   <div id="hint">ドラッグで回転 ・ ホイール / ピンチでズーム (Shift+で距離) ・ 天体クリックで接近</div>
 
+  <!-- 高解像度テクスチャを ON にした直後の確認。先に適用してから「保存してよいか」を
+       聞く。端末が耐えられず落ちても、保存前なら次に開いたとき既定へ戻る -->
+  <div id="hiResConfirm" class="hud" role="alertdialog" aria-labelledby="hiResConfirmText">
+    <p id="hiResConfirmText"></p>
+    <div class="row">
+      <button id="hiResRevert"></button>
+      <button id="hiResKeep" class="primary"></button>
+    </div>
+  </div>
+
   <footer id="controls" class="hud">
     <button id="ctrlCollapse" aria-label="操作パネルを隠す">⌄</button>
     <button id="play" class="primary"><span id="playIcon"><svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="2.4" y="1.8" width="2.6" height="8.4" rx="0.7"/><rect x="7" y="1.8" width="2.6" height="8.4" rx="0.7"/></svg></span><span id="playLabel">停止</span></button>

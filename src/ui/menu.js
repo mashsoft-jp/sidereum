@@ -50,17 +50,63 @@
   });
 
   // テクスチャの解像度 (2048×1024 / 4096×2048)。既定は端末で決めている
-  // (PC = 高解像度、スマホ = 標準) ので、ここで上書きしたぶんだけ localStorage に残す
+  // (PC = 高解像度、スマホ = 標準) ので、ここで上書きしたぶんだけ localStorage に残す。
+  //
+  // ON にするときだけ「先に適用してから保存の可否を聞く」。追加の画像を読み込み、
+  // 常駐するテクスチャも4倍になるので、非力な端末では表示が重くなったり WebGL の
+  // コンテキストが落ちたりしうる。保存前に落ちれば、次に開いたときは既定へ戻る。
+  // OFF は安全な向きなので即座に保存する
   const menuHiResBtn = document.getElementById("menuHiRes");
+  const hiResConfirmEl = document.getElementById("hiResConfirm");
+  const hiResConfirmText = document.getElementById("hiResConfirmText");
+  const hiResKeepBtn = document.getElementById("hiResKeep");
+  const hiResRevertBtn = document.getElementById("hiResRevert");
   function updateHiResLabel() {
     setMenuCheck(menuHiResBtn, T().menuHiRes, texHiRes);
+    hiResConfirmText.textContent = T().hiResConfirm;
+    hiResKeepBtn.textContent = T().hiResKeep;
+    hiResRevertBtn.textContent = T().hiResRevert;
   }
-  menuHiResBtn.addEventListener("click", () => {
-    texHiRes = !texHiRes;
+  function saveHiRes() {
     try { localStorage.setItem("ssHiRes", texHiRes ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
+  }
+  function setHiRes(on) {
+    texHiRes = on;
     updateHiResLabel();
     reloadTextures();
+  }
+  menuHiResBtn.addEventListener("click", () => {
     setMenu(false);
+    if (texHiRes) {                       // ON → OFF は確認せず保存
+      hiResConfirmEl.classList.remove("open");
+      setHiRes(false);
+      saveHiRes();
+      return;
+    }
+    setHiRes(true);                       // 先に効かせて、見てから決めてもらう
+    hiResConfirmEl.classList.add("open");
+    liftHiResConfirm();
+  });
+  // 操作パネルの上へ逃がす。パネルの高さはビュー (宇宙/地上) と折りたたみ状態で
+  // 変わるので、出すたびに実測する (ツアーバーの liftTourBar と同じ考え方)
+  function liftHiResConfirm() {
+    const c = document.getElementById("controls");
+    const r = c.getBoundingClientRect();
+    const up = r.height > 0 ? Math.max(0, innerHeight - r.top) + 12 : 0;
+    hiResConfirmEl.style.bottom = up
+      ? "calc(" + (18 + up) + "px + env(safe-area-inset-bottom, 0px))" : "";
+  }
+  addEventListener("resize", () => {
+    if (hiResConfirmEl.classList.contains("open")) liftHiResConfirm();
+  });
+  hiResKeepBtn.addEventListener("click", () => {
+    hiResConfirmEl.classList.remove("open");
+    saveHiRes();
+  });
+  hiResRevertBtn.addEventListener("click", () => {
+    hiResConfirmEl.classList.remove("open");
+    setHiRes(false);
+    saveHiRes();
   });
 
   // 全画面表示 (Fullscreen API)。iPhone の Safari は非対応のためボタン自体を隠す

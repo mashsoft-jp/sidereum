@@ -28,6 +28,11 @@
       menuTerrain: "風景",
       menuBloom: "光の滲み",
       menuHiRes: "高解像度テクスチャ",
+      hiResConfirm: "高解像度テクスチャに切り替えました。追加の画像を読み込むぶん通信量が増え、" +
+                    "端末によっては表示が重くなったり不安定になることがあります。この設定を保存しますか。" +
+                    "保存しなければ、次に開いたときは元に戻ります。",
+      hiResKeep: "保存する",
+      hiResRevert: "元に戻す",
       menuAbout: "ライセンス・クレジット",
       menuUnitToMi: "距離をマイル表示",
       menuUnitToKm: "距離を km 表示",
@@ -76,6 +81,11 @@
       menuTerrain: "Scenery",
       menuBloom: "Glow",
       menuHiRes: "High-res textures",
+      hiResConfirm: "Switched to high-resolution textures. This downloads additional images and " +
+                    "can make the view heavy or unstable on some devices. Keep this setting? " +
+                    "If you don't, it reverts the next time you open the page.",
+      hiResKeep: "Keep",
+      hiResRevert: "Revert",
       menuAbout: "License & Credits",
       menuUnitToMi: "Distances in miles",
       menuUnitToKm: "Distances in km",

@@ -791,6 +791,22 @@
   }
   #hint.fade { opacity: 0; }
 
+  /* 高解像度テクスチャの保存確認。ツアーバーと同じ位置・幅に置く
+     (同時に出ることはない — ツアー中はメニューを開けない) */
+  #hiResConfirm {
+    left: 50%;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    width: min(520px, calc(100vw - 24px));
+    box-sizing: border-box;
+    padding: 14px 16px 12px;
+    z-index: 17;   /* 開いたメニュー(16)より前面 */
+    display: none;
+  }
+  #hiResConfirm.open { display: block; }
+  #hiResConfirm p { margin: 0 0 10px; font-size: 12px; line-height: 1.7; }
+  #hiResConfirm .row { display: flex; justify-content: flex-end; gap: 8px; }
+
   #noGL {
     position: absolute;
     inset: 0;
