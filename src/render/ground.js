@@ -492,6 +492,47 @@
       gl.disable(gl.DEPTH_TEST);
     }
 
+    // 太陽の眩しさ (グレア)。宇宙ビューと同じ理由で Bloom のときだけ足す —
+    // Bloom はトーンマップ済みの画面を取り込むので、太陽の円盤は空や雲と同じ
+    // 1.0 に潰れていて、Bloom だけでは太陽を特別扱いできない。
+    //
+    // 地平線より下では出さない。深度バッファは球の描画前に消しているので
+    // 地形では隠せず、また昇る前から光っていたら嘘になる。地平線近くは
+    // 大気を長く通って実際に減光するので、高度で薄くする (月面には大気が
+    // 無いので、この減衰は入れない = 昇った瞬間から容赦なく眩しい)
+    if (bloomOn) {
+      const sv = groundVis.find((v) => v.b === SUN);
+      const sinAlt = sv ? sv.py / SKYR : -1;
+      if (sv && sinAlt > 0) {
+        const fade = surfaceBody === "moon"
+          ? 1 : Math.min(1, sinAlt / 0.10);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE);
+        gl.depthMask(false);
+        gl.useProgram(billP.pr);
+        gl.uniformMatrix4fv(billP.u.uVP, false, gVP32);
+        gl.uniform3f(billP.u.uCenter, sv.px, sv.py, sv.pz);
+        gl.uniform3f(billP.u.uRight, gV64[0], gV64[4], gV64[8]);
+        gl.uniform3f(billP.u.uUp, gV64[1], gV64[5], gV64[9]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, billVB);
+        gl.enableVertexAttribArray(billP.a.aCorner);
+        gl.vertexAttribPointer(billP.a.aCorner, 2, gl.FLOAT, false, 0, 0);
+        // 裾 → 芯 の順。角度で決めるので、画角を狭めても見かけの比率は変わらない
+        gl.uniform1f(billP.u.uFall, 1.6);
+        gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN);
+        gl.uniform3f(billP.u.uCol1, 0.55 * fade, 0.32 * fade, 0.12 * fade);
+        gl.uniform3f(billP.u.uCol2, 1.00 * fade, 0.86 * fade, 0.66 * fade);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.uniform1f(billP.u.uFall, 0.6);
+        gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * 0.16);
+        gl.uniform3f(billP.u.uCol1, 1.0 * fade, 0.80 * fade, 0.45 * fade);
+        gl.uniform3f(billP.u.uCol2, 1.0 * fade, 1.00 * fade, 1.00 * fade);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.disable(gl.BLEND);
+        gl.depthMask(true);
+      }
+    }
+
     // 彗星のコマ・尾 (太陽接近時のみ)。観測者フレームへ変換し、他の天体と同じく
     // 天球ドーム上へ一様縮小して置く (真の距離のままだと高倍率時に near 面で消える)
     {
