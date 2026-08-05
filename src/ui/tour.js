@@ -138,9 +138,15 @@
   }
   function liftTourBar() {
     const c = TOUR_UI_EL.controls;
-    const up = c.classList.contains("tourShow") ? c.offsetHeight + 18 : 0;
-    tourBar.style.bottom = up
-      ? "calc(" + (18 + up) + "px + env(safe-area-inset-bottom, 0px))" : "";
+    if (!c.classList.contains("tourShow")) {
+      tourBar.style.bottom = "";
+      return;
+    }
+    // パネルの実測位置から求める。パネル自身の下端はブレークポイントごとに違い
+    // (セーフエリアも含む)、それを再計算すると必ずずれるので、画面下端から
+    // パネル上端までの距離をそのまま使い、隙間だけ足す
+    const up = Math.max(0, innerHeight - c.getBoundingClientRect().top) + 8;
+    tourBar.style.bottom = up + "px";
   }
   // 端末を回すと操作パネルの高さ (レイアウトごと) が変わる。ステップを進めるまで
   // 測り直していなかったので、回転した瞬間からバーがパネルに重なったままだった

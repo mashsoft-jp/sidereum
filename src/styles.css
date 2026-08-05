@@ -553,6 +553,10 @@
   /* チュートリアルのステップが ui: [...] で一時的に出すもの。
      display は隠す前の値に戻す必要があるため、要素ごとに書く */
   #app.tourMode #controls.tourShow { display: grid; }
+  /* 操作パネルを出す回でも、畳む ⌃ は出さない。ナレーションバーのすぐ上に来るので
+     押すつもりのない指が当たり、説明している当のパネルが引っ込んでしまう
+     (戻すための ⌄ もツアー中は隠しているので、手詰まりになる) */
+  #app.tourMode #controls #ctrlCollapse { display: none; }
   #app.tourMode #navPanel.tourShow,
   #app.tourMode #viewMode.tourShow { display: flex; }
   #app.tourMode #menuBtn.tourShow { display: block; }
@@ -858,10 +862,11 @@
     #controls {
       /* 縮小適合幅だと min-width:0 の値列が 0 に潰れるため、全幅固定にする */
       left: 8px; right: 8px; transform: none; max-width: none;
-      gap: 6px 4px;
-      padding: 8px 10px;
+      gap: 3px 4px;
+      padding: 6px 10px;
       grid-template-columns: auto auto auto minmax(50px, 1fr) auto auto;
     }
+    #controls button { padding: 4px 9px; }
     #app.ctrlHidden #controls { transform: translateY(calc(100% + 40px + env(safe-area-inset-bottom, 0px))); }
     button { padding: 6px 9px; font-size: 11px; }
     /* 再生/停止は記号のみ + 値表示を圧縮して、高度カラム (7列目) を収める */
@@ -937,15 +942,6 @@
     }
     #ctrlExpand { bottom: calc(4px + env(safe-area-inset-bottom, 0px) / 2); }
     #controls button { padding: 3px 8px; font-size: 10.5px; }
-    /* パネルの高さを決めているのは行間ではなく右端の縦スライダー列。3行すべてに
-       またがるので、この列を縮めないとパネルは縮まない (横持ちでは画面の 4割を
-       占めていて、ツアーのナレーションが上へ押し出されていた)。
-       つまみの可動域と ▲▼ を残したまま、隙間と文字を詰める */
-    #app.groundMode #controls #gAltCell,
-    #app:not(.groundMode) #controls #angleCell { gap: 2px; }
-    #gAltCell #gAlt, #angleCell #angle { min-height: 38px; }
-    #gAltLabelTop, #gAltVal, #angleCell #angleLabel, #angleVal { font-size: 9.5px; }
-    #gAltCell .step, #angleCell .step { padding: 0 8px; font-size: 9px; }
     #play { min-width: 0; }
     #playLabel { display: none; }
     #playIcon { margin-right: 0; }
@@ -965,5 +961,19 @@
       scrollbar-width: thin;
     }
     #info.open { transform: none; }
+  }
+
+  /* ---- モバイル共通 (縦持ち・横持ち) ---- */
+  @media (max-width: 720px), (max-height: 480px) {
+    /* 操作パネルの高さを決めているのは行間ではなく、右端の縦スライダー列
+       (宇宙=角度 / 地上=高度)。3行すべてにまたがるので、この列を縮めない
+       かぎりパネルは縮まない — 中身が 26px しかない行が、この列の 144px に
+       合わせて 44px へ引き伸ばされていた。
+       つまみの可動域と ▲▼ は残す (指で細かく動かすには押して1目盛りが要る) */
+    #app.groundMode #controls #gAltCell,
+    #app:not(.groundMode) #controls #angleCell { gap: 2px; }
+    #gAltCell #gAlt, #angleCell #angle { min-height: 38px; }
+    #gAltLabelTop, #gAltVal, #angleCell #angleLabel, #angleVal { font-size: 9.5px; }
+    #gAltCell .step, #angleCell .step { padding: 0 8px; font-size: 9px; }
   }
 
