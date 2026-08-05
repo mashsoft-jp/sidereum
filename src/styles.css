@@ -556,6 +556,11 @@
   #app.tourMode #navPanel.tourShow,
   #app.tourMode #viewMode.tourShow { display: flex; }
   #app.tourMode #menuBtn.tourShow { display: block; }
+  /* 天体リストはモバイルでは既定で引っ込んでいる (navHidden で画面外へ平行移動)。
+     display だけ戻しても画面外のままで、出すための » も tourMode で隠しているため、
+     「左のリストからも選べます」と言いながら何も無い状態になる。
+     ツアーが出すと決めた回だけは navHidden に勝たせる */
+  #app.tourMode.navHidden #navPanel.tourShow { transform: none; pointer-events: auto; }
   #app.tourMode #clock.tourShow #nowBtn { display: block; }
   #app.tourMode #clock.tourShow #dateInput,
   #app.tourMode #clock.tourShow #timeInput { pointer-events: auto; color: var(--text); }
