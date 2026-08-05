@@ -905,12 +905,21 @@
     #controls {
       /* ホームバーのセーフエリアも半分だけ尊重して画面下端に寄せる */
       bottom: calc(4px + env(safe-area-inset-bottom, 0px) / 2);
-      gap: 3px 6px;
-      padding: 6px 10px;
+      gap: 2px 6px;
+      padding: 5px 10px;
       grid-template-columns: auto auto auto minmax(70px, 130px) auto auto;
     }
     #ctrlExpand { bottom: calc(4px + env(safe-area-inset-bottom, 0px) / 2); }
     #controls button { padding: 3px 8px; font-size: 10.5px; }
+    /* パネルの高さを決めているのは行間ではなく右端の縦スライダー列。3行すべてに
+       またがるので、この列を縮めないとパネルは縮まない (横持ちでは画面の 4割を
+       占めていて、ツアーのナレーションが上へ押し出されていた)。
+       つまみの可動域と ▲▼ を残したまま、隙間と文字を詰める */
+    #app.groundMode #controls #gAltCell,
+    #app:not(.groundMode) #controls #angleCell { gap: 2px; }
+    #gAltCell #gAlt, #angleCell #angle { min-height: 38px; }
+    #gAltLabelTop, #gAltVal, #angleCell #angleLabel, #angleVal { font-size: 9.5px; }
+    #gAltCell .step, #angleCell .step { padding: 0 8px; font-size: 9px; }
     #play { min-width: 0; }
     #playLabel { display: none; }
     #playIcon { margin-right: 0; }
