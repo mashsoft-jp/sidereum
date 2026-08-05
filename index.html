@@ -8994,6 +8994,11 @@
     tourBar.style.bottom = up
       ? "calc(" + (18 + up) + "px + env(safe-area-inset-bottom, 0px))" : "";
   }
+  // 端末を回すと操作パネルの高さ (レイアウトごと) が変わる。ステップを進めるまで
+  // 測り直していなかったので、回転した瞬間からバーがパネルに重なったままだった
+  addEventListener("resize", () => {
+    if (tour) liftTourBar();
+  });
 
   // 操作の検知。達成したら「できました」を出し、少し置いてから次のステップへ
   function armTourAwait(s) {
