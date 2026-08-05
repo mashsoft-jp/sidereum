@@ -9339,6 +9339,11 @@
   function startTour(t, step) {
     if (!t) return;
     if (!tourSaved) tourSaved = captureTourState();   // 再入時は最初の状態を保つ
+    // 自動送りはツアーごとに OFF から。前のツアーで入れたまま次を始めると、
+    // 見るつもりで開いた場面が勝手に流れていってしまう。
+    // (endTour ではなくここで落とす — ツアー一覧から別のツアーへ直接移ると
+    //  endTour を通らない)
+    tourAuto = false;
     tour = t;
     tourActive = true;
     tourProbe = t.probe || null;
