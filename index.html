@@ -903,11 +903,37 @@
     #clock { padding: 5px 10px; }
     #dateInput, #timeInput { font-size: 13px; }
     #nowBtn { font-size: 9px; padding: 2px 8px; margin-top: 3px; }
+    /* 横持ちのノッチは画面の左右に来る。ここは下端いっぱいに広がるバーなので、
+       上端の HUD と違ってセーフエリアを丸ごと空ける (端の文字が欠ける) */
     #tourBar {
-      left: 8px; right: 8px; width: auto; transform: none;
+      left: calc(8px + var(--sal)); right: calc(8px + var(--sar));
+      width: auto; transform: none;
       bottom: calc(6px + env(safe-area-inset-bottom, 0px)); padding: 8px 12px 7px;
     }
-    #tourText { margin: 5px 0 7px; font-size: 11px; line-height: 1.6; min-height: 0; }
+    /* 縦持ちの3段 (見出し / 説明 / ボタン) だと、操作パネルと同時に出したときに
+       画面がほとんど残らない。2段に畳む:
+         はじめての操作  3/11  ・・・・・  ✓できました  ✕
+         ◀  〜〜説明文〜〜  シーンに戻す  自動送り  次へ▶
+       行をまたいで並べ替えるため、包み (tourHead/tourNav) は display: contents で
+       畳んで、中身を直接グリッドに載せる */
+    #tourBar.open {
+      display: grid;
+      grid-template-columns: auto auto 1fr auto auto auto;
+      align-items: center;
+      column-gap: 8px; row-gap: 3px;
+    }
+    #tourHead, #tourNav { display: contents; }
+    #tourTitle { grid-row: 1; grid-column: 1; }
+    #tourStep  { grid-row: 1; grid-column: 2; }
+    #tourDots  { grid-row: 1; grid-column: 3; margin: 0; justify-self: start; }
+    #tourDone  { grid-row: 1; grid-column: 4 / span 2; margin: 0; justify-self: end; }
+    #tourClose { grid-row: 1; grid-column: 6; justify-self: end; }
+    #tourPrev   { grid-row: 2; grid-column: 1; }
+    #tourText   { grid-row: 2; grid-column: 2 / span 2; margin: 0; }
+    #tourResume { grid-row: 2; grid-column: 4; }
+    #tourAuto   { grid-row: 2; grid-column: 5; }
+    #tourNext   { grid-row: 2; grid-column: 6; }
+    #tourText { font-size: 11px; line-height: 1.55; min-height: 0; }
     #tourPrev, #tourNext { min-width: 0; }
     #hint { display: none; }
     #navPanel {
