@@ -68,7 +68,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 4,
+      ver: 5,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -88,8 +88,8 @@
         {
           scene: false, await: "rotate",
           text: {
-            ja: "まずは視点を回してみます。画面をドラッグしてください。",
-            en: "First, turn the view: drag anywhere on the screen.",
+            ja: "まずは視点を回してみます。画面を左右にドラッグしてください。",
+            en: "First, turn the view: drag left or right anywhere on the screen.",
           },
         },
         {
@@ -187,7 +187,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 5,
+      ver: 6,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -207,8 +207,8 @@
         {
           scene: false, await: "rotate",
           text: {
-            ja: "まずは視点を回してみます。1本指で画面をドラッグしてください。",
-            en: "First, turn the view: drag the screen with one finger.",
+            ja: "まずは視点を回してみます。1本指で画面を左右にドラッグしてください。",
+            en: "First, turn the view: drag the screen left or right with one finger.",
           },
         },
         {
