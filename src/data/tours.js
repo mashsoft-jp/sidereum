@@ -47,7 +47,8 @@
   //   wide  画面が広い端末 (タブレット等) 用の差し替え。ビュー切替は狭い画面
   //         でだけハンバーガーメニューへ入るので、案内する場所と文言を変える
   //   await 促した操作の検知。「できました」を出す (次へ進むのは自動送り時のみ):
-  //         "rotate" / "zoom" / "dist" / "pan" / "select" / "play" / "view" / "menu"
+  //         "rotate" / "zoom" / "dist" / "pan" / "angle" / "select" / "play" /
+  //         "view" / "menu"
   //         / "date" (日時は再生でも動くので、入力欄を触った回数で見ている)
   //
   // ツアー単位:
@@ -68,7 +69,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 5,
+      ver: 6,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -122,17 +123,14 @@
           },
         },
         {
-          scene: false, ui: ["controls"], hi: "#camSelect, #angleCell",
+          scene: false, await: "angle", ui: ["controls"], hi: "#camSelect, #angleCell",
           text: {
             ja: "「カメラ」からは決まった視点へ一度で移れます。" +
-                "「真上」は軌道面を真上から、「真横」は真横から。" +
-                "「デフォルト」は火星軌道までが収まる位置、「全体表示」は最初の引きの画に戻します。" +
-                "右の「角度」スライダーでも、同じように見おろす角度を変えられます。" +
-                "見失ったらここで立て直せます。",
-            en: "The “Camera” menu jumps straight to a fixed viewpoint: Top looks down on the " +
-                "orbital plane, Side views it edge-on, Default frames the inner planets out to " +
-                "Mars, and Overview returns to the opening wide shot. The “Angle” slider on the " +
-                "right tilts the view the same way. Use these whenever you lose your bearings.",
+                "右の「角度」スライダーでは見おろす角度を変えられます。" +
+                "見失ったらここで立て直せます。どちらか試してみてください。",
+            en: "The “Camera” menu jumps straight to a fixed viewpoint, and the “Angle” slider " +
+                "on the right tilts the view. Use these whenever you lose your bearings — " +
+                "try either one.",
           },
         },
         {
@@ -187,7 +185,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 6,
+      ver: 7,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -241,17 +239,14 @@
           },
         },
         {
-          scene: false, ui: ["controls"], hi: "#camSelect, #angleCell",
+          scene: false, await: "angle", ui: ["controls"], hi: "#camSelect, #angleCell",
           text: {
             ja: "「カメラ」からは決まった視点へ一度で移れます。" +
-                "「真上」は軌道面を真上から、「真横」は真横から。" +
-                "「デフォルト」は火星軌道までが収まる位置、「全体表示」は最初の引きの画に戻します。" +
-                "右の「角度」スライダーでも、同じように見おろす角度を変えられます。" +
-                "見失ったらここで立て直せます。",
-            en: "The “Camera” menu jumps straight to a fixed viewpoint: Top looks down on the " +
-                "orbital plane, Side views it edge-on, Default frames the inner planets out to " +
-                "Mars, and Overview returns to the opening wide shot. The “Angle” slider on the " +
-                "right tilts the view the same way. Use these whenever you lose your bearings.",
+                "右の「角度」スライダーでは見おろす角度を変えられます。" +
+                "見失ったらここで立て直せます。どちらか試してみてください。",
+            en: "The “Camera” menu jumps straight to a fixed viewpoint, and the “Angle” slider " +
+                "on the right tilts the view. Use these whenever you lose your bearings — " +
+                "try either one.",
           },
         },
         {

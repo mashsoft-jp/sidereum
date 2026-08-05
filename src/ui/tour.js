@@ -68,6 +68,13 @@
       const v = cam.distTgt;
       return () => Math.abs(Math.log(cam.distTgt / v)) > 0.2;
     },
+    // 「カメラ」の視点プリセットと「角度」スライダー。前者は俯角と距離の
+    // 両方を動かすものがあるので、どちらかが変われば達成とする
+    angle: () => {
+      const p = cam.pitchTgt, d = cam.distTgt;
+      return () => Math.abs(cam.pitchTgt - p) > 0.06 ||
+                   Math.abs(Math.log(cam.distTgt / d)) > 0.2;
+    },
     pan: () => {
       const p = cam.panOffTgt.slice();
       return () => Math.hypot(cam.panOffTgt[0] - p[0], cam.panOffTgt[1] - p[1],
