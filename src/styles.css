@@ -949,16 +949,18 @@
     #play { min-width: 0; }
     #playLabel { display: none; }
     #playIcon { margin-right: 0; }
-    /* 情報パネルは右側に縦利用 (時計の下から)。100dvh で実際の可視領域に収める */
+    /* 情報パネルは右側に縦利用 (時計の下から)。100dvh で実際の可視領域に収める。
+       時計は上端 16px + 高さ 55px (日時 + 「現在時刻に合わせる」) なので、下端は
+       71px。58px では最後のボタンに被っていた */
     #info {
-      top: calc(58px + var(--sat));
+      top: calc(80px + var(--sat));
       right: calc(8px + var(--sar));
       bottom: auto;
       left: auto;
       transform: translateX(16px);
       width: min(290px, 42vw);
-      max-height: calc(100vh - 66px);
-      max-height: calc(100dvh - 66px - var(--sat) - env(safe-area-inset-bottom, 0px));
+      max-height: calc(100vh - 88px);
+      max-height: calc(100dvh - 88px - var(--sat) - env(safe-area-inset-bottom, 0px));
       overflow-y: auto;
       scrollbar-width: thin;
     }
