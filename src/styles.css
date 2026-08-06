@@ -909,10 +909,14 @@
     }
     #dateInput, #timeInput { font-size: 13px; }
     #nowBtn { font-size: 9px; padding: 2px 8px; margin-top: 0; }
-    /* 横持ちのノッチは画面の左右に来る。ここは下端いっぱいに広がるバーなので、
-       上端の HUD と違ってセーフエリアを丸ごと空ける (端の文字が欠ける) */
+    /* 横持ちのノッチは画面の左右、しかも上下の中央あたりに来る。上端の HUD
+       (タイトル・時計・観測地チップ) は縦位置が重ならないのでセーフエリアを
+       半分しか見ないが、ノッチの帯を縦に横切る要素は丸ごと空ける必要がある。
+       さらに実機で env() が 0 のまま返る例があり、それだと丸ごと空けても
+       避けきれない。セーフエリアと固定の下限の大きい方を採る */
     #tourBar {
-      left: calc(8px + var(--sal)); right: calc(8px + var(--sar));
+      left: max(calc(8px + var(--sal)), 44px);
+      right: max(calc(8px + var(--sar)), 20px);
       width: auto; transform: none;
       bottom: calc(6px + env(safe-area-inset-bottom, 0px)); padding: 8px 12px 7px;
     }
@@ -952,12 +956,14 @@
     /* 観測地バーが上へ抜けたぶん、天体リストをタイトルのすぐ下まで上げる。
        #app #navPanel (ID 2つ) に勝たせるため、こちらも同じ形で書く */
     #app #navPanel, #app #navExpand { top: calc(57px + var(--sat)); }
+    /* リストはノッチの帯を縦に横切るので、#tourBar と同じ扱いにする
+       (半分だけ避けていたため、天体名の頭がノッチに食われていた) */
     #navPanel {
-      left: calc(16px + var(--sal) / 2);
+      left: max(calc(16px + var(--sal)), 44px);
       max-height: calc(100vh - 134px);
       max-height: calc(100dvh - 134px - var(--sat));
     }
-    #navExpand { left: calc(var(--sal) / 2); }
+    #navExpand { left: max(var(--sal), 28px); }
     #nav button { padding: 3px 9px; font-size: 10px; }
     #controls {
       /* ホームバーのセーフエリアも半分だけ尊重して画面下端に寄せる */
