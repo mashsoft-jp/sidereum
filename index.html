@@ -897,6 +897,15 @@
     /* 縦持ち: カメラを4行目へ移し、col1 を空けてスライダー列を広く使う */
     #camSelect { grid-column: 1 / -1; grid-row: 4; justify-self: stretch; align-self: center; }
     #app:not(.groundMode) #controls .camGap { display: block; }   /* 距離/ズーム行の col1 を確保して整列 */
+    /* 角度の列は7列目 (暗黙の列) にあり、カメラの 1 / -1 は明示した6列までしか
+       伸びない。4行目の右端だけが空くので、角度の列をそこまで伸ばして
+       つまみの可動域に回す (地上ビューは4行目が無いので伸ばさない) */
+    /* パネルは align-items: center なので、伸ばす指定だけでは中身の高さのまま
+       中央に置かれる。align-self で4行ぶんに引き伸ばして、余りを flex:1 の
+       つまみに配る */
+    #app:not(.groundMode) #controls #angleCell {
+      grid-row: 1 / span 4; align-self: stretch;
+    }
   }
 
   /* ---- 横向きスマホ / 高さの低い画面 (Landscape) ---- */
