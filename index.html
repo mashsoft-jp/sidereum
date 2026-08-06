@@ -999,6 +999,24 @@
     #gAltCell #gAlt, #angleCell #angle { min-height: 38px; }
     #gAltLabelTop, #gAltVal, #angleCell #angleLabel, #angleVal { font-size: 9.5px; }
     #gAltCell .step, #angleCell .step { padding: 0 8px; font-size: 9px; }
+
+    /* モーダル3種 (ガイドツアー一覧・操作方法・ライセンス)。PC と同じ字送りだと
+       ツアーはカード2枚、操作方法は数行で画面が埋まる。3つとも一段落とす —
+       枠と見出しは共通の指定なので、ここでも揃えて掛ける */
+    #about, #howto, #tourList { padding: 14px 16px 12px; }
+    #about h2, #howto h2, #tourList h2 { font-size: 13px; margin-bottom: 8px; }
+    #aboutClose, #howtoClose, #tourListClose { top: 8px; right: 8px; font-size: 12px; }
+    #about h3, #howto h3 { margin: 12px 0 5px; font-size: 9px; }
+    #about p, #howto p { margin: 5px 0; font-size: 10.5px; line-height: 1.7; }
+    #about td, #howto td { padding: 3px 0; font-size: 10px; }
+    #about td:first-child, #howto td:first-child { padding-right: 10px; }
+    #tourList .tourCard { padding: 9px 11px 8px; margin-top: 8px; }
+    #tourList .tourCard h3 { margin-bottom: 3px; font-size: 12px; }
+    #tourList .tourCard p { font-size: 10.5px; line-height: 1.7; }
+    #tourList .tourNo { font-size: 10px; }
+    #tourList .tourNew { margin-left: 6px; padding: 1px 5px; font-size: 8.5px; }
+    #tourList .tourMeta { margin-top: 7px; font-size: 9px; }
+    #tourList .tourStart { padding: 4px 12px; font-size: 10px; }
   }
 
 </style>
