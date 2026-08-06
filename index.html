@@ -915,7 +915,18 @@
     #title { padding: 6px 10px 6px 6px; gap: 6px; left: calc(16px + var(--sal) / 2); }
     #title h1 { font-size: 11px; letter-spacing: 0.14em; }
     #menuBtn { padding: 4px 6px; font-size: 15px; }
-    #menu { top: calc(54px + var(--sat)); left: calc(16px + var(--sal) / 2); }
+    /* 横持ちではメニューが画面より高くなる (13項目で 498px / 画面 393px)。
+       はみ出したぶんは触れないので、収まらないときだけ中でスクロールさせる。
+       左はリストやガイドと同じくノッチの帯を縦に横切るので同じ扱いにする */
+    #menu {
+      top: calc(54px + var(--sat));
+      left: max(calc(16px + var(--sal)), 44px);
+      max-height: calc(100vh - 62px);
+      max-height: calc(100dvh - 62px - var(--sat) - env(safe-area-inset-bottom, 0px));
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
     /* 横持ちは縦が足りない。時計を2段 (日時 / 現在時刻に合わせる) で組むと 55px
        使い、その下に入る情報パネルがそのぶん痩せる。上部は横に空いているので、
        ボタンを日時の左へ並べて1段にする (55px → 30px) */
