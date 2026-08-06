@@ -896,7 +896,12 @@
   @media (max-height: 480px) {
     /* 左端のノッチのセーフエリアは半分だけ尊重して余白を詰める
        (上端付近の HUD はノッチと垂直位置が重ならないため) */
-    #title { padding: 6px 10px 6px 6px; gap: 6px; left: calc(16px + var(--sal) / 2); }
+    /* 左端の基準。ノッチを避ける最小位置でもある (帯を縦に横切る要素と同じ値)。
+       ハンバーガーの左端をここに置き、開いたメニューの左端も同じ値にして揃える */
+    :root { --barL: max(calc(16px + var(--sal)), 44px); }
+    /* タイトルの枠線 1px と padding-left 6px ぶん戻すと、中の ☰ の左端が
+       --barL に来る = 開いたメニューの左端とちょうど揃う */
+    #title { padding: 6px 10px 6px 6px; gap: 6px; left: calc(var(--barL) - 7px); }
     #title h1 { font-size: 11px; letter-spacing: 0.14em; }
     #menuBtn { padding: 4px 6px; font-size: 15px; }
     /* 横持ちではメニューが画面より高くなる (13項目で 498px / 画面 393px)。
@@ -904,7 +909,7 @@
        左はリストやガイドと同じくノッチの帯を縦に横切るので同じ扱いにする */
     #menu {
       top: calc(54px + var(--sat));
-      left: max(calc(16px + var(--sal)), 44px);
+      left: var(--barL);
       max-height: calc(100vh - 62px);
       max-height: calc(100dvh - 62px - var(--sat) - env(safe-area-inset-bottom, 0px));
       overflow-y: auto;
