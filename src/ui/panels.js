@@ -183,6 +183,7 @@
     setPlaying(playing);
     speedFromSlider();
     positionInfoPanel();
+    placeObsSite();   // タイトルの幅が言語で変わる (観測地チップの位置がずれる)
     if (selected) openInfo(selected);
     if (aboutEl.classList.contains("open")) buildAbout();
     if (howtoEl.classList.contains("open")) buildHowto();

@@ -321,6 +321,16 @@
   // ---------- 観測地 (ハンバーガーメニュー内。タップでエディタを展開) ----------
   const obsSiteChip = document.getElementById("obsSiteChip");
   const obsSitePop = document.getElementById("obsSitePop");
+  // 横持ちでは観測地チップをタイトルの右横へ並べる (縦を空けて天体リストを上げる)。
+  // 置く位置はタイトルの右端で決まるが、その幅はアプリ名と言語で変わるので、
+  // 決め打ちにせず実測して CSS へ渡す
+  const titleEl = document.getElementById("title");
+  function placeObsSite() {
+    document.documentElement.style.setProperty(
+      "--titleR", Math.round(titleEl.getBoundingClientRect().right) + "px");
+  }
+  window.addEventListener("resize", placeObsSite);
+  placeObsSite();
   function siteLabel() {
     const o = T().obs;
     for (const c of CITIES) {

@@ -856,9 +856,9 @@
     #info.open { transform: none; }
     #hint { display: none; }
     #menu { top: calc(60px + var(--sat)); }
-    #navPanel { top: calc(100px + var(--sat)); max-height: 40vh; max-height: 40dvh; }
+    /* top は指定しない。上端は観測地バーぶんを空けた 108px で全画面サイズ共通 */
+    #navPanel { max-height: 40vh; max-height: 40dvh; }
     #masterToggles button { padding: 3px 9px; font-size: 10px; }
-    #navExpand { top: calc(100px + var(--sat)); }
     #nav { gap: 3px; }
     #nav button { padding: 4px 9px; font-size: 10px; }
     #controls {
@@ -942,13 +942,22 @@
     #tourText { font-size: 11px; line-height: 1.55; min-height: 0; }
     #tourPrev, #tourNext { min-width: 0; }
     #hint { display: none; }
-    #navPanel {
-      top: calc(54px + var(--sat));
-      left: calc(16px + var(--sal) / 2);
-      max-height: calc(100vh - 185px);
-      max-height: calc(100dvh - 185px - var(--sat));
+    /* 観測地チップはタイトルの右横へ。縦持ちのようにタイトルの下に積むと、
+       その帯ぶん天体リストが下がり、ただでさえ足りない縦をさらに使う。
+       上端は横に空いているので、そちらへ逃がす (--titleR は実測値) */
+    #obsSiteBar {
+      top: calc(16px + var(--sat));
+      left: calc(var(--titleR, 170px) + 10px);
     }
-    #navExpand { top: calc(54px + var(--sat)); left: calc(var(--sal) / 2); }
+    /* 観測地バーが上へ抜けたぶん、天体リストをタイトルのすぐ下まで上げる。
+       #app #navPanel (ID 2つ) に勝たせるため、こちらも同じ形で書く */
+    #app #navPanel, #app #navExpand { top: calc(57px + var(--sat)); }
+    #navPanel {
+      left: calc(16px + var(--sal) / 2);
+      max-height: calc(100vh - 134px);
+      max-height: calc(100dvh - 134px - var(--sat));
+    }
+    #navExpand { left: calc(var(--sal) / 2); }
     #nav button { padding: 3px 9px; font-size: 10px; }
     #controls {
       /* ホームバーのセーフエリアも半分だけ尊重して画面下端に寄せる */
