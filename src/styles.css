@@ -889,9 +889,15 @@
     #title h1 { font-size: 11px; letter-spacing: 0.14em; }
     #menuBtn { padding: 4px 6px; font-size: 15px; }
     #menu { top: calc(54px + var(--sat)); left: calc(16px + var(--sal) / 2); }
-    #clock { padding: 5px 10px; }
+    /* 横持ちは縦が足りない。時計を2段 (日時 / 現在時刻に合わせる) で組むと 55px
+       使い、その下に入る情報パネルがそのぶん痩せる。上部は横に空いているので、
+       ボタンを日時の左へ並べて1段にする (55px → 30px) */
+    #clock {
+      display: flex; flex-direction: row-reverse; align-items: center; gap: 10px;
+      padding: 5px 10px;
+    }
     #dateInput, #timeInput { font-size: 13px; }
-    #nowBtn { font-size: 9px; padding: 2px 8px; margin-top: 3px; }
+    #nowBtn { font-size: 9px; padding: 2px 8px; margin-top: 0; }
     /* 横持ちのノッチは画面の左右に来る。ここは下端いっぱいに広がるバーなので、
        上端の HUD と違ってセーフエリアを丸ごと空ける (端の文字が欠ける) */
     #tourBar {
@@ -945,18 +951,18 @@
     #play { min-width: 0; }
     #playLabel { display: none; }
     #playIcon { margin-right: 0; }
-    /* 情報パネルは右側に縦利用 (時計の下から)。100dvh で実際の可視領域に収める。
-       時計は上端 16px + 高さ 55px (日時 + 「現在時刻に合わせる」) なので、下端は
-       71px。58px では最後のボタンに被っていた */
+    /* 情報パネルは右側に縦利用 (時計の下から)。時計は上端 16px + 高さ 30px
+       (1段に詰めた後) なので、下端は 46px。実際の高さは positionInfoPanel が
+       操作パネルの上端まで測って決めるので、ここの max-height は保険 */
     #info {
-      top: calc(80px + var(--sat));
+      top: calc(55px + var(--sat));
       right: calc(8px + var(--sar));
       bottom: auto;
       left: auto;
       transform: translateX(16px);
       width: min(290px, 42vw);
-      max-height: calc(100vh - 88px);
-      max-height: calc(100dvh - 88px - var(--sat) - env(safe-area-inset-bottom, 0px));
+      max-height: calc(100vh - 63px);
+      max-height: calc(100dvh - 63px - var(--sat) - env(safe-area-inset-bottom, 0px));
       overflow-y: auto;
       scrollbar-width: thin;
     }
