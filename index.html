@@ -908,13 +908,13 @@
     }
   }
 
-  /* 速度の文字列は「1秒 = 1 秒」〜「1秒 = 15.3 時間」で 30px 近く伸び縮みする。
-     値の欄を畳んだままだと、その差がそのまま隣のスライダーの幅の揺れになり、
-     つまみを動かすたびに目盛りの長さが変わる。最長ぶんを確保して固定する。
+  /* 速度の文字列は値によって伸び縮みする (最長「12.2 時間/秒」= 68px)。値の欄を
+     畳んだままだと、その差がそのまま隣のスライダーの幅の揺れになり、つまみを
+     動かすたびに目盛りの長さが変わる。最長ぶんを確保して固定する。
      ただし 320px 級では横が足りず溢れるので、収まる幅の端末だけに掛ける
      (畳んだままの端末では、元から値のテキストが欄からはみ出している) */
   @media (min-width: 360px) and (max-width: 720px) {
-    #speedVal, #zoomVal { min-width: 86px; }
+    #speedVal, #zoomVal { min-width: 68px; }
   }
 
   /* ---- 横向きスマホ / 高さの低い画面 (Landscape) ---- */
@@ -1622,7 +1622,7 @@
       pause: "停止", play: "再生", speed: "速度", distance: "距離", angle: "角度",
       ctrlHide: "操作パネルを隠す", ctrlShow: "操作パネルを表示",
       orbits: "軌道", labels: "名前", constellations: "星座", reset: "全体表示",
-      nowBtn: "現在時刻に合わせる", ratePrefix: "1秒 = ",
+      nowBtn: "現在時刻に合わせる", rateSuffix: "/秒",
       viewTop: "真上", viewDef: "デフォルト", viewSide: "真横", camera: "カメラ",
       viewSpace: "宇宙", viewGround: "地上", viewMoon: "月面", gFovLabel: "ズーム", gAzLabel: "方位", gAltLabel: "高度",
       hint: "ドラッグで回転 ・ 右ドラッグ / 2本指で移動 ・ ホイール / ピンチでズーム (Shift+で距離) ・ 天体クリックで接近",
@@ -1676,7 +1676,7 @@
       pause: "Pause", play: "Play", speed: "Speed", distance: "Distance", angle: "Angle",
       ctrlHide: "Hide controls", ctrlShow: "Show controls",
       orbits: "Orbits", labels: "Labels", constellations: "Consts", reset: "Overview",
-      nowBtn: "Set to current time", ratePrefix: "1s = ",
+      nowBtn: "Set to current time", rateSuffix: "/s",
       viewTop: "Top", viewDef: "Default", viewSide: "Side", camera: "Camera",
       viewSpace: "Space", viewGround: "Ground", viewMoon: "Moon", gFovLabel: "Zoom", gAzLabel: "Azimuth", gAltLabel: "Alt",
       hint: "Drag to rotate · Right-drag / two fingers to pan · Wheel / pinch to zoom (Shift for distance) · Click a body to approach",
@@ -8031,7 +8031,7 @@
   function speedFromSlider() {
     // v=0: 1秒/秒 (実時間), v=18: 1分/秒, v=36: 1時間/秒 (既定), v=100: 約240年/秒
     daysPerSec = Math.pow(60, speedInput.value / 18) / 86400;
-    speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
+    speedVal.textContent = fmtDays(daysPerSec) + T().rateSuffix;
   }
   speedInput.addEventListener("input", speedFromSlider);
 
@@ -8051,7 +8051,7 @@
     if (next === undefined) return;
     daysPerSec = next / 86400;
     speedInput.value = Math.max(0, Math.min(100, Math.round(18 * Math.log(next) / Math.log(60))));
-    speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
+    speedVal.textContent = fmtDays(daysPerSec) + T().rateSuffix;
   }
   function bindHold(btn, fire) {
     let delay = null, rep = null;
@@ -8586,7 +8586,7 @@
     if (isFinite(spd) && spd > 0) {
       daysPerSec = spd;
       speedInput.value = Math.max(0, Math.min(100, Math.round(18 * Math.log(spd * 86400) / Math.log(60))));
-      speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
+      speedVal.textContent = fmtDays(daysPerSec) + T().rateSuffix;
     }
     if (q.get("play") === "0") setPlaying(false);
     else if (q.get("play") === "1") setPlaying(true);
@@ -9240,7 +9240,7 @@
       daysPerSec = s.spd;
       speedInput.value = Math.max(0, Math.min(100,
         Math.round(18 * Math.log(s.spd * 86400) / Math.log(60))));
-      speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
+      speedVal.textContent = fmtDays(daysPerSec) + T().rateSuffix;
     }
     setPlaying(!!s.play);
     // 選択はするが情報パネルは開かない (ナレーションと重なるため)
@@ -9472,7 +9472,7 @@
     daysPerSec = v.daysPerSec;
     speedInput.value = Math.max(0, Math.min(100,
       Math.round(18 * Math.log(v.daysPerSec * 86400) / Math.log(60))));
-    speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
+    speedVal.textContent = fmtDays(daysPerSec) + T().rateSuffix;
     setPlaying(v.playing);
     // 観測地はビューを開く前に戻す (setObsSite が localStorage も書き戻す)
     if (obsLat !== v.obsLat || obsLon !== v.obsLon) setObsSite(v.obsLat, v.obsLon);
@@ -9684,7 +9684,7 @@
       daysPerSec = sp;
       speedInput.value = Math.max(0, Math.min(100,
         Math.round(18 * Math.log(sp * 86400) / Math.log(60))));
-      speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
+      speedVal.textContent = fmtDays(daysPerSec) + T().rateSuffix;
     }
     // ズームは俯瞰域のみ復元 (天体接近中の至近距離は選択が復元されないため除外)
     const zd = parseFloat(localStorage.getItem("ssZoom"));

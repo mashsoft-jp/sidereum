@@ -287,7 +287,7 @@
       daysPerSec = s.spd;
       speedInput.value = Math.max(0, Math.min(100,
         Math.round(18 * Math.log(s.spd * 86400) / Math.log(60))));
-      speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
+      speedVal.textContent = fmtDays(daysPerSec) + T().rateSuffix;
     }
     setPlaying(!!s.play);
     // 選択はするが情報パネルは開かない (ナレーションと重なるため)
@@ -519,7 +519,7 @@
     daysPerSec = v.daysPerSec;
     speedInput.value = Math.max(0, Math.min(100,
       Math.round(18 * Math.log(v.daysPerSec * 86400) / Math.log(60))));
-    speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
+    speedVal.textContent = fmtDays(daysPerSec) + T().rateSuffix;
     setPlaying(v.playing);
     // 観測地はビューを開く前に戻す (setObsSite が localStorage も書き戻す)
     if (obsLat !== v.obsLat || obsLon !== v.obsLon) setObsSite(v.obsLat, v.obsLon);

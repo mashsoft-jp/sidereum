@@ -155,7 +155,7 @@
   function speedFromSlider() {
     // v=0: 1秒/秒 (実時間), v=18: 1分/秒, v=36: 1時間/秒 (既定), v=100: 約240年/秒
     daysPerSec = Math.pow(60, speedInput.value / 18) / 86400;
-    speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
+    speedVal.textContent = fmtDays(daysPerSec) + T().rateSuffix;
   }
   speedInput.addEventListener("input", speedFromSlider);
 
@@ -175,7 +175,7 @@
     if (next === undefined) return;
     daysPerSec = next / 86400;
     speedInput.value = Math.max(0, Math.min(100, Math.round(18 * Math.log(next) / Math.log(60))));
-    speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
+    speedVal.textContent = fmtDays(daysPerSec) + T().rateSuffix;
   }
   function bindHold(btn, fire) {
     let delay = null, rep = null;

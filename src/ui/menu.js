@@ -200,7 +200,7 @@
     if (isFinite(spd) && spd > 0) {
       daysPerSec = spd;
       speedInput.value = Math.max(0, Math.min(100, Math.round(18 * Math.log(spd * 86400) / Math.log(60))));
-      speedVal.textContent = T().ratePrefix + fmtDays(daysPerSec);
+      speedVal.textContent = fmtDays(daysPerSec) + T().rateSuffix;
     }
     if (q.get("play") === "0") setPlaying(false);
     else if (q.get("play") === "1") setPlaying(true);
