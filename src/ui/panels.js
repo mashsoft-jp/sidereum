@@ -16,10 +16,10 @@
       space_rows: [
         ["回転", "ドラッグ (1本指ドラッグ)"],
         ["ズーム", "ホイール / ピンチ"],
-        ["距離", "Shift+ホイール、またはパネルのものさしの行"],
+        ["距離", "Shift+ホイール、またはパネルの {dist} の行"],
         ["平行移動", "右ドラッグ / 2本指ドラッグ"],
         ["天体", "クリック / タップで選択・接近 (再度で解除)"],
-        ["視点", "パネルの「カメラ」プルダウン・右端の縦スライダー"],
+        ["視点", "パネルの「カメラ」プルダウン・右端の {angle} スライダー"],
       ],
       ground_rows: [
         ["見回し", "ドラッグ"],
@@ -43,10 +43,10 @@
       space_rows: [
         ["Rotate", "Drag (one-finger drag)"],
         ["Zoom", "Wheel / pinch"],
-        ["Distance", "Shift+wheel, or the ruler row in the panel"],
+        ["Distance", "Shift+wheel, or the {dist} row in the panel"],
         ["Pan", "Right-drag / two-finger drag"],
         ["Bodies", "Click / tap to select & approach (again to deselect)"],
-        ["Viewpoint", "“Camera” dropdown & the vertical slider on the right"],
+        ["Viewpoint", "“Camera” dropdown & the {angle} slider on the right"],
       ],
       ground_rows: [
         ["Look around", "Drag"],
@@ -66,8 +66,9 @@
         ["Share & settings", "Menu (share link · units · language)"],
       ],
     };
+    // {dist} などは操作パネルの行見出しアイコンに展開する (ツアーと同じ仕組み)
     const tbl = (rows) => `<table><tbody>` +
-      rows.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("") + `</tbody></table>`;
+      rows.map((r) => `<tr><td>${r[0]}</td><td>${tourTextHTML(r[1])}</td></tr>`).join("") + `</tbody></table>`;
     howtoEl.innerHTML =
       `<button id="howtoClose" aria-label="close">✕</button>` +
       `<h2>${c.title}</h2>` +

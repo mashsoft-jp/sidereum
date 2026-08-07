@@ -40,6 +40,23 @@
 
   const tourText = (o) => (o ? (lang === "ja" ? o.ja : o.en) : "");
 
+  // ナレーション中の {mag} などを、操作パネルの行見出しアイコンそのものに置き換える。
+  // 見出しを語からアイコンにしたので、文章側も「虫めがねの行」のような言い換えでは
+  // なく現物を指す。複製元はパネルの要素そのもの — 別に持つと、アイコンを描き直した
+  // ときに文章側だけ古いままになる。読み上げ用の隠しテキストも一緒に付いてくるので、
+  // 音声では「ズームの行」と読まれる (言語切替にも自動で追従する)
+  const TOUR_ICON = {
+    speed: "speedLabel", mag: "magLabel", dist: "zoomLabel",
+    angle: "angleLabel", az: "gAzLabel", alt: "gAltLabelTop",
+  };
+  const escHTML = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  function tourTextHTML(s) {
+    return escHTML(s).replace(/\{(\w+)\}/g, (m, k) => {
+      const el = TOUR_ICON[k] && document.getElementById(TOUR_ICON[k]);
+      return el ? '<span class="inlIcon">' + el.innerHTML + "</span>" : m;
+    });
+  }
+
   // 端末の出し分け。UI の位置はレイアウトで、操作方法は入力方式で変わるので
   // 「狭い画面」と「タッチ (ホバーできない粗いポインタ)」のどちらかで判定する
   const mqTouch = matchMedia("(hover: none) and (pointer: coarse)");
@@ -468,7 +485,7 @@
     const t = T();
     tourTitleEl.textContent = tourText(tour.title);
     tourStepEl.textContent = (tourIdx + 1) + " / " + tour.steps.length;
-    tourTextEl.textContent = tourText(tourStateAt(tourIdx).text);
+    tourTextEl.innerHTML = tourTextHTML(tourText(tourStateAt(tourIdx).text));
     tourDotsEl.innerHTML = tour.steps
       .map((_, i) => '<i class="' + (i === tourIdx ? "on" : "") + '"></i>').join("");
     tourPrevBtn.disabled = tourIdx === 0;

@@ -72,7 +72,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 9,
+      ver: 10,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -100,9 +100,9 @@
           scene: false, await: "zoom", ui: ["controls"], hi: "#mag",
           text: {
             ja: "マウスホイールを回すと拡大・縮小できます。" +
-                "下のパネルの虫めがねの行が、いま何倍かを示しています。回してみてください。",
-            en: "Scroll the mouse wheel to zoom in and out. The magnifier row in the panel " +
-                "below shows the current magnification. Give it a try.",
+                "下のパネルの {mag} の行が、いま何倍かを示しています。回してみてください。",
+            en: "Scroll the mouse wheel to zoom in and out. The {mag} row in the panel below " +
+                "shows the current magnification. Give it a try.",
           },
         },
         {
@@ -110,10 +110,10 @@
           text: {
             ja: "Shift を押しながらホイールを回すと、拡大率ではなく" +
                 "太陽系との距離そのものが変わります。" +
-                "虫めがねの行は ×1.0 のまま、ものさしの行の数字だけが動くのが分かります。",
+                "{mag} の行は ×1.0 のまま、{dist} の行の数字だけが動くのが分かります。",
             en: "Hold Shift while scrolling to change your distance from the Solar System " +
-                "itself, rather than the magnification: the magnifier row stays at ×1.0 while " +
-                "only the ruler row moves.",
+                "itself, rather than the magnification: the {mag} row stays at ×1.0 while " +
+                "only the {dist} row moves.",
           },
         },
         {
@@ -129,9 +129,9 @@
           scene: false, await: "angle", ui: ["controls"], hi: "#camSelect, #angleCell",
           text: {
             ja: "「カメラ」からは決まった視点へ一度で移れます。" +
-                "右端の縦スライダーでは見おろす角度を変えられます。" +
+                "右端の {angle} のスライダーでは見おろす角度を変えられます。" +
                 "見失ったらここで立て直せます。どちらか試してみてください。",
-            en: "The “Camera” menu jumps straight to a fixed viewpoint, and the vertical slider " +
+            en: "The “Camera” menu jumps straight to a fixed viewpoint, and the {angle} slider " +
                 "on the right tilts the view. Use these whenever you lose your bearings — " +
                 "try either one.",
           },
@@ -188,7 +188,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 10,
+      ver: 11,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -216,20 +216,20 @@
           scene: false, await: "zoom", ui: ["controls"], hi: "#mag",
           text: {
             ja: "2本の指でつまむように広げたり縮めたり (ピンチ) すると拡大・縮小できます。" +
-                "下のパネルの虫めがねの行が、いま何倍かを示しています。",
-            en: "Pinch with two fingers to zoom in and out. The magnifier row in the panel " +
-                "below shows the current magnification.",
+                "下のパネルの {mag} の行が、いま何倍かを示しています。",
+            en: "Pinch with two fingers to zoom in and out. The {mag} row in the panel below " +
+                "shows the current magnification.",
           },
         },
         {
           scene: false, await: "dist", ui: ["controls"], hi: "#zoom",
           text: {
-            ja: "下のパネルのものさしの行では、拡大率ではなく" +
-                "太陽系との距離そのものが変わります。動かすと虫めがねの行は ×1.0 のまま、" +
-                "ものさしの行の数字だけが変わります。",
-            en: "The ruler row in the panel below changes how far you are from the Solar " +
-                "System itself, rather than the magnification: the magnifier row stays at " +
-                "×1.0 while only the ruler row moves. Try it.",
+            ja: "下のパネルの {dist} の行では、拡大率ではなく" +
+                "太陽系との距離そのものが変わります。動かすと {mag} の行は ×1.0 のまま、" +
+                "{dist} の行の数字だけが変わります。",
+            en: "The {dist} row in the panel below changes how far you are from the Solar " +
+                "System itself, rather than the magnification: the {mag} row stays at " +
+                "×1.0 while only the {dist} row moves. Try it.",
           },
         },
         {
@@ -245,9 +245,9 @@
           scene: false, await: "angle", ui: ["controls"], hi: "#camSelect, #angleCell",
           text: {
             ja: "「カメラ」からは決まった視点へ一度で移れます。" +
-                "右端の縦スライダーでは見おろす角度を変えられます。" +
+                "右端の {angle} のスライダーでは見おろす角度を変えられます。" +
                 "見失ったらここで立て直せます。どちらか試してみてください。",
-            en: "The “Camera” menu jumps straight to a fixed viewpoint, and the vertical slider " +
+            en: "The “Camera” menu jumps straight to a fixed viewpoint, and the {angle} slider " +
                 "on the right tilts the view. Use these whenever you lose your bearings — " +
                 "try either one.",
           },

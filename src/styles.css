@@ -442,6 +442,14 @@
     color: var(--dim);
   }
   #angleCell .ctlIcon, #gAltCell .ctlIcon { display: block; }
+  /* 説明文の中に埋め込んだ行見出しアイコン (ツアーのナレーション・操作方法)。
+     文字サイズに合わせて拡縮し、強調色で「画面のこれ」と分かるようにする */
+  .inlIcon { white-space: nowrap; }
+  .inlIcon .ctlIcon {
+    width: 1.15em; height: 1.15em;
+    vertical-align: -0.24em;
+    color: var(--accent);
+  }
   /* 視覚的には隠すが読み上げには残す */
   .vh {
     position: absolute; width: 1px; height: 1px;
