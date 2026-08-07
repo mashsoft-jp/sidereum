@@ -467,6 +467,8 @@
   }
   /* col1 のプレースホルダ: PC はカメラが col1 を占有するため不要 (縦持ちのみ距離/ズーム行の col1 を確保) */
   #controls .camGap { display: none; }
+  /* カメラのアイコンはモバイルだけ。PC は select の文字「カメラ」をそのまま出す */
+  #camIcon { display: none; }
   /* ---- 地上ビュー用コントロールの出し分け ---- */
   .groundOnly { display: none; }
   #app.groundMode .spaceOnly { display: none; }
@@ -1055,10 +1057,15 @@
          箱はその幅のままなので、明示的に詰める (▲▼ と同じくらいの指の的) */
       width: 34px; min-width: 0;
       padding: 6px 2px;
-      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="%23c9d5ea" stroke-width="1.15" stroke-linejoin="round"><path d="M1 4.1h2.3l.9-1.3h3.6l.9 1.3H11v5.4H1z"/><circle cx="6" cy="6.7" r="1.9"/></svg>');
-      background-repeat: no-repeat;
-      background-position: center;
-      background-size: 15px 15px;
+    }
+    /* アイコンは select と同じセルへ重ねる (グリッドは同じ区画に複数置ける)。
+       指は下の select に通す */
+    #app:not(.groundMode) #controls #camIcon {
+      display: block;
+      grid-column: 1; grid-row: 2 / span 2;
+      justify-self: center; align-self: center;
+      pointer-events: none;
+      color: var(--text);
     }
     /* 縦スライダーの見出しは省く。行が3つしかないモバイルではこの 15px が効く。
        どの列かは位置と ▲▼ で分かるし、読み上げにはスライダー自身の

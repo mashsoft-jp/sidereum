@@ -72,7 +72,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 10,
+      ver: 11,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -128,11 +128,11 @@
         {
           scene: false, await: "angle", ui: ["controls"], hi: "#camSelect, #angleCell",
           text: {
-            ja: "「カメラ」からは決まった視点へ一度で移れます。" +
-                "右端の {angle} のスライダーでは見おろす角度を変えられます。" +
+            ja: "{cam} からは決まった視点へ一度で移れます。" +
+                "右端の縦のスライダーでは見おろす角度を変えられます。" +
                 "見失ったらここで立て直せます。どちらか試してみてください。",
-            en: "The “Camera” menu jumps straight to a fixed viewpoint, and the {angle} slider " +
-                "on the right tilts the view. Use these whenever you lose your bearings — " +
+            en: "The {cam} menu jumps straight to a fixed viewpoint, and the vertical slider at " +
+                "the right edge tilts the view. Use these whenever you lose your bearings — " +
                 "try either one.",
           },
         },
@@ -188,7 +188,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 11,
+      ver: 12,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -244,11 +244,11 @@
         {
           scene: false, await: "angle", ui: ["controls"], hi: "#camSelect, #angleCell",
           text: {
-            ja: "「カメラ」からは決まった視点へ一度で移れます。" +
-                "右端の {angle} のスライダーでは見おろす角度を変えられます。" +
+            ja: "{cam} からは決まった視点へ一度で移れます。" +
+                "右端の縦のスライダーでは見おろす角度を変えられます。" +
                 "見失ったらここで立て直せます。どちらか試してみてください。",
-            en: "The “Camera” menu jumps straight to a fixed viewpoint, and the {angle} slider " +
-                "on the right tilts the view. Use these whenever you lose your bearings — " +
+            en: "The {cam} menu jumps straight to a fixed viewpoint, and the vertical slider at " +
+                "the right edge tilts the view. Use these whenever you lose your bearings — " +
                 "try either one.",
           },
         },

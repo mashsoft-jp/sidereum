@@ -19,7 +19,7 @@
         ["距離", "Shift+ホイール、またはパネルの {dist} の行"],
         ["平行移動", "右ドラッグ / 2本指ドラッグ"],
         ["天体", "クリック / タップで選択・接近 (再度で解除)"],
-        ["視点", "パネルの「カメラ」プルダウン・右端の {angle} スライダー"],
+        ["視点", "パネルの {cam} プルダウン・右端の縦のスライダー"],
       ],
       ground_rows: [
         ["見回し", "ドラッグ"],
@@ -46,7 +46,7 @@
         ["Distance", "Shift+wheel, or the {dist} row in the panel"],
         ["Pan", "Right-drag / two-finger drag"],
         ["Bodies", "Click / tap to select & approach (again to deselect)"],
-        ["Viewpoint", "“Camera” dropdown & the {angle} slider on the right"],
+        ["Viewpoint", "The {cam} dropdown & the vertical slider at the right edge"],
       ],
       ground_rows: [
         ["Look around", "Drag"],
@@ -147,6 +147,7 @@
     setCtlLabel("zoomLabel", t.distance);
     setCtlLabel("magLabel", t.gFovLabel);
     setCtlLabel("angleLabel", t.angle);
+    setCtlLabel("camIcon", t.camera);
     orbitsBtn.textContent = t.orbits;
     labelsBtn.textContent = t.labels;
     constBtn.textContent = t.constellations;

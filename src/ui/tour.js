@@ -47,13 +47,23 @@
   // 音声では「ズームの行」と読まれる (言語切替にも自動で追従する)
   const TOUR_ICON = {
     speed: "speedLabel", mag: "magLabel", dist: "zoomLabel",
-    angle: "angleLabel", az: "gAzLabel", alt: "gAltLabelTop",
+    angle: "angleLabel", az: "gAzLabel", alt: "gAltLabelTop", cam: "camIcon",
   };
   const escHTML = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  // トークンの前後の空白ごと拾う。アイコンにはその空白が要るが、日本語で語に
+  // 戻したときは「パネルの 「カメラ」 プルダウン」と間延びするので落とす
   function tourTextHTML(s) {
-    return escHTML(s).replace(/\{(\w+)\}/g, (m, k) => {
+    return escHTML(s).replace(/( ?)\{(\w+)\}( ?)/g, (m, pre, k, post) => {
       const el = TOUR_ICON[k] && document.getElementById(TOUR_ICON[k]);
-      return el ? '<span class="inlIcon">' + el.innerHTML + "</span>" : m;
+      if (!el) return m;
+      // 画面に出ていないアイコンを文章に出すと、探しても見つからないものを
+      // 指すことになる (カメラは PC では文字のまま)。そのときは語で書く
+      if (getComputedStyle(el).display === "none") {
+        const w = el.querySelector(".vh");
+        const t = w ? w.textContent : "";
+        return lang === "ja" ? "「" + t + "」" : pre + "“" + t + "”" + post;
+      }
+      return pre + '<span class="inlIcon">' + el.innerHTML + "</span>" + post;
     });
   }
 

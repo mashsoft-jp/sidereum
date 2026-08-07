@@ -483,6 +483,8 @@
   }
   /* col1 のプレースホルダ: PC はカメラが col1 を占有するため不要 (縦持ちのみ距離/ズーム行の col1 を確保) */
   #controls .camGap { display: none; }
+  /* カメラのアイコンはモバイルだけ。PC は select の文字「カメラ」をそのまま出す */
+  #camIcon { display: none; }
   /* ---- 地上ビュー用コントロールの出し分け ---- */
   .groundOnly { display: none; }
   #app.groundMode .spaceOnly { display: none; }
@@ -1071,10 +1073,15 @@
          箱はその幅のままなので、明示的に詰める (▲▼ と同じくらいの指の的) */
       width: 34px; min-width: 0;
       padding: 6px 2px;
-      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="%23c9d5ea" stroke-width="1.15" stroke-linejoin="round"><path d="M1 4.1h2.3l.9-1.3h3.6l.9 1.3H11v5.4H1z"/><circle cx="6" cy="6.7" r="1.9"/></svg>');
-      background-repeat: no-repeat;
-      background-position: center;
-      background-size: 15px 15px;
+    }
+    /* アイコンは select と同じセルへ重ねる (グリッドは同じ区画に複数置ける)。
+       指は下の select に通す */
+    #app:not(.groundMode) #controls #camIcon {
+      display: block;
+      grid-column: 1; grid-row: 2 / span 2;
+      justify-self: center; align-self: center;
+      pointer-events: none;
+      color: var(--text);
     }
     /* 縦スライダーの見出しは省く。行が3つしかないモバイルではこの 15px が効く。
        どの列かは位置と ▲▼ で分かるし、読み上げにはスライダー自身の
@@ -1224,6 +1231,9 @@
       <option value="side">真横</option>
       <option value="reset">全体表示</option>
     </select>
+    <!-- モバイルで select の上に重ねるアイコン (select の中に SVG は置けない)。
+         説明文の {cam} もここを複製するので、絵は一箇所にまとまる -->
+    <span id="camIcon" class="spaceOnly" aria-hidden="true" title="カメラ"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round"><path d="M1 4.1h2.3l.9-1.3h3.6l.9 1.3H11v5.4H1z"/><circle cx="6" cy="6.7" r="1.9"/></svg><span class="vh">カメラ</span></span>
     <span class="camGap"></span>
     <span class="slider spaceOnly" id="magLabel" title="ズーム"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><circle cx="5.1" cy="5.1" r="3.3"/><path d="M7.6 7.6l2.7 2.7"/></svg><span class="vh">ズーム</span></span>
     <button id="magOut" class="step spaceOnly" aria-label="ズームアウト">−</button>
@@ -1935,7 +1945,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 10,
+      ver: 11,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -1991,11 +2001,11 @@
         {
           scene: false, await: "angle", ui: ["controls"], hi: "#camSelect, #angleCell",
           text: {
-            ja: "「カメラ」からは決まった視点へ一度で移れます。" +
-                "右端の {angle} のスライダーでは見おろす角度を変えられます。" +
+            ja: "{cam} からは決まった視点へ一度で移れます。" +
+                "右端の縦のスライダーでは見おろす角度を変えられます。" +
                 "見失ったらここで立て直せます。どちらか試してみてください。",
-            en: "The “Camera” menu jumps straight to a fixed viewpoint, and the {angle} slider " +
-                "on the right tilts the view. Use these whenever you lose your bearings — " +
+            en: "The {cam} menu jumps straight to a fixed viewpoint, and the vertical slider at " +
+                "the right edge tilts the view. Use these whenever you lose your bearings — " +
                 "try either one.",
           },
         },
@@ -2051,7 +2061,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 11,
+      ver: 12,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -2107,11 +2117,11 @@
         {
           scene: false, await: "angle", ui: ["controls"], hi: "#camSelect, #angleCell",
           text: {
-            ja: "「カメラ」からは決まった視点へ一度で移れます。" +
-                "右端の {angle} のスライダーでは見おろす角度を変えられます。" +
+            ja: "{cam} からは決まった視点へ一度で移れます。" +
+                "右端の縦のスライダーでは見おろす角度を変えられます。" +
                 "見失ったらここで立て直せます。どちらか試してみてください。",
-            en: "The “Camera” menu jumps straight to a fixed viewpoint, and the {angle} slider " +
-                "on the right tilts the view. Use these whenever you lose your bearings — " +
+            en: "The {cam} menu jumps straight to a fixed viewpoint, and the vertical slider at " +
+                "the right edge tilts the view. Use these whenever you lose your bearings — " +
                 "try either one.",
           },
         },
@@ -8794,7 +8804,7 @@
         ["距離", "Shift+ホイール、またはパネルの {dist} の行"],
         ["平行移動", "右ドラッグ / 2本指ドラッグ"],
         ["天体", "クリック / タップで選択・接近 (再度で解除)"],
-        ["視点", "パネルの「カメラ」プルダウン・右端の {angle} スライダー"],
+        ["視点", "パネルの {cam} プルダウン・右端の縦のスライダー"],
       ],
       ground_rows: [
         ["見回し", "ドラッグ"],
@@ -8821,7 +8831,7 @@
         ["Distance", "Shift+wheel, or the {dist} row in the panel"],
         ["Pan", "Right-drag / two-finger drag"],
         ["Bodies", "Click / tap to select & approach (again to deselect)"],
-        ["Viewpoint", "“Camera” dropdown & the {angle} slider on the right"],
+        ["Viewpoint", "The {cam} dropdown & the vertical slider at the right edge"],
       ],
       ground_rows: [
         ["Look around", "Drag"],
@@ -8922,6 +8932,7 @@
     setCtlLabel("zoomLabel", t.distance);
     setCtlLabel("magLabel", t.gFovLabel);
     setCtlLabel("angleLabel", t.angle);
+    setCtlLabel("camIcon", t.camera);
     orbitsBtn.textContent = t.orbits;
     labelsBtn.textContent = t.labels;
     constBtn.textContent = t.constellations;
@@ -9048,13 +9059,23 @@
   // 音声では「ズームの行」と読まれる (言語切替にも自動で追従する)
   const TOUR_ICON = {
     speed: "speedLabel", mag: "magLabel", dist: "zoomLabel",
-    angle: "angleLabel", az: "gAzLabel", alt: "gAltLabelTop",
+    angle: "angleLabel", az: "gAzLabel", alt: "gAltLabelTop", cam: "camIcon",
   };
   const escHTML = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  // トークンの前後の空白ごと拾う。アイコンにはその空白が要るが、日本語で語に
+  // 戻したときは「パネルの 「カメラ」 プルダウン」と間延びするので落とす
   function tourTextHTML(s) {
-    return escHTML(s).replace(/\{(\w+)\}/g, (m, k) => {
+    return escHTML(s).replace(/( ?)\{(\w+)\}( ?)/g, (m, pre, k, post) => {
       const el = TOUR_ICON[k] && document.getElementById(TOUR_ICON[k]);
-      return el ? '<span class="inlIcon">' + el.innerHTML + "</span>" : m;
+      if (!el) return m;
+      // 画面に出ていないアイコンを文章に出すと、探しても見つからないものを
+      // 指すことになる (カメラは PC では文字のまま)。そのときは語で書く
+      if (getComputedStyle(el).display === "none") {
+        const w = el.querySelector(".vh");
+        const t = w ? w.textContent : "";
+        return lang === "ja" ? "「" + t + "」" : pre + "“" + t + "”" + post;
+      }
+      return pre + '<span class="inlIcon">' + el.innerHTML + "</span>" + post;
     });
   }
 

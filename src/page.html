@@ -137,6 +137,9 @@
       <option value="side">真横</option>
       <option value="reset">全体表示</option>
     </select>
+    <!-- モバイルで select の上に重ねるアイコン (select の中に SVG は置けない)。
+         説明文の {cam} もここを複製するので、絵は一箇所にまとまる -->
+    <span id="camIcon" class="spaceOnly" aria-hidden="true" title="カメラ"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round"><path d="M1 4.1h2.3l.9-1.3h3.6l.9 1.3H11v5.4H1z"/><circle cx="6" cy="6.7" r="1.9"/></svg><span class="vh">カメラ</span></span>
     <span class="camGap"></span>
     <span class="slider spaceOnly" id="magLabel" title="ズーム"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><circle cx="5.1" cy="5.1" r="3.3"/><path d="M7.6 7.6l2.7 2.7"/></svg><span class="vh">ズーム</span></span>
     <button id="magOut" class="step spaceOnly" aria-label="ズームアウト">−</button>
