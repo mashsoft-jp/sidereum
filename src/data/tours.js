@@ -72,7 +72,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 11,
+      ver: 12,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -84,9 +84,11 @@
           play: false, constel: true, mark: true,
           text: {
             ja: "Sidereum へようこそ。太陽系を実際の縮尺で見てまわれます。" +
-                "基本の操作をひとつずつ試してみましょう。",
+                "基本の操作をひとつずつ試してみましょう。" +
+                "まずは右下の「次へ」をクリックしてください。",
             en: "Welcome to Sidereum — the Solar System at true scale. " +
-                "Let's try the basic controls one at a time.",
+                "Let's try the basic controls one at a time. " +
+                "Start by clicking “Next” at the bottom right.",
           },
         },
         {
@@ -188,7 +190,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 12,
+      ver: 13,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -200,9 +202,11 @@
           play: false, constel: true, mark: true,
           text: {
             ja: "Sidereum へようこそ。太陽系を実際の縮尺で見てまわれます。" +
-                "基本の操作をひとつずつ試してみましょう。",
+                "基本の操作をひとつずつ試してみましょう。" +
+                "まずは右下の「次へ」をタップしてください。",
             en: "Welcome to Sidereum — the Solar System at true scale. " +
-                "Let's try the basic controls one at a time.",
+                "Let's try the basic controls one at a time. " +
+                "Start by tapping “Next” at the bottom right.",
           },
         },
         {
