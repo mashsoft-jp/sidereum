@@ -568,20 +568,25 @@
   #app.ctrlHidden #ctrlExpand { display: block; }
 
   /* ---- ガイドツアーのナレーションバー (操作パネルと同じ位置に入れ替わる) ---- */
+  /* iOS Safari は、合成レイヤに載った箱の中身を差し替えたときに塗り直しそこねる
+     ことがある。ナレーションは回ごとに中身を丸ごと入れ替えるので、前の回の文字が
+     残って描かれていた (textContent から innerHTML に変えてアイコンを埋め込む
+     ようにしてから出るようになった)。
+     この箱からはレイヤを作る指定を落とす:
+       - transform (中央寄せ) → left/right + margin auto で寄せる。これは広い画面
+         だけの指定で、スマホは元から transform: none。iPad でだけ症状が出ていた
+         のと符合する
+       - backdrop-filter (.hud の blur) → 背景を濃くして補う */
   #tourBar {
-    left: 50%;
+    left: 0; right: 0;
+    margin-left: auto; margin-right: auto;
     bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-    transform: translateX(-50%);
+    transform: none;
     width: min(620px, calc(100vw - 24px));
     box-sizing: border-box;
     padding: 12px 16px 10px;
     z-index: 14;
     display: none;
-    /* ここだけ .hud の blur を外す。iOS Safari は backdrop-filter を掛けた箱の
-       中身を差し替えたときに塗り直しそこねることがあり、前の回の文字が残って
-       描かれていた (ナレーションを textContent から innerHTML に変えて
-       アイコンを埋め込むようにしてから出るようになった)。
-       blur のぶんは背景を濃くして補う */
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     background: rgba(9, 14, 28, 0.94);

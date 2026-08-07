@@ -67,6 +67,15 @@
     });
   }
 
+  // ナレーションの差し替え。iOS Safari は前の回の文字を残して描くことがあるので、
+  // 1フレームだけ不透明度をずらして塗り直しを促す (0.999 は見た目に出ない)。
+  // レイヤを作る指定は #tourBar 側から落としてあり、これはその上での保険
+  function setTourText(html) {
+    tourTextEl.innerHTML = html;
+    tourTextEl.style.opacity = "0.999";
+    requestAnimationFrame(() => { tourTextEl.style.opacity = ""; });
+  }
+
   // 端末の出し分け。UI の位置はレイアウトで、操作方法は入力方式で変わるので
   // 「狭い画面」と「タッチ (ホバーできない粗いポインタ)」のどちらかで判定する
   const mqTouch = matchMedia("(hover: none) and (pointer: coarse)");
@@ -499,7 +508,7 @@
     const t = T();
     tourTitleEl.textContent = tourText(tour.title);
     tourStepEl.textContent = (tourIdx + 1) + " / " + tour.steps.length;
-    tourTextEl.innerHTML = tourTextHTML(tourText(tourStateAt(tourIdx).text));
+    setTourText(tourTextHTML(tourText(tourStateAt(tourIdx).text)));
     tourDotsEl.innerHTML = tour.steps
       .map((_, i) => '<i class="' + (i === tourIdx ? "on" : "") + '"></i>').join("");
     tourPrevBtn.disabled = tourIdx === 0;
