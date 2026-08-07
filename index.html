@@ -628,7 +628,11 @@
      display は隠す前の値に戻す必要があるため、要素ごとに書く */
   #app.tourMode #controls.tourShow { display: grid; }
   /* 縦スライダーは操作パネルと一組。パネルを出す回では一緒に出す */
-  #app.tourMode #angleCell.tourShow, #app.tourMode #gAltCell.tourShow { display: flex; }
+  /* ビューで振り分ける。2つは同じ位置に絶対配置されるので、両方出すと後ろの
+     #gAltCell が上に乗り、宇宙ビューなのに地上の「高度」が指を受け取ってしまう
+     (見た目は同じなので、角度が動かないようにしか見えない) */
+  #app.tourMode:not(.groundMode) #angleCell.tourShow { display: flex; }
+  #app.tourMode.groundMode #gAltCell.tourShow { display: flex; }
   /* 操作パネルを出す回でも、畳む ⌃ は出さない。ナレーションバーのすぐ上に来るので
      押すつもりのない指が当たり、説明している当のパネルが引っ込んでしまう
      (戻すための ⌄ もツアー中は隠しているので、手詰まりになる) */
