@@ -16,10 +16,10 @@
       space_rows: [
         ["回転", "ドラッグ (1本指ドラッグ)"],
         ["ズーム", "ホイール / ピンチ"],
-        ["距離", "Shift+ホイール、または「距離」スライダー"],
+        ["距離", "Shift+ホイール、またはパネルのものさしの行"],
         ["平行移動", "右ドラッグ / 2本指ドラッグ"],
         ["天体", "クリック / タップで選択・接近 (再度で解除)"],
-        ["視点", "パネルの「カメラ」プルダウン・「角度」スライダー"],
+        ["視点", "パネルの「カメラ」プルダウン・右端の縦スライダー"],
       ],
       ground_rows: [
         ["見回し", "ドラッグ"],
@@ -43,10 +43,10 @@
       space_rows: [
         ["Rotate", "Drag (one-finger drag)"],
         ["Zoom", "Wheel / pinch"],
-        ["Distance", "Shift+wheel, or the “Distance” slider"],
+        ["Distance", "Shift+wheel, or the ruler row in the panel"],
         ["Pan", "Right-drag / two-finger drag"],
         ["Bodies", "Click / tap to select & approach (again to deselect)"],
-        ["Viewpoint", "“Camera” dropdown & “Angle” slider in the panel"],
+        ["Viewpoint", "“Camera” dropdown & the vertical slider on the right"],
       ],
       ground_rows: [
         ["Look around", "Drag"],
