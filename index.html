@@ -923,18 +923,6 @@
     #speedVal, #zoomVal { min-width: 68px; }
     #app.groundMode #controls #gAltCell,
     #app:not(.groundMode) #controls #angleCell { margin-left: 2px; padding-left: 8px; }
-    /* 縦持ち: カメラを4行目へ移し、col1 を空けてスライダー列を広く使う */
-    #camSelect { grid-column: 1 / -1; grid-row: 4; justify-self: stretch; align-self: center; }
-    #app:not(.groundMode) #controls .camGap { display: block; }   /* 距離/ズーム行の col1 を確保して整列 */
-    /* 角度の列は7列目 (暗黙の列) にあり、カメラの 1 / -1 は明示した6列までしか
-       伸びない。4行目の右端だけが空くので、角度の列をそこまで伸ばして
-       つまみの可動域に回す (地上ビューは4行目が無いので伸ばさない) */
-    /* パネルは align-items: center なので、伸ばす指定だけでは中身の高さのまま
-       中央に置かれる。align-self で4行ぶんに引き伸ばして、余りを flex:1 の
-       つまみに配る */
-    #app:not(.groundMode) #controls #angleCell {
-      grid-row: 1 / span 4; align-self: stretch;
-    }
   }
 
 
@@ -1069,6 +1057,29 @@
     #gAltCell #gAlt, #angleCell #angle { min-height: 38px; }
     #gAltLabelTop, #gAltVal, #angleCell #angleLabel, #angleVal { font-size: 9.5px; }
     #gAltCell .step, #angleCell .step { padding: 0 8px; font-size: 9px; }
+
+    /* カメラは文字だと 1列目が 70px 近くまで広がり、縦持ちでは収まらないので
+       4行目へ落としていた。アイコンにすれば ▲▼ と同じ幅で 1列目に収まり、
+       PC・横持ちと同じ位置 (1列目の2〜3行) に置ける。
+       select の中に SVG は入れられないので、文字を透明にして背景に置く
+       (開いたときの一覧は OS が描くので影響しない)。背景画像では currentColor
+       が使えないため、色は --text の値を直に書いている */
+    #camSelect {
+      color: transparent;
+      appearance: none; -webkit-appearance: none;
+      /* select は最長の選択肢 (「全体表示」) で幅が決まる。文字を透明にしても
+         箱はその幅のままなので、明示的に詰める (▲▼ と同じくらいの指の的) */
+      width: 34px; min-width: 0;
+      padding: 6px 2px;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="%23c9d5ea" stroke-width="1.15" stroke-linejoin="round"><path d="M1 4.1h2.3l.9-1.3h3.6l.9 1.3H11v5.4H1z"/><circle cx="6" cy="6.7" r="1.9"/></svg>');
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 15px 15px;
+    }
+    /* 縦スライダーの見出しは省く。行が3つしかないモバイルではこの 15px が効く。
+       どの列かは位置と ▲▼ で分かるし、読み上げにはスライダー自身の
+       aria-label が残る */
+    #angleLabel, #gAltLabelTop { display: none; }
 
     /* モーダル3種 (ガイドツアー一覧・操作方法・ライセンス)。PC と同じ字送りだと
        ツアーはカード2枚、操作方法は数行で画面が埋まる。3つとも一段落とす —
