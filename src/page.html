@@ -123,7 +123,7 @@
   <footer id="controls" class="hud">
     <button id="ctrlCollapse" aria-label="操作パネルを隠す">⌄</button>
     <button id="play" class="primary"><span id="playIcon"><svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="2.4" y="1.8" width="2.6" height="8.4" rx="0.7"/><rect x="7" y="1.8" width="2.6" height="8.4" rx="0.7"/></svg></span><span id="playLabel">停止</span></button>
-    <label class="slider" id="speedLabel" for="speed">速度</label>
+    <label class="slider" id="speedLabel" for="speed" title="速度"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="6" r="4.5"/><path d="M6 3.3V6.1l2 1.3"/></svg><span class="vh">速度</span></label>
     <button id="speedDown" class="step" aria-label="遅くする">−</button>
     <input type="range" id="speed" min="0" max="100" value="0" aria-label="時間の速さ">
     <button id="speedUp" class="step" aria-label="速くする">＋</button>
@@ -138,14 +138,14 @@
       <option value="reset">全体表示</option>
     </select>
     <span class="camGap"></span>
-    <span class="slider spaceOnly" id="magLabel">ズーム</span>
+    <span class="slider spaceOnly" id="magLabel" title="ズーム"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><circle cx="5.1" cy="5.1" r="3.3"/><path d="M7.6 7.6l2.7 2.7"/></svg><span class="vh">ズーム</span></span>
     <button id="magOut" class="step spaceOnly" aria-label="ズームアウト">−</button>
     <input type="range" id="mag" class="spaceOnly" min="0" max="100" value="0" aria-label="拡大率">
     <button id="magIn" class="step spaceOnly" aria-label="ズームイン">＋</button>
     <span id="magVal" class="spaceOnly"></span>
 
     <span class="camGap"></span>
-    <span class="slider spaceOnly" id="zoomLabel">距離</span>
+    <span class="slider spaceOnly" id="zoomLabel" title="距離"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.3 2.6v6.8M10.7 2.6v6.8M1.3 6h9.4M3.2 4.4L1.6 6l1.6 1.6M8.8 4.4L10.4 6 8.8 7.6"/></svg><span class="vh">距離</span></span>
     <button id="zoomOut" class="step spaceOnly" aria-label="遠ざける">−</button>
     <input type="range" id="zoom" class="spaceOnly" min="0" max="100" value="40" aria-label="注視点との距離">
     <button id="zoomIn" class="step spaceOnly" aria-label="近づける">＋</button>
@@ -153,7 +153,7 @@
 
     <!-- カメラ俯角の縦スライダー (地上ビューの「高度」と同じ右端カラム) -->
     <div id="angleCell" class="spaceOnly">
-      <span id="angleLabel">角度</span>
+      <span id="angleLabel" title="角度"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><path d="M1.2 9.6h9.6M1.2 9.6L9.4 2.8"/><path d="M6.6 9.6a5.4 5.4 0 0 0-1.1-3.1"/></svg><span class="vh">角度</span></span>
       <button id="angleUp" class="step" aria-label="上から見おろす">▲</button>
       <input type="range" id="angle" min="-90" max="90" value="20" aria-label="カメラ俯角">
       <button id="angleDown" class="step" aria-label="横から見る">▼</button>
@@ -162,21 +162,21 @@
 
     <!-- 地上ビュー用 -->
     <span class="groundOnly"></span>
-    <span class="slider groundOnly" id="gFovLabel">ズーム</span>
+    <span class="slider groundOnly" id="gFovLabel" title="ズーム"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><circle cx="5.1" cy="5.1" r="3.3"/><path d="M7.6 7.6l2.7 2.7"/></svg><span class="vh">ズーム</span></span>
     <button id="gFovOut" class="step groundOnly" aria-label="ズームアウト">−</button>
     <input type="range" id="gFov" class="groundOnly" min="0" max="100" value="43" aria-label="ズーム">
     <button id="gFovIn" class="step groundOnly" aria-label="ズームイン">＋</button>
     <span id="gFovVal" class="groundOnly"></span>
 
     <span class="groundOnly"></span>
-    <span class="slider groundOnly" id="gAzLabel">方位</span>
+    <span class="slider groundOnly" id="gAzLabel" title="方位"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="4.6"/><path d="M6 2.2l1.7 5.6L6 6.6 4.3 7.8z" fill="currentColor" stroke="none"/></svg><span class="vh">方位</span></span>
     <button id="gAzLeft" class="step groundOnly" aria-label="左へ回す">◀</button>
     <svg id="gAzTape" class="groundOnly" viewBox="-90 -22 180 36" aria-hidden="true"></svg>
     <button id="gAzRight" class="step groundOnly" aria-label="右へ回す">▶</button>
     <span id="gAzDir" class="groundOnly"></span>
 
     <div id="gAltCell" class="groundOnly">
-      <span id="gAltLabelTop">高度</span>
+      <span id="gAltLabelTop" title="高度"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><path d="M1.2 9.6h9.6M1.2 9.6L9.4 2.8"/><path d="M6.6 9.6a5.4 5.4 0 0 0-1.1-3.1"/></svg><span class="vh">高度</span></span>
       <button id="gAltUp" class="step" aria-label="上を向く">▲</button>
       <input type="range" id="gAlt" min="-80" max="90" value="30" aria-label="高度">
       <button id="gAltDown" class="step" aria-label="下を向く">▼</button>

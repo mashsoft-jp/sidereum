@@ -127,16 +127,25 @@
   });
 
   // ---------- 言語切替 ----------
+  // 操作パネルの行見出しはアイコンなので、語はホバーの title と読み上げ用の
+  // 隠しテキストに入れる (textContent で置くとアイコンごと消える)
+  function setCtlLabel(id, text) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.title = text;
+    const vh = el.querySelector(".vh");
+    if (vh) vh.textContent = text;
+  }
   function applyLang() {
     const t = T();
     document.documentElement.lang = lang;
     document.title = t.title;
     document.getElementById("hint").textContent = hintText();
     document.getElementById("noGL").innerHTML = t.noGL;
-    document.getElementById("speedLabel").textContent = t.speed;
-    document.getElementById("zoomLabel").textContent = t.distance;
-    document.getElementById("magLabel").textContent = t.gFovLabel;
-    document.getElementById("angleLabel").textContent = t.angle;
+    setCtlLabel("speedLabel", t.speed);
+    setCtlLabel("zoomLabel", t.distance);
+    setCtlLabel("magLabel", t.gFovLabel);
+    setCtlLabel("angleLabel", t.angle);
     orbitsBtn.textContent = t.orbits;
     labelsBtn.textContent = t.labels;
     constBtn.textContent = t.constellations;
@@ -150,9 +159,9 @@
     vmGroundBtn.textContent = t.viewGround;
     vmMoonBtn.textContent = t.viewMoon;
     rebuildMoonSites();
-    document.getElementById("gFovLabel").textContent = t.gFovLabel;
-    document.getElementById("gAzLabel").textContent = t.gAzLabel;
-    document.getElementById("gAltLabelTop").textContent = t.gAltLabel;
+    setCtlLabel("gFovLabel", t.gFovLabel);
+    setCtlLabel("gAzLabel", t.gAzLabel);
+    setCtlLabel("gAltLabelTop", t.gAltLabel);
     ctrlCollapseBtn.title = t.ctrlHide;
     ctrlExpandBtn.title = t.ctrlShow;
     refreshObsSiteUI();
