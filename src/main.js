@@ -11,7 +11,7 @@
       daysPerSec = sp;
       speedInput.value = Math.max(0, Math.min(100,
         Math.round(18 * Math.log(sp * 86400) / Math.log(60))));
-      speedVal.textContent = fmtDays(daysPerSec) + T().rateSuffix;
+      speedVal.textContent = fmtRate(daysPerSec);
     }
     // ズームは俯瞰域のみ復元 (天体接近中の至近距離は選択が復元されないため除外)
     const zd = parseFloat(localStorage.getItem("ssZoom"));

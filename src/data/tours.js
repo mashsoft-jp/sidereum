@@ -72,7 +72,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 7,
+      ver: 8,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -158,9 +158,9 @@
           scene: false, ui: ["controls"], hi: "#play, #speed", await: "play",
           text: {
             ja: "下のパネルの再生ボタンで時間を進められます。速度は隣のスライダーで、" +
-                "1秒 = 1秒 から約240年まで変えられます。押してみてください。",
+                "実時間から 1秒あたり約240年まで変えられます。押してみてください。",
             en: "Press play in the panel below to run time forward. The slider next to it " +
-                "sets the speed, from 1 second per second up to about 240 years. Try it.",
+                "sets the speed, from real time up to about 240 years per second. Try it.",
           },
         },
         {
@@ -188,7 +188,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 8,
+      ver: 9,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -274,9 +274,9 @@
           scene: false, ui: ["controls"], hi: "#play, #speed", await: "play",
           text: {
             ja: "下のパネルの再生ボタンで時間を進められます。速度は隣のスライダーで、" +
-                "1秒 = 1秒 から約240年まで変えられます。押してみてください。",
+                "実時間から 1秒あたり約240年まで変えられます。押してみてください。",
             en: "Press play in the panel below to run time forward. The slider next to it " +
-                "sets the speed, from 1 second per second up to about 240 years. Try it.",
+                "sets the speed, from real time up to about 240 years per second. Try it.",
           },
         },
         {

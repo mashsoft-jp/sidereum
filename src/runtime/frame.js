@@ -233,6 +233,12 @@
     if (v >= 1 / 1440) return Math.round(v * 1440) + u.min;
     return Math.round(v * 86400) + u.s;
   }
+  // 再生速度の表示。最低速だけは「1秒/秒」になってしまい、割り算の形では
+  // 意味が取りにくい (1秒で1秒進む = 等倍) ので、そこだけ言葉にする
+  function fmtRate(v) {
+    if (Math.abs(v * 86400 - 1) < 0.01) return T().rateReal;
+    return fmtDays(v) + T().rateSuffix;
+  }
 
   // ---------- メインループ ----------
   let last = performance.now();
