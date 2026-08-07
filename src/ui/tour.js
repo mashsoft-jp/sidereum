@@ -157,10 +157,14 @@
   }
 
   // ステップが要求する UI の出し分け・ハイライト・ナレーションバーの位置
+  const vSliderEls = [document.getElementById("angleCell"), document.getElementById("gAltCell")];
   function applyTourChrome(s) {
     for (const k in TOUR_UI_EL) {
       TOUR_UI_EL[k].classList.toggle("tourShow", !!s.ui && s.ui.indexOf(k) >= 0);
     }
+    // 右端の縦スライダーは操作パネルから独立した要素だが、出し入れは一組で扱う
+    const ctl = !!s.ui && s.ui.indexOf("controls") >= 0;
+    for (const el of vSliderEls) el.classList.toggle("tourShow", ctl);
     for (const el of tourHiEls) el.classList.remove("tourHi");
     tourHiEls = s.hi ? [...document.querySelectorAll(s.hi)] : [];
     for (const el of tourHiEls) el.classList.add("tourHi");
