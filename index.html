@@ -413,6 +413,14 @@
   }
   /* 時刻欄のスピナーは HUD では邪魔なので消す (ピッカーのアイコンは日付欄と揃える) */
   #timeInput::-webkit-inner-spin-button { display: none; }
+  /* Android の Chrome は date/time 欄に中身より広い既定の幅を持たせるので、
+     値とピッカーのアイコンの間が空き、日時パネルごと横に伸びる。上限を切って
+     余った分だけ詰める (内部は余白から先に潰れるので、字が欠けることはない)。
+     em はフォントサイズに比例する文字の幅、+px はアイコンと内側の余白のぶん —
+     アイコンは字と一緒に縮まないので、この2つは分けて足す。
+     もともと中身の幅で出ている iOS・PC では上限に届かず、何も変わらない */
+  #dateInput { max-width: calc(7.6em + 22px); }
+  #timeInput { max-width: calc(4.6em + 26px); }
   #dateInput:focus-visible, #timeInput:focus-visible {
     outline: 1px solid var(--accent-dim); border-radius: 3px;
   }
