@@ -94,7 +94,7 @@
         {
           scene: false, await: "rotate",
           text: {
-            ja: "まずは視点を回してみます。画面を左右にドラッグしてください。",
+            ja: "視点を回してみます。画面を左右にドラッグしてください。",
             en: "First, turn the view: drag left or right anywhere on the screen.",
           },
         },
@@ -212,7 +212,7 @@
         {
           scene: false, await: "rotate",
           text: {
-            ja: "まずは視点を回してみます。1本指で画面を左右にドラッグしてください。",
+            ja: "視点を回してみます。1本指で画面を左右にドラッグしてください。",
             en: "First, turn the view: drag the screen left or right with one finger.",
           },
         },
