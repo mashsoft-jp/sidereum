@@ -1988,7 +1988,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 12,
+      ver: 13,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -2017,30 +2017,32 @@
         {
           scene: false, await: "zoom", ui: ["controls"], hi: "#mag",
           text: {
-            ja: "マウスホイールを回すと拡大・縮小できます。" +
-                "下のパネルの {mag} の行が、いま何倍かを示しています。回してみてください。",
-            en: "Scroll the mouse wheel to zoom in and out. The {mag} row in the panel below " +
-                "shows the current magnification. Give it a try.",
+            ja: "ここからは下のパネルを使います。拡大・縮小は {mag} の行で、" +
+                "スライダーを動かすか − ＋ を押してください。" +
+                "マウスホイールでも同じことができます。",
+            en: "From here we use the panel below. Zoom with the {mag} row — drag the " +
+                "slider, or use − and +. The mouse wheel does the same thing.",
           },
         },
         {
           scene: false, await: "dist", ui: ["controls"], hi: "#zoom",
           text: {
-            ja: "Shift を押しながらホイールを回すと、拡大率ではなく" +
-                "太陽系との距離そのものが変わります。" +
-                "{mag} の行は ×1.0 のまま、{dist} の行の数字だけが動くのが分かります。",
-            en: "Hold Shift while scrolling to change your distance from the Solar System " +
-                "itself, rather than the magnification: the {mag} row stays at ×1.0 while " +
-                "only the {dist} row moves.",
+            ja: "{dist} の行では、拡大率ではなく太陽系との距離そのものが変わります。" +
+                "動かすと {mag} の行は ×1.0 のまま、{dist} の数字だけが変わります。" +
+                "Shift を押しながらホイールでも同じです。",
+            en: "The {dist} row changes your distance from the Solar System itself, rather " +
+                "than the magnification: move it and the {mag} row stays at ×1.0 while only " +
+                "the {dist} number changes. Shift+wheel does the same thing.",
           },
         },
         {
           scene: false, await: "pan", ui: [], hi: null,
           text: {
             ja: "右ドラッグすると、見ている位置を平行に動かせます。" +
+                "これはパネルに無い、画面だけの操作です。" +
                 "中心から外れた天体を追いたいときに使います。",
-            en: "Right-drag to slide the view sideways — handy for following " +
-                "something that has drifted off centre.",
+            en: "Right-drag to slide the view sideways. This one has no panel equivalent — " +
+                "handy for following something that has drifted off centre.",
           },
         },
         {
@@ -2106,7 +2108,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 13,
+      ver: 14,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -2135,30 +2137,31 @@
         {
           scene: false, await: "zoom", ui: ["controls"], hi: "#mag",
           text: {
-            ja: "2本の指でつまむように広げたり縮めたり (ピンチ) すると拡大・縮小できます。" +
-                "下のパネルの {mag} の行が、いま何倍かを示しています。",
-            en: "Pinch with two fingers to zoom in and out. The {mag} row in the panel below " +
-                "shows the current magnification.",
+            ja: "ここからは下のパネルを使います。拡大・縮小は {mag} の行で、" +
+                "スライダーを動かすか − ＋ をタップしてください。" +
+                "2本の指でつまむ (ピンチ) 操作でも同じことができます。",
+            en: "From here we use the panel below. Zoom with the {mag} row — drag the " +
+                "slider, or tap − and +. Pinching with two fingers does the same thing.",
           },
         },
         {
           scene: false, await: "dist", ui: ["controls"], hi: "#zoom",
           text: {
-            ja: "下のパネルの {dist} の行では、拡大率ではなく" +
-                "太陽系との距離そのものが変わります。動かすと {mag} の行は ×1.0 のまま、" +
-                "{dist} の行の数字だけが変わります。",
-            en: "The {dist} row in the panel below changes how far you are from the Solar " +
-                "System itself, rather than the magnification: the {mag} row stays at " +
-                "×1.0 while only the {dist} row moves. Try it.",
+            ja: "{dist} の行では、拡大率ではなく太陽系との距離そのものが変わります。" +
+                "動かすと {mag} の行は ×1.0 のまま、{dist} の数字だけが変わります。",
+            en: "The {dist} row changes your distance from the Solar System itself, rather " +
+                "than the magnification: move it and the {mag} row stays at ×1.0 while only " +
+                "the {dist} number changes. Try it.",
           },
         },
         {
           scene: false, await: "pan", ui: [], hi: null,
           text: {
             ja: "2本の指を同時にドラッグすると、見ている位置を平行に動かせます。" +
+                "これはパネルに無い、画面だけの操作です。" +
                 "中心から外れた天体を追いたいときに使います。",
-            en: "Drag with two fingers to slide the view sideways — handy for following " +
-                "something that has drifted off centre.",
+            en: "Drag with two fingers to slide the view sideways. This one has no panel " +
+                "equivalent — handy for following something that has drifted off centre.",
           },
         },
         {
