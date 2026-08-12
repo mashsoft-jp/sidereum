@@ -72,7 +72,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 18,
+      ver: 19,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -137,10 +137,10 @@
         {
           scene: false, await: "select", ui: ["nav"], hi: "#navPanel",
           text: {
-            ja: "天体をクリックすると選択して近づきます。左のリストからも選べます。" +
-                "どれか選んでみてください。",
-            en: "Click a body to select it and fly closer — or pick one from the " +
-                "list on the left. Try selecting one.",
+            ja: "画面上の天体をクリックすると、その天体に近づきます。" +
+                "左の天体リストからも選ぶことができます。",
+            en: "Click a body on screen to fly closer to it. " +
+                "You can also pick one from the body list on the left.",
           },
         },
         {
@@ -186,7 +186,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 21,
+      ver: 22,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -250,10 +250,10 @@
         {
           scene: false, await: "select", ui: ["nav"], hi: "#navPanel",
           text: {
-            ja: "天体をタップすると選択して近づきます。左のリストからも選べます。" +
-                "どれか選んでみてください。",
-            en: "Tap a body to select it and fly closer — or pick one from the list on " +
-                "the left. Try selecting one.",
+            ja: "画面上の天体をタップすると、その天体に近づきます。" +
+                "左の天体リストからも選ぶことができます。",
+            en: "Tap a body on screen to fly closer to it. " +
+                "You can also pick one from the body list on the left.",
           },
         },
         {
