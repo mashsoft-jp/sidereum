@@ -72,7 +72,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 17,
+      ver: 18,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -128,11 +128,10 @@
         {
           scene: false, await: "angle", ui: ["controls"], hi: "#camSelect, #angleCell",
           text: {
-            ja: "{cam} では、あらかじめ決められた視点へ一度に移動できます。" +
-                "右端の縦のスライダーでは、見おろす角度を変えられます。" +
-                "どちらか試してみてください。",
-            en: "The {cam} menu moves you to a preset viewpoint, and the vertical slider at the " +
-                "right edge tilts the view up and down. Try either one.",
+            ja: "{cam} では、あらかじめ決められた視点に移動できます。" +
+                "右端の縦のスライダーでは、見下ろす角度を変えられます。",
+            en: "The {cam} menu moves you to a preset viewpoint, and the vertical slider " +
+                "at the right edge changes how steeply you look down.",
           },
         },
         {
@@ -187,7 +186,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 20,
+      ver: 21,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -242,11 +241,10 @@
         {
           scene: false, await: "angle", ui: ["controls"], hi: "#camSelect, #angleCell",
           text: {
-            ja: "{cam} では、あらかじめ決められた視点へ一度に移動できます。" +
-                "右端の縦のスライダーでは、見おろす角度を変えられます。" +
-                "どちらか試してみてください。",
-            en: "The {cam} menu moves you to a preset viewpoint, and the vertical slider at the " +
-                "right edge tilts the view up and down. Try either one.",
+            ja: "{cam} では、あらかじめ決められた視点に移動できます。" +
+                "右端の縦のスライダーでは、見下ろす角度を変えられます。",
+            en: "The {cam} menu moves you to a preset viewpoint, and the vertical slider " +
+                "at the right edge changes how steeply you look down.",
           },
         },
         {
