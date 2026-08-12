@@ -523,22 +523,43 @@
   }
   #viewMode button:hover { color: var(--text); background: rgba(150, 178, 224, 0.10); }
   #viewMode button.on { color: #0a0d16; background: var(--accent); font-weight: 600; }
-  /* 縦持ちスマホ: 上部はタイトルと時計が占めるためその下へ */
-  @media (max-width: 720px) {
-    #viewMode { top: calc(62px + var(--sat)); }
-    #viewMode button { padding: 4px 13px; font-size: 11px; }
+  #vmToggle { display: none; }
+  /* 狭い画面: 3つ並べるとタイトルと時計の間に入らないので、いま見ているビューだけを
+     出し、押したら下に開く。開いた中身は時計 (右上) の左側に収まる幅にとどめる。
+     translateX で中央に寄せないのは、レイヤに乗ると iOS で書き換えた文字が
+     描き残ることがあるため (ツアーのナレーションで実際に起きた) */
+  @media (max-width: 720px), (max-height: 480px) {
+    #viewMode {
+      left: 0; right: 0; margin-inline: auto; transform: none; width: max-content;
+      flex-direction: column; align-items: stretch; gap: 2px; padding: 3px;
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+      background: rgba(9, 14, 28, 0.92); border-radius: 14px;
+    }
+    #vmToggle {
+      display: flex; align-items: center; gap: 4px;
+      padding: 4px 10px; font-size: 11px; letter-spacing: 0.08em;
+      color: var(--text); background: none; border: none; border-radius: 11px;
+    }
+    #vmToggle .vmCaret { width: 10px; height: 10px; transition: transform 0.15s; }
+    #viewMode.open #vmToggle .vmCaret { transform: rotate(180deg); }
+    /* 閉じているときは現在のビューだけ。開いたら 3 つを縦に並べる */
+    #viewMode > button:not(#vmToggle) { display: none; }
+    #viewMode.open > button:not(#vmToggle) {
+      display: block; padding: 5px 10px; font-size: 11px; text-align: center; border-radius: 11px;
+    }
   }
+  /* 縦持ち: 上端の行はタイトルと時計で埋まっている。幅の狭い端末や英語表記では
+     中央に置く余地が残らない (320px 幅だと隙間は 40px ほどしかない) ので、
+     時計の下に一段取り、そのぶん天体リストを下げる */
+  @media (max-width: 720px) {
+    #viewMode { top: calc(96px + var(--sat)); }
+    /* #app #navPanel (ID 2つ) の既定に勝たせるため、こちらも同じ形で書く */
+    #app #navPanel, #app #navExpand { top: calc(140px + var(--sat)); }
+  }
+  /* 横持ちは上端に余裕があるので、タイトルと時計と同じ行に置く */
   @media (max-height: 480px) {
     #viewMode { top: calc(8px + var(--sat)); }
   }
-  /* モバイル: ビュー切替をハンバーガーメニュー内へ収める (JS で移動) */
-  #menu #viewMode {
-    position: static; transform: none; top: auto; left: auto; z-index: auto;
-    backdrop-filter: none; -webkit-backdrop-filter: none;
-    background: rgba(9, 14, 28, 0.6); border: 1px solid var(--line); border-radius: 8px;
-    padding: 3px; margin-bottom: 4px; gap: 2px;
-  }
-  #menu #viewMode button { flex: 1; padding: 7px 6px; font-size: 12px; text-align: center; border-radius: 6px; }
   /* 高度(地上・月面)/角度(宇宙) の縦スライダー。操作パネルからは切り離し、画面の
      右端に独立して置く。パネルの行数に縛られないので、つまみの可動域を画面の
      高さに合わせて伸ばせる (パネル内では3行ぶん = 38px が上限だった) */
@@ -1160,7 +1181,9 @@
     <h1>SIDEREUM<span class="beta">(β版)</span></h1>
   </header>
 
+  <!-- 狭い画面では vmToggle だけを出し、押すと 3 つが下に開く (CSS で出し分け) -->
   <div id="viewMode" role="group" aria-label="ビュー切替">
+    <button id="vmToggle" aria-haspopup="true" aria-expanded="false"><span id="vmToggleTxt">宇宙</span><svg class="vmCaret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.8L6 7.8l3-3"/></svg></button>
     <button id="vmSpace" class="on">宇宙</button>
     <button id="vmGround">地上</button>
     <button id="vmMoon">月面</button>
@@ -1963,8 +1986,8 @@
   //         ui・hi も畳み込みの対象。何も出さない回は ui: [] / hi: null と
   //         明示して消す — 書き忘れると前の回のパネルと強調がそのまま残り、
   //         今の説明と関係ない場所が光り続ける
-  //   wide  画面が広い端末 (タブレット等) 用の差し替え。ビュー切替は狭い画面
-  //         でだけハンバーガーメニューへ入るので、案内する場所と文言を変える
+  //   wide  画面が広い端末 (タブレット等) 用の差し替え。狭い画面ではビュー切替が
+  //         今のビュー1つに畳まれるなど、UI の形が変わる回で文言を差し替える
   //   await 促した操作の検知。「できました」を出す (次へ進むのは自動送り時のみ):
   //         "rotate" / "zoom" / "dist" / "pan" / "angle" / "select" / "play" /
   //         "view" / "menu"
@@ -2106,7 +2129,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 17,
+      ver: 18,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -2198,15 +2221,16 @@
           },
         },
         {
-          scene: false, await: "view", ui: ["menu", "view"], hi: "#menuBtn",
+          scene: false, await: "view", ui: ["view"], hi: "#viewMode",
           text: {
-            ja: "左上のメニューを開くと、宇宙・地上・月面を切り替えられます。" +
+            ja: "画面上部の中央には、いま見ているビューが出ています。" +
+                "タップすると宇宙・地上・月面を切り替えられます。" +
                 "地上と月面は、その場所から見た実際の空になります。切り替えてみてください。",
-            en: "Open the menu at the top left to switch between Space, Ground and Moon. " +
-                "Ground and Moon show the real sky from that place. Try switching.",
+            en: "The view you are in is shown at the top centre of the screen. Tap it to " +
+                "switch between Space, Ground and Moon. Ground and Moon show the real sky " +
+                "from that place. Try switching.",
           },
           wide: {
-            ui: ["view"], hi: "#viewMode",
             text: {
               ja: "上のタブで宇宙・地上・月面を切り替えられます。" +
                   "地上と月面は、その場所から見た実際の空になります。切り替えてみてください。",
@@ -2218,23 +2242,12 @@
         {
           scene: false, await: "menu", ui: ["menu"], hi: "#menuBtn",
           text: {
-            ja: "同じメニューに、共有リンク・風景の表示・単位や言語の切替・" +
+            ja: "左上のメニューには、共有リンク・風景の表示・単位や言語の切替・" +
                 "操作方法があります。開いてみてください。基本操作はここまでです。" +
                 "ほかのガイドツアーも同じメニューから開けます。",
-            en: "The same menu holds share links, scenery, units, language and the full " +
-                "control list — open it and see. That's the basics — the other guided " +
-                "tours live there too.",
-          },
-          wide: {
-            ui: ["menu"], hi: "#menuBtn",
-            text: {
-              ja: "左上のメニューには、共有リンク・風景の表示・単位や言語の切替・" +
-                  "操作方法があります。開いてみてください。基本操作はここまでです。" +
-                  "ほかのガイドツアーも同じメニューから開けます。",
-              en: "The menu at the top left holds share links, scenery, units, language and " +
-                  "the full control list — open it and see. That's the basics — the other " +
-                  "guided tours live in the same menu.",
-            },
+            en: "The menu at the top left holds share links, scenery, units, language and " +
+                "the full control list — open it and see. That's the basics — the other " +
+                "guided tours live in the same menu.",
           },
         },
       ],
@@ -6162,6 +6175,9 @@
   //#endregion
   //#region src/ui/view-mode.js
   // 宇宙/地上のビュー切替 (画面上部のトグル)
+  const viewModeEl = document.getElementById("viewMode");
+  const vmToggleBtn = document.getElementById("vmToggle");
+  const vmToggleTxt = document.getElementById("vmToggleTxt");
   const vmSpaceBtn = document.getElementById("vmSpace");
   const vmGroundBtn = document.getElementById("vmGround");
   const vmMoonBtn = document.getElementById("vmMoon");
@@ -6191,10 +6207,17 @@
     if (instant) { gAz = gAzTgt; gAlt = gAltTgt; }
     return true;
   }
+  // 狭い画面のビュー切替は「いま見ているビュー」だけを出すので、名前を入れ直す
+  function updateVmToggle() {
+    const t = T();
+    vmToggleTxt.textContent = !groundView ? t.viewSpace
+      : surfaceBody === "moon" ? t.viewMoon : t.viewGround;
+  }
   function syncViewModeUI() {
     vmSpaceBtn.classList.toggle("on", !groundView);
     vmGroundBtn.classList.toggle("on", groundView && surfaceBody === "earth");
     vmMoonBtn.classList.toggle("on", groundView && surfaceBody === "moon");
+    updateVmToggle();
     updateHint();          // ビューに応じてヒントを差し替え・再表示
     refreshObsSiteUI();    // 観測地チップを地球/月で切り替え
   }
@@ -6223,25 +6246,27 @@
     app.classList.remove("groundMode", "moonMode");
     syncViewModeUI();
   }
-  vmGroundBtn.addEventListener("click", () => { enterGround(); setMenu(false); });
-  vmMoonBtn.addEventListener("click", () => { enterMoon(); setMenu(false); });
-  vmSpaceBtn.addEventListener("click", () => { exitGround(); setMenu(false); });
-  // モバイル (狭い/低い画面) ではビュー切替をハンバーガーメニュー内へ移動
-  {
-    const viewModeEl = document.getElementById("viewMode");
-    const menuEl = document.getElementById("menu");
-    const appEl = document.getElementById("app");
-    const mqCompact = matchMedia("(max-width: 720px), (max-height: 480px)");
-    const placeViewMode = () => {
-      if (mqCompact.matches) {
-        if (viewModeEl.parentElement !== menuEl) menuEl.insertBefore(viewModeEl, menuEl.firstChild);
-      } else if (viewModeEl.parentElement !== appEl) {
-        appEl.insertBefore(viewModeEl, menuEl);
-      }
-    };
-    mqCompact.addEventListener("change", placeViewMode);
-    placeViewMode();
+  vmGroundBtn.addEventListener("click", () => { enterGround(); setVmOpen(false); });
+  vmMoonBtn.addEventListener("click", () => { enterMoon(); setVmOpen(false); });
+  vmSpaceBtn.addEventListener("click", () => { exitGround(); setVmOpen(false); });
+  // 狭い画面のビュー切替 (いま見ているビュー → 押すと 3 つが開く)。
+  // 広い画面では #vmToggle が出ないので、この開閉は画面に出てこない
+  function setVmOpen(open) {
+    viewModeEl.classList.toggle("open", open);
+    vmToggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
   }
+  vmToggleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = !viewModeEl.classList.contains("open");
+    if (open) setMenu(false);   // メニューと同時に開かない
+    setVmOpen(open);
+  });
+  document.addEventListener("pointerdown", (e) => {
+    if (!viewModeEl.contains(e.target)) setVmOpen(false);
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Escape") setVmOpen(false);
+  });
 
   // 月面の観測地点プリセット (selenographic lat, lon)
   const MOON_SITES = [
@@ -8918,12 +8943,12 @@
     const c = lang === "ja" ? {
       yomi: "(シデレウム)",
       lead: "太陽系を自由に見てまわれる Web プラネタリウムです。",
-      rows: ["ドラッグで回転", "ホイール / ピンチでズーム", "天体をタップで選択・接近", "上部タブで 宇宙 / 地上 / 月面 を切替"],
+      rows: ["ドラッグで回転", "ホイール / ピンチでズーム", "天体をタップで選択・接近", "画面上部で 宇宙 / 地上 / 月面 を切替"],
       more: "操作方法を見る", start: "はじめる",
     } : {
       yomi: "",
       lead: "A web planetarium for exploring the Solar System.",
-      rows: ["Drag to rotate", "Wheel / pinch to zoom", "Tap a body to select & approach", "Top tabs switch Space / Ground / Moon"],
+      rows: ["Drag to rotate", "Wheel / pinch to zoom", "Tap a body to select & approach", "Switch Space / Ground / Moon at the top"],
       more: "View controls", start: "Get started",
     };
     welcomeEl.innerHTML =
@@ -8990,6 +9015,7 @@
     vmSpaceBtn.textContent = t.viewSpace;
     vmGroundBtn.textContent = t.viewGround;
     vmMoonBtn.textContent = t.viewMoon;
+    updateVmToggle();
     rebuildMoonSites();
     setCtlLabel("gFovLabel", t.gFovLabel);
     setCtlLabel("gAzLabel", t.gAzLabel);

@@ -25,7 +25,9 @@
     <h1>SIDEREUM<span class="beta">(β版)</span></h1>
   </header>
 
+  <!-- 狭い画面では vmToggle だけを出し、押すと 3 つが下に開く (CSS で出し分け) -->
   <div id="viewMode" role="group" aria-label="ビュー切替">
+    <button id="vmToggle" aria-haspopup="true" aria-expanded="false"><span id="vmToggleTxt">宇宙</span><svg class="vmCaret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.8L6 7.8l3-3"/></svg></button>
     <button id="vmSpace" class="on">宇宙</button>
     <button id="vmGround">地上</button>
     <button id="vmMoon">月面</button>

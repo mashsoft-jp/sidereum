@@ -88,12 +88,12 @@
     const c = lang === "ja" ? {
       yomi: "(シデレウム)",
       lead: "太陽系を自由に見てまわれる Web プラネタリウムです。",
-      rows: ["ドラッグで回転", "ホイール / ピンチでズーム", "天体をタップで選択・接近", "上部タブで 宇宙 / 地上 / 月面 を切替"],
+      rows: ["ドラッグで回転", "ホイール / ピンチでズーム", "天体をタップで選択・接近", "画面上部で 宇宙 / 地上 / 月面 を切替"],
       more: "操作方法を見る", start: "はじめる",
     } : {
       yomi: "",
       lead: "A web planetarium for exploring the Solar System.",
-      rows: ["Drag to rotate", "Wheel / pinch to zoom", "Tap a body to select & approach", "Top tabs switch Space / Ground / Moon"],
+      rows: ["Drag to rotate", "Wheel / pinch to zoom", "Tap a body to select & approach", "Switch Space / Ground / Moon at the top"],
       more: "View controls", start: "Get started",
     };
     welcomeEl.innerHTML =
@@ -160,6 +160,7 @@
     vmSpaceBtn.textContent = t.viewSpace;
     vmGroundBtn.textContent = t.viewGround;
     vmMoonBtn.textContent = t.viewMoon;
+    updateVmToggle();
     rebuildMoonSites();
     setCtlLabel("gFovLabel", t.gFovLabel);
     setCtlLabel("gAzLabel", t.gAzLabel);

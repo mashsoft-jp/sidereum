@@ -47,8 +47,8 @@
   //         ui・hi も畳み込みの対象。何も出さない回は ui: [] / hi: null と
   //         明示して消す — 書き忘れると前の回のパネルと強調がそのまま残り、
   //         今の説明と関係ない場所が光り続ける
-  //   wide  画面が広い端末 (タブレット等) 用の差し替え。ビュー切替は狭い画面
-  //         でだけハンバーガーメニューへ入るので、案内する場所と文言を変える
+  //   wide  画面が広い端末 (タブレット等) 用の差し替え。狭い画面ではビュー切替が
+  //         今のビュー1つに畳まれるなど、UI の形が変わる回で文言を差し替える
   //   await 促した操作の検知。「できました」を出す (次へ進むのは自動送り時のみ):
   //         "rotate" / "zoom" / "dist" / "pan" / "angle" / "select" / "play" /
   //         "view" / "menu"
@@ -190,7 +190,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 17,
+      ver: 18,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -282,15 +282,16 @@
           },
         },
         {
-          scene: false, await: "view", ui: ["menu", "view"], hi: "#menuBtn",
+          scene: false, await: "view", ui: ["view"], hi: "#viewMode",
           text: {
-            ja: "左上のメニューを開くと、宇宙・地上・月面を切り替えられます。" +
+            ja: "画面上部の中央には、いま見ているビューが出ています。" +
+                "タップすると宇宙・地上・月面を切り替えられます。" +
                 "地上と月面は、その場所から見た実際の空になります。切り替えてみてください。",
-            en: "Open the menu at the top left to switch between Space, Ground and Moon. " +
-                "Ground and Moon show the real sky from that place. Try switching.",
+            en: "The view you are in is shown at the top centre of the screen. Tap it to " +
+                "switch between Space, Ground and Moon. Ground and Moon show the real sky " +
+                "from that place. Try switching.",
           },
           wide: {
-            ui: ["view"], hi: "#viewMode",
             text: {
               ja: "上のタブで宇宙・地上・月面を切り替えられます。" +
                   "地上と月面は、その場所から見た実際の空になります。切り替えてみてください。",
@@ -302,23 +303,12 @@
         {
           scene: false, await: "menu", ui: ["menu"], hi: "#menuBtn",
           text: {
-            ja: "同じメニューに、共有リンク・風景の表示・単位や言語の切替・" +
+            ja: "左上のメニューには、共有リンク・風景の表示・単位や言語の切替・" +
                 "操作方法があります。開いてみてください。基本操作はここまでです。" +
                 "ほかのガイドツアーも同じメニューから開けます。",
-            en: "The same menu holds share links, scenery, units, language and the full " +
-                "control list — open it and see. That's the basics — the other guided " +
-                "tours live there too.",
-          },
-          wide: {
-            ui: ["menu"], hi: "#menuBtn",
-            text: {
-              ja: "左上のメニューには、共有リンク・風景の表示・単位や言語の切替・" +
-                  "操作方法があります。開いてみてください。基本操作はここまでです。" +
-                  "ほかのガイドツアーも同じメニューから開けます。",
-              en: "The menu at the top left holds share links, scenery, units, language and " +
-                  "the full control list — open it and see. That's the basics — the other " +
-                  "guided tours live in the same menu.",
-            },
+            en: "The menu at the top left holds share links, scenery, units, language and " +
+                "the full control list — open it and see. That's the basics — the other " +
+                "guided tours live in the same menu.",
           },
         },
       ],

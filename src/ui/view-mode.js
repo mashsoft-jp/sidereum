@@ -1,4 +1,7 @@
   // 宇宙/地上のビュー切替 (画面上部のトグル)
+  const viewModeEl = document.getElementById("viewMode");
+  const vmToggleBtn = document.getElementById("vmToggle");
+  const vmToggleTxt = document.getElementById("vmToggleTxt");
   const vmSpaceBtn = document.getElementById("vmSpace");
   const vmGroundBtn = document.getElementById("vmGround");
   const vmMoonBtn = document.getElementById("vmMoon");
@@ -28,10 +31,17 @@
     if (instant) { gAz = gAzTgt; gAlt = gAltTgt; }
     return true;
   }
+  // 狭い画面のビュー切替は「いま見ているビュー」だけを出すので、名前を入れ直す
+  function updateVmToggle() {
+    const t = T();
+    vmToggleTxt.textContent = !groundView ? t.viewSpace
+      : surfaceBody === "moon" ? t.viewMoon : t.viewGround;
+  }
   function syncViewModeUI() {
     vmSpaceBtn.classList.toggle("on", !groundView);
     vmGroundBtn.classList.toggle("on", groundView && surfaceBody === "earth");
     vmMoonBtn.classList.toggle("on", groundView && surfaceBody === "moon");
+    updateVmToggle();
     updateHint();          // ビューに応じてヒントを差し替え・再表示
     refreshObsSiteUI();    // 観測地チップを地球/月で切り替え
   }
@@ -60,25 +70,27 @@
     app.classList.remove("groundMode", "moonMode");
     syncViewModeUI();
   }
-  vmGroundBtn.addEventListener("click", () => { enterGround(); setMenu(false); });
-  vmMoonBtn.addEventListener("click", () => { enterMoon(); setMenu(false); });
-  vmSpaceBtn.addEventListener("click", () => { exitGround(); setMenu(false); });
-  // モバイル (狭い/低い画面) ではビュー切替をハンバーガーメニュー内へ移動
-  {
-    const viewModeEl = document.getElementById("viewMode");
-    const menuEl = document.getElementById("menu");
-    const appEl = document.getElementById("app");
-    const mqCompact = matchMedia("(max-width: 720px), (max-height: 480px)");
-    const placeViewMode = () => {
-      if (mqCompact.matches) {
-        if (viewModeEl.parentElement !== menuEl) menuEl.insertBefore(viewModeEl, menuEl.firstChild);
-      } else if (viewModeEl.parentElement !== appEl) {
-        appEl.insertBefore(viewModeEl, menuEl);
-      }
-    };
-    mqCompact.addEventListener("change", placeViewMode);
-    placeViewMode();
+  vmGroundBtn.addEventListener("click", () => { enterGround(); setVmOpen(false); });
+  vmMoonBtn.addEventListener("click", () => { enterMoon(); setVmOpen(false); });
+  vmSpaceBtn.addEventListener("click", () => { exitGround(); setVmOpen(false); });
+  // 狭い画面のビュー切替 (いま見ているビュー → 押すと 3 つが開く)。
+  // 広い画面では #vmToggle が出ないので、この開閉は画面に出てこない
+  function setVmOpen(open) {
+    viewModeEl.classList.toggle("open", open);
+    vmToggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
   }
+  vmToggleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = !viewModeEl.classList.contains("open");
+    if (open) setMenu(false);   // メニューと同時に開かない
+    setVmOpen(open);
+  });
+  document.addEventListener("pointerdown", (e) => {
+    if (!viewModeEl.contains(e.target)) setVmOpen(false);
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Escape") setVmOpen(false);
+  });
 
   // 月面の観測地点プリセット (selenographic lat, lon)
   const MOON_SITES = [

@@ -507,22 +507,43 @@
   }
   #viewMode button:hover { color: var(--text); background: rgba(150, 178, 224, 0.10); }
   #viewMode button.on { color: #0a0d16; background: var(--accent); font-weight: 600; }
-  /* 縦持ちスマホ: 上部はタイトルと時計が占めるためその下へ */
-  @media (max-width: 720px) {
-    #viewMode { top: calc(62px + var(--sat)); }
-    #viewMode button { padding: 4px 13px; font-size: 11px; }
+  #vmToggle { display: none; }
+  /* 狭い画面: 3つ並べるとタイトルと時計の間に入らないので、いま見ているビューだけを
+     出し、押したら下に開く。開いた中身は時計 (右上) の左側に収まる幅にとどめる。
+     translateX で中央に寄せないのは、レイヤに乗ると iOS で書き換えた文字が
+     描き残ることがあるため (ツアーのナレーションで実際に起きた) */
+  @media (max-width: 720px), (max-height: 480px) {
+    #viewMode {
+      left: 0; right: 0; margin-inline: auto; transform: none; width: max-content;
+      flex-direction: column; align-items: stretch; gap: 2px; padding: 3px;
+      backdrop-filter: none; -webkit-backdrop-filter: none;
+      background: rgba(9, 14, 28, 0.92); border-radius: 14px;
+    }
+    #vmToggle {
+      display: flex; align-items: center; gap: 4px;
+      padding: 4px 10px; font-size: 11px; letter-spacing: 0.08em;
+      color: var(--text); background: none; border: none; border-radius: 11px;
+    }
+    #vmToggle .vmCaret { width: 10px; height: 10px; transition: transform 0.15s; }
+    #viewMode.open #vmToggle .vmCaret { transform: rotate(180deg); }
+    /* 閉じているときは現在のビューだけ。開いたら 3 つを縦に並べる */
+    #viewMode > button:not(#vmToggle) { display: none; }
+    #viewMode.open > button:not(#vmToggle) {
+      display: block; padding: 5px 10px; font-size: 11px; text-align: center; border-radius: 11px;
+    }
   }
+  /* 縦持ち: 上端の行はタイトルと時計で埋まっている。幅の狭い端末や英語表記では
+     中央に置く余地が残らない (320px 幅だと隙間は 40px ほどしかない) ので、
+     時計の下に一段取り、そのぶん天体リストを下げる */
+  @media (max-width: 720px) {
+    #viewMode { top: calc(96px + var(--sat)); }
+    /* #app #navPanel (ID 2つ) の既定に勝たせるため、こちらも同じ形で書く */
+    #app #navPanel, #app #navExpand { top: calc(140px + var(--sat)); }
+  }
+  /* 横持ちは上端に余裕があるので、タイトルと時計と同じ行に置く */
   @media (max-height: 480px) {
     #viewMode { top: calc(8px + var(--sat)); }
   }
-  /* モバイル: ビュー切替をハンバーガーメニュー内へ収める (JS で移動) */
-  #menu #viewMode {
-    position: static; transform: none; top: auto; left: auto; z-index: auto;
-    backdrop-filter: none; -webkit-backdrop-filter: none;
-    background: rgba(9, 14, 28, 0.6); border: 1px solid var(--line); border-radius: 8px;
-    padding: 3px; margin-bottom: 4px; gap: 2px;
-  }
-  #menu #viewMode button { flex: 1; padding: 7px 6px; font-size: 12px; text-align: center; border-radius: 6px; }
   /* 高度(地上・月面)/角度(宇宙) の縦スライダー。操作パネルからは切り離し、画面の
      右端に独立して置く。パネルの行数に縛られないので、つまみの可動域を画面の
      高さに合わせて伸ばせる (パネル内では3行ぶん = 38px が上限だった) */
