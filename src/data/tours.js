@@ -380,7 +380,7 @@
     },
     {
       id: "halley1910",
-      ver: 3,
+      ver: 4,
       title: { ja: "ハレー彗星 1910年の大接近", en: "Halley's Comet: the 1910 Approach" },
       lead: {
         ja: "太陽系の外から落ちてきて、地球のすぐ横をかすめ、また去っていくまでを辿ります。",
@@ -388,7 +388,10 @@
       },
       steps: [
         {
-          view: "space", sel: null, fit: 11, a: 0.55, y: 0.9, mag: 1,
+          // y は長軸と直交する向き。近日点の方向は world の水平角で 0.94 rad
+          // なので、そこから 90° 回した -0.63 で楕円を横から見る (元の 0.9 は
+          // ほぼ長軸を覗き込む向きで、軌道の細長さが分からなかった)
+          view: "space", sel: null, fit: 11, a: 0.55, y: -0.63, mag: 1,
           d: "1907-06-25", play: false, constel: false, spot: "halley",
           text: {
             ja: "1907年、ハレー彗星は木星と土星の軌道のあいだ、太陽から 10 au のあたりにいます。" +
