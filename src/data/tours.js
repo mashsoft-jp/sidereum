@@ -72,7 +72,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 15,
+      ver: 16,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -83,14 +83,10 @@
           view: "space", sel: null, fit: 1.7, a: 0.42, y: 0.9, mag: 1,
           play: false, constel: true, mark: true,
           text: {
-            ja: "Sidereum へようこそ。惑星の並びも大きさも実際のとおりで、" +
-                "好きな日時の空を宇宙からでも地上からでも眺められます。" +
-                "基本の操作をひとつずつ試してみましょう。" +
-                "まずは右下の「次へ」をクリックしてください。",
-            en: "Welcome to Sidereum. Every planet sits at its real place and real size, and " +
-                "you can look at any date from space or from the ground. " +
-                "Let's try the basic controls one at a time. " +
-                "Start by clicking “Next” at the bottom right.",
+            ja: "Sidereum へようこそ。宇宙を自由に見てまわれる Web プラネタリウムです。" +
+                "基本の操作を試してみましょう。右下の「次へ」をクリックしてください。",
+            en: "Welcome to Sidereum, a web planetarium for exploring space freely. " +
+                "Let's try the basic controls — click “Next” at the bottom right to start.",
           },
         },
         {
@@ -194,7 +190,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 16,
+      ver: 17,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -205,14 +201,10 @@
           view: "space", sel: null, fit: 1.7, a: 0.42, y: 0.9, mag: 1,
           play: false, constel: true, mark: true,
           text: {
-            ja: "Sidereum へようこそ。惑星の並びも大きさも実際のとおりで、" +
-                "好きな日時の空を宇宙からでも地上からでも眺められます。" +
-                "基本の操作をひとつずつ試してみましょう。" +
-                "まずは右下の「次へ」をタップしてください。",
-            en: "Welcome to Sidereum. Every planet sits at its real place and real size, and " +
-                "you can look at any date from space or from the ground. " +
-                "Let's try the basic controls one at a time. " +
-                "Start by tapping “Next” at the bottom right.",
+            ja: "Sidereum へようこそ。宇宙を自由に見てまわれる Web プラネタリウムです。" +
+                "基本の操作を試してみましょう。右下の「次へ」をタップしてください。",
+            en: "Welcome to Sidereum, a web planetarium for exploring space freely. " +
+                "Let's try the basic controls — tap “Next” at the bottom right to start.",
           },
         },
         {
