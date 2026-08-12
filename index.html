@@ -523,29 +523,24 @@
   }
   #viewMode button:hover { color: var(--text); background: rgba(150, 178, 224, 0.10); }
   #viewMode button.on { color: #0a0d16; background: var(--accent); font-weight: 600; }
-  #vmToggle { display: none; }
-  /* 狭い画面: 3つ並べるとタイトルと時計の間に入らないので、いま見ているビューだけを
-     出し、押したら下に開く。開いた中身は時計 (右上) の左側に収まる幅にとどめる。
+  #vmSelect { display: none; }
+  /* 狭い画面: 3つ並べるとタイトルと時計の間に入らないので、選択中のビューを出す
+     select にする (開いた一覧は端末が出すので、こちらの画面配置に干渉しない)。
      translateX で中央に寄せないのは、レイヤに乗ると iOS で書き換えた文字が
      描き残ることがあるため (ツアーのナレーションで実際に起きた) */
   @media (max-width: 720px), (max-height: 480px) {
     #viewMode {
       left: 0; right: 0; margin-inline: auto; transform: none; width: max-content;
-      flex-direction: column; align-items: stretch; gap: 2px; padding: 3px;
+      padding: 0; gap: 0; border-radius: 15px;
       backdrop-filter: none; -webkit-backdrop-filter: none;
-      background: rgba(9, 14, 28, 0.92); border-radius: 14px;
+      background: rgba(9, 14, 28, 0.92);
     }
-    #vmToggle {
-      display: flex; align-items: center; gap: 4px;
-      padding: 4px 10px; font-size: 11px; letter-spacing: 0.08em;
-      color: var(--text); background: none; border: none; border-radius: 11px;
-    }
-    #vmToggle .vmCaret { width: 10px; height: 10px; transition: transform 0.15s; }
-    #viewMode.open #vmToggle .vmCaret { transform: rotate(180deg); }
-    /* 閉じているときは現在のビューだけ。開いたら 3 つを縦に並べる */
-    #viewMode > button:not(#vmToggle) { display: none; }
-    #viewMode.open > button:not(#vmToggle) {
-      display: block; padding: 5px 10px; font-size: 11px; text-align: center; border-radius: 11px;
+    #viewMode > button { display: none; }
+    #vmSelect {
+      display: block;
+      font-family: var(--font-ui); font-size: 11px; letter-spacing: 0.08em;
+      color: var(--text); background: none; border: none; border-radius: 15px;
+      padding: 7px 12px; cursor: pointer; color-scheme: dark;
     }
   }
   /* 縦持ち: 上端の行はタイトルと時計で埋まっている。幅の狭い端末や英語表記では
@@ -1181,9 +1176,14 @@
     <h1>SIDEREUM<span class="beta">(β版)</span></h1>
   </header>
 
-  <!-- 狭い画面では vmToggle だけを出し、押すと 3 つが下に開く (CSS で出し分け) -->
+  <!-- 狭い画面は 3 つ並べる幅が無いので、選択中のビューを出す select にする
+       (どちらを出すかは CSS。中身は同じなので状態は片方に持たせない) -->
   <div id="viewMode" role="group" aria-label="ビュー切替">
-    <button id="vmToggle" aria-haspopup="true" aria-expanded="false"><span id="vmToggleTxt">宇宙</span><svg class="vmCaret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.8L6 7.8l3-3"/></svg></button>
+    <select id="vmSelect" aria-label="ビュー切替">
+      <option value="space">宇宙</option>
+      <option value="ground">地上</option>
+      <option value="moon">月面</option>
+    </select>
     <button id="vmSpace" class="on">宇宙</button>
     <button id="vmGround">地上</button>
     <button id="vmMoon">月面</button>
@@ -2129,7 +2129,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 18,
+      ver: 19,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -2224,11 +2224,11 @@
           scene: false, await: "view", ui: ["view"], hi: "#viewMode",
           text: {
             ja: "画面上部の中央には、いま見ているビューが出ています。" +
-                "タップすると宇宙・地上・月面を切り替えられます。" +
+                "タップして宇宙・地上・月面から選べます。" +
                 "地上と月面は、その場所から見た実際の空になります。切り替えてみてください。",
-            en: "The view you are in is shown at the top centre of the screen. Tap it to " +
-                "switch between Space, Ground and Moon. Ground and Moon show the real sky " +
-                "from that place. Try switching.",
+            en: "The view you are in is shown at the top centre of the screen. Tap it and " +
+                "pick Space, Ground or Moon. Ground and Moon show the real sky from that " +
+                "place. Try switching.",
           },
           wide: {
             text: {
@@ -6175,9 +6175,7 @@
   //#endregion
   //#region src/ui/view-mode.js
   // 宇宙/地上のビュー切替 (画面上部のトグル)
-  const viewModeEl = document.getElementById("viewMode");
-  const vmToggleBtn = document.getElementById("vmToggle");
-  const vmToggleTxt = document.getElementById("vmToggleTxt");
+  const vmSelect = document.getElementById("vmSelect");
   const vmSpaceBtn = document.getElementById("vmSpace");
   const vmGroundBtn = document.getElementById("vmGround");
   const vmMoonBtn = document.getElementById("vmMoon");
@@ -6207,17 +6205,15 @@
     if (instant) { gAz = gAzTgt; gAlt = gAltTgt; }
     return true;
   }
-  // 狭い画面のビュー切替は「いま見ているビュー」だけを出すので、名前を入れ直す
-  function updateVmToggle() {
-    const t = T();
-    vmToggleTxt.textContent = !groundView ? t.viewSpace
-      : surfaceBody === "moon" ? t.viewMoon : t.viewGround;
+  // 狭い画面のビュー切替は select なので、選択中の項目を合わせ直す
+  function updateVmSelect() {
+    vmSelect.value = !groundView ? "space" : surfaceBody === "moon" ? "moon" : "ground";
   }
   function syncViewModeUI() {
     vmSpaceBtn.classList.toggle("on", !groundView);
     vmGroundBtn.classList.toggle("on", groundView && surfaceBody === "earth");
     vmMoonBtn.classList.toggle("on", groundView && surfaceBody === "moon");
-    updateVmToggle();
+    updateVmSelect();
     updateHint();          // ビューに応じてヒントを差し替え・再表示
     refreshObsSiteUI();    // 観測地チップを地球/月で切り替え
   }
@@ -6246,26 +6242,14 @@
     app.classList.remove("groundMode", "moonMode");
     syncViewModeUI();
   }
-  vmGroundBtn.addEventListener("click", () => { enterGround(); setVmOpen(false); });
-  vmMoonBtn.addEventListener("click", () => { enterMoon(); setVmOpen(false); });
-  vmSpaceBtn.addEventListener("click", () => { exitGround(); setVmOpen(false); });
-  // 狭い画面のビュー切替 (いま見ているビュー → 押すと 3 つが開く)。
-  // 広い画面では #vmToggle が出ないので、この開閉は画面に出てこない
-  function setVmOpen(open) {
-    viewModeEl.classList.toggle("open", open);
-    vmToggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
-  }
-  vmToggleBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const open = !viewModeEl.classList.contains("open");
-    if (open) setMenu(false);   // メニューと同時に開かない
-    setVmOpen(open);
-  });
-  document.addEventListener("pointerdown", (e) => {
-    if (!viewModeEl.contains(e.target)) setVmOpen(false);
-  });
-  window.addEventListener("keydown", (e) => {
-    if (e.code === "Escape") setVmOpen(false);
+  vmGroundBtn.addEventListener("click", enterGround);
+  vmMoonBtn.addEventListener("click", enterMoon);
+  vmSpaceBtn.addEventListener("click", exitGround);
+  vmSelect.addEventListener("change", () => {
+    const v = vmSelect.value;
+    if (v === "ground") enterGround();
+    else if (v === "moon") enterMoon();
+    else exitGround();
   });
 
   // 月面の観測地点プリセット (selenographic lat, lon)
@@ -9015,7 +8999,11 @@
     vmSpaceBtn.textContent = t.viewSpace;
     vmGroundBtn.textContent = t.viewGround;
     vmMoonBtn.textContent = t.viewMoon;
-    updateVmToggle();
+    const vmOpts = vmSelect.options;
+    vmOpts[0].textContent = t.viewSpace;
+    vmOpts[1].textContent = t.viewGround;
+    vmOpts[2].textContent = t.viewMoon;
+    updateVmSelect();
     rebuildMoonSites();
     setCtlLabel("gFovLabel", t.gFovLabel);
     setCtlLabel("gAzLabel", t.gAzLabel);

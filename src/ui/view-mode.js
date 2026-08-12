@@ -1,7 +1,5 @@
   // 宇宙/地上のビュー切替 (画面上部のトグル)
-  const viewModeEl = document.getElementById("viewMode");
-  const vmToggleBtn = document.getElementById("vmToggle");
-  const vmToggleTxt = document.getElementById("vmToggleTxt");
+  const vmSelect = document.getElementById("vmSelect");
   const vmSpaceBtn = document.getElementById("vmSpace");
   const vmGroundBtn = document.getElementById("vmGround");
   const vmMoonBtn = document.getElementById("vmMoon");
@@ -31,17 +29,15 @@
     if (instant) { gAz = gAzTgt; gAlt = gAltTgt; }
     return true;
   }
-  // 狭い画面のビュー切替は「いま見ているビュー」だけを出すので、名前を入れ直す
-  function updateVmToggle() {
-    const t = T();
-    vmToggleTxt.textContent = !groundView ? t.viewSpace
-      : surfaceBody === "moon" ? t.viewMoon : t.viewGround;
+  // 狭い画面のビュー切替は select なので、選択中の項目を合わせ直す
+  function updateVmSelect() {
+    vmSelect.value = !groundView ? "space" : surfaceBody === "moon" ? "moon" : "ground";
   }
   function syncViewModeUI() {
     vmSpaceBtn.classList.toggle("on", !groundView);
     vmGroundBtn.classList.toggle("on", groundView && surfaceBody === "earth");
     vmMoonBtn.classList.toggle("on", groundView && surfaceBody === "moon");
-    updateVmToggle();
+    updateVmSelect();
     updateHint();          // ビューに応じてヒントを差し替え・再表示
     refreshObsSiteUI();    // 観測地チップを地球/月で切り替え
   }
@@ -70,26 +66,14 @@
     app.classList.remove("groundMode", "moonMode");
     syncViewModeUI();
   }
-  vmGroundBtn.addEventListener("click", () => { enterGround(); setVmOpen(false); });
-  vmMoonBtn.addEventListener("click", () => { enterMoon(); setVmOpen(false); });
-  vmSpaceBtn.addEventListener("click", () => { exitGround(); setVmOpen(false); });
-  // 狭い画面のビュー切替 (いま見ているビュー → 押すと 3 つが開く)。
-  // 広い画面では #vmToggle が出ないので、この開閉は画面に出てこない
-  function setVmOpen(open) {
-    viewModeEl.classList.toggle("open", open);
-    vmToggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
-  }
-  vmToggleBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const open = !viewModeEl.classList.contains("open");
-    if (open) setMenu(false);   // メニューと同時に開かない
-    setVmOpen(open);
-  });
-  document.addEventListener("pointerdown", (e) => {
-    if (!viewModeEl.contains(e.target)) setVmOpen(false);
-  });
-  window.addEventListener("keydown", (e) => {
-    if (e.code === "Escape") setVmOpen(false);
+  vmGroundBtn.addEventListener("click", enterGround);
+  vmMoonBtn.addEventListener("click", enterMoon);
+  vmSpaceBtn.addEventListener("click", exitGround);
+  vmSelect.addEventListener("change", () => {
+    const v = vmSelect.value;
+    if (v === "ground") enterGround();
+    else if (v === "moon") enterMoon();
+    else exitGround();
   });
 
   // 月面の観測地点プリセット (selenographic lat, lon)

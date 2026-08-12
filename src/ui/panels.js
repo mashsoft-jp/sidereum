@@ -160,7 +160,11 @@
     vmSpaceBtn.textContent = t.viewSpace;
     vmGroundBtn.textContent = t.viewGround;
     vmMoonBtn.textContent = t.viewMoon;
-    updateVmToggle();
+    const vmOpts = vmSelect.options;
+    vmOpts[0].textContent = t.viewSpace;
+    vmOpts[1].textContent = t.viewGround;
+    vmOpts[2].textContent = t.viewMoon;
+    updateVmSelect();
     rebuildMoonSites();
     setCtlLabel("gFovLabel", t.gFovLabel);
     setCtlLabel("gAzLabel", t.gAzLabel);

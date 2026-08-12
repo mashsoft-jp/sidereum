@@ -190,7 +190,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 18,
+      ver: 19,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -285,11 +285,11 @@
           scene: false, await: "view", ui: ["view"], hi: "#viewMode",
           text: {
             ja: "画面上部の中央には、いま見ているビューが出ています。" +
-                "タップすると宇宙・地上・月面を切り替えられます。" +
+                "タップして宇宙・地上・月面から選べます。" +
                 "地上と月面は、その場所から見た実際の空になります。切り替えてみてください。",
-            en: "The view you are in is shown at the top centre of the screen. Tap it to " +
-                "switch between Space, Ground and Moon. Ground and Moon show the real sky " +
-                "from that place. Try switching.",
+            en: "The view you are in is shown at the top centre of the screen. Tap it and " +
+                "pick Space, Ground or Moon. Ground and Moon show the real sky from that " +
+                "place. Try switching.",
           },
           wide: {
             text: {
