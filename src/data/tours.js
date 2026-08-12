@@ -72,7 +72,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 16,
+      ver: 17,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -109,14 +109,11 @@
         {
           scene: false, await: "dist", ui: ["controls"], hi: "#zoom",
           text: {
-            ja: "操作パネルの {dist} の行では、拡大率ではなく" +
-                "太陽系との距離そのものが変わります。" +
-                "動かしても {mag} の行の倍率は変わらず、{dist} の数字だけが変わります。" +
+            ja: "{dist} の行は太陽系との距離を表します。" +
+                "スライダーを動かすか − ＋ を押すと、距離が変わります。" +
                 "Shift を押しながらホイールでも同じです。",
-            en: "The {dist} row in the control panel changes your distance from the Solar " +
-                "System itself, rather than the magnification: move it and the {mag} " +
-                "row keeps its value while only the {dist} number changes. Shift+wheel " +
-                "does the same thing.",
+            en: "The {dist} row is your distance from the Solar System. Drag the slider, " +
+                "or use − and +, to change it. Shift+wheel does the same thing.",
           },
         },
         {
@@ -190,7 +187,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 19,
+      ver: 20,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -227,12 +224,10 @@
         {
           scene: false, await: "dist", ui: ["controls"], hi: "#zoom",
           text: {
-            ja: "操作パネルの {dist} の行では、拡大率ではなく" +
-                "太陽系との距離そのものが変わります。" +
-                "動かしても {mag} の行の倍率は変わらず、{dist} の数字だけが変わります。",
-            en: "The {dist} row in the control panel changes your distance from the Solar " +
-                "System itself, rather than the magnification: move it and the {mag} " +
-                "row keeps its value while only the {dist} number changes. Try it.",
+            ja: "{dist} の行は太陽系との距離を表します。" +
+                "スライダーを動かすか − ＋ をタップすると、距離が変わります。",
+            en: "The {dist} row is your distance from the Solar System. Drag the slider, " +
+                "or tap − and +, to change it.",
           },
         },
         {
