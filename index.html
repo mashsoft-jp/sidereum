@@ -1988,7 +1988,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 13,
+      ver: 14,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -1999,10 +1999,12 @@
           view: "space", sel: null, fit: 1.7, a: 0.42, y: 0.9, mag: 1,
           play: false, constel: true, mark: true,
           text: {
-            ja: "Sidereum へようこそ。太陽系を実際の縮尺で見てまわれます。" +
+            ja: "Sidereum へようこそ。惑星の並びも大きさも実際のとおりで、" +
+                "好きな日時の空を宇宙からでも地上からでも眺められます。" +
                 "基本の操作をひとつずつ試してみましょう。" +
                 "まずは右下の「次へ」をクリックしてください。",
-            en: "Welcome to Sidereum — the Solar System at true scale. " +
+            en: "Welcome to Sidereum. Every planet sits at its real place and real size, and " +
+                "you can look at any date from space or from the ground. " +
                 "Let's try the basic controls one at a time. " +
                 "Start by clicking “Next” at the bottom right.",
           },
@@ -2017,21 +2019,22 @@
         {
           scene: false, await: "zoom", ui: ["controls"], hi: "#mag",
           text: {
-            ja: "ここからは下のパネルを使います。拡大・縮小は {mag} の行で、" +
+            ja: "画面の下にある操作パネルを説明します。拡大・縮小は {mag} の行で、" +
                 "スライダーを動かすか − ＋ を押してください。" +
                 "マウスホイールでも同じことができます。",
-            en: "From here we use the panel below. Zoom with the {mag} row — drag the " +
-                "slider, or use − and +. The mouse wheel does the same thing.",
+            en: "Now for the control panel at the bottom of the screen. Zoom with the " +
+                "{mag} row — drag the slider, or use − and +. The mouse wheel does " +
+                "the same thing.",
           },
         },
         {
           scene: false, await: "dist", ui: ["controls"], hi: "#zoom",
           text: {
             ja: "{dist} の行では、拡大率ではなく太陽系との距離そのものが変わります。" +
-                "動かすと {mag} の行は ×1.0 のまま、{dist} の数字だけが変わります。" +
+                "動かしても {mag} の行の倍率は変わらず、{dist} の数字だけが変わります。" +
                 "Shift を押しながらホイールでも同じです。",
             en: "The {dist} row changes your distance from the Solar System itself, rather " +
-                "than the magnification: move it and the {mag} row stays at ×1.0 while only " +
+                "than the magnification: move it and the {mag} row keeps its value while only " +
                 "the {dist} number changes. Shift+wheel does the same thing.",
           },
         },
@@ -2039,21 +2042,19 @@
           scene: false, await: "pan", ui: [], hi: null,
           text: {
             ja: "右ドラッグすると、見ている位置を平行に動かせます。" +
-                "これはパネルに無い、画面だけの操作です。" +
                 "中心から外れた天体を追いたいときに使います。",
-            en: "Right-drag to slide the view sideways. This one has no panel equivalent — " +
-                "handy for following something that has drifted off centre.",
+            en: "Right-drag to slide the view sideways — handy for following " +
+                "something that has drifted off centre.",
           },
         },
         {
           scene: false, await: "angle", ui: ["controls"], hi: "#camSelect, #angleCell",
           text: {
-            ja: "{cam} からは決まった視点へ一度で移れます。" +
-                "右端の縦のスライダーでは見おろす角度を変えられます。" +
-                "見失ったらここで立て直せます。どちらか試してみてください。",
-            en: "The {cam} menu jumps straight to a fixed viewpoint, and the vertical slider at " +
-                "the right edge tilts the view. Use these whenever you lose your bearings — " +
-                "try either one.",
+            ja: "{cam} では、あらかじめ決められた視点へ一度に移動できます。" +
+                "右端の縦のスライダーでは、見おろす角度を変えられます。" +
+                "どちらか試してみてください。",
+            en: "The {cam} menu moves you to a preset viewpoint, and the vertical slider at the " +
+                "right edge tilts the view up and down. Try either one.",
           },
         },
         {
@@ -2077,9 +2078,9 @@
         {
           scene: false, ui: ["controls"], hi: "#play, #speed", await: "play",
           text: {
-            ja: "下のパネルの再生ボタンで時間を進められます。速度は隣のスライダーで、" +
+            ja: "操作パネルの再生ボタンで時間を進められます。速度は隣のスライダーで、" +
                 "実時間から 1秒あたり約240年まで変えられます。押してみてください。",
-            en: "Press play in the panel below to run time forward. The slider next to it " +
+            en: "Press play in the control panel to run time forward. The slider next to it " +
                 "sets the speed, from real time up to about 240 years per second. Try it.",
           },
         },
@@ -2108,7 +2109,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 14,
+      ver: 15,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -2119,10 +2120,12 @@
           view: "space", sel: null, fit: 1.7, a: 0.42, y: 0.9, mag: 1,
           play: false, constel: true, mark: true,
           text: {
-            ja: "Sidereum へようこそ。太陽系を実際の縮尺で見てまわれます。" +
+            ja: "Sidereum へようこそ。惑星の並びも大きさも実際のとおりで、" +
+                "好きな日時の空を宇宙からでも地上からでも眺められます。" +
                 "基本の操作をひとつずつ試してみましょう。" +
                 "まずは右下の「次へ」をタップしてください。",
-            en: "Welcome to Sidereum — the Solar System at true scale. " +
+            en: "Welcome to Sidereum. Every planet sits at its real place and real size, and " +
+                "you can look at any date from space or from the ground. " +
                 "Let's try the basic controls one at a time. " +
                 "Start by tapping “Next” at the bottom right.",
           },
@@ -2137,20 +2140,21 @@
         {
           scene: false, await: "zoom", ui: ["controls"], hi: "#mag",
           text: {
-            ja: "ここからは下のパネルを使います。拡大・縮小は {mag} の行で、" +
+            ja: "画面の下にある操作パネルを説明します。拡大・縮小は {mag} の行で、" +
                 "スライダーを動かすか − ＋ をタップしてください。" +
                 "2本の指でつまむ (ピンチ) 操作でも同じことができます。",
-            en: "From here we use the panel below. Zoom with the {mag} row — drag the " +
-                "slider, or tap − and +. Pinching with two fingers does the same thing.",
+            en: "Now for the control panel at the bottom of the screen. Zoom with the " +
+                "{mag} row — drag the slider, or tap − and +. Pinching with two " +
+                "fingers does the same thing.",
           },
         },
         {
           scene: false, await: "dist", ui: ["controls"], hi: "#zoom",
           text: {
             ja: "{dist} の行では、拡大率ではなく太陽系との距離そのものが変わります。" +
-                "動かすと {mag} の行は ×1.0 のまま、{dist} の数字だけが変わります。",
+                "動かしても {mag} の行の倍率は変わらず、{dist} の数字だけが変わります。",
             en: "The {dist} row changes your distance from the Solar System itself, rather " +
-                "than the magnification: move it and the {mag} row stays at ×1.0 while only " +
+                "than the magnification: move it and the {mag} row keeps its value while only " +
                 "the {dist} number changes. Try it.",
           },
         },
@@ -2158,21 +2162,19 @@
           scene: false, await: "pan", ui: [], hi: null,
           text: {
             ja: "2本の指を同時にドラッグすると、見ている位置を平行に動かせます。" +
-                "これはパネルに無い、画面だけの操作です。" +
                 "中心から外れた天体を追いたいときに使います。",
-            en: "Drag with two fingers to slide the view sideways. This one has no panel " +
-                "equivalent — handy for following something that has drifted off centre.",
+            en: "Drag with two fingers to slide the view sideways — handy for following " +
+                "something that has drifted off centre.",
           },
         },
         {
           scene: false, await: "angle", ui: ["controls"], hi: "#camSelect, #angleCell",
           text: {
-            ja: "{cam} からは決まった視点へ一度で移れます。" +
-                "右端の縦のスライダーでは見おろす角度を変えられます。" +
-                "見失ったらここで立て直せます。どちらか試してみてください。",
-            en: "The {cam} menu jumps straight to a fixed viewpoint, and the vertical slider at " +
-                "the right edge tilts the view. Use these whenever you lose your bearings — " +
-                "try either one.",
+            ja: "{cam} では、あらかじめ決められた視点へ一度に移動できます。" +
+                "右端の縦のスライダーでは、見おろす角度を変えられます。" +
+                "どちらか試してみてください。",
+            en: "The {cam} menu moves you to a preset viewpoint, and the vertical slider at the " +
+                "right edge tilts the view up and down. Try either one.",
           },
         },
         {
@@ -2196,9 +2198,9 @@
         {
           scene: false, ui: ["controls"], hi: "#play, #speed", await: "play",
           text: {
-            ja: "下のパネルの再生ボタンで時間を進められます。速度は隣のスライダーで、" +
+            ja: "操作パネルの再生ボタンで時間を進められます。速度は隣のスライダーで、" +
                 "実時間から 1秒あたり約240年まで変えられます。押してみてください。",
-            en: "Press play in the panel below to run time forward. The slider next to it " +
+            en: "Press play in the control panel to run time forward. The slider next to it " +
                 "sets the speed, from real time up to about 240 years per second. Try it.",
           },
         },
