@@ -520,24 +520,34 @@
       background: rgba(9, 14, 28, 0.92);
     }
     #viewMode > button { display: none; }
+    /* 縦の余白はタイトルの箱と同じ高さ (37px) になるよう取る。上端の行に並べたとき、
+       ☰ の箱・時計の箱と天地が揃う */
     #vmSelect {
       display: block;
       font-family: var(--font-ui); font-size: 11px; letter-spacing: 0.08em;
       color: var(--text); background: none; border: none; border-radius: 15px;
-      padding: 7px 12px; cursor: pointer; color-scheme: dark;
+      padding: 9px 10px; cursor: pointer; color-scheme: dark;
     }
   }
-  /* 縦持ち: 上端の行はタイトルと時計で埋まっている。幅の狭い端末や英語表記では
-     中央に置く余地が残らない (320px 幅だと隙間は 40px ほどしかない) ので、
-     時計の下に一段取り、そのぶん天体リストを下げる */
+  /* 縦持ち: 上端の行はタイトルと時計で埋まっているので、中央に入る幅があるときだけ
+     同じ行に並べ、足りない端末では時計の下に一段取る (そのぶん天体リストを下げる)。
+     効くのはタイトル側の隙間で、幅 W のとき W/2 −(タイトル右端)−(切替幅/2)。
+     4px 残す条件が、日本語 (タイトル 157・切替 66) で 388px、
+     英語 (161・87) で 417px になる */
   @media (max-width: 720px) {
-    #viewMode { top: calc(96px + var(--sat)); }
+    #viewMode { top: calc(var(--vmTop, 96px) + var(--sat)); }
     /* #app #navPanel (ID 2つ) の既定に勝たせるため、こちらも同じ形で書く */
-    #app #navPanel, #app #navExpand { top: calc(140px + var(--sat)); }
+    #app #navPanel, #app #navExpand { top: calc(var(--vmNavTop, 140px) + var(--sat)); }
   }
-  /* 横持ちは上端に余裕があるので、タイトルと時計と同じ行に置く */
+  @media (min-width: 388px) {
+    :root { --vmTop: 16px; --vmNavTop: 108px; }
+  }
+  @media (max-width: 416px) {
+    :root[lang="en"] { --vmTop: 96px; --vmNavTop: 140px; }
+  }
+  /* 横持ちは上端が横に空いているので、幅を問わず同じ行に置ける */
   @media (max-height: 480px) {
-    #viewMode { top: calc(8px + var(--sat)); }
+    #viewMode { top: calc(16px + var(--sat)); }
   }
   /* 高度(地上・月面)/角度(宇宙) の縦スライダー。操作パネルからは切り離し、画面の
      右端に独立して置く。パネルの行数に縛られないので、つまみの可動域を画面の
