@@ -282,6 +282,11 @@
       for (const b of ALL_BODIES) b.showOrbit = !!s.orbits;
       orbitsBtn.classList.toggle("on", !!s.orbits);
     }
+    // 天球の経緯線は、書いた回だけ出す (既定は消す — 星座や軌道と違い、ツアーで
+    // 見せたい天体の前を格子が横切るだけになる回がほとんど)。localStorage は
+    // 書き換えず、開始前の状態は終了時に戻す
+    showGrid = !!s.grid;
+    updateGridLabel();
     // selected はカメラの注視先として使うだけなので、既定では選択マークを出さない
     showSelMark = !!s.mark;
     tourSight = s.sight || null;
@@ -535,7 +540,7 @@
   // まるごと控えておき、終了時に戻す (tour.keep が真のツアーだけ戻さない)
   function captureTourState() {
     return {
-      showConst, showSelMark,
+      showConst, showSelMark, showGrid,
       orbits: ALL_BODIES.map((b) => b.showOrbit),
       simDays, daysPerSec, playing,
       groundView, surfaceBody,
@@ -548,9 +553,11 @@
     };
   }
   function restoreTourState(v, keepScene) {
-    // 表示設定 (星座・選択マーク) はツアー中だけの一時変更なので必ず戻す
+    // 表示設定 (星座・経緯線・選択マーク) はツアー中だけの一時変更なので必ず戻す
     showConst = v.showConst;
     constBtn.classList.toggle("on", showConst);
+    showGrid = v.showGrid;
+    updateGridLabel();
     ALL_BODIES.forEach((b, i) => { b.showOrbit = v.orbits[i]; });
     orbitsBtn.classList.toggle("on", ALL_BODIES.some((b) => b.showOrbit));
     showSelMark = v.showSelMark;

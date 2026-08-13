@@ -1985,6 +1985,7 @@
   //   constel 星座 (と黄道) を出すか。ツアー中だけの一時変更で設定は保存しない
   //   orbits  軌道線を出すか。同じく一時変更。探査機視点など「写真」として
   //         見せる場面では、画面を横切る線が邪魔になるので落とす
+  //   grid    天球の経緯線を出すか。書いた回だけ出る (既定は消す)。同じく一時変更
   //   mark  sel の天体に選択マーク (オレンジのリング) を出すか。既定は false
   //   hold  自動送りでの滞留秒 (既定 12)
   //   text  ナレーション
@@ -9364,6 +9365,11 @@
       for (const b of ALL_BODIES) b.showOrbit = !!s.orbits;
       orbitsBtn.classList.toggle("on", !!s.orbits);
     }
+    // 天球の経緯線は、書いた回だけ出す (既定は消す — 星座や軌道と違い、ツアーで
+    // 見せたい天体の前を格子が横切るだけになる回がほとんど)。localStorage は
+    // 書き換えず、開始前の状態は終了時に戻す
+    showGrid = !!s.grid;
+    updateGridLabel();
     // selected はカメラの注視先として使うだけなので、既定では選択マークを出さない
     showSelMark = !!s.mark;
     tourSight = s.sight || null;
@@ -9617,7 +9623,7 @@
   // まるごと控えておき、終了時に戻す (tour.keep が真のツアーだけ戻さない)
   function captureTourState() {
     return {
-      showConst, showSelMark,
+      showConst, showSelMark, showGrid,
       orbits: ALL_BODIES.map((b) => b.showOrbit),
       simDays, daysPerSec, playing,
       groundView, surfaceBody,
@@ -9630,9 +9636,11 @@
     };
   }
   function restoreTourState(v, keepScene) {
-    // 表示設定 (星座・選択マーク) はツアー中だけの一時変更なので必ず戻す
+    // 表示設定 (星座・経緯線・選択マーク) はツアー中だけの一時変更なので必ず戻す
     showConst = v.showConst;
     constBtn.classList.toggle("on", showConst);
+    showGrid = v.showGrid;
+    updateGridLabel();
     ALL_BODIES.forEach((b, i) => { b.showOrbit = v.orbits[i]; });
     orbitsBtn.classList.toggle("on", ALL_BODIES.some((b) => b.showOrbit));
     showSelMark = v.showSelMark;
