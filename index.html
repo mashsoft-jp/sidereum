@@ -7466,6 +7466,14 @@
   const infoPanel = document.getElementById("info");
   const navEl = document.getElementById("nav");
 
+  // 選択中の天体をもう一度押したとき。注視先はそのままに、選択の飾り
+  // (オレンジの枠と説明パネル) だけを出し入れする。寄って眺めるときに、
+  // 見たい面へ枠と文字が重なるのを避けるため。解除は何もない所を押す
+  function toggleSelChrome(body) {
+    showSelMark = !showSelMark;
+    if (showSelMark) openInfo(body);
+    else infoPanel.classList.remove("open");
+  }
   function select(body, fly) {
     selected = body;
     updateNavSel();
@@ -7859,13 +7867,8 @@
     btn.textContent = bName(b);
     btn.dataset.key = b.key;
     btn.addEventListener("click", () => {
-      if (selected === b) {
-        // パネルを閉じていた場合は再表示、開いていれば選択解除
-        if (infoPanel.classList.contains("open")) select(null, false);
-        else openInfo(b);
-      } else {
-        select(b, true);
-      }
+      if (selected === b) toggleSelChrome(b);
+      else { showSelMark = true; select(b, true); }
     });
     const ob = document.createElement("button");
     ob.className = "tgl on";
@@ -8076,17 +8079,19 @@
     // 変わるため)。ただし選択を促しているチュートリアルのステップだけは通す
     if ((!tourActive || tourAllowsSelect()) &&
         pointers.has(e.pointerId) && dragMoved < 5 && pointers.size === 1 && e.button === 0) {
+      // 同じ天体を再度押したら選択の飾りだけを消す (注視先は動かさない)。
+      // リストのボタンと同じ扱い
       if (groundView) {
         // 選択 + その方向へカメラを向けて追尾 (以後のズームでも中央に保つ)
         const hit = hitTestGround(e.clientX, e.clientY);
-        if (hit) select(hit, true);
+        if (hit === selected && hit) toggleSelChrome(hit);
+        else if (hit) { showSelMark = true; select(hit, true); }
       } else {
         const hit = hitTest(e.clientX, e.clientY);
         if (hit === selected && hit) {
-          // 選択中の天体を再タップ: リストの再タップと同じトグル挙動
-          if (infoPanel.classList.contains("open")) select(null, false);
-          else openInfo(hit);
+          toggleSelChrome(hit);
         } else if (hit) {
+          showSelMark = true;
           select(hit, true);
         } else {
           select(null, false);
@@ -8869,7 +8874,7 @@
         ["ズーム", "ホイール / ピンチ"],
         ["距離", "Shift+ホイール、またはパネルの {dist} の行"],
         ["平行移動", "右ドラッグ / 2本指ドラッグ"],
-        ["天体", "クリック / タップで選択・接近 (再度で解除)"],
+        ["天体", "クリック / タップで選択・接近 (再度で枠と説明を隠す・何もない所で解除)"],
         ["視点", "パネルの {cam} プルダウン・右端の縦のスライダー"],
       ],
       ground_rows: [
@@ -8896,7 +8901,7 @@
         ["Zoom", "Wheel / pinch"],
         ["Distance", "Shift+wheel, or the {dist} row in the panel"],
         ["Pan", "Right-drag / two-finger drag"],
-        ["Bodies", "Click / tap to select & approach (again to deselect)"],
+        ["Bodies", "Click / tap to select & approach (again hides the ring & panel · empty space deselects)"],
         ["Viewpoint", "The {cam} dropdown & the vertical slider at the right edge"],
       ],
       ground_rows: [

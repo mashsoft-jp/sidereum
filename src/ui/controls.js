@@ -86,17 +86,19 @@
     // 変わるため)。ただし選択を促しているチュートリアルのステップだけは通す
     if ((!tourActive || tourAllowsSelect()) &&
         pointers.has(e.pointerId) && dragMoved < 5 && pointers.size === 1 && e.button === 0) {
+      // 同じ天体を再度押したら選択の飾りだけを消す (注視先は動かさない)。
+      // リストのボタンと同じ扱い
       if (groundView) {
         // 選択 + その方向へカメラを向けて追尾 (以後のズームでも中央に保つ)
         const hit = hitTestGround(e.clientX, e.clientY);
-        if (hit) select(hit, true);
+        if (hit === selected && hit) toggleSelChrome(hit);
+        else if (hit) { showSelMark = true; select(hit, true); }
       } else {
         const hit = hitTest(e.clientX, e.clientY);
         if (hit === selected && hit) {
-          // 選択中の天体を再タップ: リストの再タップと同じトグル挙動
-          if (infoPanel.classList.contains("open")) select(null, false);
-          else openInfo(hit);
+          toggleSelChrome(hit);
         } else if (hit) {
+          showSelMark = true;
           select(hit, true);
         } else {
           select(null, false);

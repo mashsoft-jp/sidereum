@@ -2,6 +2,14 @@
   const infoPanel = document.getElementById("info");
   const navEl = document.getElementById("nav");
 
+  // 選択中の天体をもう一度押したとき。注視先はそのままに、選択の飾り
+  // (オレンジの枠と説明パネル) だけを出し入れする。寄って眺めるときに、
+  // 見たい面へ枠と文字が重なるのを避けるため。解除は何もない所を押す
+  function toggleSelChrome(body) {
+    showSelMark = !showSelMark;
+    if (showSelMark) openInfo(body);
+    else infoPanel.classList.remove("open");
+  }
   function select(body, fly) {
     selected = body;
     updateNavSel();
@@ -395,13 +403,8 @@
     btn.textContent = bName(b);
     btn.dataset.key = b.key;
     btn.addEventListener("click", () => {
-      if (selected === b) {
-        // パネルを閉じていた場合は再表示、開いていれば選択解除
-        if (infoPanel.classList.contains("open")) select(null, false);
-        else openInfo(b);
-      } else {
-        select(b, true);
-      }
+      if (selected === b) toggleSelChrome(b);
+      else { showSelMark = true; select(b, true); }
     });
     const ob = document.createElement("button");
     ob.className = "tgl on";

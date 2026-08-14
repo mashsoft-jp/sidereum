@@ -18,7 +18,7 @@
         ["ズーム", "ホイール / ピンチ"],
         ["距離", "Shift+ホイール、またはパネルの {dist} の行"],
         ["平行移動", "右ドラッグ / 2本指ドラッグ"],
-        ["天体", "クリック / タップで選択・接近 (再度で解除)"],
+        ["天体", "クリック / タップで選択・接近 (再度で枠と説明を隠す・何もない所で解除)"],
         ["視点", "パネルの {cam} プルダウン・右端の縦のスライダー"],
       ],
       ground_rows: [
@@ -45,7 +45,7 @@
         ["Zoom", "Wheel / pinch"],
         ["Distance", "Shift+wheel, or the {dist} row in the panel"],
         ["Pan", "Right-drag / two-finger drag"],
-        ["Bodies", "Click / tap to select & approach (again to deselect)"],
+        ["Bodies", "Click / tap to select & approach (again hides the ring & panel · empty space deselects)"],
         ["Viewpoint", "The {cam} dropdown & the vertical slider at the right edge"],
       ],
       ground_rows: [
