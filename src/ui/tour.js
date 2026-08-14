@@ -38,6 +38,8 @@
   let tourUntil = null;       // 早送りステップの停止日時 (simDays)
   let tourRideFly = false;    // 引きの画から探査機視点へ乗り移る回 (最初のフレームで飛ぶ)
   let tourRideLock = false;   // 目標を画面中央に捉えたか (捉えたあとは遅れなく追う)
+  let tourRideTurn = 0;       // 向き直りの経過 [s]
+  const RIDE_TURN = 1.6;      // 向き直りにかける時間 [s]
 
   const tourText = (o) => (o ? (lang === "ja" ? o.ja : o.en) : "");
 
@@ -296,6 +298,7 @@
     // まま次の天体へ向き直る回 (タイタン → 土星) は止めずに飛び続けさせる
     tourRideFly = !!s.ride && !tourRide;
     tourRideLock = false;   // 目標が変わるので捉え直す (向き直る動きを見せる)
+    tourRideTurn = 0;
     tourProbeHold = !!s.probeIn;
     if (!s.ride) tourRideEye = null;   // 探査機視点を抜けたら次回は今の視点から
     tourRide = s.ride || null;
@@ -455,16 +458,22 @@
     const pitchT = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, Math.asin(dy / d)));
     const eYaw = Math.atan2(Math.sin(yawT - cam.yaw), Math.cos(yawT - cam.yaw));
     const eDist = Math.log(d / (cam.dist || d));
-    const ePos = Math.hypot(e[0] - tourRideEye[0], e[1] - tourRideEye[1], e[2] - tourRideEye[2]);
-    const close = Math.abs(eDist) < 0.02 && Math.abs(eYaw) < 0.02 &&
-                  Math.abs(pitchT - cam.pitch) < 0.02 && ePos < d * 0.01;
-    // 引きから乗り移る回は最初のフレームでそのまま機体へ移る (寄っていく途中の
-    // 画はナレーションと合わない)。乗ったまま次の天体へ向き直る回は、
-    // 「振り向いて飛んでいく」動きに見えるようゆっくり回す。
-    // 一度捉えたら以後は遅れなく追う — 遅れを残すと、早送りが終わって時計が
-    // 止まったあとにカメラだけが数秒動き続け、勝手に構図を直したように見える
-    const k = close || tourRideLock || tourRideFly || !(dt > 0)
-      ? 1 : 1 - Math.exp(-dt * 1.1);
+    // 残差に掛ける割合。1 なら目標そのもの (遅れなし)。
+    //   引きから乗り移る回        : 最初のフレームで機体へ (寄る途中の画は出さない)
+    //   乗ったまま向き直る回      : RIDE_TURN 秒かけて回す
+    //   それ以降                  : 遅れなしで追う
+    // 回す量を「残り時間ぶんの割合」で決めるので、RIDE_TURN 秒でぴったり
+    // 追いつききる。緩和 (指数) で近づけるだけだと遅れがいつまでも残り、
+    // 早送りが終わって時計が止まったあとにカメラだけが動いてしまう
+    let k = 1;
+    if (!tourRideLock && !tourRideFly && dt > 0) {
+      const smooth = (x) => x * x * (3 - 2 * x);
+      const u0 = smooth(Math.min(1, tourRideTurn / RIDE_TURN));
+      tourRideTurn += dt;
+      const u1 = smooth(Math.min(1, tourRideTurn / RIDE_TURN));
+      k = u1 >= 1 || u0 >= 1 ? 1 : (u1 - u0) / (1 - u0);
+      if (u1 >= 1) tourRideLock = true;
+    }
     for (let i = 0; i < 3; i++) {
       tourRideEye[i] += (e[i] - tourRideEye[i]) * k;
       cam.panOff[i] = 0;
@@ -485,7 +494,7 @@
     cam.distTgt = cam.dist;
     cam.yawTgt = cam.yaw;
     cam.pitchTgt = cam.pitch;
-    if (close || tourRideFly) { tourRideFly = false; tourRideLock = true; }
+    if (tourRideFly) { tourRideFly = false; tourRideLock = true; }
     if (tourRideSpd > 0 && tourRideRef > 0) {
       // カメラを合わせている最中も時計は進める。ただしカメラが追いつく前に
       // 通り過ぎてしまわないよう、距離の食い違いが大きい間は速度を落とす。
@@ -627,6 +636,7 @@
     tourPath = false;
     tourRideFly = false;
     tourRideLock = false;
+    tourRideTurn = 0;
     tourProbeHold = false;
     tourRideEye = null;
     const keepScene = !!(tour && tour.keep);
