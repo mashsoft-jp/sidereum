@@ -6214,7 +6214,10 @@
     if (d < -Math.PI) d += 2 * Math.PI;
     gAzTgt = gAz + d;
     gAltTgt = Math.max(-1.3, Math.min(GALT_MAX, c.alt * DEG));
-    if (instant) { gAz = gAzTgt; gAlt = gAltTgt; }
+    // 即時に向けたときは追尾の基準もここで捨てる。残しておくと、次のフレームで
+    // 「前フレームからの天体の移動分」として日時ジャンプぶんがもう一度足され、
+    // ずれた画から数秒かけて戻ってくる (ツアーで日を跨ぐ回に出ていた)
+    if (instant) { gAz = gAzTgt; gAlt = gAltTgt; gTrkKey = ""; }
     return true;
   }
   // 狭い画面のビュー切替は select なので、選択中の項目を合わせ直す
