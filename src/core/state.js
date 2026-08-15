@@ -216,28 +216,37 @@
         const nx = h.to || pr.way.find((w) => wayDays(w.d) > tp);
         const nxAU = nx.au || wayAU(nx.at, wayDays(nx.d), [0, 0, 0]);
         const uOut = vUnit(vSub(nxAU, keplerAU(body, tp, [0, 0, 0])));
+        // 軌道面。pole があれば実測の角運動量方向をそのまま使う (通過点を含む面に
+        // なるよう、通過点方向に垂直な成分だけ採る)。向きまで実測なので、通る側を
+        // 選び直す必要も無い。pole が無い場合は通過点と離脱方向が張る面 —
+        // 離脱方向は惑星間の補間から来るので、実際とは数十度ずれることがある
         const shape = (v) => {
-          const n0 = vUnit(vCross(v, uOut));
+          const u = vUnit(v);
           const mk = (n) => {
-            const peri = vRot(vUnit(v), n, -nu1);
+            const peri = vRot(u, n, -nu1);
             return { n, peri, asym: vRot(peri, n, nuInf) };
           };
+          if (h.pole) {
+            const p = vUnit(h.pole), d0 = vDot(p, u);
+            return mk(vUnit([p[0] - u[0]*d0, p[1] - u[1]*d0, p[2] - u[2]*d0]));
+          }
+          const n0 = vUnit(vCross(v, uOut));
           const a1 = mk(n0), a2 = mk([-n0[0], -n0[1], -n0[2]]);
           return vDot(a1.asym, uOut) >= vDot(a2.asym, uOut) ? a1 : a2;
         };
-        // miss をずらす向き。法線は miss を入れる前の面から決めて一度だけ作り直す。
-        // roll は法線から面内へ倒す角 [度] で、そのまま「衛星のどこの上を通るか」
-        // になる (0 = 極の上、90 = 赤道の上)。どちらも via 天体の方向 P1 に
-        // 垂直なので、中心天体からの距離は変わらず離心率の逆算も崩れない
+        // miss をずらす向き。off があれば実測のずれの向きをそのまま使い、
+        // 無ければ軌道面の法線 (= 衛星の極の上を通る)。どちらも via 天体の方向
+        // P1 に垂直な成分だけを採るので、中心天体からの距離は変わらず、
+        // 離心率の逆算も崩れない。法線は miss を入れる前の面から一度だけ決める
         const o0 = shape(P1);
         const m = h.via.miss || 0;
-        const rl = (h.via.roll || 0) * DEG;
         const rHat = vUnit(P1);
-        const tHat = vCross(o0.n, rHat);        // 面内で P1 に垂直 (公転の進む向き)
-        const c = Math.cos(rl) * m, t = Math.sin(rl) * m;
-        const o = shape([P1[0] + o0.n[0]*c + tHat[0]*t,
-                         P1[1] + o0.n[1]*c + tHat[1]*t,
-                         P1[2] + o0.n[2]*c + tHat[2]*t]);
+        let dir = o0.n;
+        if (h.via.off) {
+          const p = vUnit(h.via.off), d0 = vDot(p, rHat);
+          dir = vUnit([p[0] - rHat[0]*d0, p[1] - rHat[1]*d0, p[2] - rHat[2]*d0]);
+        }
+        const o = shape([P1[0] + dir[0]*m, P1[1] + dir[1]*m, P1[2] + dir[2]*m]);
         return {
           body, tp, e, A, mu: h.mu, peri: o.peri, side: vCross(o.n, o.peri),
           ta: tp - h.span, tb: tp + h.span,
