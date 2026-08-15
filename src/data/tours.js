@@ -620,7 +620,7 @@
     {
       id: "voyager1",
       probe: "voyager1",
-      ver: 13,
+      ver: 14,
       title: { ja: "ボイジャー1号の旅", en: "The Voyage of Voyager 1" },
       lead: {
         ja: "1977年の打ち上げから、木星・土星を経て星間空間へ。人類が最も遠くへ送った機体を追います。",
@@ -645,11 +645,9 @@
           spd: 45, play: true, until: "1979-03-03",
           text: {
             ja: "火星軌道を越え、小惑星帯を抜けて木星へ。18か月の巡航です。" +
-                "軌跡はフライバイの日付と場所を経由点にした近似ですが、" +
-                "各惑星に到達する日時は実際の記録どおりです。",
+                "この軌跡は、実際の航行記録から起こしたものです。",
             en: "Past Mars, through the asteroid belt, on to Jupiter — eighteen months of cruise. " +
-                "The path here is an interpolation through the flyby waypoints, but the dates and " +
-                "places of each encounter are the real ones.",
+                "The path drawn here is taken from the actual flight record.",
           },
         },
         {
