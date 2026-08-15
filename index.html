@@ -1747,6 +1747,7 @@
       hintGround: "ドラッグで見回す ・ ホイール / ピンチでズーム ・ 天体タップで選択・追尾",
       noGL: "お使いの環境では WebGL が利用できないため、<br>3D 表示を開始できませんでした。",
       imgPrefix: "画像: ", procTex: "テクスチャ: シェーダによる生成 (実写ではありません)",
+      monoTex: " — 輝度のみの画像のため、色は再現です",
       u: { yr: " 年", d: " 日", h: " 時間", min: " 分", s: " 秒" },
       menuLang: "English",
       menuHelp: "操作方法",
@@ -1801,6 +1802,7 @@
       hintGround: "Drag to look around · Wheel / pinch to zoom · Tap a body to select & track",
       noGL: "WebGL is not available in this environment,<br>so the 3D view could not be started.",
       imgPrefix: "Imagery: ", procTex: "Texture: procedurally generated (not actual imagery)",
+      monoTex: " — monochrome imagery; colour is approximated",
       u: { yr: " yr", d: " days", h: " hr", min: " min", s: " sec" },
       menuLang: "日本語",
       menuHelp: "Controls",
@@ -1941,6 +1943,9 @@
     mars: "NASA/USGS (Viking)",
     jupiter: "NASA/JPL/Space Science Institute (Cassini)",
     io: "NASA/JPL/USGS (Voyager, Galileo)",
+    europa: "NASA/JPL/USGS (Voyager, Galileo)",
+    ganymede: "NASA/JPL/USGS (Voyager, Galileo)",
+    callisto: "NASA/JPL/USGS (Voyager, Galileo)",
     pluto: "NASA/JHUAPL/SwRI (New Horizons)",
     ceres: "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (Dawn)",
     vesta: "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (Dawn)",
@@ -4245,8 +4250,9 @@
   // ---------- 天体テクスチャ (パブリックドメインの実全球マップ) ----------
   //   出典: 水星 MESSENGER (USGS) / 金星 Magellan レーダー地形 (NASA) / 地球 Blue Marble (NASA) /
   //         月 LRO (NASA SVS) / 火星 Viking (USGS) / 木星 Cassini PIA07782 (NASA/JPL) /
-  //         イオ Voyager + Galileo SSI 合成 (USGS) / 冥王星 New Horizons (NASA) /
-  //         ケレス・ベスタ Dawn (NASA/JPL)
+  //         イオ・ガニメデ Voyager + Galileo SSI 合成 (USGS) /
+  //         エウロパ・カリスト 同 (USGS。輝度のみの製品なので色は天体色を掛けた) /
+  //         冥王星 New Horizons (NASA) / ケレス・ベスタ Dawn (NASA/JPL)
   //   土星・天王星・海王星・パラス・ジュノーは実測の全球マップが存在しないためプロシージャル描画
   //
   //   画像は index.html と同じ場所の tex/ に置く外部ファイル。data URI で埋め込むと
@@ -4263,10 +4269,16 @@
     mars:    "mars.jpg",
     jupiter: "jupiter.jpg",
     io:      "io.jpg",
+    europa:   "europa.jpg",
+    ganymede: "ganymede.jpg",
+    callisto: "callisto.jpg",
     pluto:   "pluto.jpg",
     ceres:   "ceres.jpg",
     vesta:   "vesta.jpg",
   };
+  // 輝度だけの製品しか無く、色は天体色 (colA) を掛けて与えたもの。
+  // クレジットに「色は再現」と添えるために持つ
+  const MONO_TEX = new Set(["europa", "callisto"]);
   // 地表以外に地球だけが持つ2枚。天体のキーではないので TEXTURES とは分ける
   //   雲   Blue Marble: Clouds (NASA Earth Observatory) — 被覆率としてグレースケールで持つ
   //   夜景 Black Marble 2016 (NASA Earth Observatory) — 下地の海陸を落として街灯りだけ残した
@@ -7757,7 +7769,9 @@
         (d ? d.rows : body.rows).map(([kk, v]) => `<tr><td>${kk}</td><td>${v}</td></tr>`).join("");
       document.getElementById("infoFact").textContent = d ? d.fact : body.fact;
       const cr = IMG_CREDIT[body.key];
-      credEl.textContent = cr ? t.imgPrefix + cr : t.procTex;
+      credEl.textContent = cr
+        ? t.imgPrefix + cr + (MONO_TEX.has(body.key) ? t.monoTex : "")
+        : t.procTex;
     }
   }
   function openInfo(body) { currentInfoBody = body; renderInfoBody(); infoPanel.classList.add("open"); }
@@ -8830,7 +8844,8 @@
     if (!menuEl.contains(e.target) && e.target !== menuBtn) setMenu(false);
   });
 
-  const CREDIT_ORDER = ["mercury", "venus", "earth", "moon", "mars", "jupiter", "io", "pluto", "ceres", "vesta"];
+  const CREDIT_ORDER = ["mercury", "venus", "earth", "moon", "mars", "jupiter",
+    "io", "europa", "ganymede", "callisto", "pluto", "ceres", "vesta"];
   function buildAbout() {
     const rows = CREDIT_ORDER
       .map((k) => `<tr><td>${bName(BODY_BY_KEY.get(k))}</td><td>${IMG_CREDIT[k]}</td></tr>`)

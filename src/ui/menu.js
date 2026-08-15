@@ -304,7 +304,8 @@
     if (!menuEl.contains(e.target) && e.target !== menuBtn) setMenu(false);
   });
 
-  const CREDIT_ORDER = ["mercury", "venus", "earth", "moon", "mars", "jupiter", "io", "pluto", "ceres", "vesta"];
+  const CREDIT_ORDER = ["mercury", "venus", "earth", "moon", "mars", "jupiter",
+    "io", "europa", "ganymede", "callisto", "pluto", "ceres", "vesta"];
   function buildAbout() {
     const rows = CREDIT_ORDER
       .map((k) => `<tr><td>${bName(BODY_BY_KEY.get(k))}</td><td>${IMG_CREDIT[k]}</td></tr>`)

@@ -272,7 +272,9 @@
         (d ? d.rows : body.rows).map(([kk, v]) => `<tr><td>${kk}</td><td>${v}</td></tr>`).join("");
       document.getElementById("infoFact").textContent = d ? d.fact : body.fact;
       const cr = IMG_CREDIT[body.key];
-      credEl.textContent = cr ? t.imgPrefix + cr : t.procTex;
+      credEl.textContent = cr
+        ? t.imgPrefix + cr + (MONO_TEX.has(body.key) ? t.monoTex : "")
+        : t.procTex;
     }
   }
   function openInfo(body) { currentInfoBody = body; renderInfoBody(); infoPanel.classList.add("open"); }

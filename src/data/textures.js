@@ -1,8 +1,9 @@
   // ---------- 天体テクスチャ (パブリックドメインの実全球マップ) ----------
   //   出典: 水星 MESSENGER (USGS) / 金星 Magellan レーダー地形 (NASA) / 地球 Blue Marble (NASA) /
   //         月 LRO (NASA SVS) / 火星 Viking (USGS) / 木星 Cassini PIA07782 (NASA/JPL) /
-  //         イオ Voyager + Galileo SSI 合成 (USGS) / 冥王星 New Horizons (NASA) /
-  //         ケレス・ベスタ Dawn (NASA/JPL)
+  //         イオ・ガニメデ Voyager + Galileo SSI 合成 (USGS) /
+  //         エウロパ・カリスト 同 (USGS。輝度のみの製品なので色は天体色を掛けた) /
+  //         冥王星 New Horizons (NASA) / ケレス・ベスタ Dawn (NASA/JPL)
   //   土星・天王星・海王星・パラス・ジュノーは実測の全球マップが存在しないためプロシージャル描画
   //
   //   画像は index.html と同じ場所の tex/ に置く外部ファイル。data URI で埋め込むと
@@ -19,10 +20,16 @@
     mars:    "mars.jpg",
     jupiter: "jupiter.jpg",
     io:      "io.jpg",
+    europa:   "europa.jpg",
+    ganymede: "ganymede.jpg",
+    callisto: "callisto.jpg",
     pluto:   "pluto.jpg",
     ceres:   "ceres.jpg",
     vesta:   "vesta.jpg",
   };
+  // 輝度だけの製品しか無く、色は天体色 (colA) を掛けて与えたもの。
+  // クレジットに「色は再現」と添えるために持つ
+  const MONO_TEX = new Set(["europa", "callisto"]);
   // 地表以外に地球だけが持つ2枚。天体のキーではないので TEXTURES とは分ける
   //   雲   Blue Marble: Clouds (NASA Earth Observatory) — 被覆率としてグレースケールで持つ
   //   夜景 Black Marble 2016 (NASA Earth Observatory) — 下地の海陸を落として街灯りだけ残した
