@@ -209,6 +209,7 @@
     moon: "NASA/GSFC/Arizona State Univ. (LRO)",
     mars: "NASA/USGS (Viking)",
     jupiter: "NASA/JPL/Space Science Institute (Cassini)",
+    io: "NASA/JPL/USGS (Voyager, Galileo)",
     pluto: "NASA/JHUAPL/SwRI (New Horizons)",
     ceres: "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (Dawn)",
     vesta: "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (Dawn)",

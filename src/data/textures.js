@@ -1,7 +1,8 @@
   // ---------- 天体テクスチャ (パブリックドメインの実全球マップ) ----------
   //   出典: 水星 MESSENGER (USGS) / 金星 Magellan レーダー地形 (NASA) / 地球 Blue Marble (NASA) /
   //         月 LRO (NASA SVS) / 火星 Viking (USGS) / 木星 Cassini PIA07782 (NASA/JPL) /
-  //         冥王星 New Horizons (NASA) / ケレス・ベスタ Dawn (NASA/JPL)
+  //         イオ Voyager + Galileo SSI 合成 (USGS) / 冥王星 New Horizons (NASA) /
+  //         ケレス・ベスタ Dawn (NASA/JPL)
   //   土星・天王星・海王星・パラス・ジュノーは実測の全球マップが存在しないためプロシージャル描画
   //
   //   画像は index.html と同じ場所の tex/ に置く外部ファイル。data URI で埋め込むと
@@ -17,6 +18,7 @@
     moon:    "moon.jpg",
     mars:    "mars.jpg",
     jupiter: "jupiter.jpg",
+    io:      "io.jpg",
     pluto:   "pluto.jpg",
     ceres:   "ceres.jpg",
     vesta:   "vesta.jpg",
