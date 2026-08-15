@@ -225,10 +225,19 @@
           const a1 = mk(n0), a2 = mk([-n0[0], -n0[1], -n0[2]]);
           return vDot(a1.asym, uOut) >= vDot(a2.asym, uOut) ? a1 : a2;
         };
-        // miss は法線方向へ。法線は miss を入れる前の面から決めて一度だけ作り直す
+        // miss をずらす向き。法線は miss を入れる前の面から決めて一度だけ作り直す。
+        // roll は法線から面内へ倒す角 [度] で、そのまま「衛星のどこの上を通るか」
+        // になる (0 = 極の上、90 = 赤道の上)。どちらも via 天体の方向 P1 に
+        // 垂直なので、中心天体からの距離は変わらず離心率の逆算も崩れない
         const o0 = shape(P1);
         const m = h.via.miss || 0;
-        const o = shape([P1[0] + o0.n[0]*m, P1[1] + o0.n[1]*m, P1[2] + o0.n[2]*m]);
+        const rl = (h.via.roll || 0) * DEG;
+        const rHat = vUnit(P1);
+        const tHat = vCross(o0.n, rHat);        // 面内で P1 に垂直 (公転の進む向き)
+        const c = Math.cos(rl) * m, t = Math.sin(rl) * m;
+        const o = shape([P1[0] + o0.n[0]*c + tHat[0]*t,
+                         P1[1] + o0.n[1]*c + tHat[1]*t,
+                         P1[2] + o0.n[2]*c + tHat[2]*t]);
         return {
           body, tp, e, A, mu: h.mu, peri: o.peri, side: vCross(o.n, o.peri),
           ta: tp - h.span, tb: tp + h.span,
