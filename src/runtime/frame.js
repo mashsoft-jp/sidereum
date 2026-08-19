@@ -342,7 +342,7 @@
     gAlt += (gAltTgt - gAlt) * k;
     gFov += (gFovTgt - gFov) * k;
 
-    tourRideCam(dtc);     // ガイドツアー: 探査機視点のステップはカメラを直接置く
+    tourRideCam();     // ガイドツアー: 探査機視点のステップはカメラを直接置く
     render(now / 1000);
     bloomPass();          // 明るいところの滲み (シーンを描き終えてから)
     updateClock();
