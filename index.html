@@ -1652,6 +1652,11 @@
       rows: [["打ち上げ", "1977年9月5日"], ["木星最接近", "1979年3月5日"], ["土星最接近", "1980年11月12日"], ["現在", "太陽系の外 (星間空間)"]],
       fact: "人類が最も遠くへ送り出した探査機。1980年に土星とタイタンを観測したあと黄道面を離れ、2012年に太陽圏を抜けて星間空間に入りました。",
       col: [0.82, 0.85, 0.90], ph0: 0.0,
+      // 部位の塗り分け (モデル座標を axis に射影した値で 3色。cut が境目)。
+      // モデルは頂点位置しか持たないので、色はこの区切りだけで与える。
+      // 下から順に 下部の構体・ブーム類 / バス (金色の断熱材) / 高利得アンテナ
+      paint: { axis: [0, 1, 0], cut: [-0.20, -0.10],
+               c0: [0.21, 0.20, 0.18], c1: [0.54, 0.41, 0.18], c2: [0.85, 0.84, 0.81] },
       // 巡航中の位置は JPL HORIZONS の実軌道 (惑星の近くは下の hyp が受け持つので、
       // 最接近の前後10日は入れない)。木星までは60日おき、以降は間隔を広げる
       way: [
@@ -1733,6 +1738,8 @@
       rows: [["打ち上げ", "1977年8月20日"], ["木星最接近", "1979年7月9日"], ["土星最接近", "1981年8月25日"], ["天王星最接近", "1986年1月24日"], ["海王星最接近", "1989年8月25日"]],
       fact: "天王星と海王星を訪れた唯一の探査機。176年に一度の惑星配列を利用して、4つの巨大惑星を続けて回りました。",
       col: [0.78, 0.84, 0.92], ph0: 2.1,
+      paint: { axis: [0, 1, 0], cut: [-0.20, -0.10],
+               c0: [0.21, 0.20, 0.18], c1: [0.54, 0.41, 0.18], c2: [0.85, 0.84, 0.81] },
       // 巡航中の位置は JPL HORIZONS の実軌道 (1号と同じ扱い)
       way: [
         { d: "1977-08-20", at: "earth" },     // 打ち上げ
@@ -1869,6 +1876,9 @@
       rows: [["打ち上げ", "1997年10月15日"], ["土星到着", "2004年7月1日"], ["ホイヘンス降下", "2005年1月14日"], ["ミッション終了", "2017年9月15日"]],
       fact: "13年にわたり土星を周回した探査機。金星・地球・木星でスイングバイを重ねて土星に到達し、最後は土星の大気へ突入して観測を終えました。",
       col: [0.90, 0.86, 0.74], ph0: 4.2,
+      // カッシーニは皿が z の高い側。バスは金色の多層断熱材で覆われている
+      paint: { axis: [0, 0, 1], cut: [0.0, 0.20],
+               c0: [0.24, 0.22, 0.19], c1: [0.72, 0.53, 0.17], c2: [0.82, 0.82, 0.80] },
       // 土星に着くまでは JPL HORIZONS の実軌道。30日おきに取り、金星2回・地球・
       // 土星周回軌道への投入は最接近の前後90分を3分まで刻んで、曲がるところを残す
       // (木星は 970万km と遠いので時間おきでよい)
@@ -4329,15 +4339,23 @@
     attribute vec3 aPos;
     uniform mat4 uMVP, uModel;
     varying vec3 vW;
+    varying vec3 vL;
     void main() {
       vW = (uModel * vec4(aPos, 1.0)).xyz;
+      vL = aPos;
       gl_Position = uMVP * vec4(aPos, 1.0);
     }
 `;
   const meshFS = EXT_DERIV
     + PRE + `
     varying vec3 vW;
+    varying vec3 vL;
     uniform vec3 uSun, uCol;
+    // 機体の塗り分け。モデル座標を uAxis に射影した値で3色に分ける
+    // (皿・機体・その他)。テクスチャも頂点色も持たないモデルなので、
+    // 部位の色はこの区切りだけで与える
+    uniform vec3 uAxis, uC1, uC2;
+    uniform vec2 uCut;
     uniform float uFlat;   // 1 = 面の微分で法線を出せる (拡張が使える)
     void main() {
       // 法線は頂点に持たせず、面の微分から求める。機械物は面ごとの平坦
@@ -4348,7 +4366,14 @@
       vec3 l = normalize(uSun - vW);
       // 裏返っても暗くならないよう、法線の向きは絶対値で扱う
       float d = uFlat > 0.5 ? abs(dot(n, l)) : 1.0;
-      gl_FragColor = vec4(tonemap(srgbToLinear(uCol) * (0.28 + 0.85 * d)), 1.0);
+      float t = dot(vL, uAxis);
+      float hi = smoothstep(uCut.y - 0.02, uCut.y + 0.02, t);
+      vec3 mat = mix(uCol, uC1, smoothstep(uCut.x - 0.02, uCut.x + 0.02, t));
+      mat = mix(mat, uC2, hi);
+      // 皿より下で軸から離れたところ (ブームの先の機器・電源) は暗い側へ寄せる。
+      // ここを金色のままにすると、機体が金一色に見えてしまう
+      mat = mix(mat, uCol, smoothstep(0.26, 0.34, length(vL - uAxis * t)) * (1.0 - hi));
+      gl_FragColor = vec4(tonemap(srgbToLinear(mat) * (0.28 + 0.85 * d)), 1.0);
     }
 `;
 
@@ -7042,7 +7067,13 @@
           gl.uniformMatrix4fv(meshP.u.uMVP, false, mMul(VP, SCR.model, SCR.mvp));
           gl.uniformMatrix4fv(meshP.u.uModel, false, SCR.model);
           gl.uniform3f(meshP.u.uSun, -eye[0], -eye[1], -eye[2]);
-          gl.uniform3fv(meshP.u.uCol, pr.col);
+          // 塗り分け (無ければ全体を col 一色)
+          const pt = pr.paint;
+          gl.uniform3fv(meshP.u.uCol, pt ? pt.c0 : pr.col);
+          gl.uniform3fv(meshP.u.uC1, pt ? pt.c1 : pr.col);
+          gl.uniform3fv(meshP.u.uC2, pt ? pt.c2 : pr.col);
+          gl.uniform3fv(meshP.u.uAxis, pt ? pt.axis : ZERO3);
+          gl.uniform2f(meshP.u.uCut, pt ? pt.cut[0] : 9, pt ? pt.cut[1] : 9);
           gl.bindBuffer(gl.ARRAY_BUFFER, me.vb);
           gl.vertexAttribPointer(meshP.a.aPos, 3, gl.FLOAT, false, 0, 0);
           gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, me.ib);

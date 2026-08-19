@@ -317,7 +317,13 @@
           gl.uniformMatrix4fv(meshP.u.uMVP, false, mMul(VP, SCR.model, SCR.mvp));
           gl.uniformMatrix4fv(meshP.u.uModel, false, SCR.model);
           gl.uniform3f(meshP.u.uSun, -eye[0], -eye[1], -eye[2]);
-          gl.uniform3fv(meshP.u.uCol, pr.col);
+          // 塗り分け (無ければ全体を col 一色)
+          const pt = pr.paint;
+          gl.uniform3fv(meshP.u.uCol, pt ? pt.c0 : pr.col);
+          gl.uniform3fv(meshP.u.uC1, pt ? pt.c1 : pr.col);
+          gl.uniform3fv(meshP.u.uC2, pt ? pt.c2 : pr.col);
+          gl.uniform3fv(meshP.u.uAxis, pt ? pt.axis : ZERO3);
+          gl.uniform2f(meshP.u.uCut, pt ? pt.cut[0] : 9, pt ? pt.cut[1] : 9);
           gl.bindBuffer(gl.ARRAY_BUFFER, me.vb);
           gl.vertexAttribPointer(meshP.a.aPos, 3, gl.FLOAT, false, 0, 0);
           gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, me.ib);
