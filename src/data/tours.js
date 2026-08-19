@@ -924,7 +924,7 @@
     {
       id: "cassini",
       probe: "cassini",
-      ver: 2,
+      ver: 3,
       title: { ja: "カッシーニの土星", en: "Cassini at Saturn" },
       lead: {
         ja: "金星・地球・木星でスイングバイを重ねて土星へ。13年間の周回と、最後の突入までを辿ります。",
@@ -944,7 +944,7 @@
         },
         {
           sel: null, fit: 1.7, a: 0.6, y: 0.9, spot: "cassini", front: null, path: true,
-          spd: 25, play: true, until: "1999-08-18T02:00",
+          spd: 25, play: true, until: "1998-04-26T12:30",
           text: {
             ja: "金星を2回、そして地球を1回かすめます。すれ違うたびに惑星の公転運動を" +
                 "少しだけ借りて加速し、内側の太陽系で2年近くかけて外へ向かう勢いを溜めました。" +
@@ -952,6 +952,29 @@
             en: "Twice past Venus, then once past Earth. Each pass borrows a little of the planet's " +
                 "orbital motion, and over nearly two years in the inner Solar System it builds up " +
                 "the speed to head outward — which means starting off sunward.",
+          },
+        },
+        {
+          // 1回目の金星。高度 284km と、この旅でいちばん近い通過。
+          // 最接近 (13:51) まで回すと夜側へ回り込んで画が暗くなるので、
+          // 昼夜の境目にかかる 13:20 で止める
+          sel: "venus", ride: "venus", spot: null, mag: 1, orbits: false, path: false,
+          d: "1998-04-26T12:30", spd: 0.012, play: true, until: "1998-04-26T13:20",
+          text: {
+            ja: "1998年4月26日、最初のスイングバイは金星でした。高度 284km — " +
+                "厚い雲のすぐ上をかすめて、金星の公転運動から速度をもらいます。",
+            en: "26 April 1998: the first swing-by was Venus. It skimmed 284 km above the thick " +
+                "clouds, taking speed from the planet's own motion around the Sun.",
+          },
+        },
+        {
+          sel: null, ride: null, fit: 1.7, a: 0.6, y: 0.9, spot: "cassini", path: true,
+          d: "1998-04-26T13:20", spd: 25, play: true, until: "1999-08-18T02:00",
+          text: {
+            ja: "1年2か月かけて金星へ戻り、もう一度かすめます。その2か月後、" +
+                "今度は地球へ。",
+            en: "Fourteen months later it swings past Venus a second time, and two months " +
+                "after that it comes back to Earth.",
           },
         },
         {
