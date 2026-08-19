@@ -445,6 +445,30 @@
   // 位置を主にすれば、探査機に乗ったままの回はカメラが 1mm も動かない。
   //
   // 追いついたら以後は完全一致させ、最接近付近でも遅れが出ないようにする
+  // 目標に対する機体の進行方向 (world)。フライバイで軌道が曲がる向きを知るために、
+  // 前後の時刻の位置差から求める (再生が止まっていても値は決まる)
+  const RIDE_H = 0.002;      // 差分に使う時間幅 [日] ≒ 3分
+  const _rv = [[0,0,0],[0,0,0],[0,0,0],[0,0,0]];
+  function rideVel(pr, tb, out) {
+    for (let i = 0; i < 2; i++) {
+      const t = simDays + (i ? RIDE_H : -RIDE_H);
+      if (!probeAU(pr, t, _rv[0])) return null;
+      toWorld(_rv[0], _rv[i * 2]);
+      toWorld(wayAU(tb.key, t, _rv[1]), _rv[i * 2 + 1]);
+      _rv[i * 2][0] -= _rv[i * 2 + 1][0];
+      _rv[i * 2][1] -= _rv[i * 2 + 1][1];
+      _rv[i * 2][2] -= _rv[i * 2 + 1][2];
+    }
+    out[0] = _rv[2][0] - _rv[0][0];
+    out[1] = _rv[2][1] - _rv[0][1];
+    out[2] = _rv[2][2] - _rv[0][2];
+    const l = Math.hypot(out[0], out[1], out[2]);
+    if (l < 1e-18) return null;
+    out[0] /= l; out[1] /= l; out[2] /= l;
+    return out;
+  }
+  const _rq = [0, 0, 0];
+
   function tourRideCam(dt) {
     if (!tourRide || groundView) { tourRideMag = 1; return; }
     const pr = tourProbe ? BODY_BY_KEY.get(tourProbe) : null;
@@ -465,17 +489,33 @@
     const rl = Math.hypot(rx, rz) || 1;
     rx /= rl; rz /= rl;
     const ux = ry * bz - rz * by, uy = rz * bx - rx * bz, uz = rx * by - ry * bx;
+    // 画面上で機体をどこに置くか (視線からのずらし)。基準は少し左上 — 下は
+    // ナレーションバーで隠れる。そこへ「進行方向」ぶんを足すと、軌道が曲がる
+    // フライバイでは機体が惑星の脇へ回り込んでいく動きが画に出る (遠くを直進
+    // しているうちは進行方向が目標を向いていて、この項は効かない)。
+    // 履歴ではなく現在の位置関係だけで決まるので、時計が止まればカメラも止まる
     const off = Math.tan(eFov() * 0.5 * 0.42);
-    const sx = off * 0.82, sy = off * 0.57;
+    let lx = -off * 0.80 * rx + off * 0.55 * ux;
+    let ly =                    off * 0.55 * uy;
+    let lz = -off * 0.80 * rz + off * 0.55 * uz;
+    if (rideVel(pr, tb, _rq)) {
+      const vb = _rq[0] * bx + _rq[1] * by + _rq[2] * bz;
+      lx += (_rq[0] - bx * vb) * off * 1.2;
+      ly += (_rq[1] - by * vb) * off * 1.2;
+      lz += (_rq[2] - bz * vb) * off * 1.2;
+    }
+    // 画面の外へ出ないよう頭打ち (実効画角の 2/3 まで)
+    const ll = Math.hypot(lx, ly, lz), lim = off * 1.6;
+    if (ll > lim) { const s2 = lim / ll; lx *= s2; ly *= s2; lz *= s2; }
     // 目標に近づくほど機体を大きく描く。物理的に正しい追走 (機体の見かけは一定で
     // 惑星だけが育つ) は、画としては動きが乏しい。開始時の距離を基準に、寄って
     // いくカメラのように機体を最大 3.2倍まで大きくする。離れ始めれば戻る
     tourRideMag = tourRideRef > 0
       ? Math.min(3.2, Math.max(1, Math.sqrt(tourRideRef / bd))) : 1;
     const back = bd * 0.06;
-    const e = [p[0] + back * (bx + sx * rx + sy * ux),
-               p[1] + back * (by + sy * uy),
-               p[2] + back * (bz + sx * rz + sy * uz)];
+    const e = [p[0] + back * (bx - lx),
+               p[1] + back * (by - ly),
+               p[2] + back * (bz - lz)];
     const dx = e[0] - f[0], dy = e[1] - f[1], dz = e[2] - f[2];
     const d = Math.hypot(dx, dy, dz);
     // 直前のカメラ位置から始める (cam.pos は前フレームの実際の視点。パンの分も
