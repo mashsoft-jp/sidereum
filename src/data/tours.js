@@ -10,7 +10,9 @@
   //   dLocal 観測地の平均太陽時での日時。「現地の何時の空か」を揃えたい地上ビュー
   //         のステップに使う (UTC 固定だと観測地の経度によっては昼になる)
   //   sel   選択天体のキー。null で選択解除 (注視点は太陽へ)
-  //   fit   この軌道半径 [au] が画面に収まる距離にする (画角と縦横比から算出)
+  //   fit   この軌道半径 [au] が画面に収まる距離にする (画角と縦横比から算出)。
+  //         目的地の軌道を写す回は、軌道半径の 1.25倍ほどを渡す — ぴったりの
+  //         値だと軌道の輪も惑星の名前も画面の端に貼りつく
   //   km    選択天体からの距離 [km]
   //   z     カメラ距離 [world]。km / fit / z は後から書いたものだけが効く
   //   mag   ズーム倍率   a 俯角 [rad]   y 方位 [rad]
@@ -642,7 +644,7 @@
           },
         },
         {
-          sel: null, fit: 6, a: 0.5, y: 0.9, spot: "voyager1", front: null, path: true,
+          sel: null, fit: 6.6, a: 0.5, y: 0.9, spot: "voyager1", front: null, path: true,
           spd: 45, play: true, until: "1979-03-03",
           text: {
             ja: "火星軌道を越え、小惑星帯を抜けて木星へ。18か月の巡航です。" +
@@ -684,7 +686,7 @@
         },
         {
           // 引きの画に戻して土星系まで運ぶ。着いたら自動で次 (探査機視点) へ
-          sel: null, ride: null, fit: 11, a: 0.5, y: 0.9, mag: 1, orbits: true, path: true,
+          sel: null, ride: null, fit: 12, a: 0.5, y: 0.9, mag: 1, orbits: true, path: true,
           spot: "voyager1", d: "1979-03-05T15:50",
           spd: 55, play: true, until: "1980-11-11T23:41",
           text: {
@@ -742,7 +744,7 @@
           },
         },
         {
-          sel: "voyager1", ride: null, mag: 1, spot: null, orbits: true, fit: 130, a: 0.9, y: 0.9,
+          sel: "voyager1", ride: null, mag: 1, spot: null, orbits: true, fit: 150, a: 0.9, y: 0.9,
           path: true, spd: 400, play: true, until: "2012-08-25",
           text: {
             ja: "そのまま外へ。2012年8月25日、太陽風が星間物質に押し返される境界 " +
@@ -798,7 +800,7 @@
           },
         },
         {
-          sel: null, fit: 6, a: 0.5, y: 0.9, spot: "voyager2", front: null, path: true,
+          sel: null, fit: 6.6, a: 0.5, y: 0.9, spot: "voyager2", front: null, path: true,
           spd: 62, play: true, until: "1979-07-07",
           text: {
             ja: "まずは木星へ、22か月の巡航です。惑星のそばを通るたびに進路を曲げてもらい、" +
@@ -821,7 +823,7 @@
           },
         },
         {
-          sel: null, ride: null, fit: 11, a: 0.5, y: 0.9, mag: 1, orbits: true, path: true,
+          sel: null, ride: null, fit: 12, a: 0.5, y: 0.9, mag: 1, orbits: true, path: true,
           spot: "voyager2", d: "1979-07-10T10:00",
           spd: 70, play: true, until: "1981-08-24T03:24",
           text: {
@@ -844,7 +846,7 @@
           },
         },
         {
-          sel: null, ride: null, fit: 21, a: 0.5, y: 0.9, mag: 1, orbits: true, path: true,
+          sel: null, ride: null, fit: 24, a: 0.5, y: 0.9, mag: 1, orbits: true, path: true,
           spot: "voyager2", d: "1981-08-26T09:24",
           spd: 145, play: true, until: "1986-01-23T18:00",
           text: {
@@ -868,8 +870,6 @@
           },
         },
         {
-          // 海王星の軌道 (30 au) を fit ぴったりに合わせると画面の端に貼りつくので、
-          // 少し余裕をとる
           sel: null, ride: null, fit: 38, a: 0.5, y: 0.9, mag: 1, orbits: true, path: true,
           spot: "voyager2", d: "1986-01-25",
           spd: 120, play: true, until: "1989-08-24T22:00",
@@ -896,7 +896,7 @@
         },
         {
           sel: "voyager2", ride: null, mag: 1, spot: null, orbits: true,
-          fit: 130, a: 0.9, y: 0.9, path: true, d: "1989-08-25T09:56",
+          fit: 150, a: 0.9, y: 0.9, path: true, d: "1989-08-25T09:56",
           spd: 800, play: true, until: "2018-11-05",
           text: {
             ja: "海王星の重力で黄道面の下へ押し出され、そのまま南へ抜けていきます。" +
@@ -906,7 +906,7 @@
           },
         },
         {
-          sel: null, fit: 32, a: 1.15, y: 1.4, play: false, spot: null, mag: 1,
+          sel: null, fit: 38, a: 1.15, y: 1.4, play: false, spot: null, mag: 1,
           d: "2018-11-05",
           text: {
             ja: "12年で4つの惑星。この並びが次に揃うのは 2150年代です。" +
@@ -967,7 +967,7 @@
           },
         },
         {
-          sel: null, ride: null, fit: 5.6, a: 0.55, y: 0.9, mag: 1, orbits: true, path: true,
+          sel: null, ride: null, fit: 6.6, a: 0.55, y: 0.9, mag: 1, orbits: true, path: true,
           spot: "cassini", d: "1999-08-18T03:24",
           spd: 60, play: true, until: "2000-12-30T10:05",
           text: {
@@ -990,7 +990,7 @@
           },
         },
         {
-          sel: null, ride: null, fit: 10.5, a: 0.55, y: 0.9, mag: 1, orbits: true, path: true,
+          sel: null, ride: null, fit: 12, a: 0.55, y: 0.9, mag: 1, orbits: true, path: true,
           spot: "cassini", d: "2000-12-30T10:05",
           spd: 130, play: true, until: "2004-06-20",
           text: {
@@ -1039,7 +1039,7 @@
           },
         },
         {
-          sel: null, fit: 11, a: 0.85, y: 1.2, play: false, spot: null, mag: 1,
+          sel: null, fit: 12, a: 0.85, y: 1.2, play: false, spot: null, mag: 1,
           d: "2017-09-15", path: true,
           text: {
             ja: "たどってきた道のりです。太陽の方へ3回落ちてから外へ — " +
