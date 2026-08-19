@@ -12,10 +12,10 @@
     return best;
   }
 
-  // 探査機を描くか。乗っている機体 (カメラ位置) と、カメラが寄っている最中は出さない
+  // 探査機を描くか。カメラが寄っている最中だけ出さない (探査機視点でも、カメラは
+  // 機体の後方にあるので機体は描く)
   const probeVisible = (pr) =>
-    pr.live && (!tourProbe || pr.key === tourProbe) &&
-    !(tourRide && pr.key === tourProbe) && !tourProbeHold;
+    pr.live && (!tourProbe || pr.key === tourProbe) && !tourProbeHold;
 
   function render(nowSec) {
     if (groundView) { renderGround(nowSec); return; }

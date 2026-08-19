@@ -6732,10 +6732,10 @@
     return best;
   }
 
-  // 探査機を描くか。乗っている機体 (カメラ位置) と、カメラが寄っている最中は出さない
+  // 探査機を描くか。カメラが寄っている最中だけ出さない (探査機視点でも、カメラは
+  // 機体の後方にあるので機体は描く)
   const probeVisible = (pr) =>
-    pr.live && (!tourProbe || pr.key === tourProbe) &&
-    !(tourRide && pr.key === tourProbe) && !tourProbeHold;
+    pr.live && (!tourProbe || pr.key === tourProbe) && !tourProbeHold;
 
   function render(nowSec) {
     if (groundView) { renderGround(nowSec); return; }
@@ -9859,6 +9859,9 @@
   //
   // カメラは (注視点 + 距離 + 角度) で持っているが、ここで緩和させるのは
   // 「カメラの位置」と「向き・距離」で、注視点はそこから逆算する。
+  // 探査機視点のカメラ。機体そのものではなく、機体の少し後方に置く (機体が
+  // 前景に入り、どこから何を見ているのかが画で分かる)。
+  //
   // 注視点を直接緩和すると、乗ったまま別の天体へ向き直るとき (タイタン → 土星)
   // に注視点だけが 120万km 先へ飛び、距離が古いままなのでカメラが一瞬ワープする。
   // 位置を主にすれば、探査機に乗ったままの回はカメラが 1mm も動かない。
@@ -9869,10 +9872,29 @@
     const pr = tourProbe ? BODY_BY_KEY.get(tourProbe) : null;
     const tb = BODY_BY_KEY.get(tourRide);
     if (!pr || !tb || !pr.live) return;
-    const e = posW.get(pr.key), f = posW.get(tb.key);
+    const p = posW.get(pr.key), f = posW.get(tb.key);
+    let bx = p[0] - f[0], by = p[1] - f[1], bz = p[2] - f[2];
+    const bd = Math.hypot(bx, by, bz);
+    if (bd < 1e-12) return;
+    bx /= bd; by /= bd; bz /= bd;          // 目標 → 機体 の向き
+    // 機体の少し後方、やや右上へ引いた視点。機体が前景に入り、目標は中央に残る。
+    // 引く量は目標までの距離に比例させるので、どの場面でも同じ構図になる。
+    // 6% は近クリップ面 (カメラ距離の 2%) より手前に機体が来ないための下限も
+    // 兼ねている — 2%前後だと機体がクリップされて消える。
+    // 横と上へのずらしは実効画角に対する割合で決める — 望遠 (mag) の回で
+    // 機体が画面の外へ出ないようにするため
+    let rx = -bz, ry = 0, rz = bx;         // b × 上 (画面の右方向)
+    const rl = Math.hypot(rx, rz) || 1;
+    rx /= rl; rz /= rl;
+    const ux = ry * bz - rz * by, uy = rz * bx - rx * bz, uz = rx * by - ry * bx;
+    const off = Math.tan(eFov() * 0.5 * 0.42);
+    const sx = off * 0.82, sy = off * 0.57;
+    const back = bd * 0.06;
+    const e = [p[0] + back * (bx + sx * rx + sy * ux),
+               p[1] + back * (by + sy * uy),
+               p[2] + back * (bz + sx * rz + sy * uz)];
     const dx = e[0] - f[0], dy = e[1] - f[1], dz = e[2] - f[2];
     const d = Math.hypot(dx, dy, dz);
-    if (d < 1e-12) return;
     // 直前のカメラ位置から始める (cam.pos は前フレームの実際の視点。パンの分も
     // 入っているので、ここを起点にすればパンを 0 に戻しても視点は跳ねない)
     if (!tourRideEye) tourRideEye = [cam.pos[0], cam.pos[1], cam.pos[2]];
