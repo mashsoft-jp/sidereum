@@ -36,6 +36,9 @@
   let tourHiEls = [];         // ハイライト中の要素 (hi は複数指定できる)
   let tourSceneDone = false;  // このツアーでシーンを一度でも適用したか
   let tourUntil = null;       // 早送りステップの停止日時 (simDays)
+  // 探査機視点の寄り。機体は記号として一定の画素数で描くので、寄せたぶんだけ
+  // 天体だけが大きくなり、機体との大小の差が実物の比に近づく
+  const RIDE_ZOOM = 2;
 
   const tourText = (o) => (o ? (lang === "ja" ? o.ja : o.en) : "");
 
@@ -363,8 +366,9 @@
       }
     }
     // ride のステップはカメラを tourRideCam が毎フレーム決める。ここで目標を
-    // 書き換えると、次のフレームの緩和が先に効いてカメラが一瞬飛んでしまう
-    if (s.ride) return;
+    // 書き換えると、次のフレームの緩和が先に効いてカメラが一瞬飛んでしまう。
+    // 倍率だけは決めておく — ステップの mag ではなく一律 RIDE_ZOOM で寄せる
+    if (s.ride) { camZoom = camZoomTgt = RIDE_ZOOM; return; }
     // fit は俯角を使って距離を出すので、角度を先に確定させる
     if (isFinite(s.a)) cam.pitchTgt = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, s.a));
     if (isFinite(s.y)) cam.yawTgt = s.y;
@@ -501,8 +505,10 @@
     // 目標に近づくほど機体を大きく描く。物理的に正しい追走 (機体の見かけは一定で
     // 惑星だけが育つ) は、画としては動きが乏しい。開始時の距離を基準に、寄って
     // いくカメラのように機体を最大 3.2倍まで大きくする。離れ始めれば戻る
-    tourRideMag = tourRideRef > 0
-      ? Math.min(3.2, Math.max(1, Math.sqrt(tourRideRef / bd))) : 1;
+    // RIDE_ZOOM で割るのは、寄せたぶんまで機体が大きくならないようにするため
+    // (機体の画素数は camZoom に比例する)。天体だけが RIDE_ZOOM 倍になる
+    tourRideMag = (tourRideRef > 0
+      ? Math.min(3.2, Math.max(1, Math.sqrt(tourRideRef / bd))) : 1) / RIDE_ZOOM;
     const back = bd * 0.06;
     const e = [p[0] + back * (bx - lx),
                p[1] + back * (by - ly),
