@@ -27,6 +27,8 @@
   let tourRideEye = null;
   // カメラが目標に落ち着くまで探査機を出さない (寄っている最中は隠す)
   let tourProbeHold = false;
+  // 探査機モデルの回転角 [rad]。再生中だけ進めるので、時計を止めれば機体も止まる
+  let probeSpin = 0;
   // 探査機の軌跡 (通過済みは濃く、未通過は淡く) を描くか
   let tourPath = false;
   const FOV = 45 * DEG;

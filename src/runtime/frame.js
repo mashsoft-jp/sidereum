@@ -252,7 +252,20 @@
     // シミュレーション時刻は「実経過時間 × 再生速度」の連続関数にする。
     // タブ非表示中は rAF が止まるが、復帰フレームで隠れていた時間ぶんを
     // 一括で進める (クランプすると 1秒=1秒 でも時計が現実から遅れていく)
-    if (playing) simDays += daysPerSec * raw;
+    if (playing) {
+      let adv = daysPerSec * raw;
+      // ツアーの早送りは、指定日時でいきなり止めずに手前から落として着地させる。
+      // 残り時間が窓 (今の速さで 1.2秒ぶん) を切ったら √ で減速 — 減速度が一定に
+      // なるので、止まる瞬間だけが急にならない
+      if (tourUntil !== null) {
+        const win = daysPerSec * 1.2, rem = tourUntil - simDays;
+        if (rem > 0 && rem < win) adv *= Math.max(0.02, Math.sqrt(rem / win));
+      }
+      simDays += adv;
+    }
+    // 探査機のモデルはゆっくり回して立体だと分かるようにしているが、回し続けると
+    // 時計を止めた場面でも機体だけが動いてしまう。再生中だけ進める
+    if (playing) probeSpin += dtc * 0.10;
 
     if (selected && followKey === selected.key) {
       const t = posW.get(selected.key);

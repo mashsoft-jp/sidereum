@@ -4997,6 +4997,8 @@
   let tourRideEye = null;
   // カメラが目標に落ち着くまで探査機を出さない (寄っている最中は隠す)
   let tourProbeHold = false;
+  // 探査機モデルの回転角 [rad]。再生中だけ進めるので、時計を止めれば機体も止まる
+  let probeSpin = 0;
   // 探査機の軌跡 (通過済みは濃く、未通過は淡く) を描くか
   let tourPath = false;
   const FOV = 45 * DEG;
@@ -7035,7 +7037,7 @@
           SCR.t[0] = t[0] - eye[0]; SCR.t[1] = t[1] - eye[1]; SCR.t[2] = t[2] - eye[2];
           const d = Math.hypot(SCR.t[0], SCR.t[1], SCR.t[2]) || 1;
           const r = d * pr.px / mfpx;
-          mRotY(nowSec * 0.10 + pr.ph0, SCR.ry);      // ゆっくり回して立体だと分かるように
+          mRotY(probeSpin + pr.ph0, SCR.ry);      // ゆっくり回して立体だと分かるように
           mTRS(SCR.t, SCR.ry, r, SCR.model);
           gl.uniformMatrix4fv(meshP.u.uMVP, false, mMul(VP, SCR.model, SCR.mvp));
           gl.uniformMatrix4fv(meshP.u.uModel, false, SCR.model);
@@ -7703,7 +7705,20 @@
     // シミュレーション時刻は「実経過時間 × 再生速度」の連続関数にする。
     // タブ非表示中は rAF が止まるが、復帰フレームで隠れていた時間ぶんを
     // 一括で進める (クランプすると 1秒=1秒 でも時計が現実から遅れていく)
-    if (playing) simDays += daysPerSec * raw;
+    if (playing) {
+      let adv = daysPerSec * raw;
+      // ツアーの早送りは、指定日時でいきなり止めずに手前から落として着地させる。
+      // 残り時間が窓 (今の速さで 1.2秒ぶん) を切ったら √ で減速 — 減速度が一定に
+      // なるので、止まる瞬間だけが急にならない
+      if (tourUntil !== null) {
+        const win = daysPerSec * 1.2, rem = tourUntil - simDays;
+        if (rem > 0 && rem < win) adv *= Math.max(0.02, Math.sqrt(rem / win));
+      }
+      simDays += adv;
+    }
+    // 探査機のモデルはゆっくり回して立体だと分かるようにしているが、回し続けると
+    // 時計を止めた場面でも機体だけが動いてしまう。再生中だけ進める
+    if (playing) probeSpin += dtc * 0.10;
 
     if (selected && followKey === selected.key) {
       const t = posW.get(selected.key);

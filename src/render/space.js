@@ -312,7 +312,7 @@
           SCR.t[0] = t[0] - eye[0]; SCR.t[1] = t[1] - eye[1]; SCR.t[2] = t[2] - eye[2];
           const d = Math.hypot(SCR.t[0], SCR.t[1], SCR.t[2]) || 1;
           const r = d * pr.px / mfpx;
-          mRotY(nowSec * 0.10 + pr.ph0, SCR.ry);      // ゆっくり回して立体だと分かるように
+          mRotY(probeSpin + pr.ph0, SCR.ry);      // ゆっくり回して立体だと分かるように
           mTRS(SCR.t, SCR.ry, r, SCR.model);
           gl.uniformMatrix4fv(meshP.u.uMVP, false, mMul(VP, SCR.model, SCR.mvp));
           gl.uniformMatrix4fv(meshP.u.uModel, false, SCR.model);
