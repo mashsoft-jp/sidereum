@@ -4990,6 +4990,9 @@
   // 近づくほど見かけの変化が速くなるので、開始時の距離を基準に再生速度を落とす
   let tourRide = null;
   let tourRideRef = 0, tourRideSpd = 0;
+  // 探査機視点で機体を描く倍率。目標に近づくほどカメラが機体へ寄っていく見せ方に
+  // するために、開始時の距離を基準として大きくする (1 = 等倍)
+  let tourRideMag = 1;
   // 探査機視点の補間はカメラ位置を主にする (注視点はそこから逆算する)
   let tourRideEye = null;
   // カメラが目標に落ち着くまで探査機を出さない (寄っている最中は隠す)
@@ -7009,7 +7012,10 @@
         const t = posW.get(pr.key);
         const dx = t[0] - eye[0], dy = t[1] - eye[1], dz = t[2] - eye[2];
         // camZoom を掛けるので見かけの角度が一定になる = 拡大すれば大きく見える
-        const px = PROBE_PX * camZoom * Math.min(1, near / (Math.hypot(dx, dy, dz) || 1));
+        // 探査機視点で乗っている機体だけ、近づくほど大きく描く (tourRideMag)
+        const rideMag = tourRide && pr.key === tourProbe ? tourRideMag : 1;
+        const px = PROBE_PX * camZoom * rideMag *
+                   Math.min(1, near / (Math.hypot(dx, dy, dz) || 1));
         if (px < 3) continue;
         pr.px = px;
         any = true;
@@ -9868,7 +9874,7 @@
   //
   // 追いついたら以後は完全一致させ、最接近付近でも遅れが出ないようにする
   function tourRideCam(dt) {
-    if (!tourRide || groundView) return;
+    if (!tourRide || groundView) { tourRideMag = 1; return; }
     const pr = tourProbe ? BODY_BY_KEY.get(tourProbe) : null;
     const tb = BODY_BY_KEY.get(tourRide);
     if (!pr || !tb || !pr.live) return;
@@ -9889,6 +9895,11 @@
     const ux = ry * bz - rz * by, uy = rz * bx - rx * bz, uz = rx * by - ry * bx;
     const off = Math.tan(eFov() * 0.5 * 0.42);
     const sx = off * 0.82, sy = off * 0.57;
+    // 目標に近づくほど機体を大きく描く。物理的に正しい追走 (機体の見かけは一定で
+    // 惑星だけが育つ) は、画としては動きが乏しい。開始時の距離を基準に、寄って
+    // いくカメラのように機体を最大 3.2倍まで大きくする。離れ始めれば戻る
+    tourRideMag = tourRideRef > 0
+      ? Math.min(3.2, Math.max(1, Math.sqrt(tourRideRef / bd))) : 1;
     const back = bd * 0.06;
     const e = [p[0] + back * (bx + sx * rx + sy * ux),
                p[1] + back * (by + sy * uy),
@@ -10081,6 +10092,7 @@
     tourRideFly = false;
     tourRideLock = false;
     tourRideTurn = 0;
+    tourRideMag = 1;
     tourProbeHold = false;
     tourRideEye = null;
     const keepScene = !!(tour && tour.keep);

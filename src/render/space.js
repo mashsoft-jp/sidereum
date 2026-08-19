@@ -289,7 +289,10 @@
         const t = posW.get(pr.key);
         const dx = t[0] - eye[0], dy = t[1] - eye[1], dz = t[2] - eye[2];
         // camZoom を掛けるので見かけの角度が一定になる = 拡大すれば大きく見える
-        const px = PROBE_PX * camZoom * Math.min(1, near / (Math.hypot(dx, dy, dz) || 1));
+        // 探査機視点で乗っている機体だけ、近づくほど大きく描く (tourRideMag)
+        const rideMag = tourRide && pr.key === tourProbe ? tourRideMag : 1;
+        const px = PROBE_PX * camZoom * rideMag *
+                   Math.min(1, near / (Math.hypot(dx, dy, dz) || 1));
         if (px < 3) continue;
         pr.px = px;
         any = true;

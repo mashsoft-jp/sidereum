@@ -446,7 +446,7 @@
   //
   // 追いついたら以後は完全一致させ、最接近付近でも遅れが出ないようにする
   function tourRideCam(dt) {
-    if (!tourRide || groundView) return;
+    if (!tourRide || groundView) { tourRideMag = 1; return; }
     const pr = tourProbe ? BODY_BY_KEY.get(tourProbe) : null;
     const tb = BODY_BY_KEY.get(tourRide);
     if (!pr || !tb || !pr.live) return;
@@ -467,6 +467,11 @@
     const ux = ry * bz - rz * by, uy = rz * bx - rx * bz, uz = rx * by - ry * bx;
     const off = Math.tan(eFov() * 0.5 * 0.42);
     const sx = off * 0.82, sy = off * 0.57;
+    // 目標に近づくほど機体を大きく描く。物理的に正しい追走 (機体の見かけは一定で
+    // 惑星だけが育つ) は、画としては動きが乏しい。開始時の距離を基準に、寄って
+    // いくカメラのように機体を最大 3.2倍まで大きくする。離れ始めれば戻る
+    tourRideMag = tourRideRef > 0
+      ? Math.min(3.2, Math.max(1, Math.sqrt(tourRideRef / bd))) : 1;
     const back = bd * 0.06;
     const e = [p[0] + back * (bx + sx * rx + sy * ux),
                p[1] + back * (by + sy * uy),
@@ -659,6 +664,7 @@
     tourRideFly = false;
     tourRideLock = false;
     tourRideTurn = 0;
+    tourRideMag = 1;
     tourProbeHold = false;
     tourRideEye = null;
     const keepScene = !!(tour && tour.keep);
