@@ -21,6 +21,7 @@
   //   apart 中心天体とこの天体が画面上で重ならない向きへ回り込む (lit より優先)
   //   front この天体が中心天体の手前に重なる向きへ回り込む (apart の逆)。
   //         km をこの天体までの距離より大きくすると、円盤を背に小さく写る
+  //   on    その回に乗る機体 (既定はツアーの主役)。分離した子機に乗り換えるとき
   //   ride  探査機ツアー専用。カメラを機体の少し後方に置き、この天体を見続ける。
   //         sel・km・角度の指定より優先する (毎フレーム計算し直す)。mag は
   //         寄りの倍率として効く (探査機視点は既定でも 2倍に寄せて撮る)
@@ -60,7 +61,8 @@
   //
   // ツアー単位:
   //   platform "touch" | "desktop" — 一覧に出す端末。未指定は常に出す
-  //   probe    探査機ツアー。この1機だけを描き、他機は隠す
+  //   probe    探査機ツアー。ここに挙げた機体だけを描き、他機は隠す。
+  //            配列も書ける (先頭が主役 = 既定で乗る機体)
   //   keep     true なら終了時にシーンを戻さない
   //   ver      内容の版 (既定 1)。中身を直したらここを +1 する。視聴済みの記録
   //            (localStorage の ssTourSeen) より新しいと、一覧で未視聴側へ戻り
@@ -923,8 +925,8 @@
     },
     {
       id: "cassini",
-      probe: "cassini",
-      ver: 3,
+      probe: ["cassini", "huygens"],
+      ver: 4,
       title: { ja: "カッシーニの土星", en: "Cassini at Saturn" },
       lead: {
         ja: "金星・地球・木星でスイングバイを重ねて土星へ。13年間の周回と、最後の突入までを辿ります。",
@@ -1036,19 +1038,30 @@
           },
         },
         {
-          sel: "titan", ride: null, km: 40000, lit: true, apart: null, mag: 1,
-          d: "2005-01-14", play: false, orbits: false,
+          sel: "cassini", ride: null, km: 400000, lit: true, apart: null, front: null, mag: 1,
+          spot: "huygens", d: "2004-12-25", orbits: false, path: false,
+          spd: 0.5, play: true, until: "2004-12-28",
           text: {
-            ja: "2005年1月14日、切り離された小型機ホイヘンスがタイタンの厚い大気を降下し、" +
-                "地表に着陸しました。外惑星系での着陸はこれが唯一です。" +
-                "液体メタンが流れた跡のある、石ころだらけの河原が写っていました。",
-            en: "14 January 2005: the Huygens probe parachuted through Titan's thick atmosphere and " +
-                "landed — still the only landing in the outer Solar System. It photographed a rounded, " +
-                "pebble-strewn floodplain carved by liquid methane.",
+            ja: "2004年12月25日、カッシーニは小型機ホイヘンスを切り離しました。" +
+                "直径2.7mの円盤は電池だけを積み、20日かけてタイタンへ落ちていきます。",
+            en: "25 December 2004: Cassini released the Huygens probe. The 2.7-metre saucer, " +
+                "running on batteries alone, began a twenty-day fall toward Titan.",
           },
         },
         {
-          sel: "saturn", km: 420000, lit: true, orbits: false, path: true,
+          sel: "titan", ride: "titan", on: "huygens", spot: null, mag: 1,
+          d: "2005-01-14T04:00", spd: 0.09, play: true, until: "2005-01-14T11:38",
+          text: {
+            ja: "2005年1月14日、ホイヘンスはタイタンの厚い大気に突入。" +
+                "パラシュートで2時間27分かけて降り、地表に着陸しました。外惑星系での着陸はこれが唯一です。" +
+                "液体メタンが流れた跡のある、石ころだらけの河原が写っていました。",
+            en: "14 January 2005: Huygens entered Titan's thick atmosphere and parachuted down for " +
+                "two hours and 27 minutes to land — still the only landing in the outer Solar System. " +
+                "It photographed a rounded, pebble-strewn floodplain carved by liquid methane.",
+          },
+        },
+        {
+          sel: "saturn", ride: null, on: null, km: 420000, lit: true, orbits: false, path: true,
           spd: 90, play: true, until: "2017-09-15",
           text: {
             ja: "13年の周回。エンケラドスの氷の裂け目から水が噴き出しているのを見つけ、" +

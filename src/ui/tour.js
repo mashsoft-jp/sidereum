@@ -299,6 +299,7 @@
     // まま次の天体へ向き直る回 (タイタン → 土星) は止めずに飛び続けさせる
     tourProbeHold = !!s.probeIn;
     tourRide = s.ride || null;
+    tourRideOn = s.on || tourProbe;      // その回に乗る機体 (既定は主役)
     tourPath = !!s.path;
     tourTouched = false;
     tourResumeBtn.hidden = true;
@@ -352,8 +353,8 @@
     // 探査機視点の減速に使う基準距離 (このステップの開始時点の距離)
     tourRideSpd = 0;
     tourRideRef = 0;
-    if (s.ride && tourProbe && isFinite(s.spd)) {
-      const e = posW.get(tourProbe), f = posW.get(s.ride);
+    if (s.ride && tourRideOn && isFinite(s.spd)) {
+      const e = posW.get(tourRideOn), f = posW.get(s.ride);
       tourRideRef = Math.hypot(e[0] - f[0], e[1] - f[1], e[2] - f[2]);
       tourRideSpd = s.spd;
     }
@@ -473,7 +474,7 @@
 
   function tourRideCam() {
     if (!tourRide || groundView) { tourRideMag = 1; return; }
-    const pr = tourProbe ? BODY_BY_KEY.get(tourProbe) : null;
+    const pr = tourRideOn ? BODY_BY_KEY.get(tourRideOn) : null;
     const tb = BODY_BY_KEY.get(tourRide);
     if (!pr || !tb || !pr.live) return;
     const p = posW.get(pr.key), f = posW.get(tb.key);
@@ -653,7 +654,9 @@
     tourAuto = false;
     tour = t;
     tourActive = true;
-    tourProbe = t.probe || null;
+    tourProbes = t.probe ? (Array.isArray(t.probe) ? t.probe : [t.probe]) : null;
+    tourProbe = tourProbes ? tourProbes[0] : null;
+    tourRideOn = tourProbe;
     tourSceneDone = false;
     hideModals();
     setMenu(false);
@@ -670,7 +673,9 @@
     tourUntil = null;
     tourSight = null;
     tourSpot = null;
+    tourProbes = null;
     tourProbe = null;
+    tourRideOn = null;
     tourRide = null;
     tourPath = false;
     tourRideMag = 1;
@@ -815,4 +820,5 @@
     startTour(t, isFinite(n) ? n - 1 : 0);
     return true;
   }
+
 

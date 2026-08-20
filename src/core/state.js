@@ -14,8 +14,11 @@
   let tourSight = null;
   // ツアーの注目天体。選択とは別に、名前と輪郭を強調して見つけやすくする
   let tourSpot = null;
-  // 探査機ツアー中はこの1機だけを描く (他機が画面に混ざると主役が分からない)
+  // 探査機ツアー中はここに挙げた機体だけを描く (他機が混ざると主役が分からない)。
+  // tourProbe はその主役 = 既定で乗る機体、tourRideOn はその回に乗る機体
+  let tourProbes = null;
   let tourProbe = null;
+  let tourRideOn = null;
   // 探査機視点。カメラを探査機の位置に置き、この天体を見る (キー文字列)。
   // 近づくほど見かけの変化が速くなるので、開始時の距離を基準に再生速度を落とす
   let tourRide = null;

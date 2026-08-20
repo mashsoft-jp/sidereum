@@ -15,7 +15,7 @@
   // 探査機を描くか。カメラが寄っている最中だけ出さない (探査機視点でも、カメラは
   // 機体の後方にあるので機体は描く)
   const probeVisible = (pr) =>
-    pr.live && (!tourProbe || pr.key === tourProbe) && !tourProbeHold;
+    pr.live && (!tourProbes || tourProbes.indexOf(pr.key) >= 0) && !tourProbeHold;
 
   function render(nowSec) {
     if (groundView) { renderGround(nowSec); return; }
@@ -250,7 +250,7 @@
       mTRS(SCR.t, null, 1, SCR.model);
       gl.uniformMatrix4fv(lineP.u.uVP, false, mMul(VP, SCR.model, SCR.mvp));
       for (const pr of PROBES) {
-        if (tourProbe && pr.key !== tourProbe) continue;
+        if (tourProbes && tourProbes.indexOf(pr.key) < 0) continue;
         if (!pr.pathVB) {
           pr.pathVB = gl.createBuffer();
           gl.bindBuffer(gl.ARRAY_BUFFER, pr.pathVB);
@@ -290,7 +290,7 @@
         const dx = t[0] - eye[0], dy = t[1] - eye[1], dz = t[2] - eye[2];
         // camZoom を掛けるので見かけの角度が一定になる = 拡大すれば大きく見える
         // 探査機視点で乗っている機体だけ、近づくほど大きく描く (tourRideMag)
-        const rideMag = tourRide && pr.key === tourProbe ? tourRideMag : 1;
+        const rideMag = tourRide && pr.key === tourRideOn ? tourRideMag : 1;
         const px = PROBE_PX * camZoom * rideMag *
                    Math.min(1, near / (Math.hypot(dx, dy, dz) || 1));
         if (px < 3) continue;
