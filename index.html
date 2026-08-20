@@ -9661,8 +9661,8 @@
   // ステップの mag はこれに掛かる — 最接近距離は天体ごとに全く違うので
   // (タイタンは半径の 2.5倍、木星は 5倍)、寄りも回ごとに決められるようにする
   const RIDE_ZOOM = 2;
-  // stay の何倍手前からカメラを緩め始めるか
-  const STAY_EASE = 2.5;
+  // stay の頭打ちの滑らかさ (stay に対する割合)。大きいほど手前から緩む
+  const STAY_SOFT = 0.6;
 
   const tourText = (o) => (o ? (lang === "ja" ? o.ja : o.en) : "");
 
@@ -10156,13 +10156,19 @@
     // 置いていかれた機体は画素固定をやめて小さく描く — 落ちていくのが画に出る
     if (tourRideStay > 0) {
       const dc = Math.hypot(e[0] - f[0], e[1] - f[1], e[2] - f[2]) || 1;
-      if (dc < tourRideStay * STAY_EASE) {
-        const a = tourRideStay * (STAY_EASE - 1);
-        const u = Math.max(0, (dc - tourRideStay) / a);
-        const k = (tourRideStay + a * u * u * (2 - u)) / dc;
+      // 追走の距離 dc を stay で頭打ちにする。max(dc, stay) をそのまま使うと
+      // 止まる瞬間に速度が跳ぶので、滑らかにした softplus を使う。これは常に
+      // dc 以上になるのが効いていて、カメラが機体より内側へ入り込まない —
+      // 内側へ入ると機体を追い越してしまい、機体が画面の外へ飛び出してから
+      // 戻ってくる (単純に「stay へ寄せる」補間だとこれが起きた)
+      const a = tourRideStay * STAY_SOFT;
+      const x = (dc - tourRideStay) / a;
+      const k = (tourRideStay + a * (x > 30 ? x : Math.log(1 + Math.exp(x)))) / dc;
+      if (k > 1.0001) {
         e[0] = f[0] + (e[0] - f[0]) * k;
         e[1] = f[1] + (e[1] - f[1]) * k;
         e[2] = f[2] + (e[2] - f[2]) * k;
+        // 置いていかれたぶん機体は小さく描く (画素固定をやめる)
         const pd = Math.hypot(e[0] - p[0], e[1] - p[1], e[2] - p[2]) || 1;
         tourRideMag *= Math.max(0.25, Math.min(1, back / pd));
       }
@@ -10474,6 +10480,7 @@
     startTour(t, isFinite(n) ? n - 1 : 0);
     return true;
   }
+
 
 
 
