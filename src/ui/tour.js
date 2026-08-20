@@ -300,6 +300,11 @@
     tourProbeHold = !!s.probeIn;
     tourRide = s.ride || null;
     tourRideOn = s.on || tourProbe;      // その回に乗る機体 (既定は主役)
+    tourRideStay = isFinite(s.stay) ? s.stay * KM2W : 0;
+    tourRideSlow = isFinite(s.slow) ? s.slow : 0.06;
+    tourRideWarm = isFinite(s.warm) ? s.warm : 0;
+    tourRideT0 = simDays;
+    tourStayOff = null;
     tourPath = !!s.path;
     tourTouched = false;
     tourResumeBtn.hidden = true;
@@ -521,6 +526,24 @@
     const e = [p[0] + back * (bx - lx),
                p[1] + back * (by - ly),
                p[2] + back * (bz - lz)];
+    // stay: 目標天体が画面を覆うところまで来たらカメラを置き去りにする。
+    // そこから先も追走すると、画面が塗り潰されたまま何も動かない画になる。
+    // 以後は目標天体に対して固定 (天体自身は公転で動くので、その分は追う) し、
+    // 遠ざかる機体は画素固定をやめて小さくしていく — 落ちていくのが画に出る
+    if (tourRideStay > 0) {
+      if (!tourStayOff && Math.hypot(e[0] - f[0], e[1] - f[1], e[2] - f[2]) <= tourRideStay) {
+        tourStayOff = [e[0] - f[0], e[1] - f[1], e[2] - f[2]];
+        tourStayRef = Math.hypot(e[0] - p[0], e[1] - p[1], e[2] - p[2]);
+        tourStayMag = tourRideMag;
+      }
+      if (tourStayOff) {
+        e[0] = f[0] + tourStayOff[0];
+        e[1] = f[1] + tourStayOff[1];
+        e[2] = f[2] + tourStayOff[2];
+        const pd = Math.hypot(e[0] - p[0], e[1] - p[1], e[2] - p[2]) || 1;
+        tourRideMag = tourStayMag * Math.max(0.25, Math.min(1, tourStayRef / pd));
+      }
+    }
     const dx = e[0] - f[0], dy = e[1] - f[1], dz = e[2] - f[2];
     const d = Math.hypot(dx, dy, dz);
     // カメラは緩和を通さず、その瞬間の位置関係から直接決める。目標が変わる回
@@ -541,7 +564,11 @@
     // 近づくほど遅くする — 見かけの大きさは 1/距離 なので、一定速度だと
     // 遠くが長く、最接近が一瞬で終わってしまう
     if (tourRideSpd > 0 && tourRideRef > 0) {
-      daysPerSec = tourRideSpd * Math.max(0.06, Math.min(1, d / tourRideRef));
+      // 目標に近いほど遅く。加えて warm があれば出だしも遅くする — 距離だけで
+      // 決めると、出発直後 (まだ遠い) が一番速くなり、分離の瞬間が一瞬で終わる
+      let f = Math.min(1, d / tourRideRef);
+      if (tourRideWarm > 0) f = Math.min(f, (simDays - tourRideT0) / tourRideWarm);
+      daysPerSec = tourRideSpd * Math.max(tourRideSlow, f);
     }
   }
 
@@ -679,6 +706,10 @@
     tourRide = null;
     tourPath = false;
     tourRideMag = 1;
+    tourRideStay = 0;
+    tourStayOff = null;
+    tourRideSlow = 0.06;
+    tourRideWarm = 0;
     tourProbeHold = false;
     const keepScene = !!(tour && tour.keep);
     tour = null;
@@ -820,5 +851,6 @@
     startTour(t, isFinite(n) ? n - 1 : 0);
     return true;
   }
+
 
 

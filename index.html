@@ -2298,6 +2298,13 @@
   //   front この天体が中心天体の手前に重なる向きへ回り込む (apart の逆)。
   //         km をこの天体までの距離より大きくすると、円盤を背に小さく写る
   //   on    その回に乗る機体 (既定はツアーの主役)。分離した子機に乗り換えるとき
+  //   stay  ride の天体までこの距離 [km] まで寄ったら、カメラをそこへ置き去りに
+  //         する。天体が画面を覆ったあとも追走すると画が動かなくなるため。
+  //         以後は機体が遠ざかるぶん小さく描かれる (落ちていくのが分かる)
+  //   slow  ride の減速の下限 (既定 0.06)。開始時と最接近時で距離の桁が
+  //         大きく違う回は、これを下げないと最後が一瞬で終わる
+  //   warm  ride の出だしをゆっくり始める日数。距離だけで速度を決めると
+  //         出発直後 (まだ遠い) が一番速くなり、分離の瞬間が一瞬で終わる
   //   ride  探査機ツアー専用。カメラを機体の少し後方に置き、この天体を見続ける。
   //         sel・km・角度の指定より優先する (毎フレーム計算し直す)。mag は
   //         寄りの倍率として効く (探査機視点は既定でも 2倍に寄せて撮る)
@@ -3202,7 +3209,7 @@
     {
       id: "cassini",
       probe: ["cassini", "huygens"],
-      ver: 4,
+      ver: 5,
       title: { ja: "カッシーニの土星", en: "Cassini at Saturn" },
       lead: {
         ja: "金星・地球・木星でスイングバイを重ねて土星へ。13年間の周回と、最後の突入までを辿ります。",
@@ -3314,30 +3321,27 @@
           },
         },
         {
-          sel: "cassini", ride: null, km: 400000, lit: true, apart: null, front: null, mag: 1,
-          spot: "huygens", d: "2004-12-25", orbits: false, path: false,
-          spd: 0.5, play: true, until: "2004-12-28",
+          // 分離から着地までを1続きで。ホイヘンスの後ろに付いてタイタンへ落ちていき、
+          // タイタンが画面を覆ったらカメラはそこに残る (stay)
+          sel: "titan", ride: "titan", on: "huygens", spot: null, mag: 1,
+          apart: null, front: null, stay: 13000, slow: 0.008, warm: 1.2,
+          d: "2004-12-25", orbits: false, path: false,
+          spd: 3, play: true, until: "2005-01-14T11:38",
           text: {
             ja: "2004年12月25日、カッシーニは小型機ホイヘンスを切り離しました。" +
-                "直径2.7mの円盤は電池だけを積み、20日かけてタイタンへ落ちていきます。",
-            en: "25 December 2004: Cassini released the Huygens probe. The 2.7-metre saucer, " +
-                "running on batteries alone, began a twenty-day fall toward Titan.",
-          },
-        },
-        {
-          sel: "titan", ride: "titan", on: "huygens", spot: null, mag: 1,
-          d: "2005-01-14T04:00", spd: 0.09, play: true, until: "2005-01-14T11:38",
-          text: {
-            ja: "2005年1月14日、ホイヘンスはタイタンの厚い大気に突入。" +
-                "パラシュートで2時間27分かけて降り、地表に着陸しました。外惑星系での着陸はこれが唯一です。" +
+                "直径2.7mの円盤は電池だけを積み、20日かけてタイタンへ落ちていきます。" +
+                "1月14日、厚い大気に突入。パラシュートで2時間27分かけて降り、地表に着陸しました。" +
+                "外惑星系での着陸はこれが唯一です。" +
                 "液体メタンが流れた跡のある、石ころだらけの河原が写っていました。",
-            en: "14 January 2005: Huygens entered Titan's thick atmosphere and parachuted down for " +
-                "two hours and 27 minutes to land — still the only landing in the outer Solar System. " +
-                "It photographed a rounded, pebble-strewn floodplain carved by liquid methane.",
+            en: "25 December 2004: Cassini released the Huygens probe — a 2.7-metre saucer running " +
+                "on batteries alone, falling toward Titan for twenty days. On 14 January it entered " +
+                "the thick atmosphere and parachuted down for two hours and 27 minutes to land, " +
+                "still the only landing in the outer Solar System. It photographed a rounded, " +
+                "pebble-strewn floodplain carved by liquid methane.",
           },
         },
         {
-          sel: "saturn", ride: null, on: null, km: 420000, lit: true, orbits: false, path: true,
+          sel: "saturn", ride: null, on: null, km: 420000, lit: true, orbits: false, path: false,
           spd: 90, play: true, until: "2017-09-15",
           text: {
             ja: "13年の周回。エンケラドスの氷の裂け目から水が噴き出しているのを見つけ、" +
@@ -5100,6 +5104,17 @@
   let tourRideMag = 1;
   // 探査機視点の寄り (mag × RIDE_ZOOM)。機体の描画倍率をこれで割って打ち消す
   let tourRideZoom = 1;
+  // 目標天体が画面を覆ったら、そこでカメラを止めて機体だけが落ちていくのを見せる。
+  // tourRideStay = 止める距離 [world] (0 = 止めない)、tourStayOff = 止めた位置
+  // (目標天体から見た相対位置)、tourStayRef/Mag = 止めた瞬間の機体までの距離と倍率
+  let tourRideStay = 0;
+  let tourStayOff = null;
+  let tourStayRef = 0, tourStayMag = 1;
+  // 探査機視点で再生速度を落とす下限 (開始時の距離に対する割合)
+  let tourRideSlow = 0.06;
+  // 回の出だしをゆっくり始める日数 (0 = 使わない)。離れていく機体を見せるなど、
+  // 「近くで起きること」が最初にある回に使う
+  let tourRideWarm = 0, tourRideT0 = 0;
   // カメラが目標に落ち着くまで探査機を出さない (寄っている最中は隠す)
   let tourProbeHold = false;
   // 探査機モデルの回転角 [rad]。再生中だけ進めるので、時計を止めれば機体も止まる
@@ -9856,6 +9871,11 @@
     tourProbeHold = !!s.probeIn;
     tourRide = s.ride || null;
     tourRideOn = s.on || tourProbe;      // その回に乗る機体 (既定は主役)
+    tourRideStay = isFinite(s.stay) ? s.stay * KM2W : 0;
+    tourRideSlow = isFinite(s.slow) ? s.slow : 0.06;
+    tourRideWarm = isFinite(s.warm) ? s.warm : 0;
+    tourRideT0 = simDays;
+    tourStayOff = null;
     tourPath = !!s.path;
     tourTouched = false;
     tourResumeBtn.hidden = true;
@@ -10077,6 +10097,24 @@
     const e = [p[0] + back * (bx - lx),
                p[1] + back * (by - ly),
                p[2] + back * (bz - lz)];
+    // stay: 目標天体が画面を覆うところまで来たらカメラを置き去りにする。
+    // そこから先も追走すると、画面が塗り潰されたまま何も動かない画になる。
+    // 以後は目標天体に対して固定 (天体自身は公転で動くので、その分は追う) し、
+    // 遠ざかる機体は画素固定をやめて小さくしていく — 落ちていくのが画に出る
+    if (tourRideStay > 0) {
+      if (!tourStayOff && Math.hypot(e[0] - f[0], e[1] - f[1], e[2] - f[2]) <= tourRideStay) {
+        tourStayOff = [e[0] - f[0], e[1] - f[1], e[2] - f[2]];
+        tourStayRef = Math.hypot(e[0] - p[0], e[1] - p[1], e[2] - p[2]);
+        tourStayMag = tourRideMag;
+      }
+      if (tourStayOff) {
+        e[0] = f[0] + tourStayOff[0];
+        e[1] = f[1] + tourStayOff[1];
+        e[2] = f[2] + tourStayOff[2];
+        const pd = Math.hypot(e[0] - p[0], e[1] - p[1], e[2] - p[2]) || 1;
+        tourRideMag = tourStayMag * Math.max(0.25, Math.min(1, tourStayRef / pd));
+      }
+    }
     const dx = e[0] - f[0], dy = e[1] - f[1], dz = e[2] - f[2];
     const d = Math.hypot(dx, dy, dz);
     // カメラは緩和を通さず、その瞬間の位置関係から直接決める。目標が変わる回
@@ -10097,7 +10135,11 @@
     // 近づくほど遅くする — 見かけの大きさは 1/距離 なので、一定速度だと
     // 遠くが長く、最接近が一瞬で終わってしまう
     if (tourRideSpd > 0 && tourRideRef > 0) {
-      daysPerSec = tourRideSpd * Math.max(0.06, Math.min(1, d / tourRideRef));
+      // 目標に近いほど遅く。加えて warm があれば出だしも遅くする — 距離だけで
+      // 決めると、出発直後 (まだ遠い) が一番速くなり、分離の瞬間が一瞬で終わる
+      let f = Math.min(1, d / tourRideRef);
+      if (tourRideWarm > 0) f = Math.min(f, (simDays - tourRideT0) / tourRideWarm);
+      daysPerSec = tourRideSpd * Math.max(tourRideSlow, f);
     }
   }
 
@@ -10235,6 +10277,10 @@
     tourRide = null;
     tourPath = false;
     tourRideMag = 1;
+    tourRideStay = 0;
+    tourStayOff = null;
+    tourRideSlow = 0.06;
+    tourRideWarm = 0;
     tourProbeHold = false;
     const keepScene = !!(tour && tour.keep);
     tour = null;
@@ -10376,6 +10422,7 @@
     startTour(t, isFinite(n) ? n - 1 : 0);
     return true;
   }
+
 
 
   //#endregion

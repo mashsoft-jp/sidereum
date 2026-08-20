@@ -28,6 +28,17 @@
   let tourRideMag = 1;
   // 探査機視点の寄り (mag × RIDE_ZOOM)。機体の描画倍率をこれで割って打ち消す
   let tourRideZoom = 1;
+  // 目標天体が画面を覆ったら、そこでカメラを止めて機体だけが落ちていくのを見せる。
+  // tourRideStay = 止める距離 [world] (0 = 止めない)、tourStayOff = 止めた位置
+  // (目標天体から見た相対位置)、tourStayRef/Mag = 止めた瞬間の機体までの距離と倍率
+  let tourRideStay = 0;
+  let tourStayOff = null;
+  let tourStayRef = 0, tourStayMag = 1;
+  // 探査機視点で再生速度を落とす下限 (開始時の距離に対する割合)
+  let tourRideSlow = 0.06;
+  // 回の出だしをゆっくり始める日数 (0 = 使わない)。離れていく機体を見せるなど、
+  // 「近くで起きること」が最初にある回に使う
+  let tourRideWarm = 0, tourRideT0 = 0;
   // カメラが目標に落ち着くまで探査機を出さない (寄っている最中は隠す)
   let tourProbeHold = false;
   // 探査機モデルの回転角 [rad]。再生中だけ進めるので、時計を止めれば機体も止まる
