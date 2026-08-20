@@ -944,7 +944,7 @@
         },
         {
           sel: null, fit: 1.7, a: 0.6, y: 0.9, spot: "cassini", front: null, path: true,
-          spd: 25, play: true, until: "1998-04-26T12:30",
+          orbits: true, spd: 25, play: true, until: "1998-04-26T12:30",
           text: {
             ja: "金星を2回、そして地球を1回かすめます。すれ違うたびに惑星の公転運動を" +
                 "少しだけ借りて加速し、内側の太陽系で2年近くかけて外へ向かう勢いを溜めました。" +
@@ -969,7 +969,7 @@
         },
         {
           sel: null, ride: null, fit: 1.7, a: 0.6, y: 0.9, spot: "cassini", path: true,
-          d: "1998-04-26T13:20", spd: 25, play: true, until: "1999-08-18T02:00",
+          orbits: true, d: "1998-04-26T13:20", spd: 25, play: true, until: "1999-08-18T02:00",
           text: {
             ja: "1年2か月かけて金星へ戻り、もう一度かすめます。その2か月後、" +
                 "今度は地球へ。",
@@ -1048,7 +1048,7 @@
           },
         },
         {
-          sel: "saturn", km: 700000, lit: true, orbits: true, path: true,
+          sel: "saturn", km: 420000, lit: true, orbits: false, path: true,
           spd: 90, play: true, until: "2017-09-15",
           text: {
             ja: "13年の周回。エンケラドスの氷の裂け目から水が噴き出しているのを見つけ、" +
@@ -1063,7 +1063,7 @@
         },
         {
           sel: null, fit: 12, a: 0.85, y: 1.2, play: false, spot: null, mag: 1,
-          d: "2017-09-15", path: true,
+          d: "2017-09-15", path: true, orbits: true,
           text: {
             ja: "たどってきた道のりです。太陽の方へ3回落ちてから外へ — " +
                 "遠回りに見えるこの形が、5.7トンを土星まで運ぶ唯一の道でした。" +
