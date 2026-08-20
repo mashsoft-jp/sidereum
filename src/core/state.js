@@ -28,12 +28,12 @@
   let tourRideMag = 1;
   // 探査機視点の寄り (mag × RIDE_ZOOM)。機体の描画倍率をこれで割って打ち消す
   let tourRideZoom = 1;
-  // 目標天体が画面を覆ったら、そこでカメラを止めて機体だけが落ちていくのを見せる。
-  // tourRideStay = 止める距離 [world] (0 = 止めない)、tourStayOff = 止めた位置
-  // (目標天体から見た相対位置)、tourStayRef/Mag = 止めた瞬間の機体までの距離と倍率
+  // 探査機を点だけで描く。天体を大きく写す回では、記号として一定の画素数で描く
+  // 機体が天体に対して大きすぎ、しかも立体なので天体に埋まって見える
+  let tourProbeDot = false;
+  // 目標天体にこの距離 [world] まで寄ったら、それ以上は寄らない (0 = 制限なし)。
+  // 天体が画面を覆ったあとも追走すると、画面が塗り潰されたまま動かない画になる
   let tourRideStay = 0;
-  let tourStayOff = null;
-  let tourStayRef = 0, tourStayMag = 1;
   // 探査機視点で再生速度を落とす下限 (開始時の距離に対する割合)
   let tourRideSlow = 0.06;
   // 回の出だしをゆっくり始める日数 (0 = 使わない)。離れていく機体を見せるなど、
@@ -163,7 +163,13 @@
         if (w.au) return { t, au: w.au };
         wayAU(w.at, t, tmp);
         const au = [tmp[0], tmp[1], tmp[2]];
-        if (w.miss) {
+        if (w.miss && w.off) {
+          // 向きが決まっているとき (probes.js の off, 黄道の単位ベクトル)。
+          // 惑星のそばの形をそのまま置きたい場面 — 実測の相対位置を使う
+          const l = Math.hypot(w.off[0], w.off[1], w.off[2]) || 1;
+          const s = w.miss / AU_KM / l;
+          au[0] += w.off[0] * s; au[1] += w.off[1] * s; au[2] += w.off[2] * s;
+        } else if (w.miss) {
           // 最接近距離ぶん、その天体の進行方向の後ろ側へずらす (probes.js の miss)
           wayAU(w.at, t - 0.01, v0);
           wayAU(w.at, t + 0.01, v1);

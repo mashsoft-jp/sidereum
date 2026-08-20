@@ -285,7 +285,7 @@
       let any = false;
       for (const pr of PROBES) {
         pr.px = 0;
-        if (!probeVisible(pr)) continue;
+        if (!probeVisible(pr) || tourProbeDot) continue;   // dot の回は下の点で描く
         const t = posW.get(pr.key);
         const dx = t[0] - eye[0], dy = t[1] - eye[1], dz = t[2] - eye[2];
         // camZoom を掛けるので見かけの角度が一定になる = 拡大すれば大きく見える

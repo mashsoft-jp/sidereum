@@ -41,6 +41,8 @@
   // ステップの mag はこれに掛かる — 最接近距離は天体ごとに全く違うので
   // (タイタンは半径の 2.5倍、木星は 5倍)、寄りも回ごとに決められるようにする
   const RIDE_ZOOM = 2;
+  // stay の何倍手前からカメラを緩め始めるか
+  const STAY_EASE = 2.5;
 
   const tourText = (o) => (o ? (lang === "ja" ? o.ja : o.en) : "");
 
@@ -301,10 +303,10 @@
     tourRide = s.ride || null;
     tourRideOn = s.on || tourProbe;      // その回に乗る機体 (既定は主役)
     tourRideStay = isFinite(s.stay) ? s.stay * KM2W : 0;
+    tourProbeDot = !!s.dot;
     tourRideSlow = isFinite(s.slow) ? s.slow : 0.06;
     tourRideWarm = isFinite(s.warm) ? s.warm : 0;
     tourRideT0 = simDays;
-    tourStayOff = null;
     tourPath = !!s.path;
     tourTouched = false;
     tourResumeBtn.hidden = true;
@@ -526,22 +528,23 @@
     const e = [p[0] + back * (bx - lx),
                p[1] + back * (by - ly),
                p[2] + back * (bz - lz)];
-    // stay: 目標天体が画面を覆うところまで来たらカメラを置き去りにする。
+    // stay: 目標天体が画面を覆うところまで来たら、それ以上は寄らない。
     // そこから先も追走すると、画面が塗り潰されたまま何も動かない画になる。
-    // 以後は目標天体に対して固定 (天体自身は公転で動くので、その分は追う) し、
-    // 遠ざかる機体は画素固定をやめて小さくしていく — 落ちていくのが画に出る
+    // 距離を頭打ちにするだけで、向きは機体を追い続ける。急に止めると不自然なので
+    // stay の STAY_EASE 倍のあたりから緩めて漸近させる (g(1)=1, g'(1)=1 で
+    // 手前と滑らかに繋がり、g'(0)=0 なので止まるところで速度が 0 になる)。
+    // 置いていかれた機体は画素固定をやめて小さく描く — 落ちていくのが画に出る
     if (tourRideStay > 0) {
-      if (!tourStayOff && Math.hypot(e[0] - f[0], e[1] - f[1], e[2] - f[2]) <= tourRideStay) {
-        tourStayOff = [e[0] - f[0], e[1] - f[1], e[2] - f[2]];
-        tourStayRef = Math.hypot(e[0] - p[0], e[1] - p[1], e[2] - p[2]);
-        tourStayMag = tourRideMag;
-      }
-      if (tourStayOff) {
-        e[0] = f[0] + tourStayOff[0];
-        e[1] = f[1] + tourStayOff[1];
-        e[2] = f[2] + tourStayOff[2];
+      const dc = Math.hypot(e[0] - f[0], e[1] - f[1], e[2] - f[2]) || 1;
+      if (dc < tourRideStay * STAY_EASE) {
+        const a = tourRideStay * (STAY_EASE - 1);
+        const u = Math.max(0, (dc - tourRideStay) / a);
+        const k = (tourRideStay + a * u * u * (2 - u)) / dc;
+        e[0] = f[0] + (e[0] - f[0]) * k;
+        e[1] = f[1] + (e[1] - f[1]) * k;
+        e[2] = f[2] + (e[2] - f[2]) * k;
         const pd = Math.hypot(e[0] - p[0], e[1] - p[1], e[2] - p[2]) || 1;
-        tourRideMag = tourStayMag * Math.max(0.25, Math.min(1, tourStayRef / pd));
+        tourRideMag *= Math.max(0.25, Math.min(1, back / pd));
       }
     }
     const dx = e[0] - f[0], dy = e[1] - f[1], dz = e[2] - f[2];
@@ -707,7 +710,7 @@
     tourPath = false;
     tourRideMag = 1;
     tourRideStay = 0;
-    tourStayOff = null;
+    tourProbeDot = false;
     tourRideSlow = 0.06;
     tourRideWarm = 0;
     tourProbeHold = false;
@@ -851,6 +854,7 @@
     startTour(t, isFinite(n) ? n - 1 : 0);
     return true;
   }
+
 
 
 
