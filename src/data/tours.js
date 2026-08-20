@@ -935,7 +935,7 @@
     {
       id: "cassini",
       probe: ["cassini", "huygens"],
-      ver: 7,
+      ver: 8,
       title: { ja: "カッシーニの土星", en: "Cassini at Saturn" },
       lead: {
         ja: "金星・地球・木星でスイングバイを重ねて土星へ。13年間の周回と、最後の突入までを辿ります。",
@@ -1055,7 +1055,7 @@
           sel: "titan", ride: "titan", on: "huygens", spot: null, mag: 1,
           apart: null, front: null, stay: 13000, slow: 0.008, warm: 1.2,
           d: "2004-12-25", orbits: false, path: false,
-          spd: 3, play: true, until: "2005-01-14T11:38",
+          spd: 3, play: true, until: "2005-01-14T12:10",
           text: {
             ja: "2004年12月25日、カッシーニは小型機ホイヘンスを切り離しました。" +
                 "直径2.7mの円盤は電池だけを積み、20日かけてタイタンへ落ちていきます。" +
@@ -1072,8 +1072,12 @@
         {
           // 機体は点で描く (dot)。土星を大きく写す回では、記号として一定の大きさで
           // 描く機体が土星に対して大きすぎ、立体なので土星に埋まって見える
-          sel: "saturn", ride: null, on: null, km: 350000, lit: true, orbits: false, path: false,
-          stay: 0, dot: true,
+          // 角度は固定。lit だと開始時 (2005年) の太陽向きで決まってしまい、
+          // 13年で土星が 150°進むぶん終わりが逆光になる。中間 (2011年) の
+          // 太陽向きに合わせておくと、両端とも半分ほど陽が当たった形になる。
+          // 周回の位相 (probes.js) は、最後にカッシーニが土星の右下へ来るよう合わせた
+          sel: "saturn", ride: null, on: null, km: 350000, lit: false, a: 0.177, y: 0.247,
+          orbits: false, path: false, stay: 0, dot: true,
           spd: 90, play: true, until: "2017-09-08",
           text: {
             ja: "13年の周回。エンケラドスの氷の裂け目から水が噴き出しているのを見つけ、" +
@@ -1086,8 +1090,11 @@
         },
         {
           // 最後の突入。カッシーニに付いて土星へ降りていく
-          sel: "saturn", ride: "saturn", dot: false, mag: 1, stay: 300000,
-          d: "2017-09-08", spd: 0.6, play: true, until: "2017-09-15",
+          // 機体に付いていくと視線が軌道に沿ってしまい、土星を真横から見る形に
+          // なる。降りていく向きと直角に構えて、雲の中へ入っていくのを横から見る
+          sel: "saturn", ride: null, dot: true, mag: 1, stay: 0,
+          km: 400000, lit: false, a: -1.082, y: 5.149,
+          d: "2017-09-08", spd: 0.6, play: true, until: "2017-09-15T08:00",
           text: {
             ja: "燃料が尽きたあと制御を失えば、いつかエンケラドスに落ちるかもしれない。" +
                 "その海を汚さないため、最後は土星自身へ落とすことが決められました。" +

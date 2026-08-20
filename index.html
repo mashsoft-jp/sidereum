@@ -2041,16 +2041,19 @@
         // 60日ごと = 1周を6点で刻む — これより粗いと補間が円の内側を通り、
         // 機体が土星に埋まる (1年に1点だった頃は中心から1.4万kmまで入っていた)
         ...Array.from({ length: 77 }, (_, i) => {
-          const th = i * Math.PI / 3;
+          const th = i * Math.PI / 3 + 2.2262;   // 位相は 11 の最後の構図に合わせた
           const c = Math.cos(th), sn = Math.sin(th);
           return { d: new Date(Date.UTC(2005, 2, 15) + i * 60 * 86400000).toISOString().slice(0, 10),
                    at: "saturn", miss: 150000, off: [c, -0.8931 * sn, 0.4498 * sn] };
         }),
         // 最後は円から外して雲頂の高さへ降ろす。1点で 15万km → 6万km と落とすと
         // 補間が行き過ぎて土星の中を通るので、同じ向きのまま3点で刻む
-        { d: "2017-09-11", at: "saturn", miss: 115000, off: [-0.4540, 0.7958, -0.4008] },
-        { d: "2017-09-13", at: "saturn", miss: 85000, off: [-0.4226, 0.8094, -0.4077] },
-        { d: "2017-09-15", at: "saturn", miss: 60300, off: [-0.3907, 0.8221, -0.4140] },   // 土星大気圏へ突入 (ミッション終了)
+        { d: "2017-09-11", at: "saturn", miss: 115000, off: [0.9831, -0.1635, 0.0824] },
+        { d: "2017-09-13", at: "saturn", miss: 85000, off: [0.9761, -0.1941, 0.0977] },
+        { d: "2017-09-15", at: "saturn", miss: 60300, off: [0.9679, -0.2244, 0.1130] },   // 土星大気圏へ突入
+        // 雲頂 (6.03万km) で切ると機体が空中に浮いたまま消える。球に隠れる
+        // ところまで潜らせてから軌跡を終える (ミッション終了)
+        { d: "2017-09-15T08:00", at: "saturn", miss: 52000, off: [0.9618, -0.2444, 0.1231] },
       ],
     },
     {
@@ -2079,6 +2082,9 @@
         { d: "2005-01-14T09:25", at: "titan", miss: 2760 },
         { d: "2005-01-14T10:30", at: "titan", miss: 2665 },
         { d: "2005-01-14T11:38", at: "titan", miss: 2575 },     // 着地 (降下 2時間27分)
+        // 地表ちょうどで切ると機体が浮いたまま消えるので、球に隠れるところ
+        // まで下げてから軌跡を終える
+        { d: "2005-01-14T12:10", at: "titan", miss: 2100 },
       ],
     },
   ];
@@ -3246,7 +3252,7 @@
     {
       id: "cassini",
       probe: ["cassini", "huygens"],
-      ver: 7,
+      ver: 8,
       title: { ja: "カッシーニの土星", en: "Cassini at Saturn" },
       lead: {
         ja: "金星・地球・木星でスイングバイを重ねて土星へ。13年間の周回と、最後の突入までを辿ります。",
@@ -3366,7 +3372,7 @@
           sel: "titan", ride: "titan", on: "huygens", spot: null, mag: 1,
           apart: null, front: null, stay: 13000, slow: 0.008, warm: 1.2,
           d: "2004-12-25", orbits: false, path: false,
-          spd: 3, play: true, until: "2005-01-14T11:38",
+          spd: 3, play: true, until: "2005-01-14T12:10",
           text: {
             ja: "2004年12月25日、カッシーニは小型機ホイヘンスを切り離しました。" +
                 "直径2.7mの円盤は電池だけを積み、20日かけてタイタンへ落ちていきます。" +
@@ -3383,8 +3389,12 @@
         {
           // 機体は点で描く (dot)。土星を大きく写す回では、記号として一定の大きさで
           // 描く機体が土星に対して大きすぎ、立体なので土星に埋まって見える
-          sel: "saturn", ride: null, on: null, km: 350000, lit: true, orbits: false, path: false,
-          stay: 0, dot: true,
+          // 角度は固定。lit だと開始時 (2005年) の太陽向きで決まってしまい、
+          // 13年で土星が 150°進むぶん終わりが逆光になる。中間 (2011年) の
+          // 太陽向きに合わせておくと、両端とも半分ほど陽が当たった形になる。
+          // 周回の位相 (probes.js) は、最後にカッシーニが土星の右下へ来るよう合わせた
+          sel: "saturn", ride: null, on: null, km: 350000, lit: false, a: 0.177, y: 0.247,
+          orbits: false, path: false, stay: 0, dot: true,
           spd: 90, play: true, until: "2017-09-08",
           text: {
             ja: "13年の周回。エンケラドスの氷の裂け目から水が噴き出しているのを見つけ、" +
@@ -3397,8 +3407,11 @@
         },
         {
           // 最後の突入。カッシーニに付いて土星へ降りていく
-          sel: "saturn", ride: "saturn", dot: false, mag: 1, stay: 300000,
-          d: "2017-09-08", spd: 0.6, play: true, until: "2017-09-15",
+          // 機体に付いていくと視線が軌道に沿ってしまい、土星を真横から見る形に
+          // なる。降りていく向きと直角に構えて、雲の中へ入っていくのを横から見る
+          sel: "saturn", ride: null, dot: true, mag: 1, stay: 0,
+          km: 400000, lit: false, a: -1.082, y: 5.149,
+          d: "2017-09-08", spd: 0.6, play: true, until: "2017-09-15T08:00",
           text: {
             ja: "燃料が尽きたあと制御を失えば、いつかエンケラドスに落ちるかもしれない。" +
                 "その海を汚さないため、最後は土星自身へ落とすことが決められました。" +
@@ -7270,12 +7283,25 @@
     const fpx = (H / 2) / Math.tan(eFov() / 2);
     let nMark = 0;
     const marked = [SUN, ...PLANETS, ...SATELLITES, ...PROBES.filter(probeVisible)];
+    const INSIDE_TEST = [SUN, ...PLANETS, ...SATELLITES];
     for (const b of marked) {
       const pr = project(posW.get(b.key));
       if (!pr) continue;
       // 扁平な天体は赤道がいちばん外側なので、印やリングはそちらに合わせる
       const rpx = bodyR(b) * (b.obl ? b.obl[0] : 1) * fpx / pr.w;
       screenPos.set(b.key, { x: pr.x, y: pr.y, r: rpx, w: pr.w });
+    }
+    // 天体の中に入った探査機 (最後の突入・着地) は、印も名前も出さない。
+    // 球に隠れて機体は見えないのに名前だけが浮いて残るため
+    for (const pr of PROBES) {
+      const sp = screenPos.get(pr.key);
+      if (!sp) continue;
+      const w = posW.get(pr.key);
+      for (const b of INSIDE_TEST) {
+        const c = posW.get(b.key), r = bodyR(b);
+        const dx = w[0] - c[0], dy = w[1] - c[1], dz = w[2] - c[2];
+        if (dx * dx + dy * dy + dz * dz < r * r) { sp.hidden = true; break; }
+      }
     }
     // 手前の大きな天体の円盤に隠れる位置にあるものは、印も名前も出さない
     // (接近して見せる場面で、遠くの惑星の名前が円盤の上に載ってしまうため)
@@ -10492,6 +10518,7 @@
     startTour(t, isFinite(n) ? n - 1 : 0);
     return true;
   }
+
 
 
 

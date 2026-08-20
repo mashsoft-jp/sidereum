@@ -362,12 +362,25 @@
     const fpx = (H / 2) / Math.tan(eFov() / 2);
     let nMark = 0;
     const marked = [SUN, ...PLANETS, ...SATELLITES, ...PROBES.filter(probeVisible)];
+    const INSIDE_TEST = [SUN, ...PLANETS, ...SATELLITES];
     for (const b of marked) {
       const pr = project(posW.get(b.key));
       if (!pr) continue;
       // 扁平な天体は赤道がいちばん外側なので、印やリングはそちらに合わせる
       const rpx = bodyR(b) * (b.obl ? b.obl[0] : 1) * fpx / pr.w;
       screenPos.set(b.key, { x: pr.x, y: pr.y, r: rpx, w: pr.w });
+    }
+    // 天体の中に入った探査機 (最後の突入・着地) は、印も名前も出さない。
+    // 球に隠れて機体は見えないのに名前だけが浮いて残るため
+    for (const pr of PROBES) {
+      const sp = screenPos.get(pr.key);
+      if (!sp) continue;
+      const w = posW.get(pr.key);
+      for (const b of INSIDE_TEST) {
+        const c = posW.get(b.key), r = bodyR(b);
+        const dx = w[0] - c[0], dy = w[1] - c[1], dz = w[2] - c[2];
+        if (dx * dx + dy * dy + dz * dz < r * r) { sp.hidden = true; break; }
+      }
     }
     // 手前の大きな天体の円盤に隠れる位置にあるものは、印も名前も出さない
     // (接近して見せる場面で、遠くの惑星の名前が円盤の上に載ってしまうため)
