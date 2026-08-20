@@ -3246,7 +3246,7 @@
     {
       id: "cassini",
       probe: ["cassini", "huygens"],
-      ver: 6,
+      ver: 7,
       title: { ja: "カッシーニの土星", en: "Cassini at Saturn" },
       lead: {
         ja: "金星・地球・木星でスイングバイを重ねて土星へ。13年間の周回と、最後の突入までを辿ります。",
@@ -3383,22 +3383,34 @@
         {
           // 機体は点で描く (dot)。土星を大きく写す回では、記号として一定の大きさで
           // 描く機体が土星に対して大きすぎ、立体なので土星に埋まって見える
-          sel: "saturn", ride: null, on: null, km: 420000, lit: true, orbits: false, path: false,
+          sel: "saturn", ride: null, on: null, km: 350000, lit: true, orbits: false, path: false,
           stay: 0, dot: true,
-          spd: 90, play: true, until: "2017-09-15",
+          spd: 90, play: true, until: "2017-09-08",
           text: {
             ja: "13年の周回。エンケラドスの氷の裂け目から水が噴き出しているのを見つけ、" +
                 "その海に生命の条件が揃っている可能性を示しました。" +
-                "燃料が尽きる前に、その海を汚さないよう2017年9月15日に土星の大気へ突入 " +
-                "— 最後の瞬間までデータを送り続けました。",
+                "タイタンにはメタンの雨が降り、川が流れ、湖があることも分かりました。",
             en: "Thirteen years in orbit. It found water jetting from cracks in Enceladus's ice and " +
-                "showed that ocean may have what life needs. To keep it from ever contaminating that " +
-                "ocean, it was flown into Saturn's atmosphere on 15 September 2017 — transmitting " +
-                "to the last second.",
+                "showed that ocean may have what life needs — and mapped a Titan where methane " +
+                "rains, carves rivers and fills lakes.",
           },
         },
         {
-          sel: null, fit: 12, a: 0.85, y: 1.2, play: false, spot: null, mag: 1,
+          // 最後の突入。カッシーニに付いて土星へ降りていく
+          sel: "saturn", ride: "saturn", dot: false, mag: 1, stay: 300000,
+          d: "2017-09-08", spd: 0.6, play: true, until: "2017-09-15",
+          text: {
+            ja: "燃料が尽きたあと制御を失えば、いつかエンケラドスに落ちるかもしれない。" +
+                "その海を汚さないため、最後は土星自身へ落とすことが決められました。" +
+                "2017年9月15日、秒速34kmで大気へ — 燃え尽きるまでの間、" +
+                "最後の瞬間までデータを送り続けました。",
+            en: "Out of fuel and out of control, it might one day have fallen onto Enceladus. To keep " +
+                "that ocean clean, it was aimed at Saturn instead. On 15 September 2017 it entered " +
+                "the atmosphere at 34 km/s, transmitting until it burned away.",
+          },
+        },
+        {
+          sel: null, ride: null, fit: 12, a: 0.85, y: 1.2, play: false, spot: null, mag: 1,
           d: "2017-09-15", path: true, orbits: true,
           text: {
             ja: "たどってきた道のりです。太陽の方へ3回落ちてから外へ — " +
