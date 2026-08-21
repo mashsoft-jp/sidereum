@@ -28,6 +28,7 @@
       tourUpdated: "Update!", tourAgain: "もう一度見る", tagNew: "New",
       menuGrid: "経緯線",
       menuTerrain: "風景",
+      menuMeteor: "流星群",
       menuBloom: "光の滲み",
       menuHiRes: "高解像度テクスチャ",
       hiResConfirm: "高解像度テクスチャに切り替えました。追加の画像を読み込むぶん通信量が増え、" +
@@ -83,6 +84,7 @@
       tourUpdated: "Update!", tourAgain: "Watch again", tagNew: "New",
       menuGrid: "Coordinate grid",
       menuTerrain: "Scenery",
+      menuMeteor: "Meteor showers",
       menuBloom: "Glow",
       menuHiRes: "High-res textures",
       hiResConfirm: "Switched to high-resolution textures. This downloads additional images and " +

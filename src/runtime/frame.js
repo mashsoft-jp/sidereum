@@ -314,11 +314,14 @@
       // 自動追尾: 日周運動での移動分は即時反映し、残差のみ緩和で追従
       // (緩和だけだと定常遅れが高倍率の視野幅を超え、天体が視野外に留まるため)
       if (gTrack) {
-        const b = selected || lastCenter;
-        if (b && b.key !== surfaceBody) {
-          const c = surfaceAltAz(b);
+        // 追う先は天体か、流星群の放射点 (ツアーで放射点を画面中央に留める)
+        const b = gRadTrack ? null : (selected || lastCenter);
+        const c = gRadTrack ? radiantAltAz(gRadTrack)
+                            : (b && b.key !== surfaceBody ? surfaceAltAz(b) : null);
+        const trk = gRadTrack ? "@" + gRadTrack : (b ? b.key : "");
+        if (c) {
           const az = c.az * DEG, alt = c.alt * DEG;
-          if (gTrkKey === b.key) {
+          if (gTrkKey === trk) {
             // 前フレームからの移動分は即時追従
             let dm = (az - gTrkAz) % (2 * Math.PI);
             if (dm > Math.PI) dm -= 2 * Math.PI;
@@ -332,10 +335,11 @@
           if (dr < -Math.PI) dr += 2 * Math.PI;
           gAzTgt = gAz + dr;
           gAltTgt = Math.max(-1.4, Math.min(GALT_MAX, alt));
-          gTrkKey = b.key; gTrkAz = az; gTrkAlt = alt;
+          gTrkKey = trk; gTrkAz = az; gTrkAlt = alt;
         }
       } else {
         gTrkKey = "";
+        gRadTrack = "";
       }
     }
     gAz += (gAzTgt - gAz) * k;

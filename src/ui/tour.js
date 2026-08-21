@@ -296,6 +296,13 @@
       for (const b of ALL_BODIES) b.showOrbit = !!s.orbits;
       orbitsBtn.classList.toggle("on", !!s.orbits);
     }
+    // 風景 (地面の質感・空の色) は、書いた回だけ触る。経緯線のように既定 OFF を
+    // 毎回押しつけると、風景を出して使っている人の見え方をツアーが勝手に変えて
+    // しまう。localStorage は書き換えず、開始前の状態は終了時に戻す
+    if (s.sky !== undefined) {
+      showTerrain = !!s.sky;
+      updateTerrainLabel();
+    }
     // 天球の経緯線は、書いた回だけ出す (既定は消す — 星座や軌道と違い、ツアーで
     // 見せたい天体の前を格子が横切るだけになる回がほとんど)。localStorage は
     // 書き換えず、開始前の状態は終了時に戻す
@@ -378,6 +385,7 @@
     if (groundView) {
       buildObsFrame();
       if (s.aim && b) aimGroundAt(b, true);
+      else if (s.radiant) aimGroundAtRadiant(s.radiant, true);
       if (isFinite(s.gfov)) {
         gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, s.gfov * DEG));
         gFov = gFovTgt;
@@ -639,7 +647,7 @@
   // まるごと控えておき、終了時に戻す (tour.keep が真のツアーだけ戻さない)
   function captureTourState() {
     return {
-      showConst, showSelMark, showGrid,
+      showConst, showSelMark, showGrid, showTerrain,
       orbits: ALL_BODIES.map((b) => b.showOrbit),
       simDays, daysPerSec, playing,
       groundView, surfaceBody,
@@ -657,6 +665,8 @@
     constBtn.classList.toggle("on", showConst);
     showGrid = v.showGrid;
     updateGridLabel();
+    showTerrain = v.showTerrain;
+    updateTerrainLabel();
     ALL_BODIES.forEach((b, i) => { b.showOrbit = v.orbits[i]; });
     orbitsBtn.classList.toggle("on", ALL_BODIES.some((b) => b.showOrbit));
     showSelMark = v.showSelMark;
@@ -686,6 +696,7 @@
     }
     gAz = gAzTgt = v.gAz; gAlt = gAltTgt = v.gAlt; gFov = gFovTgt = v.gFov;
     gTrack = v.gTrack;   // ツアーの aim で立てた追尾を持ち越さない
+    gRadTrack = "";      // 放射点の追尾も同様
   }
 
   function startTour(t, step) {

@@ -19,6 +19,7 @@
   function aimGroundAt(body, instant) {
     if (!body || body.key === surfaceBody) return false;   // 立っている天体自身は見られない
     gTrack = true;
+    gRadTrack = "";   // 天体を追うので、放射点の追尾は捨てる
     const c = surfaceAltAz(body);
     // 現在の向きから最短方向で回るよう、目標方位は現在値の近傍に取る
     let d = (c.az * DEG - gAz) % (2 * Math.PI);

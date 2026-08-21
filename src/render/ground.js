@@ -619,6 +619,10 @@
       }
     }
 
+    // 流星。空のものはすべて描き終えてから重ねる (加算合成なので順序が効く)
+    updateMeteors(nowSec);
+    drawMeteors(nowSec);
+
     // 地面 (下半球ドーム) を最後に不透明で描き、地平線より下を覆い隠す。
     // 天体・星・星座より後に描くので、地平線下の要素は確実に隠れる
     gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.depthMask(false);
@@ -700,6 +704,7 @@
         octx.fillText(lang === "ja" ? "黄道" : "Ecliptic", bx, by - 6);
       }
     }
+    drawRadiants();   // 放射点 (降っている流星群があるときだけ)
     octx.font = '11px "Avenir Next","Hiragino Sans",sans-serif';
     // 名前は天体リストの「名前」に従う (宇宙ビューと同じ)。名前を消すと選択天体の
     // 目印が無くなってしまうので、選択マークは名前とは別に出す

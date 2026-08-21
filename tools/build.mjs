@@ -46,10 +46,12 @@ const MANIFEST = [
   "core/state.js",       // 実行時状態・月の位置 (ELP-2000)・位置更新
   "render/body.js",      // リサイズ・描画基盤・drawBody・project
   "data/sky.js",         // 恒星カタログ・星座線/名・黄道
+  "data/showers.js",     // 流星群の放射点・出現数
   "render/ground.js",    // 地上ビュー (観測者フレーム・renderGround)
   "ui/view-mode.js",     // ビュー切替・月面観測地点・月の表側マップ
   "render/space.js",     // hitTestGround・render (宇宙ビュー)
   "render/comet.js",     // 彗星のコマ・尾 (両ビュー共用)
+  "render/meteor.js",    // 流星 (地上ビュー)
   "runtime/frame.js",    // オーバーレイ・時刻表示・メインループ
   "ui/observe.js",       // 選択・観測モード・観測地・天体リスト
   "ui/controls.js",      // 入力・操作パネル・設定保存

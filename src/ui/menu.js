@@ -52,6 +52,17 @@
     updateTerrainLabel();
   });
 
+  // 流星群。地上ビューでその日に降っている群の流星と放射点を出す
+  const menuMeteorBtn = document.getElementById("menuMeteor");
+  function updateMeteorLabel() {
+    setMenuCheck(menuMeteorBtn, T().menuMeteor, showMeteor);
+  }
+  menuMeteorBtn.addEventListener("click", () => {
+    showMeteor = !showMeteor;
+    try { localStorage.setItem("ssMeteor", showMeteor ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
+    updateMeteorLabel();
+  });
+
   // 明るいところの滲み (Bloom)。描画負荷が上がるので切れるようにしておく
   const menuBloomBtn = document.getElementById("menuBloom");
   function updateBloomLabel() {

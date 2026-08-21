@@ -183,6 +183,7 @@
     menuAboutBtn.textContent = t.menuAbout;
     updateGridLabel();
     updateTerrainLabel();
+    updateMeteorLabel();
     updateBloomLabel();
     updateHiResLabel();
     updateUnitLabel();

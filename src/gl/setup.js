@@ -91,6 +91,10 @@
   const tailVS = `@@glsl:tail.vert@@`;
   const tailFS = PRE + `@@glsl:tail.frag@@`;
 
+  // ---- 流星の光跡 (放射点から流れる細いリボン, 加算) ----
+  const meteorVS = `@@glsl:meteor.vert@@`;
+  const meteorFS = PRE + `@@glsl:meteor.frag@@`;
+
   // ---- 彗星のコマ (太陽側が圧縮された涙滴型の光。ガウシアン減衰で継ぎ目なし) ----
   const comaVS = `@@glsl:coma.vert@@`;
   const comaFS = PRE + `@@glsl:coma.frag@@`;
@@ -113,7 +117,7 @@
   // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
   // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
   let bodyRenderer;
-  let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP;
+  let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP;
   let threshP, blurP, addP;
   try {
     bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
@@ -123,6 +127,7 @@
     ringP = program(ringVS, ringFS);
     tailP = program(tailVS, tailFS);
     comaP = program(comaVS, comaFS);
+    meteorP = program(meteorVS, meteorFS);
     terrainP = program(terrainVS, terrainFS);
     meshP = program(meshVS, meshFS);
     threshP = program(postVS, threshFS);

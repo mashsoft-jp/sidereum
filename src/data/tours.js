@@ -39,6 +39,10 @@
   //         (寄っていく画の途中から機体が居座ると、寄る動きが台無しになる)
   //   site  地上ビューの観測地 [緯度, 経度]。ビューを開く前に適用する
   //   aim   true なら地上ビューで sel の天体に照準を合わせ、追尾する
+  //   radiant 地上ビューで、この流星群の放射点に照準を合わせて追尾する
+  //         (aim と違い天体ではないので、選択とは無関係に効く)
+  //   sky   風景 (地面の質感・空の色) を出すか。書いた回だけ触る一時変更で、
+  //         書かなければ利用者の設定のまま。昼夜を見せたい回で使う
   //   sight 宇宙ビューで、注視天体からこの天体へ向かう視線ガイド (破線) を出す
   //   spot  この天体の名前と輪郭を強調する (カメラは動かさない)。
   //         引きの画では点になって見つけられないので、注目させたい回に使う
@@ -1125,6 +1129,153 @@
                 "that was the only way to carry 5.7 tonnes to Saturn. Where the Voyagers passed " +
                 "through, Cassini stayed for thirteen years, 294 orbits and 450,000 images. " +
                 "And now it is part of Saturn itself.",
+          },
+        },
+      ],
+    },
+    {
+      id: "meteors",
+      ver: 1,
+      title: { ja: "流星群を眺める", en: "Watching the Meteor Showers" },
+      lead: {
+        ja: "毎年きまった夜に空を横切る流星が、どこから来て、なぜ毎年同じ日に来るのかを見ます。",
+        en: "Where the meteors of the annual showers come from, and why they return on the same nights.",
+      },
+      steps: [
+        {
+          view: "space", sel: "halley", fit: 2.4, a: 1.05, y: 0.6, mag: 1,
+          d: "1986-02-09", play: false, orbits: true, constel: false, sky: true,
+          text: {
+            ja: "流星のもとは、彗星が通り道に置いていった砂粒ほどの塵です。" +
+                "1986年、太陽のそばまで来たハレー彗星。オレンジの線がその軌道で、" +
+                "地球の軌道と2か所で交わっています。彗星が戻ってくるのは76年に一度ですが、" +
+                "置いていった塵は軌道上に残り続けます。",
+            en: "Meteors begin as grains of dust a comet leaves along its path. " +
+                "Here is Halley near the Sun in 1986; the orange line is its orbit, which crosses " +
+                "Earth's at two places. The comet itself comes back only every 76 years, but the dust " +
+                "it shed stays strung out along the orbit.",
+          },
+        },
+        {
+          view: "ground", site: [35.68, 139.69], d: "2026-05-06T18:30",
+          radiant: "etaaqr", gfov: 85, constel: true, sel: null,
+          spd: 0.00208, play: true, until: "2026-05-06T20:30", mark: false,
+          text: {
+            ja: "その交点のひとつを、地球は毎年5月上旬に通ります。東京、日本時間5月7日の午前3時半。" +
+                "みずがめ座η流星群です。流星の道すじを逆にたどると、みずがめ座の一点 — 放射点 — に集まります。" +
+                "群の名前はこの点がある星座から付いています。" +
+                "なお出現数は再生速度に比例します。ここは3分/秒なので、実際の3分ぶんが1秒に詰まっています。",
+            en: "Earth reaches one of those crossings every year in early May. Tokyo, 03:30 on 7 May. " +
+                "These are the Eta Aquariids: trace the trails backwards and they converge on one point in " +
+                "Aquarius — the radiant — which is what each shower is named after. " +
+                "Note: the number of meteors scales with playback speed. At 3 min/s, three real minutes pass each second.",
+          },
+        },
+        {
+          site: [-33.87, 151.21],
+          text: {
+            ja: "同じ5月7日3時半の空を、今度はシドニーから見ます。同じ瞬間でも、" +
+                "放射点の高度は26°ではなく37°です。" +
+                "流星は放射点の高さ (の正弦) に比例して増えるので、南半球のほうが多く見えます。" +
+                "みずがめ座ηの放射点は赤緯 −1° — ほぼ天の赤道上にあり、南半球に有利な群です。",
+            en: "The same 03:30 sky, now from Sydney. At that same moment the radiant stands " +
+                "37° up instead of 26°. " +
+                "The rate scales with the sine of that altitude, so the southern sky wins. " +
+                "The Eta Aquariid radiant sits at declination −1°, right on the celestial equator, " +
+                "which favours southern observers.",
+          },
+        },
+        {
+          site: [35.68, 139.69], d: "2026-10-21T18:18", radiant: "orionids",
+          until: "2026-10-21T20:18",
+          text: {
+            ja: "半年後の10月22日午前3時、同じ東京の空。オリオン座流星群です。" +
+                "これもハレー彗星の塵 — 地球は同じ彗星が残した帯を、行きと帰りで年に二度横切っています。" +
+                "秒速66kmと速く、青白い光が一瞬で走ります。",
+            en: "Half a year later, 03:00 on 22 October, from the same spot in Tokyo: the Orionids. " +
+                "This is Halley's dust too — Earth crosses the same comet's stream twice a year, " +
+                "once at each crossing point. At 66 km/s these are fast, and flash bluish-white.",
+          },
+        },
+        {
+          d: "2026-08-12T18:00", radiant: "perseids", until: "2026-08-12T20:00",
+          text: {
+            ja: "8月13日午前3時、ペルセウス座流星群。母天体はスイフト・タットル彗星です。" +
+                "放射点が高く昇り、天頂出現数も100個/時と多いため、最も安定して見られる群になっています。" +
+                "梅雨も明けて夜も暖かい時期にあたるのも大きいところです。",
+            en: "03:00 on 13 August: the Perseids, from comet Swift–Tuttle. " +
+                "The radiant climbs high, the zenithal rate is around 100 an hour, and the nights are warm — " +
+                "which is why this is the shower most people have actually seen.",
+          },
+        },
+        {
+          d: "2026-12-14T17:00", radiant: "geminids", until: "2026-12-14T19:00",
+          text: {
+            ja: "12月15日午前2時、ふたご座流星群。放射点はほぼ天頂です。" +
+                "秒速35kmとこれまでの群の半分ほどの速さで、一本ずつがゆっくり、黄色っぽく流れます。" +
+                "母天体は彗星ではなく小惑星ファエトンで、その正体はまだ議論が続いています。",
+            en: "02:00 on 15 December: the Geminids, with the radiant almost overhead. " +
+                "At 35 km/s — half the speed of the showers so far — each one drifts across slowly and yellow. " +
+                "Its parent is not a comet but the asteroid Phaethon, and what that means is still debated.",
+          },
+        },
+        {
+          site: [51.51, -0.13], d: "2027-01-04T03:13", radiant: "quadrantids",
+          until: "2027-01-04T05:13",
+          text: {
+            ja: "2027年1月4日午前3時、ロンドン。しぶんぎ座流星群の極大の瞬間です。" +
+                "この群は極大の幅が6時間ほどしかありません — 塵の帯が細く、地球が数時間で通り抜けてしまうためです。",
+            en: "03:00 on 4 January 2027, London: the exact maximum of the Quadrantids. " +
+                "This shower's peak is only about six hours wide — the stream is narrow, and Earth is " +
+                "through it in a matter of hours.",
+          },
+        },
+        {
+          site: [35.68, 139.69],
+          text: {
+            ja: "同じ瞬間の東京は昼です。極大が数時間しかない群は、そのとき夜だった地域しか見られません。" +
+                "しぶんぎ座はさらに放射点の赤緯が +49.5° と高く、南緯40°より南では地平線の上に昇りません。" +
+                "「流星群は世界中で見られる」わけではない、というのはこの二つの意味においてです。",
+            en: "At that same moment Tokyo is in daylight. When a peak lasts only hours, only the side of " +
+                "the planet that happens to be in darkness sees it. The Quadrantid radiant also sits at " +
+                "declination +49.5°, so south of latitude 40°S it never rises at all. " +
+                "That is the sense in which a shower is not visible worldwide.",
+          },
+        },
+        {
+          site: [35.68, 139.69], d: "2026-11-17T19:00", radiant: "leonids",
+          until: "2026-11-17T21:00",
+          text: {
+            ja: "11月18日午前4時、しし座流星群。平年の天頂出現数は15個/時ほどで、しばらく見ていて数個という群です。" +
+                "秒速71kmは主な群でいちばん速く、明るいものは通り過ぎたあとに光の筋 (痕) を残します。",
+            en: "04:00 on 18 November: the Leonids. In an ordinary year the zenithal rate is about 15 an hour — " +
+                "a few meteors for a long wait. At 71 km/s they are the fastest of the major showers, and the " +
+                "bright ones leave a glowing train behind them.",
+          },
+        },
+        {
+          d: "2001-11-18T18:15", spd: 0.000694, until: "2001-11-18T18:45",
+          text: {
+            ja: "同じ群、同じ日本の空を2001年11月19日午前3時15分へ。天頂出現数はおよそ3,300個/時 — 平年の200倍です。" +
+                "放出されて間もない塵はまだ均されておらず、細い帯のまま軌道に残っています。" +
+                "母彗星テンペル・タットルの回帰 (33年) の前後には、その帯を直撃する年があるのです。" +
+                "なおここは1分/秒。実際の60倍の速さで流しています。",
+            en: "The same shower over Japan, at 03:15 on 19 November 2001. The zenithal rate reached about " +
+                "3,300 an hour — 200 times a normal year. Dust shed recently has not spread out yet and still " +
+                "lies in a narrow trail, and around the 33-year returns of comet Tempel–Tuttle, Earth runs " +
+                "straight into one. Note: playback here is 1 min/s, sixty times real speed.",
+          },
+        },
+        {
+          d: "2026-11-17T19:00", spd: 0.00208, until: "2026-11-17T21:00",
+          text: {
+            ja: "「毎年同じ日」なのは、塵が軌道一周ぶんに均されていて、地球がその交点を通る位置が動かないから。" +
+                "「当たり年がある」のは、均されていない細い帯がまだ残っているからです。日付は定常、量は定常ではない。" +
+                "この画面の日付を動かせば、どの群も同じように空へ出てきます。",
+            en: "The date repeats because the dust has spread all the way around the orbit, so the crossing " +
+                "point stays put. The outbursts happen because narrow, un-spread trails are still out there. " +
+                "The timing is steady; the numbers are not. " +
+                "Change the date on this screen and any of these showers will come back.",
           },
         },
       ],
