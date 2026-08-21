@@ -91,10 +91,12 @@
       if (groundView) {
         // 選択 + その方向へカメラを向けて追尾 (以後のズームでも中央に保つ)
         const hit = hitTestGround(e.clientX, e.clientY);
+        if (hit && !tourAllowsBody(hit)) return;
         if (hit === selected && hit) toggleSelChrome(hit);
         else if (hit) { showSelMark = true; select(hit, true); }
       } else {
         const hit = hitTest(e.clientX, e.clientY);
+        if (hit && !tourAllowsBody(hit)) return;
         if (hit === selected && hit) {
           toggleSelChrome(hit);
         } else if (hit) {

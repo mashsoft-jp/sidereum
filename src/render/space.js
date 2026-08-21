@@ -62,7 +62,7 @@
     // 星空はカメラ中心の球 = カメラ相対座標そのもの
     gl.uniformMatrix4fv(pointP.u.uVP, false, VP);
     gl.uniform1f(pointP.u.uScale, DPR);
-    gl.uniform1f(pointP.u.uAlpha, 0.9);
+    gl.uniform1f(pointP.u.uAlpha, 1);
     gl.bindBuffer(gl.ARRAY_BUFFER, starVB);
     gl.enableVertexAttribArray(pointP.a.aPos);
     gl.enableVertexAttribArray(pointP.a.aSize);

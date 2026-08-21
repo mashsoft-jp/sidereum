@@ -40,8 +40,10 @@
       buf[o + 1] = ze * R;
       buf[o + 2] = -ye * R;
       STAR_W[i*3] = xq; STAR_W[i*3+1] = ze; STAR_W[i*3+2] = -ye;   // ワールド単位方向
-      buf[o + 3] = mag < 1.2 ? 2.8 : mag < 2.8 ? 1.9 : mag < 4.0 ? 1.35 : mag < 5.2 ? 1.0 : 0.8;
-      const br = Math.min(1, Math.pow(10, -0.11 * mag));       // 等級 → 明るさ
+      // 真空なので大気の減光がない。地上ビューより一段大きく・明るく取る
+      // (暗い星まで見えないと星空が寂しくなるため、等級差は主に点の大きさで表す)
+      buf[o + 3] = Math.max(1.6, 4.9 - 0.55 * mag);
+      const br = Math.max(0.62, Math.min(1, 1.35 - 0.115 * mag));   // 等級 → 明るさ
       const col = STAR_COL[i];                                 // B-V 色指数による実際の色味
       buf[o+4] = col[0] * br; buf[o+5] = col[1] * br; buf[o+6] = col[2] * br;
     }

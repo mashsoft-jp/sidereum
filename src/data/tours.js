@@ -50,6 +50,8 @@
   //   orbits  軌道線を出すか。同じく一時変更。探査機視点など「写真」として
   //         見せる場面では、画面を横切る線が邪魔になるので落とす
   //   grid    天球の経緯線を出すか。書いた回だけ出る (既定は消す)。同じく一時変更
+  //   pick  await: "select" の回で、この天体だけを選ばせる。他は押しても
+  //         反応しない (画面上の天体も、天体リストのボタンも)
   //   mark  sel の天体に選択マーク (オレンジのリング) を出すか。既定は false
   //   hold  自動送りでの滞留秒 (既定 12)
   //   text  ナレーション
@@ -87,7 +89,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 19,
+      ver: 20,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -150,12 +152,15 @@
           },
         },
         {
-          scene: false, await: "select", ui: ["nav"], hi: "#navPanel",
+          scene: false, await: "select", pick: "earth", ui: ["nav"],
+          hi: '#navPanel, #nav button.body[data-key="earth"]',
           text: {
             ja: "画面上の天体をクリックすると、その天体に近づきます。" +
-                "左の天体リストからも選ぶことができます。",
+                "左の天体リストからも選ぶことができます。" +
+                "それでは地球を選んでみましょう。",
             en: "Click a body on screen to fly closer to it. " +
-                "You can also pick one from the body list on the left.",
+                "You can also pick one from the body list on the left. " +
+                "Let's try it with Earth.",
           },
         },
         {
@@ -201,7 +206,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 22,
+      ver: 23,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -263,12 +268,15 @@
           },
         },
         {
-          scene: false, await: "select", ui: ["nav"], hi: "#navPanel",
+          scene: false, await: "select", pick: "earth", ui: ["nav"],
+          hi: '#navPanel, #nav button.body[data-key="earth"]',
           text: {
             ja: "画面上の天体をタップすると、その天体に近づきます。" +
-                "左の天体リストからも選ぶことができます。",
+                "左の天体リストからも選ぶことができます。" +
+                "それでは地球を選んでみましょう。",
             en: "Tap a body on screen to fly closer to it. " +
-                "You can also pick one from the body list on the left.",
+                "You can also pick one from the body list on the left. " +
+                "Let's try it with Earth.",
           },
         },
         {

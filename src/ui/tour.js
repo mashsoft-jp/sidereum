@@ -122,8 +122,10 @@
       return () => Math.hypot(cam.panOffTgt[0] - p[0], cam.panOffTgt[1] - p[1],
                               cam.panOffTgt[2] - p[2]) > cam.dist * 0.05;
     },
-    select: () => {
+    // pick が書いてあれば、その天体を選ぶまで達成にしない
+    select: (s) => {
       const b = selected;
+      if (s && s.pick) return () => !!selected && selected.key === s.pick;
       return () => !!selected && selected !== b;
     },
     play: () => {
@@ -213,7 +215,7 @@
     tourDoneTimer = 0;
     tourBar.classList.remove("done");
     const f = s.await && TOUR_AWAIT[s.await];
-    tourAwaitTest = f ? f() : null;
+    tourAwaitTest = f ? f(s) : null;
     // until は再生するステップでだけ効かせる。停止中のステップにも効くと、
     // 畳み込みで引き継がれた until を開始時点で満たして即座に進んでしまう
     const t = s.play && s.until ? Date.parse(s.until + "Z") : NaN;
@@ -252,6 +254,12 @@
   // ツアー中でも、天体の選択を促しているステップだけはキャンバスのクリックを通す
   function tourAllowsSelect() {
     return !!tour && tourStateAt(tourIdx).await === "select";
+  }
+  // 選ばせる天体を1つに絞っているステップ (pick) では、それ以外は選ばせない
+  function tourAllowsBody(b) {
+    if (!tour) return true;
+    const pick = tourStateAt(tourIdx).pick;
+    return !pick || (!!b && b.key === pick);
   }
 
   // 0..i のステップを畳み込んだ状態 (書かれていない項目は前のステップを引き継ぐ)

@@ -405,6 +405,9 @@
     btn.textContent = bName(b);
     btn.dataset.key = b.key;
     btn.addEventListener("click", () => {
+      // ツアー中は選択を促しているステップだけ、しかもそのステップが選ばせる
+      // 天体だけ通す (画面のタップと同じ扱い)
+      if (tourActive && (!tourAllowsSelect() || !tourAllowsBody(b))) return;
       if (selected === b) toggleSelChrome(b);
       else { showSelMark = true; select(b, true); }
     });

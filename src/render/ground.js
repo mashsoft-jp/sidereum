@@ -320,6 +320,10 @@
     // 恒星 (実カタログ, 地平線より上のみ)。ワールド単位方向を観測者フレームへ投影
     if (N_CAT) {
       if (!starGVB) starGVB = gl.createBuffer();
+      // 大気の無い月面では減光が効かないので、地上より一段大きく・明るく描く
+      const szK = isMoonSurf ? 4.9 : 4.0, szMin = isMoonSurf ? 1.6 : 0.9;
+      const brK = isMoonSurf ? 1.35 : 1.15, brA = isMoonSurf ? 0.115 : 0.13;
+      const brMin = isMoonSurf ? 0.62 : 0.3;
       let ns = 0;
       for (let i = 0; i < N_CAT; i++) {
         const wx = STAR_W[i*3], wy = STAR_W[i*3+1], wz = STAR_W[i*3+2];
@@ -330,8 +334,8 @@
         const o = ns * 7;
         starGArr[o] = east * SKYR; starGArr[o+1] = up * SKYR; starGArr[o+2] = -north * SKYR;
         const m = STAR_MAG[i];
-        starGArr[o+3] = Math.max(0.9, 4.0 - 0.55 * m);
-        const c = Math.max(0.3, Math.min(1, 1.15 - 0.13 * m));
+        starGArr[o+3] = Math.max(szMin, szK - 0.55 * m);
+        const c = Math.max(brMin, Math.min(1, brK - brA * m));
         const col = STAR_COL[i];                  // B-V 色指数による実際の色味
         starGArr[o+4] = col[0] * c; starGArr[o+5] = col[1] * c; starGArr[o+6] = col[2] * c;
         ns++;
@@ -340,7 +344,7 @@
         gl.useProgram(pointP.pr);
         gl.uniformMatrix4fv(pointP.u.uVP, false, gVP32);
         gl.uniform1f(pointP.u.uScale, DPR);
-        gl.uniform1f(pointP.u.uAlpha, 0.95 * starVis);
+        gl.uniform1f(pointP.u.uAlpha, (isMoonSurf ? 1 : 0.95) * starVis);
         gl.bindBuffer(gl.ARRAY_BUFFER, starGVB);
         gl.bufferData(gl.ARRAY_BUFFER, starGArr, gl.DYNAMIC_DRAW);
         gl.enableVertexAttribArray(pointP.a.aPos);
