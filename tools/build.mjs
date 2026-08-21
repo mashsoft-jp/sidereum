@@ -44,6 +44,7 @@ const MANIFEST = [
   "gl/resources.js",     // テクスチャの GL ロード・星空宣言・小惑星帯・軌道線
   "gl/post.js",          // Bloom (画面を取り込んで明るいところを滲ませる)
   "core/state.js",       // 実行時状態・月の位置 (ELP-2000)・位置更新
+  "core/eclipse.js",     // 食 (日食・月食・衛星の影) の遮蔽体えらび
   "render/body.js",      // リサイズ・描画基盤・drawBody・project
   "data/sky.js",         // 恒星カタログ・星座線/名・黄道
   "data/showers.js",     // 流星群の放射点・出現数

@@ -37,6 +37,8 @@
     t: [0, 0, 0], tgt: [0, 0, 0],
     v: [0, 0, 0], v2: [0, 0, 0],
     sun: [0, 0, 0],             // bodyRenderer.draw へ渡す光源位置
+    // 食の遮蔽体 (描画中の座標系へ移したもの)。毎フレーム作り直さず使い回す
+    ecl: { c: [0, 0, 0], r: 0, sunAng: 0, col: null },
   };
 
   function bodyModel(b, r) {
@@ -163,7 +165,8 @@
       // 宇宙ビューは全天体で同一 (カメラ相対の太陽位置)、地上ビューは天体ごとに
       // 「天体 → 実際の太陽」方向を遠方光源の位置として渡す
       // radiusPx = 画面上の見かけの半径。夜側の明るさ (満ち欠けの見え方) を決める
-      draw({ body, model, mvp, sunPosition, radiusPx }) {
+      // eclipse = 太陽面を隠している天体 {c, r, sunAng, col}。無ければ null
+      draw({ body, model, mvp, sunPosition, radiusPx, eclipse }) {
         if (!inPass) throw new Error("bodyRenderer: beginPass より前に draw が呼ばれました");
         const tx = texByKey.get(body.key);
         // 法線図を持つ天体だけユニット4を差し替える。持たない天体でも
@@ -183,6 +186,12 @@
         // 扁平は天体ごと。真球は 1,1,1 (条件分岐で省くと前の天体の値が残る)
         gl.uniform3fv(u.uOblate, body.obl || NO_OBL);
         gl.uniform1f(u.uRingOn, body.ring ? 1 : 0);
+        // 食。遮蔽体が無いフレームでも「無い」ことを毎回伝える (前の天体の
+        // 影を引きずると、関係のない天体が暗くなる)
+        const ec = eclipse || null;
+        gl.uniform3f(u.uEclC, ec ? ec.c[0] : 0, ec ? ec.c[1] : 0, ec ? ec.c[2] : 0);
+        gl.uniform2f(u.uEclR, ec ? ec.r : 0, ec ? ec.sunAng : 1);
+        gl.uniform3fv(u.uEclCol, ec ? ec.col : ZERO3);
         gl.uniform1f(u.uAtmos, 0);      // 直前が大気シェルでも本体として描く
         gl.uniform1f(u.uType, body.type);
         // 色はリニアに直したもの (bodies.js で一度だけ変換済み) を渡す。
@@ -207,7 +216,17 @@
     const model = bodyModel(b, r);              // SCR.t にカメラ相対位置が入る
     const d = Math.hypot(SCR.t[0], SCR.t[1], SCR.t[2]) || 1;
     const radiusPx = r / d * (H / 2) / Math.tan(eFov() / 2);
-    bodyRenderer.draw({ body: b, model, mvp: mMul(VP, model, SCR.mvp), sunPosition, radiusPx });
+    // 遮蔽体もカメラ相対へ (f64 で差を取ってから f32 化するのは天体本体と同じ)
+    const e = eclipseFor(b);
+    let eclipse = null;
+    if (e) {
+      SCR.ecl.c[0] = e.cw[0] - EYE[0];
+      SCR.ecl.c[1] = e.cw[1] - EYE[1];
+      SCR.ecl.c[2] = e.cw[2] - EYE[2];
+      SCR.ecl.r = e.r; SCR.ecl.sunAng = e.sunAng; SCR.ecl.col = e.col;
+      eclipse = SCR.ecl;
+    }
+    bodyRenderer.draw({ body: b, model, mvp: mMul(VP, model, SCR.mvp), sunPosition, radiusPx, eclipse });
   }
 
   // 宇宙ビュー用。大気を持つ天体のシェルを1つ描く (本体をすべて描いたあとに呼ぶ)

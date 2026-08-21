@@ -4,6 +4,8 @@
     uniform float uMoon;    // 1 = 月面, 0 = 地上
     uniform float uDay;     // 昼夜係数 (0 = 夜, 1 = 昼)
     uniform float uSky;     // 1 = 空ドーム, 0 = 地面ドーム
+    uniform float uOcc;     // 日食で隠されずに残っている太陽面の割合 (1 = 食なし)。
+                            // 地上は uDay 側へ畳んであるので、ここで使うのは月面だけ
 
     float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     float noise(vec2 x) {
@@ -72,7 +74,7 @@
         float sh = 0.62 + 0.15 * base + 0.18 * grain + (0.30 * k1 + 0.16 * k2) * relief;
         col = srgbToLinear(vec3(0.56, 0.545, 0.52)) * clamp(sh, 0.04, 1.5);
         // 大気が無いので影は漆黒、日向はコントラストが強い
-        float lit = smoothstep(-0.03, 0.06, uSun.y);
+        float lit = smoothstep(-0.03, 0.06, uSun.y) * uOcc;
         col *= mix(0.04, 1.0, lit);
         col += vec3(0.0061, 0.0090, 0.0152) * (1.0 - lit);   // 地球照のうっすらした青み
       } else {

@@ -273,6 +273,7 @@
     }
 
     updatePositions();
+    updateEclipses();   // 太陽面を隠している天体を、今の位置から選び直す
 
     // 注視点追従 & ズーム・角度の緩和
     if (selected) {

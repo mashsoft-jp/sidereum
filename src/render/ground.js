@@ -20,6 +20,7 @@
     return Math.max(2e-9, Math.min(GMIN_DEFAULT, angDiam * 1.1));
   }
   const _fwd = [0, 0, 0], _gp = [0, 0, 0], _sunG = [0, 0, 0];
+  const _eclW = [0, 0, 0], _eclG = [0, 0, 0];   // 食: 天体 → 遮蔽体 (ワールド / 地平フレーム)
   // 極小画角 (超高倍率) では f32 行列の量子化で照準・描画が破綻するため、
   // 地上ビューの行列は f64 で合成し、GPU へ渡す直前に f32 化する
   const gVP = mIdent(new Float64Array(16)), gVP32 = new Float32Array(16);
@@ -205,11 +206,30 @@
     gVP32.set(gVP);
 
     // 太陽の方向 (地平フレーム) と昼夜係数。地形の陰影・大気・星の減光に使う
-    bodySky(SUN, _sunG);
+    const sunAU = bodySky(SUN, _sunG);
     const isMoonSurf = surfaceBody === "moon";
+    // ---- 日食: 観測地から見て太陽面が何割隠れているか ----
+    // 地上では月が、月面では地球が太陽を隠す。皆既に近づくほど空が暗くなり、
+    // 昼のうちに星が現れる — 昼夜係数へ畳んでおけば、空・地面・星・天体の
+    // エアライト・Bloom のしきい値まで一度に効く
+    const eclOcc = isMoonSurf ? BODY_BY_KEY.get("earth") : MOON;
+    let sunCov = 0;
+    {
+      const occAU = bodySky(eclOcc, _gp);
+      const rs = Math.asin(Math.min(1, SUN.rkm / (sunAU * AU_KM)));
+      const ro = Math.asin(Math.min(1, eclOcc.rkm / (occAU * AU_KM)));
+      const cos = _gp[0]*_sunG[0] + _gp[1]*_sunG[1] + _gp[2]*_sunG[2];
+      sunCov = diskCoverage(Math.acos(Math.max(-1, Math.min(1, cos))), rs, ro);
+    }
+    // 隠れた面積をそのまま明るさに使うと、半分欠けただけで夕方になってしまう。
+    // 目は明るさの対数に反応するので、実際に暗さを感じるのは残りが1割を切って
+    // から — 残光を対数で写して、桁が落ちるほど急に暗くなる形にする。
+    // 皆既でも 0 にはしない: 実際の皆既中の空は深い薄明で、地平はぐるりと
+    // 夕焼け色に残る
+    const sunLeft = Math.max(0.02, Math.min(1, 1 + Math.log10(Math.max(1e-4, 1 - sunCov)) / 3.5));
     // 月面は大気が無いので昼でも空は暗いまま (星も見える)
     const dayF = (showTerrain && !isMoonSurf)
-      ? Math.max(0, Math.min(1, (_sunG[1] + 0.12) / 0.22)) : 0;
+      ? Math.max(0, Math.min(1, (_sunG[1] + 0.12) / 0.22)) * sunLeft : 0;
     starVis = 1 - dayF * 0.98;   // 昼は星をほぼ消す
     skyDayF = dayF;
 
@@ -225,6 +245,7 @@
       gl.uniform3f(terrainP.u.uSun, _sunG[0], _sunG[1], _sunG[2]);
       gl.uniform1f(terrainP.u.uMoon, 0);
       gl.uniform1f(terrainP.u.uDay, dayF);
+      gl.uniform1f(terrainP.u.uOcc, sunLeft);
       gl.uniform1f(terrainP.u.uSky, 1);
       gl.bindBuffer(gl.ARRAY_BUFFER, skyVB);
       gl.enableVertexAttribArray(terrainP.a.aPos);
@@ -388,14 +409,19 @@
       const px = _gp[0]*SKYR, py = _gp[1]*SKYR, pz = _gp[2]*SKYR;
       groundVis.push({ b, px, py, pz, rpx: spherePx });
       if (spherePx >= 5) {                          // 画面上で十分大きい → 球
-        bigBodies.push({ b, dx: _gp[0], dy: _gp[1], dz: _gp[2], px, py, pz,
+        bigBodies.push({ b, px, py, pz, dist: distAU,
                          wr: SKYR * Math.tan(angR), rpx: spherePx });
         continue;
       }
       let size, r, g, bl;
-      if (b === SUN) { size = 18; r = 1.0; g = 0.9; bl = 0.6; }
-      else if (b.key === "moon") { size = 11; r = 0.9; g = 0.92; bl = 0.96; }
-      else { size = magSize(magV == null ? 3.5 : magV); r = b.colA[0]*0.5+0.5; g = b.colA[1]*0.5+0.5; bl = b.colA[2]*0.5+0.5; }
+      if (b === SUN) {
+        // 日食で欠けているぶん暗くする (点で描かれる倍率では形は出せない)
+        size = 18 * (0.35 + 0.65 * sunLeft); r = 1.0 * sunLeft; g = 0.9 * sunLeft; bl = 0.6 * sunLeft;
+      } else if (b.key === "moon") {
+        size = 11; r = 0.9; g = 0.92; bl = 0.96;
+      } else {
+        size = magSize(magV == null ? 3.5 : magV); r = b.colA[0]*0.5+0.5; g = b.colA[1]*0.5+0.5; bl = b.colA[2]*0.5+0.5;
+      }
       const o = n * 7;
       groundPtArr[o]=px; groundPtArr[o+1]=py; groundPtArr[o+2]=pz;
       groundPtArr[o+3]=size; groundPtArr[o+4]=r; groundPtArr[o+5]=g; groundPtArr[o+6]=bl;
@@ -419,6 +445,17 @@
     gl.disable(gl.BLEND);
     // 拡大された天体はテクスチャ球で描画。太陽方向から照らすので満ち欠けも再現される
     if (bigBodies.length) {
+      // 天体はすべて半径 SKYR のドーム上に置いてあるので、重なったときに球どうしが
+      // 同じ距離で交差してしまう (日食で月が太陽を隠せない)。位置と半径を同じ率で
+      // 縮めれば投影は1画素も変わらないから、実距離の順にドームの半径を変えて
+      // 深度だけを正しくする
+      if (bigBodies.length > 1) {
+        bigBodies.sort((x, y) => x.dist - y.dist);
+        for (let i = 0; i < bigBodies.length; i++) {
+          const k = 0.55 + 0.45 * (i / (bigBodies.length - 1)), bb = bigBodies[i];
+          bb.px *= k; bb.py *= k; bb.pz *= k; bb.wr *= k;
+        }
+      }
       if (surfaceBody === "moon") { bodySky(SUN, _fwd); }
       else { const sc = computeObs(SUN); azAltDir(sc.az, sc.alt, _fwd); }
       const sunGx = _fwd[0] * SKYR, sunGy = _fwd[1] * SKYR, sunGz = _fwd[2] * SKYR;
@@ -466,9 +503,23 @@
           if (b.key === "saturn") { satLx = Ld[0]; satLy = Ld[1]; satLz = Ld[2]; }
           SCR.sun[0] = Ld[0] * 1e6; SCR.sun[1] = Ld[1] * 1e6; SCR.sun[2] = Ld[2] * 1e6;
         }
+        // 食の遮蔽体。ワールドでの「天体 → 遮蔽体」をそのまま地平フレームへ回し、
+        // ドームの縮尺 (球の半径 / 実半径) を掛けて置き直す
+        const ecl = eclipseFor(b);
+        let eclipse = null;
+        if (ecl) {
+          const w = posW.get(b.key), sc = R / bodyR(b);
+          _eclW[0] = ecl.cw[0] - w[0]; _eclW[1] = ecl.cw[1] - w[1]; _eclW[2] = ecl.cw[2] - w[2];
+          worldDirToGround(_eclW, _eclG);
+          SCR.ecl.c[0] = bb.px + _eclG[0] * sc;
+          SCR.ecl.c[1] = bb.py + _eclG[1] * sc;
+          SCR.ecl.c[2] = bb.pz + _eclG[2] * sc;
+          SCR.ecl.r = ecl.r * sc; SCR.ecl.sunAng = ecl.sunAng; SCR.ecl.col = ecl.col;
+          eclipse = SCR.ecl;
+        }
         const mvp = mMul(gVP, m, SCR.mvp);
         SCR.model.set(m);   // uModel は f32 で十分 (法線用)。f64 配列を直接渡さない
-        bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun, radiusPx: bb.rpx });
+        bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun, radiusPx: bb.rpx, eclipse });
         if (b.air) {
           // 行列とやりたいことは本体と同じで、大きさだけ (1 + air) 倍にする。
           // gM64 は次の天体で上書きされるので、ここで取っておく
@@ -530,6 +581,43 @@
       gl.disable(gl.DEPTH_TEST);
     }
 
+    // ---- 皆既日食のコロナ ----
+    // 普段は光球が明るすぎて見えず、太陽面が完全に隠れて初めて現れる。
+    // 板は月の球より奥 (太陽のドーム半径) へ置き、深度テストで中心を月に
+    // 食わせて輪にする — 手前に置くと、ただの光の玉になってしまう。
+    // Bloom の有無によらず出す: これはカメラや目の中の滲みではなく、
+    // 実際にそこにある光だから
+    {
+      const cAmt = Math.max(0, Math.min(1, (sunCov - 0.985) / 0.015));
+      const sBB = bigBodies.find((x) => x.b === SUN);
+      const sv = sBB || groundVis.find((v) => v.b === SUN);
+      if (cAmt > 0 && sv && sv.py > 0) {
+        const cr = sBB ? sBB.wr
+                       : SKYR * Math.tan(Math.asin(Math.min(0.9, SUN.rkm / (sunAU * AU_KM))));
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthMask(false);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE);
+        gl.useProgram(billP.pr);
+        gl.uniformMatrix4fv(billP.u.uVP, false, gVP32);
+        gl.uniform3f(billP.u.uCenter, sv.px, sv.py, sv.pz);
+        gl.uniform3f(billP.u.uRight, gV64[0], gV64[4], gV64[8]);
+        gl.uniform3f(billP.u.uUp, gV64[1], gV64[5], gV64[9]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, billVB);
+        gl.enableVertexAttribArray(billP.a.aCorner);
+        gl.vertexAttribPointer(billP.a.aCorner, 2, gl.FLOAT, false, 0, 0);
+        // 内側ほど明るい真珠色。太陽半径の 5倍あたりまで裾を引く
+        gl.uniform1f(billP.u.uFall, 1.8);
+        gl.uniform1f(billP.u.uSize, cr * 5.0);
+        gl.uniform3f(billP.u.uCol1, 0.16 * cAmt, 0.17 * cAmt, 0.21 * cAmt);
+        gl.uniform3f(billP.u.uCol2, 0.85 * cAmt, 0.88 * cAmt, 0.96 * cAmt);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.disable(gl.BLEND);
+        gl.disable(gl.DEPTH_TEST);
+        gl.depthMask(true);
+      }
+    }
+
     // 太陽の眩しさ (グレア)。宇宙ビューと同じ理由で Bloom のときだけ足す —
     // Bloom はトーンマップ済みの画面を取り込むので、太陽の円盤は空や雲と同じ
     // 1.0 に潰れていて、Bloom だけでは太陽を特別扱いできない。
@@ -542,8 +630,10 @@
       const sv = groundVis.find((v) => v.b === SUN);
       const sinAlt = sv ? sv.py / SKYR : -1;
       if (sv && sinAlt > 0) {
-        const fade = surfaceBody === "moon"
-          ? 1 : Math.min(1, sinAlt / 0.10);
+        // 日食で隠れているぶんは眩しくない。皆既ではグレアが完全に消え、
+        // 空だけが暗く残る
+        const fade = (surfaceBody === "moon"
+          ? 1 : Math.min(1, sinAlt / 0.10)) * (1 - sunCov);
         // 大気を長く通るほど青が抜けて赤くなる (夕日が赤い理由)。地平ぎわの
         // 太陽を白いまま光らせると、周りが焼けているのにそこだけ昼の色になる。
         // 月面には大気が無いので白のまま
@@ -633,6 +723,7 @@
       gl.uniform3f(terrainP.u.uSun, _sunG[0], _sunG[1], _sunG[2]);
       gl.uniform1f(terrainP.u.uMoon, isMoonSurf ? 1 : 0);
       gl.uniform1f(terrainP.u.uDay, dayF);
+      gl.uniform1f(terrainP.u.uOcc, sunLeft);
       gl.uniform1f(terrainP.u.uSky, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, isMoonSurf ? ridgeVB.moon : ridgeVB.earth);
       gl.enableVertexAttribArray(terrainP.a.aPos);

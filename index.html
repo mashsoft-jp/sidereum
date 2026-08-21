@@ -3983,6 +3983,9 @@
     uniform float uNrmAmt;      // その強さ。0 = 法線マップを持たない天体
     uniform float uAtmos;       // 1 = 大気シェルとして描く (本体ではなく)
     uniform float uAtmosT;      // シェルの厚み (天体半径を 1 とした比)
+    uniform vec3 uEclC;         // 食: 遮蔽体の中心 (uSun と同じ座標系)
+    uniform vec2 uEclR;         // x = 遮蔽体の半径 (同じ単位。0 = 食なし), y = 太陽の視半径 [rad]
+    uniform vec3 uEclCol;       // 皆既のとき遮蔽体の大気を回り込んで届く光 (リニア)
 
     // 全球マップの取得はすべてこれを通す。経度方向は必ずどこかで折り返すので、
     // 微分を自動で取らせるとその1列でミップ段が最粗まで落ちて縦縞になる。
@@ -4169,6 +4172,40 @@
           }
         }
       }
+      // ---- 食: 他の天体が太陽面を隠す ----
+      // 月食 (地球の影に入る月)・日食 (地球へ落ちる月の影)・木星面を渡る
+      // ガリレオ衛星の影は、どれも「その点から見て太陽面の何割が遮蔽体に
+      // 隠れたか」で決まる。2円の重なり面積をここで解く。遮蔽体の選定は
+      // CPU 側 (core/eclipse.js)
+      vec3 eclLight = vec3(0.0);
+      if (uEclR.x > 0.0) {
+        vec3 D = uEclC - vW;
+        float d = length(D);
+        float ro = asin(clamp(uEclR.x / d, 0.0, 1.0));        // 遮蔽体の視半径
+        float rs = uEclR.y;                                   // 太陽の視半径
+        float sep = acos(clamp(dot(D / d, L), -1.0, 1.0));    // 中心どうしの離角
+        float cov = 0.0;
+        if (sep < rs + ro) {
+          if (sep <= ro - rs) {
+            cov = 1.0;                                        // 皆既
+          } else if (sep <= rs - ro) {
+            cov = (ro * ro) / (rs * rs);                      // 金環
+          } else {
+            float ca = clamp((sep*sep + rs*rs - ro*ro) / (2.0*sep*rs), -1.0, 1.0);
+            float cb = clamp((sep*sep + ro*ro - rs*rs) / (2.0*sep*ro), -1.0, 1.0);
+            cov = (rs*rs * (acos(ca) - ca * sqrt(max(1.0 - ca*ca, 0.0)))
+                 + ro*ro * (acos(cb) - cb * sqrt(max(1.0 - cb*cb, 0.0))))
+                / (3.14159265 * rs * rs);
+          }
+        }
+        // 本影の中へ届くのは、遮蔽体の大気を回り込んだ光だけ (皆既月食の赤銅色)。
+        // 本影の縁ほど明るく中心ほど暗いので、離角で暗くする。大気を持たない
+        // 遮蔽体は uEclCol = 0 なので、この項は消える
+        float t = clamp(sep / max(ro - rs, 1e-6), 0.0, 1.0);  // 0 = 本影の中心
+        eclLight = uEclCol * dif * cov * mix(0.22, 1.0, t * t);
+        dif *= 1.0 - cov;
+      }
+
       float lat = p.y;
       // アルベドは以降すべてリニア。uColA/B/C・uRim・uAmb は CPU 側で変換済み、
       // テクスチャと即値だけここで戻す
@@ -4265,7 +4302,7 @@
       // では暗くして満ち欠けを見せる。昼側の明るさは uAmb によらず一定に保つ
       float ambient = uAmb * dayFade;
       float direct = mix(1.0, 1.03, uComet) - ambient;
-      vec3 c = alb * (ambient + dif * direct) + vec3(spec) * dif;
+      vec3 c = alb * (ambient + dif * direct + eclLight) + vec3(spec) * dif;
 
       if (isEarth > 0.5) {
         float ndl = dot(N, L);
@@ -4315,6 +4352,8 @@
     uniform float uMoon;    // 1 = 月面, 0 = 地上
     uniform float uDay;     // 昼夜係数 (0 = 夜, 1 = 昼)
     uniform float uSky;     // 1 = 空ドーム, 0 = 地面ドーム
+    uniform float uOcc;     // 日食で隠されずに残っている太陽面の割合 (1 = 食なし)。
+                            // 地上は uDay 側へ畳んであるので、ここで使うのは月面だけ
 
     float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     float noise(vec2 x) {
@@ -4383,7 +4422,7 @@
         float sh = 0.62 + 0.15 * base + 0.18 * grain + (0.30 * k1 + 0.16 * k2) * relief;
         col = srgbToLinear(vec3(0.56, 0.545, 0.52)) * clamp(sh, 0.04, 1.5);
         // 大気が無いので影は漆黒、日向はコントラストが強い
-        float lit = smoothstep(-0.03, 0.06, uSun.y);
+        float lit = smoothstep(-0.03, 0.06, uSun.y) * uOcc;
         col *= mix(0.04, 1.0, lit);
         col += vec3(0.0061, 0.0090, 0.0152) * (1.0 - lit);   // 地球照のうっすらした青み
       } else {
@@ -5738,6 +5777,101 @@
   }
 
   //#endregion
+  //#region src/core/eclipse.js
+  // ============================================================
+  // 食 (球の影)
+  //   太陽 – 遮蔽体 – 被照射体 が一直線に並ぶと、被照射体の表面から見た太陽面が
+  //   遮蔽体に食われる。月食 (地球の影に入る月)・日食 (地球へ落ちる月の影)・
+  //   木星面を渡るガリレオ衛星の影は、どれも同じ1つの計算で出る。
+  //
+  //   遮蔽の量は「その点から見て太陽面の何割が隠れたか」なので、面積の計算は
+  //   画素ごとにシェーダ (body.frag) で解く。ここが決めるのは「どの天体を
+  //   遮蔽体として渡すか」だけ — 太陽系のどの天体も、影を落としうる相手は
+  //   同じ系の中の数個しかない。
+  // ============================================================
+
+  // 2円 (太陽面と遮蔽体) の重なり。返すのは太陽面が隠れた割合 0〜1。
+  // sep = 中心どうしの離角、rs = 太陽の視半径、ro = 遮蔽体の視半径 [rad]
+  function diskCoverage(sep, rs, ro) {
+    if (sep >= rs + ro) return 0;              // 触れていない
+    if (sep <= ro - rs) return 1;              // 皆既 (太陽が完全に隠れる)
+    if (sep <= rs - ro) return (ro * ro) / (rs * rs);   // 金環 (遮蔽体が太陽面の中)
+    const ca = Math.max(-1, Math.min(1, (sep*sep + rs*rs - ro*ro) / (2*sep*rs)));
+    const cb = Math.max(-1, Math.min(1, (sep*sep + ro*ro - rs*rs) / (2*sep*ro)));
+    const area = rs*rs * (Math.acos(ca) - ca * Math.sqrt(Math.max(0, 1 - ca*ca)))
+               + ro*ro * (Math.acos(cb) - cb * Math.sqrt(Math.max(0, 1 - cb*cb)));
+    return Math.min(1, area / (Math.PI * rs * rs));
+  }
+
+  // 皆既月食の赤銅色。本影の中へ届くのは、地球の大気を回り込むあいだに青を
+  // 散乱で失った赤い光だけ。実際の明るさは満月の 1万分の1ほどで、そのまま
+  // 出すと画面上は真っ黒になる — 同じ画面の中で「満月よりはっきり暗い赤」に
+  // 見える値を置いている (リニア。照明の係数なのでトーンマップの前に効く)
+  const ECL_REFRACT = [0.85, 0.185, 0.065];
+  const ECL_NO_AIR = [0, 0, 0];
+
+  // 遮蔽体になりうる相手。惑星には自分の衛星が、衛星には母惑星と兄弟の衛星が影を落とす
+  const ECL_CAND = new Map();
+  {
+    const byParent = new Map();
+    for (const s of SATELLITES) {
+      if (!byParent.has(s.parent)) byParent.set(s.parent, []);
+      byParent.get(s.parent).push(s);
+    }
+    for (const p of PLANETS) {
+      const kids = byParent.get(p.key);
+      if (kids && kids.length) ECL_CAND.set(p, kids);
+    }
+    for (const s of SATELLITES) {
+      const par = PLANETS.find((p) => p.key === s.parent);
+      const sib = (byParent.get(s.parent) || []).filter((x) => x !== s);
+      const cands = par ? [par].concat(sib) : sib;
+      if (cands.length) ECL_CAND.set(s, cands);
+    }
+  }
+
+  // 天体キー → その天体を照らす太陽面を隠している遮蔽体 (無ければ null)。
+  //   cw     遮蔽体の中心 (ワールド。posW の配列をそのまま指す)
+  //   r      遮蔽体の半径 (ワールド)
+  //   sunAng その天体から見た太陽の視半径 [rad]
+  //   col    皆既のとき届く屈折光 (リニア)。大気の無い遮蔽体は 0
+  const eclipseByKey = new Map();
+
+  function updateEclipses() {
+    const Rsun = bodyR(SUN);
+    for (const [b, cands] of ECL_CAND) {
+      eclipseByKey.set(b.key, null);
+      const w = posW.get(b.key);
+      const ds = Math.hypot(w[0], w[1], w[2]);      // 太陽はワールド原点にある
+      if (ds < 1e-12) continue;
+      const rs = Math.asin(Math.min(1, Rsun / ds));
+      const lx = -w[0] / ds, ly = -w[1] / ds, lz = -w[2] / ds;   // 天体 → 太陽
+      const rb = bodyR(b);
+      let best = null, bestSlack = 0;
+      for (const c of cands) {
+        const cw = posW.get(c.key);
+        const dx = cw[0] - w[0], dy = cw[1] - w[1], dz = cw[2] - w[2];
+        const d = Math.hypot(dx, dy, dz);
+        if (d < 1e-12 || d >= ds) continue;         // 太陽より遠い側からは影が届かない
+        const cos = (dx * lx + dy * ly + dz * lz) / d;
+        if (cos <= 0) continue;                     // 太陽と反対側
+        const sep = Math.acos(Math.max(-1, Math.min(1, cos)));
+        const ro = Math.asin(Math.min(1, bodyR(c) / d));
+        // 天体には広がりがあるので、中心では外れていても縁が影に入ることがある。
+        // 表面の点で離角がずれる量は最大 rb/d [rad] なので、そのぶん広く採る
+        const slack = (rs + ro + rb / d) - sep;
+        if (slack <= 0) continue;
+        if (slack > bestSlack) { bestSlack = slack; best = c; }
+      }
+      if (!best) continue;
+      eclipseByKey.set(b.key, {
+        cw: posW.get(best.key), r: bodyR(best), sunAng: rs,
+        col: best.air ? ECL_REFRACT : ECL_NO_AIR,
+      });
+    }
+  }
+  const eclipseFor = (b) => eclipseByKey.get(b.key) || null;
+  //#endregion
   //#region src/render/body.js
   // ---------- リサイズ ----------
   function resize() {
@@ -5778,6 +5912,8 @@
     t: [0, 0, 0], tgt: [0, 0, 0],
     v: [0, 0, 0], v2: [0, 0, 0],
     sun: [0, 0, 0],             // bodyRenderer.draw へ渡す光源位置
+    // 食の遮蔽体 (描画中の座標系へ移したもの)。毎フレーム作り直さず使い回す
+    ecl: { c: [0, 0, 0], r: 0, sunAng: 0, col: null },
   };
 
   function bodyModel(b, r) {
@@ -5904,7 +6040,8 @@
       // 宇宙ビューは全天体で同一 (カメラ相対の太陽位置)、地上ビューは天体ごとに
       // 「天体 → 実際の太陽」方向を遠方光源の位置として渡す
       // radiusPx = 画面上の見かけの半径。夜側の明るさ (満ち欠けの見え方) を決める
-      draw({ body, model, mvp, sunPosition, radiusPx }) {
+      // eclipse = 太陽面を隠している天体 {c, r, sunAng, col}。無ければ null
+      draw({ body, model, mvp, sunPosition, radiusPx, eclipse }) {
         if (!inPass) throw new Error("bodyRenderer: beginPass より前に draw が呼ばれました");
         const tx = texByKey.get(body.key);
         // 法線図を持つ天体だけユニット4を差し替える。持たない天体でも
@@ -5924,6 +6061,12 @@
         // 扁平は天体ごと。真球は 1,1,1 (条件分岐で省くと前の天体の値が残る)
         gl.uniform3fv(u.uOblate, body.obl || NO_OBL);
         gl.uniform1f(u.uRingOn, body.ring ? 1 : 0);
+        // 食。遮蔽体が無いフレームでも「無い」ことを毎回伝える (前の天体の
+        // 影を引きずると、関係のない天体が暗くなる)
+        const ec = eclipse || null;
+        gl.uniform3f(u.uEclC, ec ? ec.c[0] : 0, ec ? ec.c[1] : 0, ec ? ec.c[2] : 0);
+        gl.uniform2f(u.uEclR, ec ? ec.r : 0, ec ? ec.sunAng : 1);
+        gl.uniform3fv(u.uEclCol, ec ? ec.col : ZERO3);
         gl.uniform1f(u.uAtmos, 0);      // 直前が大気シェルでも本体として描く
         gl.uniform1f(u.uType, body.type);
         // 色はリニアに直したもの (bodies.js で一度だけ変換済み) を渡す。
@@ -5948,7 +6091,17 @@
     const model = bodyModel(b, r);              // SCR.t にカメラ相対位置が入る
     const d = Math.hypot(SCR.t[0], SCR.t[1], SCR.t[2]) || 1;
     const radiusPx = r / d * (H / 2) / Math.tan(eFov() / 2);
-    bodyRenderer.draw({ body: b, model, mvp: mMul(VP, model, SCR.mvp), sunPosition, radiusPx });
+    // 遮蔽体もカメラ相対へ (f64 で差を取ってから f32 化するのは天体本体と同じ)
+    const e = eclipseFor(b);
+    let eclipse = null;
+    if (e) {
+      SCR.ecl.c[0] = e.cw[0] - EYE[0];
+      SCR.ecl.c[1] = e.cw[1] - EYE[1];
+      SCR.ecl.c[2] = e.cw[2] - EYE[2];
+      SCR.ecl.r = e.r; SCR.ecl.sunAng = e.sunAng; SCR.ecl.col = e.col;
+      eclipse = SCR.ecl;
+    }
+    bodyRenderer.draw({ body: b, model, mvp: mMul(VP, model, SCR.mvp), sunPosition, radiusPx, eclipse });
   }
 
   // 宇宙ビュー用。大気を持つ天体のシェルを1つ描く (本体をすべて描いたあとに呼ぶ)
@@ -6292,6 +6445,7 @@
     return Math.max(2e-9, Math.min(GMIN_DEFAULT, angDiam * 1.1));
   }
   const _fwd = [0, 0, 0], _gp = [0, 0, 0], _sunG = [0, 0, 0];
+  const _eclW = [0, 0, 0], _eclG = [0, 0, 0];   // 食: 天体 → 遮蔽体 (ワールド / 地平フレーム)
   // 極小画角 (超高倍率) では f32 行列の量子化で照準・描画が破綻するため、
   // 地上ビューの行列は f64 で合成し、GPU へ渡す直前に f32 化する
   const gVP = mIdent(new Float64Array(16)), gVP32 = new Float32Array(16);
@@ -6477,11 +6631,30 @@
     gVP32.set(gVP);
 
     // 太陽の方向 (地平フレーム) と昼夜係数。地形の陰影・大気・星の減光に使う
-    bodySky(SUN, _sunG);
+    const sunAU = bodySky(SUN, _sunG);
     const isMoonSurf = surfaceBody === "moon";
+    // ---- 日食: 観測地から見て太陽面が何割隠れているか ----
+    // 地上では月が、月面では地球が太陽を隠す。皆既に近づくほど空が暗くなり、
+    // 昼のうちに星が現れる — 昼夜係数へ畳んでおけば、空・地面・星・天体の
+    // エアライト・Bloom のしきい値まで一度に効く
+    const eclOcc = isMoonSurf ? BODY_BY_KEY.get("earth") : MOON;
+    let sunCov = 0;
+    {
+      const occAU = bodySky(eclOcc, _gp);
+      const rs = Math.asin(Math.min(1, SUN.rkm / (sunAU * AU_KM)));
+      const ro = Math.asin(Math.min(1, eclOcc.rkm / (occAU * AU_KM)));
+      const cos = _gp[0]*_sunG[0] + _gp[1]*_sunG[1] + _gp[2]*_sunG[2];
+      sunCov = diskCoverage(Math.acos(Math.max(-1, Math.min(1, cos))), rs, ro);
+    }
+    // 隠れた面積をそのまま明るさに使うと、半分欠けただけで夕方になってしまう。
+    // 目は明るさの対数に反応するので、実際に暗さを感じるのは残りが1割を切って
+    // から — 残光を対数で写して、桁が落ちるほど急に暗くなる形にする。
+    // 皆既でも 0 にはしない: 実際の皆既中の空は深い薄明で、地平はぐるりと
+    // 夕焼け色に残る
+    const sunLeft = Math.max(0.02, Math.min(1, 1 + Math.log10(Math.max(1e-4, 1 - sunCov)) / 3.5));
     // 月面は大気が無いので昼でも空は暗いまま (星も見える)
     const dayF = (showTerrain && !isMoonSurf)
-      ? Math.max(0, Math.min(1, (_sunG[1] + 0.12) / 0.22)) : 0;
+      ? Math.max(0, Math.min(1, (_sunG[1] + 0.12) / 0.22)) * sunLeft : 0;
     starVis = 1 - dayF * 0.98;   // 昼は星をほぼ消す
     skyDayF = dayF;
 
@@ -6497,6 +6670,7 @@
       gl.uniform3f(terrainP.u.uSun, _sunG[0], _sunG[1], _sunG[2]);
       gl.uniform1f(terrainP.u.uMoon, 0);
       gl.uniform1f(terrainP.u.uDay, dayF);
+      gl.uniform1f(terrainP.u.uOcc, sunLeft);
       gl.uniform1f(terrainP.u.uSky, 1);
       gl.bindBuffer(gl.ARRAY_BUFFER, skyVB);
       gl.enableVertexAttribArray(terrainP.a.aPos);
@@ -6660,14 +6834,19 @@
       const px = _gp[0]*SKYR, py = _gp[1]*SKYR, pz = _gp[2]*SKYR;
       groundVis.push({ b, px, py, pz, rpx: spherePx });
       if (spherePx >= 5) {                          // 画面上で十分大きい → 球
-        bigBodies.push({ b, dx: _gp[0], dy: _gp[1], dz: _gp[2], px, py, pz,
+        bigBodies.push({ b, px, py, pz, dist: distAU,
                          wr: SKYR * Math.tan(angR), rpx: spherePx });
         continue;
       }
       let size, r, g, bl;
-      if (b === SUN) { size = 18; r = 1.0; g = 0.9; bl = 0.6; }
-      else if (b.key === "moon") { size = 11; r = 0.9; g = 0.92; bl = 0.96; }
-      else { size = magSize(magV == null ? 3.5 : magV); r = b.colA[0]*0.5+0.5; g = b.colA[1]*0.5+0.5; bl = b.colA[2]*0.5+0.5; }
+      if (b === SUN) {
+        // 日食で欠けているぶん暗くする (点で描かれる倍率では形は出せない)
+        size = 18 * (0.35 + 0.65 * sunLeft); r = 1.0 * sunLeft; g = 0.9 * sunLeft; bl = 0.6 * sunLeft;
+      } else if (b.key === "moon") {
+        size = 11; r = 0.9; g = 0.92; bl = 0.96;
+      } else {
+        size = magSize(magV == null ? 3.5 : magV); r = b.colA[0]*0.5+0.5; g = b.colA[1]*0.5+0.5; bl = b.colA[2]*0.5+0.5;
+      }
       const o = n * 7;
       groundPtArr[o]=px; groundPtArr[o+1]=py; groundPtArr[o+2]=pz;
       groundPtArr[o+3]=size; groundPtArr[o+4]=r; groundPtArr[o+5]=g; groundPtArr[o+6]=bl;
@@ -6691,6 +6870,17 @@
     gl.disable(gl.BLEND);
     // 拡大された天体はテクスチャ球で描画。太陽方向から照らすので満ち欠けも再現される
     if (bigBodies.length) {
+      // 天体はすべて半径 SKYR のドーム上に置いてあるので、重なったときに球どうしが
+      // 同じ距離で交差してしまう (日食で月が太陽を隠せない)。位置と半径を同じ率で
+      // 縮めれば投影は1画素も変わらないから、実距離の順にドームの半径を変えて
+      // 深度だけを正しくする
+      if (bigBodies.length > 1) {
+        bigBodies.sort((x, y) => x.dist - y.dist);
+        for (let i = 0; i < bigBodies.length; i++) {
+          const k = 0.55 + 0.45 * (i / (bigBodies.length - 1)), bb = bigBodies[i];
+          bb.px *= k; bb.py *= k; bb.pz *= k; bb.wr *= k;
+        }
+      }
       if (surfaceBody === "moon") { bodySky(SUN, _fwd); }
       else { const sc = computeObs(SUN); azAltDir(sc.az, sc.alt, _fwd); }
       const sunGx = _fwd[0] * SKYR, sunGy = _fwd[1] * SKYR, sunGz = _fwd[2] * SKYR;
@@ -6738,9 +6928,23 @@
           if (b.key === "saturn") { satLx = Ld[0]; satLy = Ld[1]; satLz = Ld[2]; }
           SCR.sun[0] = Ld[0] * 1e6; SCR.sun[1] = Ld[1] * 1e6; SCR.sun[2] = Ld[2] * 1e6;
         }
+        // 食の遮蔽体。ワールドでの「天体 → 遮蔽体」をそのまま地平フレームへ回し、
+        // ドームの縮尺 (球の半径 / 実半径) を掛けて置き直す
+        const ecl = eclipseFor(b);
+        let eclipse = null;
+        if (ecl) {
+          const w = posW.get(b.key), sc = R / bodyR(b);
+          _eclW[0] = ecl.cw[0] - w[0]; _eclW[1] = ecl.cw[1] - w[1]; _eclW[2] = ecl.cw[2] - w[2];
+          worldDirToGround(_eclW, _eclG);
+          SCR.ecl.c[0] = bb.px + _eclG[0] * sc;
+          SCR.ecl.c[1] = bb.py + _eclG[1] * sc;
+          SCR.ecl.c[2] = bb.pz + _eclG[2] * sc;
+          SCR.ecl.r = ecl.r * sc; SCR.ecl.sunAng = ecl.sunAng; SCR.ecl.col = ecl.col;
+          eclipse = SCR.ecl;
+        }
         const mvp = mMul(gVP, m, SCR.mvp);
         SCR.model.set(m);   // uModel は f32 で十分 (法線用)。f64 配列を直接渡さない
-        bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun, radiusPx: bb.rpx });
+        bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun, radiusPx: bb.rpx, eclipse });
         if (b.air) {
           // 行列とやりたいことは本体と同じで、大きさだけ (1 + air) 倍にする。
           // gM64 は次の天体で上書きされるので、ここで取っておく
@@ -6802,6 +7006,43 @@
       gl.disable(gl.DEPTH_TEST);
     }
 
+    // ---- 皆既日食のコロナ ----
+    // 普段は光球が明るすぎて見えず、太陽面が完全に隠れて初めて現れる。
+    // 板は月の球より奥 (太陽のドーム半径) へ置き、深度テストで中心を月に
+    // 食わせて輪にする — 手前に置くと、ただの光の玉になってしまう。
+    // Bloom の有無によらず出す: これはカメラや目の中の滲みではなく、
+    // 実際にそこにある光だから
+    {
+      const cAmt = Math.max(0, Math.min(1, (sunCov - 0.985) / 0.015));
+      const sBB = bigBodies.find((x) => x.b === SUN);
+      const sv = sBB || groundVis.find((v) => v.b === SUN);
+      if (cAmt > 0 && sv && sv.py > 0) {
+        const cr = sBB ? sBB.wr
+                       : SKYR * Math.tan(Math.asin(Math.min(0.9, SUN.rkm / (sunAU * AU_KM))));
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthMask(false);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE);
+        gl.useProgram(billP.pr);
+        gl.uniformMatrix4fv(billP.u.uVP, false, gVP32);
+        gl.uniform3f(billP.u.uCenter, sv.px, sv.py, sv.pz);
+        gl.uniform3f(billP.u.uRight, gV64[0], gV64[4], gV64[8]);
+        gl.uniform3f(billP.u.uUp, gV64[1], gV64[5], gV64[9]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, billVB);
+        gl.enableVertexAttribArray(billP.a.aCorner);
+        gl.vertexAttribPointer(billP.a.aCorner, 2, gl.FLOAT, false, 0, 0);
+        // 内側ほど明るい真珠色。太陽半径の 5倍あたりまで裾を引く
+        gl.uniform1f(billP.u.uFall, 1.8);
+        gl.uniform1f(billP.u.uSize, cr * 5.0);
+        gl.uniform3f(billP.u.uCol1, 0.16 * cAmt, 0.17 * cAmt, 0.21 * cAmt);
+        gl.uniform3f(billP.u.uCol2, 0.85 * cAmt, 0.88 * cAmt, 0.96 * cAmt);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.disable(gl.BLEND);
+        gl.disable(gl.DEPTH_TEST);
+        gl.depthMask(true);
+      }
+    }
+
     // 太陽の眩しさ (グレア)。宇宙ビューと同じ理由で Bloom のときだけ足す —
     // Bloom はトーンマップ済みの画面を取り込むので、太陽の円盤は空や雲と同じ
     // 1.0 に潰れていて、Bloom だけでは太陽を特別扱いできない。
@@ -6814,8 +7055,10 @@
       const sv = groundVis.find((v) => v.b === SUN);
       const sinAlt = sv ? sv.py / SKYR : -1;
       if (sv && sinAlt > 0) {
-        const fade = surfaceBody === "moon"
-          ? 1 : Math.min(1, sinAlt / 0.10);
+        // 日食で隠れているぶんは眩しくない。皆既ではグレアが完全に消え、
+        // 空だけが暗く残る
+        const fade = (surfaceBody === "moon"
+          ? 1 : Math.min(1, sinAlt / 0.10)) * (1 - sunCov);
         // 大気を長く通るほど青が抜けて赤くなる (夕日が赤い理由)。地平ぎわの
         // 太陽を白いまま光らせると、周りが焼けているのにそこだけ昼の色になる。
         // 月面には大気が無いので白のまま
@@ -6905,6 +7148,7 @@
       gl.uniform3f(terrainP.u.uSun, _sunG[0], _sunG[1], _sunG[2]);
       gl.uniform1f(terrainP.u.uMoon, isMoonSurf ? 1 : 0);
       gl.uniform1f(terrainP.u.uDay, dayF);
+      gl.uniform1f(terrainP.u.uOcc, sunLeft);
       gl.uniform1f(terrainP.u.uSky, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, isMoonSurf ? ridgeVB.moon : ridgeVB.earth);
       gl.enableVertexAttribArray(terrainP.a.aPos);
@@ -8517,6 +8761,7 @@
     }
 
     updatePositions();
+    updateEclipses();   // 太陽面を隠している天体を、今の位置から選び直す
 
     // 注視点追従 & ズーム・角度の緩和
     if (selected) {

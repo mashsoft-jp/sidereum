@@ -18,6 +18,9 @@
     uniform float uNrmAmt;      // その強さ。0 = 法線マップを持たない天体
     uniform float uAtmos;       // 1 = 大気シェルとして描く (本体ではなく)
     uniform float uAtmosT;      // シェルの厚み (天体半径を 1 とした比)
+    uniform vec3 uEclC;         // 食: 遮蔽体の中心 (uSun と同じ座標系)
+    uniform vec2 uEclR;         // x = 遮蔽体の半径 (同じ単位。0 = 食なし), y = 太陽の視半径 [rad]
+    uniform vec3 uEclCol;       // 皆既のとき遮蔽体の大気を回り込んで届く光 (リニア)
 
     // 全球マップの取得はすべてこれを通す。経度方向は必ずどこかで折り返すので、
     // 微分を自動で取らせるとその1列でミップ段が最粗まで落ちて縦縞になる。
@@ -204,6 +207,40 @@
           }
         }
       }
+      // ---- 食: 他の天体が太陽面を隠す ----
+      // 月食 (地球の影に入る月)・日食 (地球へ落ちる月の影)・木星面を渡る
+      // ガリレオ衛星の影は、どれも「その点から見て太陽面の何割が遮蔽体に
+      // 隠れたか」で決まる。2円の重なり面積をここで解く。遮蔽体の選定は
+      // CPU 側 (core/eclipse.js)
+      vec3 eclLight = vec3(0.0);
+      if (uEclR.x > 0.0) {
+        vec3 D = uEclC - vW;
+        float d = length(D);
+        float ro = asin(clamp(uEclR.x / d, 0.0, 1.0));        // 遮蔽体の視半径
+        float rs = uEclR.y;                                   // 太陽の視半径
+        float sep = acos(clamp(dot(D / d, L), -1.0, 1.0));    // 中心どうしの離角
+        float cov = 0.0;
+        if (sep < rs + ro) {
+          if (sep <= ro - rs) {
+            cov = 1.0;                                        // 皆既
+          } else if (sep <= rs - ro) {
+            cov = (ro * ro) / (rs * rs);                      // 金環
+          } else {
+            float ca = clamp((sep*sep + rs*rs - ro*ro) / (2.0*sep*rs), -1.0, 1.0);
+            float cb = clamp((sep*sep + ro*ro - rs*rs) / (2.0*sep*ro), -1.0, 1.0);
+            cov = (rs*rs * (acos(ca) - ca * sqrt(max(1.0 - ca*ca, 0.0)))
+                 + ro*ro * (acos(cb) - cb * sqrt(max(1.0 - cb*cb, 0.0))))
+                / (3.14159265 * rs * rs);
+          }
+        }
+        // 本影の中へ届くのは、遮蔽体の大気を回り込んだ光だけ (皆既月食の赤銅色)。
+        // 本影の縁ほど明るく中心ほど暗いので、離角で暗くする。大気を持たない
+        // 遮蔽体は uEclCol = 0 なので、この項は消える
+        float t = clamp(sep / max(ro - rs, 1e-6), 0.0, 1.0);  // 0 = 本影の中心
+        eclLight = uEclCol * dif * cov * mix(0.22, 1.0, t * t);
+        dif *= 1.0 - cov;
+      }
+
       float lat = p.y;
       // アルベドは以降すべてリニア。uColA/B/C・uRim・uAmb は CPU 側で変換済み、
       // テクスチャと即値だけここで戻す
@@ -300,7 +337,7 @@
       // では暗くして満ち欠けを見せる。昼側の明るさは uAmb によらず一定に保つ
       float ambient = uAmb * dayFade;
       float direct = mix(1.0, 1.03, uComet) - ambient;
-      vec3 c = alb * (ambient + dif * direct) + vec3(spec) * dif;
+      vec3 c = alb * (ambient + dif * direct + eclLight) + vec3(spec) * dif;
 
       if (isEarth > 0.5) {
         float ndl = dot(N, L);
