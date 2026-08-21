@@ -46,22 +46,24 @@
   function updateTerrainLabel() {
     setMenuCheck(menuTerrainBtn, T().menuTerrain, showTerrain);
   }
-  menuTerrainBtn.addEventListener("click", () => {
-    showTerrain = !showTerrain;
+  function setTerrain(v) {
+    showTerrain = v;
     try { localStorage.setItem("ssTerrain", showTerrain ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
     updateTerrainLabel();
-  });
+  }
+  menuTerrainBtn.addEventListener("click", () => setTerrain(!showTerrain));
 
   // 流星群。地上ビューでその日に降っている群の流星と放射点を出す
   const menuMeteorBtn = document.getElementById("menuMeteor");
   function updateMeteorLabel() {
     setMenuCheck(menuMeteorBtn, T().menuMeteor, showMeteor);
   }
-  menuMeteorBtn.addEventListener("click", () => {
-    showMeteor = !showMeteor;
+  function setMeteor(v) {
+    showMeteor = v;
     try { localStorage.setItem("ssMeteor", showMeteor ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
     updateMeteorLabel();
-  });
+  }
+  menuMeteorBtn.addEventListener("click", () => setMeteor(!showMeteor));
 
   // 明るいところの滲み (Bloom)。描画負荷が上がるので切れるようにしておく
   const menuBloomBtn = document.getElementById("menuBloom");
@@ -251,7 +253,7 @@
   // 中身が増えた・変わった項目に印を付ける。項目ごとに「今の版」を持ち、
   // 利用者がその項目を開いた時点の版を localStorage に控えて比べる。
   // 中身を直したら、その項目の版を +1 する
-  const MENU_VER = { menuHelp: 1, menuAbout: 1 };
+  const MENU_VER = { menuHelp: 1, menuCal: 1, menuAbout: 1 };
   const MENU_SEEN_KEY = "ssMenuSeen";
   function loadMenuSeen() {
     try { return JSON.parse(localStorage.getItem(MENU_SEEN_KEY)) || {}; }

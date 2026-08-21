@@ -7,6 +7,7 @@
     aboutEl.classList.remove("open");
     howtoEl.classList.remove("open");
     tourListEl.classList.remove("open");
+    skyCalEl.classList.remove("open");
     modalScrim.classList.remove("on");
   }
   modalScrim.addEventListener("click", hideModals);
@@ -180,6 +181,7 @@
     updateFsLabel();
     menuHelpBtn.textContent = t.menuHelp;
     menuTourBtn.textContent = t.menuTour;
+    menuCalBtn.textContent = t.menuCal;
     menuAboutBtn.textContent = t.menuAbout;
     updateGridLabel();
     updateTerrainLabel();
@@ -206,6 +208,7 @@
     if (howtoEl.classList.contains("open")) buildHowto();
     if (welcomeEl.classList.contains("open")) buildWelcome();
     refreshTourUI();
+    refreshSkyCal(false);
   }
   menuLangBtn.addEventListener("click", () => {
     lang = lang === "ja" ? "en" : "ja";

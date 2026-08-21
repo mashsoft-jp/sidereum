@@ -304,6 +304,7 @@
     lastObsStr = "";
     refreshObsSiteUI();
     if (infoTab === "obs" && currentInfoBody) renderInfoBody();
+    refreshSkyCal(true);   // 食が見えるかどうかは観測地で変わる
   }
   function applyObsInputs() {
     const la = Math.min(90, Math.abs(parseFloat(obsLatInput.value) || 0));

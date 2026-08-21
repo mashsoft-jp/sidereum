@@ -151,7 +151,7 @@
     display: none;
   }
   #modalScrim.on { display: block; }
-  #about, #howto, #tourList {
+  #about, #howto, #tourList, #skyCal {
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     width: min(540px, calc(100vw - 32px));
@@ -163,8 +163,8 @@
     display: none;
     z-index: 20;
   }
-  #about.open, #howto.open, #tourList.open { display: block; }
-  #about h2, #howto h2, #tourList h2 {
+  #about.open, #howto.open, #tourList.open, #skyCal.open { display: block; }
+  #about h2, #howto h2, #tourList h2, #skyCal h2 {
     margin: 0 0 10px;
     font-size: 15px;
     font-weight: 600;
@@ -190,7 +190,7 @@
   }
   #about td:first-child, #howto td:first-child { color: var(--dim); white-space: nowrap; padding-right: 14px; }
   #howto td:first-child { width: 7.5em; white-space: normal; }
-  #aboutClose, #howtoClose, #tourListClose {
+  #aboutClose, #howtoClose, #tourListClose, #skyCalClose {
     position: absolute;
     top: 10px; right: 10px;
     padding: 2px 8px;
@@ -199,7 +199,42 @@
     border: none;
     color: var(--dim);
   }
-  #aboutClose:hover, #howtoClose:hover, #tourListClose:hover { color: var(--text); background: none; }
+  #aboutClose:hover, #howtoClose:hover, #tourListClose:hover, #skyCalClose:hover { color: var(--text); background: none; }
+  /* ---- 天文カレンダー (モーダル) ---- */
+  #skyCal > p { margin: 6px 0 12px; font-size: 11.5px; line-height: 1.8; color: var(--dim); }
+  #skyCal .calMonth {
+    margin: 16px 0 4px;
+    font-size: 10px; letter-spacing: 0.22em; color: var(--dim);
+    border-bottom: 1px solid var(--line); padding-bottom: 4px;
+  }
+  #skyCal .calRow {
+    display: flex; align-items: center; gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  /* 日付列は数字を等幅にして、行が変わっても桁が揃うようにする */
+  #skyCal .calWhen {
+    flex: none; width: 5.6em;
+    font-family: var(--font-num); font-variant-numeric: tabular-nums;
+    display: flex; align-items: baseline; gap: 3px;
+  }
+  #skyCal .calDay { font-size: 15px; color: var(--text); min-width: 1.4em; text-align: right; }
+  #skyCal .calWd { font-size: 9px; color: var(--dim); }
+  #skyCal .calTime { font-size: 10px; color: var(--dim); margin-left: auto; }
+  #skyCal .calWhat { flex: 1 1 auto; min-width: 0; }
+  #skyCal .calTitle { display: block; font-size: 12px; color: var(--text); line-height: 1.5; }
+  #skyCal .calSub { display: block; font-size: 10px; color: var(--dim); line-height: 1.6; }
+  #skyCal .calGo {
+    flex: none;
+    padding: 3px 10px; font-size: 10px; letter-spacing: 0.1em;
+    color: var(--accent); background: rgba(150, 178, 224, 0.08); border-color: var(--line);
+  }
+  #skyCal .calGo:hover { background: rgba(150, 178, 224, 0.18); }
+  #skyCal .calNav {
+    display: flex; justify-content: space-between; gap: 10px; margin-top: 14px;
+  }
+  #skyCal .calNav button { padding: 4px 12px; font-size: 10px; letter-spacing: 0.1em; }
+  #skyCal .calNote { margin: 12px 0 0; font-size: 10px; color: var(--dim); }
   /* ---- ガイドツアーの一覧 (モーダル) ---- */
   #tourList .tourCard {
     border: 1px solid var(--line);

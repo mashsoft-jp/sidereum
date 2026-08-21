@@ -167,7 +167,7 @@
     display: none;
   }
   #modalScrim.on { display: block; }
-  #about, #howto, #tourList {
+  #about, #howto, #tourList, #skyCal {
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     width: min(540px, calc(100vw - 32px));
@@ -179,8 +179,8 @@
     display: none;
     z-index: 20;
   }
-  #about.open, #howto.open, #tourList.open { display: block; }
-  #about h2, #howto h2, #tourList h2 {
+  #about.open, #howto.open, #tourList.open, #skyCal.open { display: block; }
+  #about h2, #howto h2, #tourList h2, #skyCal h2 {
     margin: 0 0 10px;
     font-size: 15px;
     font-weight: 600;
@@ -206,7 +206,7 @@
   }
   #about td:first-child, #howto td:first-child { color: var(--dim); white-space: nowrap; padding-right: 14px; }
   #howto td:first-child { width: 7.5em; white-space: normal; }
-  #aboutClose, #howtoClose, #tourListClose {
+  #aboutClose, #howtoClose, #tourListClose, #skyCalClose {
     position: absolute;
     top: 10px; right: 10px;
     padding: 2px 8px;
@@ -215,7 +215,42 @@
     border: none;
     color: var(--dim);
   }
-  #aboutClose:hover, #howtoClose:hover, #tourListClose:hover { color: var(--text); background: none; }
+  #aboutClose:hover, #howtoClose:hover, #tourListClose:hover, #skyCalClose:hover { color: var(--text); background: none; }
+  /* ---- 天文カレンダー (モーダル) ---- */
+  #skyCal > p { margin: 6px 0 12px; font-size: 11.5px; line-height: 1.8; color: var(--dim); }
+  #skyCal .calMonth {
+    margin: 16px 0 4px;
+    font-size: 10px; letter-spacing: 0.22em; color: var(--dim);
+    border-bottom: 1px solid var(--line); padding-bottom: 4px;
+  }
+  #skyCal .calRow {
+    display: flex; align-items: center; gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  /* 日付列は数字を等幅にして、行が変わっても桁が揃うようにする */
+  #skyCal .calWhen {
+    flex: none; width: 5.6em;
+    font-family: var(--font-num); font-variant-numeric: tabular-nums;
+    display: flex; align-items: baseline; gap: 3px;
+  }
+  #skyCal .calDay { font-size: 15px; color: var(--text); min-width: 1.4em; text-align: right; }
+  #skyCal .calWd { font-size: 9px; color: var(--dim); }
+  #skyCal .calTime { font-size: 10px; color: var(--dim); margin-left: auto; }
+  #skyCal .calWhat { flex: 1 1 auto; min-width: 0; }
+  #skyCal .calTitle { display: block; font-size: 12px; color: var(--text); line-height: 1.5; }
+  #skyCal .calSub { display: block; font-size: 10px; color: var(--dim); line-height: 1.6; }
+  #skyCal .calGo {
+    flex: none;
+    padding: 3px 10px; font-size: 10px; letter-spacing: 0.1em;
+    color: var(--accent); background: rgba(150, 178, 224, 0.08); border-color: var(--line);
+  }
+  #skyCal .calGo:hover { background: rgba(150, 178, 224, 0.18); }
+  #skyCal .calNav {
+    display: flex; justify-content: space-between; gap: 10px; margin-top: 14px;
+  }
+  #skyCal .calNav button { padding: 4px 12px; font-size: 10px; letter-spacing: 0.1em; }
+  #skyCal .calNote { margin: 12px 0 0; font-size: 10px; color: var(--dim); }
   /* ---- ガイドツアーの一覧 (モーダル) ---- */
   #tourList .tourCard {
     border: 1px solid var(--line);
@@ -1203,6 +1238,7 @@
   <div id="menu" class="hud" role="menu">
     <button id="menuHelp" role="menuitem"></button>
     <button id="menuTour" role="menuitem"></button>
+    <button id="menuCal" role="menuitem"></button>
     <button id="menuGrid" role="menuitemcheckbox" aria-checked="false"></button>
     <button id="menuTerrain" role="menuitemcheckbox" aria-checked="false"></button>
     <button id="menuMeteor" role="menuitemcheckbox" aria-checked="false"></button>
@@ -1243,6 +1279,7 @@
   <aside id="about" class="hud" aria-modal="true"></aside>
   <aside id="howto" class="hud" aria-modal="true"></aside>
   <aside id="tourList" class="hud" aria-modal="true"></aside>
+  <aside id="skyCal" class="hud" aria-modal="true"></aside>
   <div id="welcome"></div>
 
   <div id="navPanel" class="hud">
@@ -2115,6 +2152,28 @@
       menuLang: "English",
       menuHelp: "操作方法",
       menuTour: "ガイドツアー",
+      menuCal: "天文カレンダー",
+      cal: {
+        title: "天文カレンダー",
+        lead: (site) => "観測地「" + site + "」から、これから1年のあいだに起きること。" +
+                        "日食・月食は、この観測地で見えるものだけを載せています。",
+        note: "※「見る」は、そのできごとの前後でいちばん見やすい時刻へ移動します。位置計算が近似なので、日時は実際より数分〜20分ほどずれます (予報には使えません)",
+        go: "見る",
+        none: "この1年に該当するできごとはありません",
+        next: "次の1年 ▶", prev: "◀ 前の1年",
+        fullmoon: "満月",
+        solarTotal: "皆既日食", solarAnnular: "金環日食", solarPartial: "部分日食",
+        lunarTotal: "皆既月食", lunarPartial: "部分月食", lunarPenumbral: "半影月食",
+        opposition: (n) => n + "が衝",
+        oppositionSub: "太陽の反対側に来て、一晩じゅう見えます。いちばん大きく明るい時期",
+        elongEast: (n, d) => n + "が東方最大離角 (" + d + "°)",
+        elongWest: (n, d) => n + "が西方最大離角 (" + d + "°)",
+        elongEastSub: "夕方の西の空でいちばん見つけやすい時期",
+        elongWestSub: "明け方の東の空でいちばん見つけやすい時期",
+        conjunction: (a, b, d) => a + "と" + b + "が接近 (" + d + "°)",
+        shower: (n) => n + "が極大",
+        magSuffix: (m) => "最大食分 " + m,
+      },
       tourStart: "はじめる", tourSteps: " シーン",
       tourNext: "次へ ▶", tourDone: "終了", tourAuto: "自動送り",
       tourResume: "シーンに戻す", tourExit: "ツアーを終了",
@@ -2171,6 +2230,28 @@
       menuLang: "日本語",
       menuHelp: "Controls",
       menuTour: "Guided tour",
+      menuCal: "Sky calendar",
+      cal: {
+        title: "Sky calendar",
+        lead: (site) => "What happens over the next year as seen from " + site + ". " +
+                        "Eclipses are listed only when they are visible from this site.",
+        note: "* \u201cShow\u201d jumps to the best viewing time around the event. Positions are approximate, so times can be off by up to ~20 minutes (not for prediction).",
+        go: "Show",
+        none: "Nothing found in this year",
+        next: "Next year ▶", prev: "◀ Previous year",
+        fullmoon: "Full moon",
+        solarTotal: "Total solar eclipse", solarAnnular: "Annular solar eclipse", solarPartial: "Partial solar eclipse",
+        lunarTotal: "Total lunar eclipse", lunarPartial: "Partial lunar eclipse", lunarPenumbral: "Penumbral lunar eclipse",
+        opposition: (n) => n + " at opposition",
+        oppositionSub: "Opposite the Sun, visible all night — biggest and brightest of the year",
+        elongEast: (n, d) => n + " at greatest eastern elongation (" + d + "°)",
+        elongWest: (n, d) => n + " at greatest western elongation (" + d + "°)",
+        elongEastSub: "Easiest to find, low in the western sky after sunset",
+        elongWestSub: "Easiest to find, low in the eastern sky before dawn",
+        conjunction: (a, b, d) => a + " and " + b + " in conjunction (" + d + "°)",
+        shower: (n) => n + " peaks",
+        magSuffix: (m) => "max magnitude " + m,
+      },
       tourStart: "Start", tourSteps: " scenes",
       tourNext: "Next ▶", tourDone: "Finish", tourAuto: "Auto",
       tourResume: "Reset view", tourExit: "Exit tour",
@@ -5872,6 +5953,312 @@
   }
   const eclipseFor = (b) => eclipseByKey.get(b.key) || null;
   //#endregion
+  //#region src/core/events.js
+  // ============================================================
+  // 天文イベントの探索
+  //   位置計算 (keplerAU / moonGeoEclKm) は時刻を引数に取る純粋な関数なので、
+  //   表示中の時刻を触らずに未来を先読みできる。ここでは時間方向に粗く走査して
+  //   「符号が変わったところ」「極値」を拾い、二分法で詰める。
+  //
+  //   ここが返すのは日時と種別だけで、絵は既存のビューに任せる (イベントを
+  //   選ぶと、その日時・その天体・そのビューへ飛ぶ)。
+  //
+  //   注意: 観測地 (obsLat/obsLon) と ECL・gmstDeg は ui/observe.js の値を
+  //   実行時に借りている。この断片のトップレベルでは触らない
+  // ============================================================
+  const EV_TWO_PI = 2 * Math.PI;
+  const EARTH_B = PLANETS.find((p) => p.key === "earth");
+  const EV_RE_KM = 6378.14;                    // 観測地の視差に使う地球半径
+  const evWrap = (a) => {                      // 角度差を (-π, π] へ畳む
+    a = (a + Math.PI) % EV_TWO_PI;
+    return (a < 0 ? a + EV_TWO_PI : a) - Math.PI;
+  };
+  const evAng = (a, b) => {                    // 2つのベクトルのなす角 [rad]
+    const la = Math.hypot(a[0], a[1], a[2]), lb = Math.hypot(b[0], b[1], b[2]);
+    if (la < 1e-12 || lb < 1e-12) return 0;
+    const c = (a[0]*b[0] + a[1]*b[1] + a[2]*b[2]) / (la * lb);
+    return Math.acos(Math.max(-1, Math.min(1, c)));
+  };
+  const _evA = [0,0,0], _evB = [0,0,0], _evC = [0,0,0], _evD = [0,0,0], _evE = [0,0,0];
+
+  // 地心黄道ベクトル [AU]。out に書いて返す (out へ _evD は渡さないこと)
+  function evGeo(b, t, out) {
+    if (b === MOON) {
+      moonGeoEclKm(t, out);
+      out[0] /= AU_KM; out[1] /= AU_KM; out[2] /= AU_KM;
+      return out;
+    }
+    keplerAU(EARTH_B, t, _evD);
+    if (b === SUN) {
+      out[0] = -_evD[0]; out[1] = -_evD[1]; out[2] = -_evD[2];
+      return out;
+    }
+    keplerAU(b, t, out);
+    out[0] -= _evD[0]; out[1] -= _evD[1]; out[2] -= _evD[2];
+    return out;
+  }
+  const evLon = (b, t, tmp) => { evGeo(b, t, tmp); return Math.atan2(tmp[1], tmp[0]); };
+
+  // f(t) = 0 を二分法で詰める (t0 と t1 で符号が違うこと)。返すのは日。
+  // 32回で 1日の区間が 2e-8 秒まで縮むので、位置計算の精度より十分細かい
+  function evRoot(f, t0, t1) {
+    let a = t0, b = t1, fa = f(a);
+    for (let i = 0; i < 32; i++) {
+      const m = (a + b) / 2, fm = f(m);
+      if ((fm < 0) === (fa < 0)) { a = m; fa = fm; } else { b = m; }
+    }
+    return (a + b) / 2;
+  }
+  // g(t) の極大を三分探索で詰める (1回で区間が 2/3 になる)
+  function evPeak(g, t0, t1) {
+    let a = t0, b = t1;
+    for (let i = 0; i < 32; i++) {
+      const m1 = a + (b - a) / 3, m2 = b - (b - a) / 3;
+      if (g(m1) < g(m2)) a = m1; else b = m2;
+    }
+    return (a + b) / 2;
+  }
+
+  // ---------- 観測地からの見え方 ----------
+  // 観測地の日心黄道位置 [AU] (地心ではなく地表の点。日食は 1° 近く変わる)
+  function evObsHelio(t, out) {
+    keplerAU(EARTH_B, t, out);
+    const lst = (((280.46061837 + 360.98564736629 * t) % 360 + 360) % 360 + obsLon) * DEG;
+    const la = obsLat * DEG, RE = EV_RE_KM / AU_KM;
+    const ox = Math.cos(la) * Math.cos(lst), oy = Math.cos(la) * Math.sin(lst), oz = Math.sin(la);
+    out[0] += RE * ox;
+    out[1] += RE * (oy * Math.cos(ECL) + oz * Math.sin(ECL));   // 赤道 → 黄道
+    out[2] += RE * (-oy * Math.sin(ECL) + oz * Math.cos(ECL));
+    return out;
+  }
+  // 観測地から見た天体の高度 [rad]。天頂方向は「地心 → 観測地」そのもの
+  function evAlt(b, t) {
+    evObsHelio(t, _evA);
+    keplerAU(EARTH_B, t, _evC);
+    const ux = _evA[0]-_evC[0], uy = _evA[1]-_evC[1], uz = _evA[2]-_evC[2];
+    const ul = Math.hypot(ux, uy, uz) || 1;
+    evGeo(b, t, _evB);
+    const tx = _evB[0]-ux, ty = _evB[1]-uy, tz = _evB[2]-uz;
+    const tl = Math.hypot(tx, ty, tz) || 1;
+    return Math.asin(Math.max(-1, Math.min(1, (tx*ux + ty*uy + tz*uz) / (tl * ul))));
+  }
+
+  // 観測地から見て太陽面が月に隠されている割合 (0〜1) と食分
+  function evSolarLocal(t) {
+    evObsHelio(t, _evA);                         // 観測地 (日心)
+    moonGeoEclKm(t, _evB);
+    keplerAU(EARTH_B, t, _evC);
+    const mx = _evC[0] + _evB[0]/AU_KM - _evA[0],   // 観測地 → 月
+          my = _evC[1] + _evB[1]/AU_KM - _evA[1],
+          mz = _evC[2] + _evB[2]/AU_KM - _evA[2];
+    const sx = -_evA[0], sy = -_evA[1], sz = -_evA[2];   // 観測地 → 太陽
+    const dm = Math.hypot(mx, my, mz), ds = Math.hypot(sx, sy, sz);
+    const rs = Math.asin(Math.min(1, SUN.rkm / (ds * AU_KM)));
+    const ro = Math.asin(Math.min(1, MOON.rkm / (dm * AU_KM)));
+    const sep = Math.acos(Math.max(-1, Math.min(1, (mx*sx + my*sy + mz*sz) / (dm * ds))));
+    return {
+      cov: diskCoverage(sep, rs, ro),
+      // 食分 = 太陽の直径のうち隠れた割合。1 以上で皆既 (金環は 1 に届かない)
+      mag: Math.max(0, (rs + ro - sep) / (2 * rs)),
+      annular: ro < rs,
+    };
+  }
+
+  // 月が地球の本影・半影のどこにいるか。covMin/covMax は月面の最も浅い点と
+  // 最も深い点で「太陽面が隠れた割合」を見たもの
+  function evLunar(t) {
+    keplerAU(EARTH_B, t, _evA);
+    moonGeoEclKm(t, _evB);
+    const mx = _evA[0] + _evB[0]/AU_KM, my = _evA[1] + _evB[1]/AU_KM, mz = _evA[2] + _evB[2]/AU_KM;
+    const ds = Math.hypot(mx, my, mz);                       // 月 → 太陽
+    const ex = _evA[0]-mx, ey = _evA[1]-my, ez = _evA[2]-mz;  // 月 → 地球
+    const de = Math.hypot(ex, ey, ez);
+    const rs = Math.asin(Math.min(1, SUN.rkm / (ds * AU_KM)));
+    const ro = Math.asin(Math.min(1, EARTH_B.rkm / (de * AU_KM)));
+    const sep = Math.acos(Math.max(-1, Math.min(1, (-(ex*mx + ey*my + ez*mz)) / (de * ds))));
+    const shift = MOON.rkm / (de * AU_KM);                    // 月の縁での離角のずれ
+    return {
+      sep,                                                     // 影の軸からの離角
+      covMax: diskCoverage(Math.max(0, sep - shift), rs, ro),  // いちばん深く入る点
+      covMin: diskCoverage(sep + shift, rs, ro),               // いちばん浅い点
+    };
+  }
+
+  // ---------- 走査 ----------
+  // t0 から days 日ぶんのイベントを日時順に返す。
+  //   { t: 日, kind: 種別, key: 天体キー, view: "ground"|"space", data: {…} }
+  function findEvents(t0, days) {
+    const out = [];
+    const t1 = t0 + days;
+    const tmp = [0,0,0];
+    const lonSun = (t) => evLon(SUN, t, tmp);
+    const push = (e) => { if (e.t >= t0 && e.t <= t1) out.push(e); };
+
+    // ---- 朔望 (新月・満月)。同時に食も調べる ----
+    {
+      const dl = (t) => evWrap(evLon(MOON, t, tmp) - lonSun(t));
+      let pa = dl(t0);
+      for (let t = t0; t < t1; t += 1) {
+        const tb = Math.min(t + 1, t1), pb = dl(tb);
+        // 新月: 差が −π 側から +π 側へ 0 をまたぐ (π のまたぎと区別する)。
+        // 新月そのものは一覧に出さない (空に見えるものが無い) — 日食の起点にだけ使う
+        if (pa < 0 && pb >= 0 && pb - pa < Math.PI) {
+          const ec = evSolarSearch(evRoot(dl, t, tb));
+          if (ec) push(ec);
+        }
+        // 満月: 差が π をまたぐ (evWrap の値が +π 付近から −π 付近へ飛ぶ)
+        if (pa > 0 && pb < 0 && pa - pb > Math.PI) {
+          const g = (t2) => evWrap(evLon(MOON, t2, tmp) - lonSun(t2) - Math.PI);
+          const tf = evRoot(g, t, tb);
+          push({ t: tf, kind: "fullmoon", key: "moon", view: "ground" });
+          const ec = evLunarSearch(tf);
+          if (ec) push(ec);
+        }
+        pa = pb;
+      }
+    }
+
+    // ---- 衝 (外惑星)。地球を挟んで太陽の反対に来る = 一晩中見える ----
+    // 太陽の見かけの動きのほうが速いので、離角は減る向きに 180° を通る。
+    // 向きを決め打ちせず、|変化| が π 未満の符号反転だけを拾う (π 未満に
+    // 限るのは、evWrap の折り返しを 0 の通過と取り違えないため)
+    for (const k of ["mars", "jupiter", "saturn", "uranus", "neptune"]) {
+      const b = PLANETS.find((p) => p.key === k);
+      const f = (t) => evWrap(evLon(b, t, tmp) - lonSun(t) - Math.PI);
+      let pa = f(t0);
+      for (let t = t0; t < t1; t += 2) {
+        const tb = Math.min(t + 2, t1), pb = f(tb);
+        if ((pa < 0) !== (pb < 0) && Math.abs(pb - pa) < Math.PI) {
+          push({ t: evRoot(f, t, tb), kind: "opposition", key: k, view: "ground" });
+        }
+        pa = pb;
+      }
+    }
+
+    // ---- 最大離角 (水星・金星)。太陽から最も離れる = いちばん見つけやすい ----
+    for (const k of ["mercury", "venus"]) {
+      const b = PLANETS.find((p) => p.key === k);
+      const el = (t) => { evGeo(b, t, _evE); evGeo(SUN, t, tmp); return evAng(_evE, tmp); };
+      let e0 = el(t0 - 2), e1 = el(t0);
+      for (let t = t0; t < t1; t += 2) {
+        const tb = Math.min(t + 2, t1), e2 = el(tb);
+        if (e1 > e0 && e1 >= e2) {
+          const tp = evPeak(el, t - 2, tb);
+          evGeo(b, tp, _evE);
+          const east = evWrap(Math.atan2(_evE[1], _evE[0]) - lonSun(tp)) > 0;
+          push({ t: tp, kind: "elongation", key: k, view: "ground",
+                 data: { deg: el(tp) / DEG, east } });
+        }
+        e0 = e1; e1 = e2;
+      }
+    }
+
+    // ---- 惑星どうしの接近 ----
+    {
+      const keys = ["mercury", "venus", "mars", "jupiter", "saturn"];
+      const bs = keys.map((k) => PLANETS.find((p) => p.key === k));
+      for (let i = 0; i < bs.length; i++) {
+        for (let j = i + 1; j < bs.length; j++) {
+          const sep = (t) => { evGeo(bs[i], t, _evE); evGeo(bs[j], t, tmp); return evAng(_evE, tmp); };
+          let s0 = sep(t0 - 1), s1 = sep(t0);
+          for (let t = t0; t < t1; t += 1) {
+            const tb = Math.min(t + 1, t1), s2 = sep(tb);
+            if (s1 < s0 && s1 <= s2) {
+              const tp = evPeak((t2) => -sep(t2), t - 1, tb);
+              const d = sep(tp) / DEG;
+              // 太陽に近すぎるものは並んでも見えないので落とす
+              evGeo(bs[i], tp, _evE); evGeo(SUN, tp, tmp);
+              if (d < 1.5 && evAng(_evE, tmp) / DEG > 15) {
+                push({ t: tp, kind: "conjunction", key: keys[i], view: "ground",
+                       data: { with: keys[j], deg: d } });
+              }
+            }
+            s0 = s1; s1 = s2;
+          }
+        }
+      }
+    }
+
+    // ---- 流星群の極大 (太陽黄経が決まった値になる瞬間) ----
+    for (const s of SHOWERS) {
+      if (s.key === "sporadic") continue;
+      const f = (t) => evWrap(lonSun(t) - s.sl * DEG);
+      let pa = f(t0);
+      for (let t = t0; t < t1; t += 2) {
+        const tb = Math.min(t + 2, t1), pb = f(tb);
+        if (pa < 0 && pb >= 0 && pb - pa < Math.PI) {
+          push({ t: evRoot(f, t, tb), kind: "shower", key: s.key, view: "ground" });
+        }
+        pa = pb;
+      }
+    }
+
+    out.sort((a, b) => a.t - b.t);
+    return out;
+  }
+
+  // 流星群の放射点の高度 [rad] (赤経赤緯から直接)
+  function evRadiantAlt(key, t) {
+    const s = SHOWERS.find((x) => x.key === key);
+    if (!s) return -1;
+    const lst = (((280.46061837 + 360.98564736629 * t) % 360 + 360) % 360 + obsLon) * DEG;
+    const H = lst - s.ra * DEG, dec = s.dec * DEG, la = obsLat * DEG;
+    return Math.asin(Math.max(-1, Math.min(1,
+      Math.sin(dec) * Math.sin(la) + Math.cos(dec) * Math.cos(la) * Math.cos(H))));
+  }
+
+  // イベントを「実際に見える時刻」へずらす。衝や最大離角の瞬間は昼に来ることが
+  // 多く、その時刻へ飛ぶと地平線の下を向いてしまう。前後半日から「空が暗くて
+  // いちばん高い」時刻を選ぶ (食だけは瞬間そのものが見せ場なのでずらさない)
+  function evViewTime(ev) {
+    if (ev.kind === "solarEclipse" || ev.kind === "lunarEclipse") return ev.t;
+    const alt = ev.kind === "shower"
+      ? (t) => evRadiantAlt(ev.key, t)
+      : (t) => evAlt(BODY_BY_KEY.get(ev.key), t);
+    let best = null;
+    for (let t = ev.t - 0.75; t <= ev.t + 0.75; t += 1 / 288) {   // 5分刻み
+      if (evAlt(SUN, t) > -8 * DEG) continue;      // 薄明が残るうちは見えない
+      const a = alt(t);
+      if (!best || a > best.a) best = { t, a };
+    }
+    return best && best.a > 0 ? best.t : ev.t;
+  }
+
+  // 新月の前後を細かく見て、観測地での日食の最大の瞬間を探す
+  function evSolarSearch(tNew) {
+    let best = null;
+    for (let t = tNew - 0.25; t <= tNew + 0.25; t += 1 / 720) {   // 2分刻み
+      const c = evSolarLocal(t);
+      if (!best || c.mag > best.mag) best = { t, mag: c.mag, cov: c.cov, annular: c.annular };
+    }
+    if (!best || best.mag <= 0) return null;
+    // 極大を詰める
+    const tp = evPeak((t) => evSolarLocal(t).mag, best.t - 1 / 720, best.t + 1 / 720);
+    const c = evSolarLocal(tp);
+    if (c.mag <= 0) return null;
+    const type = c.cov >= 1 ? "total" : (c.annular && c.mag > 0.98 ? "annular" : "partial");
+    return { t: tp, kind: "solarEclipse", key: "sun", view: "ground",
+             data: { type, mag: c.mag, up: evAlt(SUN, tp) > 0 } };
+  }
+
+  // 満月の前後を細かく見て、月食の最大の瞬間 (影の軸に最も近づく時刻) を探す。
+  // 遮蔽率で探すと、皆既のあいだは 1 で頭打ちになって「いつが最大か」が
+  // 決まらない。離角そのものを見れば、皆既の最中でも中心が一意に決まる
+  function evLunarSearch(tFull) {
+    let best = null;
+    for (let t = tFull - 0.25; t <= tFull + 0.25; t += 1 / 288) {   // 5分刻み
+      const c = evLunar(t);
+      if (!best || c.sep < best.c.sep) best = { t, c };
+    }
+    if (!best || best.c.covMax <= 0) return null;
+    const tp = evPeak((t) => -evLunar(t).sep, best.t - 1 / 288, best.t + 1 / 288);
+    const c = evLunar(tp);
+    if (c.covMax <= 0) return null;
+    const type = c.covMin >= 1 ? "total" : (c.covMax >= 1 ? "partial" : "penumbral");
+    return { t: tp, kind: "lunarEclipse", key: "moon", view: "ground",
+             data: { type, up: evAlt(MOON, tp) > 0 } };
+  }
+  //#endregion
   //#region src/render/body.js
   // ---------- リサイズ ----------
   function resize() {
@@ -9160,6 +9547,7 @@
     lastObsStr = "";
     refreshObsSiteUI();
     if (infoTab === "obs" && currentInfoBody) renderInfoBody();
+    refreshSkyCal(true);   // 食が見えるかどうかは観測地で変わる
   }
   function applyObsInputs() {
     const la = Math.min(90, Math.abs(parseFloat(obsLatInput.value) || 0));
@@ -9950,22 +10338,24 @@
   function updateTerrainLabel() {
     setMenuCheck(menuTerrainBtn, T().menuTerrain, showTerrain);
   }
-  menuTerrainBtn.addEventListener("click", () => {
-    showTerrain = !showTerrain;
+  function setTerrain(v) {
+    showTerrain = v;
     try { localStorage.setItem("ssTerrain", showTerrain ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
     updateTerrainLabel();
-  });
+  }
+  menuTerrainBtn.addEventListener("click", () => setTerrain(!showTerrain));
 
   // 流星群。地上ビューでその日に降っている群の流星と放射点を出す
   const menuMeteorBtn = document.getElementById("menuMeteor");
   function updateMeteorLabel() {
     setMenuCheck(menuMeteorBtn, T().menuMeteor, showMeteor);
   }
-  menuMeteorBtn.addEventListener("click", () => {
-    showMeteor = !showMeteor;
+  function setMeteor(v) {
+    showMeteor = v;
     try { localStorage.setItem("ssMeteor", showMeteor ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
     updateMeteorLabel();
-  });
+  }
+  menuMeteorBtn.addEventListener("click", () => setMeteor(!showMeteor));
 
   // 明るいところの滲み (Bloom)。描画負荷が上がるので切れるようにしておく
   const menuBloomBtn = document.getElementById("menuBloom");
@@ -10155,7 +10545,7 @@
   // 中身が増えた・変わった項目に印を付ける。項目ごとに「今の版」を持ち、
   // 利用者がその項目を開いた時点の版を localStorage に控えて比べる。
   // 中身を直したら、その項目の版を +1 する
-  const MENU_VER = { menuHelp: 1, menuAbout: 1 };
+  const MENU_VER = { menuHelp: 1, menuCal: 1, menuAbout: 1 };
   const MENU_SEEN_KEY = "ssMenuSeen";
   function loadMenuSeen() {
     try { return JSON.parse(localStorage.getItem(MENU_SEEN_KEY)) || {}; }
@@ -10274,6 +10664,7 @@
     aboutEl.classList.remove("open");
     howtoEl.classList.remove("open");
     tourListEl.classList.remove("open");
+    skyCalEl.classList.remove("open");
     modalScrim.classList.remove("on");
   }
   modalScrim.addEventListener("click", hideModals);
@@ -10447,6 +10838,7 @@
     updateFsLabel();
     menuHelpBtn.textContent = t.menuHelp;
     menuTourBtn.textContent = t.menuTour;
+    menuCalBtn.textContent = t.menuCal;
     menuAboutBtn.textContent = t.menuAbout;
     updateGridLabel();
     updateTerrainLabel();
@@ -10473,6 +10865,7 @@
     if (howtoEl.classList.contains("open")) buildHowto();
     if (welcomeEl.classList.contains("open")) buildWelcome();
     refreshTourUI();
+    refreshSkyCal(false);
   }
   menuLangBtn.addEventListener("click", () => {
     lang = lang === "ja" ? "en" : "ja";
@@ -11385,6 +11778,150 @@
 
 
 
+  //#endregion
+  //#region src/ui/calendar.js
+  // ---------- 天文カレンダー (モーダル) ----------
+  // core/events.js が見つけたできごとを日時順に並べ、選ぶとその日時・その天体・
+  // 地上ビューへ飛ばす。ここは表示と飛び先だけを持ち、計算は一切しない。
+  const menuCalBtn = document.getElementById("menuCal");
+  const skyCalEl = document.getElementById("skyCal");
+  const CAL_SPAN = 366;          // 1画面ぶんの期間 [日]
+  let calT0 = null;              // 表示している期間の先頭 (null = 未計算)
+  let calRows = [];
+
+  // イベント1件の見出しと補足。天体名・群名は言語に合わせる
+  function calText(ev) {
+    const c = T().cal;
+    const nm = (k) => { const b = BODY_BY_KEY.get(k); return b ? bName(b) : k; };
+    switch (ev.kind) {
+      case "fullmoon":
+        return { h: c.fullmoon, s: "" };
+      case "solarEclipse":
+        return { h: ev.data.type === "total" ? c.solarTotal
+               : ev.data.type === "annular" ? c.solarAnnular : c.solarPartial,
+                 s: c.magSuffix(ev.data.mag.toFixed(2)) };
+      case "lunarEclipse":
+        return { h: ev.data.type === "total" ? c.lunarTotal
+               : ev.data.type === "partial" ? c.lunarPartial : c.lunarPenumbral, s: "" };
+      case "opposition":
+        return { h: c.opposition(nm(ev.key)), s: c.oppositionSub };
+      case "elongation":
+        return ev.data.east
+          ? { h: c.elongEast(nm(ev.key), ev.data.deg.toFixed(0)), s: c.elongEastSub }
+          : { h: c.elongWest(nm(ev.key), ev.data.deg.toFixed(0)), s: c.elongWestSub };
+      case "conjunction":
+        return { h: c.conjunction(nm(ev.key), nm(ev.data.with), ev.data.deg.toFixed(1)), s: "" };
+      case "shower": {
+        const sh = SHOWERS.find((x) => x.key === ev.key);
+        return { h: c.shower(sh ? (lang === "ja" ? sh.ja : sh.en) : ev.key), s: "" };
+      }
+    }
+    return { h: ev.kind, s: "" };
+  }
+
+  const CAL_WD_JA = ["日", "月", "火", "水", "木", "金", "土"];
+  const CAL_WD_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const CAL_MON_EN = ["January", "February", "March", "April", "May", "June",
+                      "July", "August", "September", "October", "November", "December"];
+
+  function buildSkyCal() {
+    const t = T(), c = t.cal;
+    const head = '<button id="skyCalClose" aria-label="close">✕</button>' +
+                 "<h2>" + c.title + "</h2>" +
+                 "<p>" + c.lead(siteLabel()) + "</p>";
+    let body = "";
+    if (!calRows.length) {
+      body = "<p>" + c.none + "</p>";
+    } else {
+      let curMonth = "";
+      for (let i = 0; i < calRows.length; i++) {
+        const ev = calRows[i], d = new Date(J2000 + ev.t * DAY_MS);
+        const mk = d.getFullYear() + "/" + (d.getMonth() + 1);
+        if (mk !== curMonth) {
+          curMonth = mk;
+          body += '<h3 class="calMonth">' +
+            (lang === "ja" ? d.getFullYear() + "年 " + (d.getMonth() + 1) + "月"
+                           : CAL_MON_EN[d.getMonth()] + " " + d.getFullYear()) + "</h3>";
+        }
+        const wd = (lang === "ja" ? CAL_WD_JA : CAL_WD_EN)[d.getDay()];
+        const tx = calText(ev);
+        body += '<div class="calRow">' +
+          '<div class="calWhen"><span class="calDay">' + d.getDate() + "</span>" +
+          '<span class="calWd">' + wd + "</span>" +
+          '<span class="calTime">' + pad2(d.getHours()) + ":" + pad2(d.getMinutes()) + "</span></div>" +
+          '<div class="calWhat"><span class="calTitle">' + tx.h + "</span>" +
+          (tx.s ? '<span class="calSub">' + tx.s + "</span>" : "") + "</div>" +
+          '<button class="calGo" data-i="' + i + '">' + c.go + "</button>" +
+        "</div>";
+      }
+    }
+    const nav = '<div class="calNav">' +
+      '<button id="calPrev">' + c.prev + "</button>" +
+      '<button id="calNext">' + c.next + "</button></div>";
+    skyCalEl.innerHTML = head + body + nav + '<p class="calNote">' + c.note + "</p>";
+    skyCalEl.scrollTop = 0;
+  }
+
+  function calCompute(t0) {
+    calT0 = t0;
+    calRows = findEvents(t0, CAL_SPAN).filter((ev) => {
+      // 食は「この観測地で見えるもの」だけ。地平線の下で起きていても案内しようがない
+      if (ev.kind === "solarEclipse" || ev.kind === "lunarEclipse") return ev.data.up;
+      return true;
+    });
+  }
+  function openSkyCal() {
+    calCompute(simDays);
+    buildSkyCal();
+    skyCalEl.classList.add("open");
+    modalScrim.classList.add("on");
+  }
+
+  // イベントを選んだときの飛び先。種別ごとに「それが見える画角」を決め打ちする
+  const CAL_FOV = {
+    solarEclipse: 1.6, lunarEclipse: 3, fullmoon: 4,
+    opposition: 20, elongation: 34, conjunction: 8, shower: 62,
+  };
+  function goToEvent(ev) {
+    hideModals();
+    setPlaying(false);
+    setSimTime(J2000 + evViewTime(ev) * DAY_MS);   // 昼に起きるものは見える時刻へずらす
+    updateClock();
+    updatePositions();
+    updateEclipses();
+    // 日食は空が暗くなるところが見せ場なので、風景が切ってあれば入れる
+    if (ev.kind === "solarEclipse") setTerrain(true);
+    if (ev.kind === "shower") setMeteor(true);
+    enterSurface("earth");
+    buildObsFrame();               // 飛んだ先の日時で観測者基底を作り直す
+    if (ev.kind === "shower") {
+      select(null, false);
+      aimGroundAtRadiant(ev.key, true);
+    } else {
+      const b = BODY_BY_KEY.get(ev.key);
+      select(b, false);
+      infoPanel.classList.remove("open");
+      aimGroundAt(b, true);
+    }
+    gFov = gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, CAL_FOV[ev.kind] * DEG));
+    updateGroundUI();
+  }
+
+  skyCalEl.addEventListener("click", (e) => {
+    if (e.target.id === "skyCalClose") { hideModals(); return; }
+    if (e.target.id === "calNext") { calCompute(calT0 + CAL_SPAN); buildSkyCal(); return; }
+    if (e.target.id === "calPrev") { calCompute(calT0 - CAL_SPAN); buildSkyCal(); return; }
+    const go = e.target.closest(".calGo");
+    if (go) goToEvent(calRows[+go.dataset.i]);
+  });
+  menuCalBtn.addEventListener("click", () => { setMenu(false); openSkyCal(); });
+
+  // 言語切替・観測地の変更で開いているものを作り直す (観測地は食の可視判定を変える)
+  function refreshSkyCal(recompute) {
+    if (!skyCalEl.classList.contains("open")) return;
+    if (recompute && calT0 !== null) calCompute(calT0);
+    buildSkyCal();
+  }
   //#endregion
   //#region src/main.js
   // ---------- 起動 ----------
