@@ -4411,6 +4411,50 @@
       gl_FragColor = vec4(tonemap(c), 1.0);
     }`;
 
+  // ---- 天の川 (全天マップを天球へ貼る。継ぎ目対策で bodyFS と同じ微分拡張を使う) ----
+  const skyVS = `
+    attribute vec3 aPos;
+    uniform mat4 uVP;
+    uniform float uRadius;
+    varying vec3 vDir;
+    void main() {
+      vDir = aPos;                       // 単位球なので頂点位置がそのまま方向
+      gl_Position = uVP * vec4(aPos * uRadius, 1.0);
+    }
+`;
+  const skyFS = EXT_DERIV
+    + (hasTexLod ? "#extension GL_EXT_shader_texture_lod : enable\n#define TEXLOD 1\n" : "")
+    + PRE + `
+    // 天の川 (拡散光だけの全天マップ)。赤道座標の正距円筒を天球へ貼る。
+    // 加算合成で背景として重ねるだけなので、画面の色を直に書く
+    // (点・尾・コマなどの発光パスと同じ扱い。トーンマップは通さない)
+    varying vec3 vDir;
+    uniform mat3 uEq;        // 描画フレームの方向 → 赤道座標
+    uniform float uBright;   // 明るさ (昼は 0 へ落とす)
+    uniform sampler2D uTex;
+
+    void main() {
+      vec3 q = normalize(uEq * normalize(vDir));
+      // 地図は左端が赤経 0h、上端が赤緯 +90°。赤経は負側へ回っても REPEAT が畳む
+      vec2 uv = vec2(atan(q.y, q.x) * 0.15915494,
+                     0.5 - asin(clamp(q.z, -1.0, 1.0)) * 0.31830989);
+#ifdef TEXLOD
+      // 赤経は uv の継ぎ目で 1→0 に飛ぶ。自動微分に任せるとその1列だけミップ段が
+      // 最粗まで落ちて空を縦に切る縞が出るので、折り返しを含まない微分を作って渡す
+      // (天体テクスチャと同じ理由。詳しくは body.frag の SAMPLE)
+      vec3 dx = dFdx(q), dy = dFdy(q);
+      float r2 = max(q.x * q.x + q.y * q.y, 1e-8);
+      float sv = 3.14159265 * sqrt(max(1.0 - q.z * q.z, 1e-8));
+      vec2 dux = vec2((q.x * dx.y - q.y * dx.x) / (r2 * 6.2831853), -dx.z / sv);
+      vec2 duy = vec2((q.x * dy.y - q.y * dy.x) / (r2 * 6.2831853), -dy.z / sv);
+      vec3 c = texture2DGradEXT(uTex, uv, dux, duy).rgb;
+#else
+      vec3 c = texture2D(uTex, uv).rgb;
+#endif
+      gl_FragColor = vec4(c * uBright, 0.0);   // 乗算済みアルファでの加算
+    }
+`;
+
   // ---- 線 (軌道) ----
   const lineVS = `
     attribute vec3 aPos;
@@ -4888,10 +4932,11 @@
   // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
   // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
   let bodyRenderer;
-  let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP;
+  let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP, skyP;
   let threshP, blurP, addP;
   try {
     bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
+    skyP = program(skyVS, skyFS);
     lineP = program(lineVS, lineFS);
     pointP = program(pointVS, pointFS);
     billP = program(billVS, billFS);
@@ -5041,9 +5086,12 @@
   // 地表以外に地球だけが持つ2枚。天体のキーではないので TEXTURES とは分ける
   //   雲   Blue Marble: Clouds (NASA Earth Observatory) — 被覆率としてグレースケールで持つ
   //   夜景 Black Marble 2016 (NASA Earth Observatory) — 下地の海陸を落として街灯りだけ残した
+  //   天の川 Deep Star Maps 2020 の拡散光版 (NASA/Goddard SVS) — 明るい恒星を
+  //        抜いた拡散光だけの全天マップ。赤道座標の正距円筒
   const TEXTURES_EXTRA = {
     cloud: "earth-clouds.jpg",
     night: "earth-night.jpg",
+    milkyway: "milkyway.jpg",
   };
   // 実測の標高から起こした接空間の法線図。アルベド図は一定の照明で正規化されて
   // いて起伏が焼き込まれているため、これが無いと太陽が動いても陰影が変わらない。
@@ -5143,6 +5191,11 @@
   // 地球の雲と夜景。天体テクスチャとは別のユニットに常駐させる
   const cloudTex = loadTex("cloud");
   const nightTex = loadTex("night");
+  // 天の川。読み込み前・失敗時は真っ黒にしておく — 加算合成なので何も足されない。
+  // loadTex の仮色 (灰色) のままだと、空全体がうっすら明るくなってしまう
+  const mwTex = loadTex("milkyway");
+  gl.bindTexture(gl.TEXTURE_2D, mwTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0]));
   // 法線図。天体ごとに差し替わるので、地表テクスチャと同じくキーで引く
   const nrmByKey = new Map();
   for (const key in NORMALS) nrmByKey.set(key, loadTex("nrm:" + key));
@@ -5154,6 +5207,7 @@
     for (const [key, tex] of texByKey) loadTexInto(tex, key);
     loadTexInto(cloudTex, "cloud");
     loadTexInto(nightTex, "night");
+    loadTexInto(mwTex, "milkyway");
     for (const [key, tex] of nrmByKey) loadTexInto(tex, "nrm:" + key);
   }
 
@@ -6508,6 +6562,62 @@
   }
 
   //#endregion
+  //#region src/render/milkyway.js
+  // ---------- 天の川 ----------
+  // 拡散光だけの全天マップ (NASA SVS Deep Star Maps 2020 の milkyway 版) を
+  // 天球へ貼る。明るい恒星 (ヒッパルコス・ティコ) は元データから抜いてあるので、
+  // こちらが点で描いている輝星カタログと二重像にならない。
+  //
+  // 地図は赤道座標の正距円筒。恒星カタログと同じく J2000 のまま扱い、描画
+  // フレーム (宇宙 = ワールド / 地上 = [東, 天頂, −北]) の方向を赤道へ回して uv を引く。
+  const MW_R = 1938;                       // 宇宙ビューの天球半径 (恒星の 1900 の外側)
+  const MW_ECL = 23.4393 * DEG;            // 黄道傾斜 (sky.js の恒星と同じ値)
+  const MW_CE = Math.cos(MW_ECL), MW_SE = Math.sin(MW_ECL);
+  const _mwEq = new Float32Array(9);       // 列 = 描画フレームの基底を赤道で見たもの
+  // 明るさ。元データは実測の輝度なので、そのまま出すと長時間露光の写真になる。
+  // 肉眼で見た天の川は「星座線が透けて見える淡い光の帯」なので、そこまで落とす。
+  // 宇宙ビューは大気の減光が無いぶん少しだけ強め
+  const MW_SPACE_BRIGHT = 0.42, MW_GROUND_BRIGHT = 0.33;
+
+  // ワールドの方向 → 赤道座標。sky.js が恒星に掛けている変換
+  // (赤道 → 黄道 → ワールド[x, z, −y]) をそのまま逆に辿る
+  function mwEqOfWorld(x, y, z, o) {
+    _mwEq[o]     = x;
+    _mwEq[o + 1] = -z * MW_CE - y * MW_SE;
+    _mwEq[o + 2] = -z * MW_SE + y * MW_CE;
+  }
+  function mwEqSpace() {                   // 宇宙ビュー: 描画フレーム = ワールド
+    mwEqOfWorld(1, 0, 0, 0);
+    mwEqOfWorld(0, 1, 0, 3);
+    mwEqOfWorld(0, 0, 1, 6);
+    return _mwEq;
+  }
+  function mwEqGround() {                  // 地上・月面ビュー: [東, 天頂, −北]
+    mwEqOfWorld(obsE[0], obsE[1], obsE[2], 0);
+    mwEqOfWorld(obsU[0], obsU[1], obsU[2], 3);
+    mwEqOfWorld(-obsN[0], -obsN[1], -obsN[2], 6);
+    return _mwEq;
+  }
+
+  // 深度もブレンドも呼び出し側の状態をそのまま使う (背景として最初に描く前提)。
+  // 視点は必ず球の中心にあるので、視線は球面と1度しか交わらない = カリング不要
+  function drawMilkyWay(vp32, eq9, radius, bright) {
+    if (bright <= 0.003) return;
+    gl.useProgram(skyP.pr);
+    gl.uniformMatrix4fv(skyP.u.uVP, false, vp32);
+    gl.uniformMatrix3fv(skyP.u.uEq, false, eq9);
+    gl.uniform1f(skyP.u.uRadius, radius);
+    gl.uniform1f(skyP.u.uBright, bright);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, mwTex);
+    gl.uniform1i(skyP.u.uTex, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, sphereVB);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIB);
+    gl.enableVertexAttribArray(skyP.a.aPos);
+    gl.vertexAttribPointer(skyP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+    gl.drawElements(gl.TRIANGLES, sphere.idx.length, gl.UNSIGNED_SHORT, 0);
+  }
+  //#endregion
   //#region src/data/sky.js
   // ---------- 恒星カタログ (Yale Bright Star Catalogue 第5改訂版, V≤6.5, パブリックドメイン) ----------
   // 6バイト/星 [u16 RA·65535/360°, u16 (Dec+90°)·65535/180°, u8 (V+2)·25.5, u8 (B-V+0.5)·85] の
@@ -7066,6 +7176,11 @@
     }
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+    // 天の川。空ドームの上に加算で重ね、恒星より先に描く (地面ドームは後から
+    // 不透明で描かれるので、地平線より下は隠れる)。昼は星と同じだけ薄れる
+    drawMilkyWay(gVP32, mwEqGround(), SKYR * 1.4,
+                 (isMoonSurf ? MW_SPACE_BRIGHT : MW_GROUND_BRIGHT) * starVis);
 
     // 星座線 (観測者フレームへ投影。地平線より上のセグメントのみ)。恒星より先に描く
     if (showConst && CONST_SEG.length) {
@@ -7893,10 +8008,15 @@
     gl.enable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
 
-    // --- 星空 (カメラ位置中心, 深度書き込みなし) ---
+    // --- 天の川 (いちばん奥。深度は見ないし書かない) ---
     gl.depthMask(false);
+    gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    drawMilkyWay(VP, mwEqSpace(), MW_R, MW_SPACE_BRIGHT);
+    gl.enable(gl.DEPTH_TEST);
+
+    // --- 星空 (カメラ位置中心, 深度書き込みなし) ---
     gl.useProgram(pointP.pr);
     // 星空はカメラ中心の球 = カメラ相対座標そのもの
     gl.uniformMatrix4fv(pointP.u.uVP, false, VP);
@@ -10545,7 +10665,7 @@
   // 中身が増えた・変わった項目に印を付ける。項目ごとに「今の版」を持ち、
   // 利用者がその項目を開いた時点の版を localStorage に控えて比べる。
   // 中身を直したら、その項目の版を +1 する
-  const MENU_VER = { menuHelp: 1, menuCal: 1, menuAbout: 1 };
+  const MENU_VER = { menuHelp: 1, menuCal: 1, menuAbout: 2 };
   const MENU_SEEN_KEY = "ssMenuSeen";
   function loadMenuSeen() {
     try { return JSON.parse(localStorage.getItem(MENU_SEEN_KEY)) || {}; }
@@ -10622,7 +10742,7 @@
       imgBody: "以下の天体の表面には、NASA / USGS のパブリックドメイン画像を使用しています。",
       proc: "太陽・土星 (環を含む)・天王星・海王星・パラス・ジュノーは、シェーダによる生成テクスチャです (実写ではありません)。",
       data: "データと精度",
-      dataBody: "軌道間隔・天体の大きさとも実寸比で表示しています。天体位置は J2000 平均軌道要素 (NASA JPL 公表値) にもとづくケプラー軌道の近似計算です。教育・可視化目的であり、天文計算・観測用途の精度はありません。小惑星の軌道上の位相は概略です。恒星 (宇宙ビューの背景・地上ビューとも) は Yale Bright Star Catalogue 第5改訂版 (Hoffleit & Warren 1991, パブリックドメイン) の実位置・実等級 (6.5等まで・約8,400星)、色は B-V 色指数にもとづく近似です。星座線は d3-celestial (Olaf Frohn, BSD-2-Clause) を使用しています。月面ビューは潮汐ロック近似 (表側が地球を向く・月の極 ≈ 黄道北) によるもので、秤動などは省略しています。",
+      dataBody: "軌道間隔・天体の大きさとも実寸比で表示しています。天体位置は J2000 平均軌道要素 (NASA JPL 公表値) にもとづくケプラー軌道の近似計算です。教育・可視化目的であり、天文計算・観測用途の精度はありません。小惑星の軌道上の位相は概略です。恒星 (宇宙ビューの背景・地上ビューとも) は Yale Bright Star Catalogue 第5改訂版 (Hoffleit & Warren 1991, パブリックドメイン) の実位置・実等級 (6.5等まで・約8,400星)、色は B-V 色指数にもとづく近似です。星座線は d3-celestial (Olaf Frohn, BSD-2-Clause) を使用しています。天の川は Deep Star Maps 2020 の拡散光版 (NASA/Goddard Space Flight Center Scientific Visualization Studio。Gaia DR2: ESA/Gaia/DPAC) を天球に貼ったものです。月面ビューは潮汐ロック近似 (表側が地球を向く・月の極 ≈ 黄道北) によるもので、秤動などは省略しています。",
       disc: "本アプリは NASA・USGS とは無関係であり、両機関による承認・推奨を意味するものではありません。",
     } : {
       lic: "License",
@@ -10631,7 +10751,7 @@
       imgBody: "The surfaces of the following bodies use public-domain imagery from NASA / USGS.",
       proc: "The Sun, Saturn (incl. rings), Uranus, Neptune, Pallas and Juno use procedurally generated textures (not actual imagery).",
       data: "Data & accuracy",
-      dataBody: "Orbital spacing and body sizes are displayed to actual scale. Positions are approximated with Keplerian orbits based on J2000 mean orbital elements published by NASA JPL. This app is for education and visualization; it is not suitable for astronomical or observational use. Orbital phases of the asteroids are approximate. Stars (both the space-view background and the ground view) use real positions and magnitudes (mag ≤ 6.5, ~8,400 stars) from the Yale Bright Star Catalogue, 5th Revised Ed. (Hoffleit & Warren 1991, public domain); colors are approximated from the B-V index. Constellation lines are from d3-celestial (Olaf Frohn, BSD-2-Clause). The Moon-surface view uses a tidal-lock approximation (near side faces Earth; lunar pole ≈ ecliptic north) and omits libration.",
+      dataBody: "Orbital spacing and body sizes are displayed to actual scale. Positions are approximated with Keplerian orbits based on J2000 mean orbital elements published by NASA JPL. This app is for education and visualization; it is not suitable for astronomical or observational use. Orbital phases of the asteroids are approximate. Stars (both the space-view background and the ground view) use real positions and magnitudes (mag ≤ 6.5, ~8,400 stars) from the Yale Bright Star Catalogue, 5th Revised Ed. (Hoffleit & Warren 1991, public domain); colors are approximated from the B-V index. Constellation lines are from d3-celestial (Olaf Frohn, BSD-2-Clause). The Milky Way is the diffuse-only layer of Deep Star Maps 2020 (NASA/Goddard Space Flight Center Scientific Visualization Studio; Gaia DR2: ESA/Gaia/DPAC), mapped onto the celestial sphere. The Moon-surface view uses a tidal-lock approximation (near side faces Earth; lunar pole ≈ ecliptic north) and omits libration.",
       disc: "This app is not affiliated with, nor endorsed by, NASA or USGS.",
     };
     aboutEl.innerHTML =

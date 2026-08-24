@@ -255,6 +255,11 @@
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
+    // 天の川。空ドームの上に加算で重ね、恒星より先に描く (地面ドームは後から
+    // 不透明で描かれるので、地平線より下は隠れる)。昼は星と同じだけ薄れる
+    drawMilkyWay(gVP32, mwEqGround(), SKYR * 1.4,
+                 (isMoonSurf ? MW_SPACE_BRIGHT : MW_GROUND_BRIGHT) * starVis);
+
     // 星座線 (観測者フレームへ投影。地平線より上のセグメントのみ)。恒星より先に描く
     if (showConst && CONST_SEG.length) {
       let cn = 0;

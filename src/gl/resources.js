@@ -66,6 +66,11 @@
   // 地球の雲と夜景。天体テクスチャとは別のユニットに常駐させる
   const cloudTex = loadTex("cloud");
   const nightTex = loadTex("night");
+  // 天の川。読み込み前・失敗時は真っ黒にしておく — 加算合成なので何も足されない。
+  // loadTex の仮色 (灰色) のままだと、空全体がうっすら明るくなってしまう
+  const mwTex = loadTex("milkyway");
+  gl.bindTexture(gl.TEXTURE_2D, mwTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0]));
   // 法線図。天体ごとに差し替わるので、地表テクスチャと同じくキーで引く
   const nrmByKey = new Map();
   for (const key in NORMALS) nrmByKey.set(key, loadTex("nrm:" + key));
@@ -77,6 +82,7 @@
     for (const [key, tex] of texByKey) loadTexInto(tex, key);
     loadTexInto(cloudTex, "cloud");
     loadTexInto(nightTex, "night");
+    loadTexInto(mwTex, "milkyway");
     for (const [key, tex] of nrmByKey) loadTexInto(tex, "nrm:" + key);
   }
 

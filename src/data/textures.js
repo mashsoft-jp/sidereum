@@ -33,9 +33,12 @@
   // 地表以外に地球だけが持つ2枚。天体のキーではないので TEXTURES とは分ける
   //   雲   Blue Marble: Clouds (NASA Earth Observatory) — 被覆率としてグレースケールで持つ
   //   夜景 Black Marble 2016 (NASA Earth Observatory) — 下地の海陸を落として街灯りだけ残した
+  //   天の川 Deep Star Maps 2020 の拡散光版 (NASA/Goddard SVS) — 明るい恒星を
+  //        抜いた拡散光だけの全天マップ。赤道座標の正距円筒
   const TEXTURES_EXTRA = {
     cloud: "earth-clouds.jpg",
     night: "earth-night.jpg",
+    milkyway: "milkyway.jpg",
   };
   // 実測の標高から起こした接空間の法線図。アルベド図は一定の照明で正規化されて
   // いて起伏が焼き込まれているため、これが無いと太陽が動いても陰影が変わらない。

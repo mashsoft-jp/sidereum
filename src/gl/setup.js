@@ -70,6 +70,12 @@
     + (hasTexLod ? "#extension GL_EXT_shader_texture_lod : enable\n#define TEXLOD 1\n" : "")
     + PRE + SKY_FN + `@@glsl:body.frag@@`;
 
+  // ---- 天の川 (全天マップを天球へ貼る。継ぎ目対策で bodyFS と同じ微分拡張を使う) ----
+  const skyVS = `@@glsl:sky.vert@@`;
+  const skyFS = EXT_DERIV
+    + (hasTexLod ? "#extension GL_EXT_shader_texture_lod : enable\n#define TEXLOD 1\n" : "")
+    + PRE + `@@glsl:sky.frag@@`;
+
   // ---- 線 (軌道) ----
   const lineVS = `@@glsl:line.vert@@`;
   const lineFS = PRE + `@@glsl:line.frag@@`;
@@ -117,10 +123,11 @@
   // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
   // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
   let bodyRenderer;
-  let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP;
+  let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP, skyP;
   let threshP, blurP, addP;
   try {
     bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
+    skyP = program(skyVS, skyFS);
     lineP = program(lineVS, lineFS);
     pointP = program(pointVS, pointFS);
     billP = program(billVS, billFS);

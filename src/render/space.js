@@ -54,10 +54,15 @@
     gl.enable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
 
-    // --- 星空 (カメラ位置中心, 深度書き込みなし) ---
+    // --- 天の川 (いちばん奥。深度は見ないし書かない) ---
     gl.depthMask(false);
+    gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    drawMilkyWay(VP, mwEqSpace(), MW_R, MW_SPACE_BRIGHT);
+    gl.enable(gl.DEPTH_TEST);
+
+    // --- 星空 (カメラ位置中心, 深度書き込みなし) ---
     gl.useProgram(pointP.pr);
     // 星空はカメラ中心の球 = カメラ相対座標そのもの
     gl.uniformMatrix4fv(pointP.u.uVP, false, VP);

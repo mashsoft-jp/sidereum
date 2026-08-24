@@ -16,6 +16,7 @@
 - ガイドツアー(視点・日時・解説をシーン単位で切り替える案内モード。`?tour=<id>` で共有可)
   - 操作を覚える「はじめての操作」は、実際に操作すると次へ進む。PC / スマホで別の内容を出し分け
 - 日食・月食 (球の影を実際に解いて描く。皆既月食の赤銅色、地球へ落ちる月の本影、木星面を渡る衛星の影、皆既日食の空の暗転とコロナ)
+- 天の川 (実測の全天マップ。宇宙・地上・月面のどのビューでも天球に貼る)
 - 火星〜木星間の小惑星帯、月の軌道、自転軸の表示
 - 明るいところの滲み (Bloom)。メニューで切り替え可
 - タッチ操作対応(モバイルレイアウトあり)
@@ -71,6 +72,7 @@ tex/               天体テクスチャ (ビルド対象外。index.html と一
 - 月の位置は ELP-2000 の主要周期項による短縮理論(Meeus 由来、黄経誤差 約0.01°・位相時刻 約数分)+ 測心視差補正で計算しています。楕円軌道・出没・満ち欠け・距離変化(約36〜41万km)を再現しますが、暦計算用途の精度はありません
 - 食 (日食・月食) は上記の惑星・月の位置から幾何を解いて描いています。起きる・起きないは正しく出ますが、**時刻は実際より数分〜20分ほどずれます** (月食は 2〜3分、日食は視差が効くぶん大きく、2035-09-02 の東京での皆既で約18分遅い)。食の予報には使えません
 - 天文カレンダーの衝・最大離角・接近も同じ位置計算から求めています。日付は実際とほぼ一致しますが、時刻には同程度のずれがあります
+- 天の川は実測の全天マップ (拡散光のみ) を天球に貼ったものです。恒星カタログとは別の層なので、明るい星が二重に出ることはありません
 - 恒星 (宇宙ビューの背景・地上ビューとも) はヨール輝星星表 (視等級6.5以下・約8,400星 ≒ 肉眼で見える全ての星) の実位置・実等級です。色は B-V 色指数にもとづく近似です
 
 ## 画像クレジット
@@ -93,8 +95,11 @@ tex/               天体テクスチャ (ビルド対象外。index.html と一
 | 月 (法線) | LOLA 標高 (LDEM 16 ppd = 5760×2880, CGI Moon Kit) | NASA/GSFC/Arizona State University, NASA Scientific Visualization Studio |
 | 火星 (法線) | MOLA MEGDR 標高 (16 ppd = 5760×2880) | NASA/JPL/GSFC (MGS MOLA Science Team) |
 | 水星 (法線) | MESSENGER 全球 DEM v2 (665 m = 23040×11520) | NASA/Johns Hopkins University APL/Carnegie Institution of Washington/USGS |
+| 天の川 | [Deep Star Maps 2020](https://svs.gsfc.nasa.gov/4851/) の拡散光版 (`milkyway_2020_4k.exr`, 4096×2048)。明るい恒星 (ヒッパルコス・ティコ) を除いた全天の拡散光。赤道座標 (ICRF/J2000) の正距円筒 | NASA/Goddard Space Flight Center Scientific Visualization Studio。Gaia DR2: ESA/Gaia/DPAC |
 
 画像は USGS Astrogeology、NASA SVS、NASA Earth Observatory、および Wikimedia Commons 経由で取得し、正距円筒図法へ縮小・JPEG 再圧縮のうえ `tex/` に置いています。
+
+天の川だけは HDR (OpenEXR, リニア輝度) なので、縮小のほかに次の処理をしています。①ショットノイズを落とす軽い平滑化 ②いちばん暗い空 (下位15〜20%) が 0 になる黒レベルの引き算 ③sRGB への変換。②は、そのまま出すと空全体がうっすら灰色になり「背景が黒い星空」に見えないため。描画時はさらに 1/3 ほどに落として、肉眼で見た淡い帯の明るさに合わせています。
 
 ### 解像度は2組
 
@@ -129,6 +134,7 @@ ON にしたときは、**先に適用してから「保存してよいか」を
 - 恒星: Yale Bright Star Catalogue, 5th Revised Edition (Hoffleit & Warren 1991、CDS V/50)。事実データの編纂物でありパブリックドメインとして扱われる
 - 月の理論: ELP-2000 の主要周期項 (J. Meeus, "Astronomical Algorithms" 2nd ed., Ch.47 の短縮版)
 - 星座線: [d3-celestial](https://github.com/ofrohn/d3-celestial) (Olaf Frohn, BSD-2-Clause) の constellations.lines を座標ベースで再編集
+- 天の川: NASA SVS [Deep Star Maps 2020](https://svs.gsfc.nasa.gov/4851/) の拡散光版 (Gaia DR2 由来。米国政府著作物)
 - 月面ビュー: 潮汐ロック近似 (表側が地球を向く・月の極 ≈ 黄道北)。物理秤動・月の極の傾斜 (1.5°) は省略
 
 ## ライセンス
