@@ -1280,5 +1280,139 @@
         },
       ],
     },
+    {
+      id: "eclipses",
+      ver: 1,
+      title: { ja: "日食と月食", en: "Eclipses" },
+      lead: {
+        ja: "太陽・地球・月が一直線に並ぶと何が起きるか。影に入る側と、影を落とす側の両方から眺めます。",
+        en: "What happens when Sun, Earth and Moon line up — seen from the side that falls into the shadow, and from the side that casts it.",
+      },
+      steps: [
+        {
+          view: "ground", site: [35.68, 139.69], d: "2025-09-07T18:13", sel: "moon",
+          aim: true, gfov: 1.4, mag: 1, constel: false, mark: false, play: false, sky: true,
+          text: {
+            ja: "2025年9月8日の未明、東京。皆既月食のさなかの月です。" +
+                "月は地球の影の中にすっぽり入っていて、太陽の光は1条も届いていません。" +
+                "それなのに真っ暗ではなく、赤銅色に光っています。",
+            en: "Tokyo, in the small hours of 8 September 2025: the Moon in the middle of a total eclipse. " +
+                "It sits entirely inside Earth's shadow — not one ray of direct sunlight reaches it. " +
+                "And yet it is not black. It glows a dull copper red.",
+          },
+        },
+        {
+          d: "2025-09-07T16:50",
+          text: {
+            ja: "1時間20分ほど前に戻すと、影に入りかけたところ。境目がぼやけているのは、" +
+                "太陽が点ではなく広がりを持った円盤だからです。月から見ると、地球の縁が太陽面を少しずつ隠していきます。" +
+                "隠れかけの帯 (半影) の幅は、ちょうど月の直径ぶんになります。",
+            en: "Rewind about eighty minutes and the Moon is only part way in. The edge is soft because the Sun " +
+                "is not a point but a disc: seen from the Moon, Earth's limb covers the solar disc gradually. " +
+                "That partly-covered band — the penumbra — happens to be about one lunar diameter wide.",
+          },
+        },
+        {
+          view: "space", sel: "moon", km: 11000, d: "2025-09-07T18:13", lit: true,
+          orbits: false, mag: 1,
+          text: {
+            ja: "同じ瞬間を宇宙から。月面のどこに立っても、太陽は地球にすっかり隠されています。" +
+                "それでも赤いのは、地球の大気を回り込んだ光が届いているから。" +
+                "青い光は散乱で失われ、残った赤だけが影の中を満たします。",
+            en: "The same moment from space. Stand anywhere on that surface and Earth completely hides the Sun. " +
+                "The red comes from sunlight bent through Earth's atmosphere on the way past: the blue is " +
+                "scattered away, and only the red gets through to fill the shadow.",
+          },
+        },
+        {
+          sel: "earth", fit: 0.0034, a: 0, apart: "sun", sight: "sun", mark: true,
+          text: {
+            ja: "少し引いて、地球の軌道面を真横から見ます。破線が太陽の方向。" +
+                "月は地球をはさんでその反対側、ちょうど一直線の上にいます。この並びが月食です。",
+            en: "Pull back and look edge-on to Earth's orbital plane. The dashed line points to the Sun, " +
+                "and the Moon sits on the far side of Earth, right on that line. " +
+                "That alignment is what a lunar eclipse is.",
+          },
+        },
+        {
+          d: "2025-12-04T23:17",
+          text: {
+            ja: "3か月後の満月。同じように太陽の反対側へ来ているのに、月は破線より少し上を通っています。" +
+                "月の軌道は地球の軌道面から 5° 傾いているので、満月のたびに影を通るわけではありません。" +
+                "食が起きるのは、満月・新月の瞬間が「2つの軌道面が交わる線」の近くに来たときだけ。" +
+                "月食も日食も年に数回しかないのはこのためです。",
+            en: "Three months on, at another full moon. It has come round to the far side of the Sun again, " +
+                "but it is passing a little above the dashed line. " +
+                "The Moon's orbit is tilted about 5° to Earth's, so it does not cross the shadow every month. " +
+                "An eclipse needs full or new moon to fall near the line where the two orbital planes cross, " +
+                "which is why we only get a few each year.",
+          },
+        },
+        {
+          view: "ground", site: [35.68, 139.69], d: "2035-09-02T01:00", sel: "sun",
+          aim: true, gfov: 1.4, sight: null, apart: null, mark: false, sky: true,
+          text: {
+            ja: "同じ並びを、月が内側 — 新月の側へ来たときに作ると日食になります。" +
+                "2035年9月2日の朝、東京。月が太陽を欠けさせているところです。" +
+                "月食が「地球の影に入った月」なのに対して、日食は「月の影に入った地球」。" +
+                "同じ影の話を、影の落ちる側から見ていることになります。",
+            en: "Make the same alignment with the Moon on the inside — at new moon — and you get a solar eclipse. " +
+                "Tokyo, the morning of 2 September 2035, with the Moon biting into the Sun. " +
+                "A lunar eclipse is the Moon inside Earth's shadow; a solar eclipse is Earth inside the Moon's. " +
+                "Same shadow, seen from the side it lands on.",
+          },
+        },
+        {
+          d: "2035-09-02T01:13",
+          text: {
+            ja: "皆既。太陽の円盤が完全に隠され、まわりに真珠色のコロナが現れました。" +
+                "普段は光球が明るすぎて見えないだけで、コロナはいつでもそこにあります。" +
+                "月の見かけの大きさが太陽とほぼ同じ — この偶然がなければ、この光景は存在しません。",
+            en: "Totality. The solar disc is completely covered, and the pearl-white corona appears around it. " +
+                "It is always there; the photosphere is simply too bright to let us see it except for these few minutes. " +
+                "The Moon happens to look almost exactly the same size as the Sun — without that coincidence, " +
+                "this sight would not exist.",
+          },
+        },
+        {
+          gfov: 85,
+          text: {
+            ja: "同じ瞬間に空全体を見てみましょう。朝の空だったはずが暗くなり、星と惑星が現れています。" +
+                "本影が地表に落とす帯は幅 100km ほどしかなく、そこを通り過ぎるのに数分。" +
+                "その数分のあいだだけ、帯の上にいる人が昼の空に星を見ることになります。",
+            en: "Now the whole sky at that same moment. The morning has gone dark and the stars and planets are out. " +
+                "The umbra paints a band only about a hundred kilometres wide across the ground, and it sweeps " +
+                "past in a few minutes. For those few minutes, anyone standing in that band sees stars in a daytime sky.",
+          },
+        },
+        {
+          site: [43.06, 141.35], d: "2030-06-01T07:59", gfov: 1.4,
+          text: {
+            ja: "2030年6月1日の夕方、札幌。同じ「太陽の正面に来た新月」でも、こちらは金環日食です。" +
+                "月の軌道は楕円で、地球からの距離が 36万〜41万km のあいだで変わります。" +
+                "遠いときの月は太陽より小さく見え、隠しきれずに縁が輪として残ります。" +
+                "空もこのとおり明るいまま — 隠れているのは太陽面の 96% でも、残りの 4% が昼を保ちます。",
+            en: "Sapporo, the evening of 1 June 2030. The same new moon crossing the Sun's face — but this time " +
+                "it is annular. The Moon's orbit is an ellipse, and its distance ranges from 360,000 to 410,000 km. " +
+                "Far out, it looks smaller than the Sun and cannot cover it, leaving a ring at the edge. " +
+                "The sky stays bright, too: 96% of the disc is hidden, and the remaining 4% still makes it daytime.",
+          },
+        },
+        {
+          view: "moon", d: "2025-09-07T18:13", sel: "earth", aim: true, gfov: 4.2, mark: false,
+          text: {
+            ja: "最後に、最初の月食を月面から。太陽は地球の真後ろで、地球による皆既日食のさなかです。" +
+                "黒い地球の縁を細い赤い輪が囲んでいます — 世界じゅうの朝焼けと夕焼けを一度に見ている姿で、" +
+                "この光が影の中へ回り込んで、地球から見た月を赤く染めていました。" +
+                "月食と日食は別々の現象ではなく、同じ影を裏表から見たものです。",
+            en: "Finally, that first lunar eclipse seen from the Moon. The Sun is directly behind Earth — " +
+                "a total solar eclipse, by Earth. A thin red ring outlines the black disc: that is every sunrise " +
+                "and sunset on the planet at once, and it is this light, bent into the shadow, that was " +
+                "reddening the Moon for everyone watching from Earth. " +
+                "A lunar eclipse and a solar eclipse are not two phenomena — they are one shadow, from either side.",
+          },
+        },
+      ],
+    },
   ];
 

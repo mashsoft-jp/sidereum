@@ -101,10 +101,12 @@
     const ro = Math.asin(Math.min(1, MOON.rkm / (dm * AU_KM)));
     const sep = Math.acos(Math.max(-1, Math.min(1, (mx*sx + my*sy + mz*sz) / (dm * ds))));
     return {
-      cov: diskCoverage(sep, rs, ro),
-      // 食分 = 太陽の直径のうち隠れた割合。1 以上で皆既 (金環は 1 に届かない)
+      // 食分 = 太陽の直径のうち隠れた割合。金環は月のほうが小さいので 1 に届かない
       mag: Math.max(0, (rs + ro - sep) / (2 * rs)),
-      annular: ro < rs,
+      // 中心食 (月が太陽面にすっかり入る) かどうかは離角で決まる。
+      // 食分のしきい値で判定すると、月が小さい回 (金環) を部分食に取り違える
+      central: sep <= Math.abs(rs - ro),
+      total: ro >= rs,
     };
   }
 
@@ -273,14 +275,14 @@
     let best = null;
     for (let t = tNew - 0.25; t <= tNew + 0.25; t += 1 / 720) {   // 2分刻み
       const c = evSolarLocal(t);
-      if (!best || c.mag > best.mag) best = { t, mag: c.mag, cov: c.cov, annular: c.annular };
+      if (!best || c.mag > best.mag) best = { t, mag: c.mag };
     }
     if (!best || best.mag <= 0) return null;
     // 極大を詰める
     const tp = evPeak((t) => evSolarLocal(t).mag, best.t - 1 / 720, best.t + 1 / 720);
     const c = evSolarLocal(tp);
     if (c.mag <= 0) return null;
-    const type = c.cov >= 1 ? "total" : (c.annular && c.mag > 0.98 ? "annular" : "partial");
+    const type = !c.central ? "partial" : (c.total ? "total" : "annular");
     return { t: tp, kind: "solarEclipse", key: "sun", view: "ground",
              data: { type, mag: c.mag, up: evAlt(SUN, tp) > 0 } };
   }
