@@ -3851,6 +3851,16 @@
     return b.rkm * KM2W;
   }
 
+  // ---------- 大気差 ----------
+  // 真高度 [rad] → 持ち上がる角度 [rad]。地平で 34′、高度5°で 9′、天頂で 0。
+  // 式は Sæmundsson。地平線より十分下では発散するので −1.5° で頭打ちにして
+  // −4° までに 0 へ落とす (そこまで下がれば地面に隠れて見えない)
+  function refractRad(hRad) {
+    const h = hRad / DEG, hc = h > -1.5 ? h : -1.5;
+    const r = 1.02 / Math.tan((hc + 10.3 / (hc + 5.11)) * DEG) / 60 * DEG;
+    return h >= -1.5 ? r : r * Math.max(0, 1 + (h + 1.5) / 2.5);
+  }
+
   // ---------- 歳差 (J2000 平均分点 ⇄ その日の平均分点) ----------
   // 天体の位置も恒星カタログも J2000 のままなのに、時角はその日のグリニッジ
   // 恒星時と比べていた。空全体が一様に回転してずれるので、天体と星の位置関係は
@@ -4739,10 +4749,24 @@
     varying vec3 vDir;
     uniform mat3 uEq;        // 描画フレームの方向 → 赤道座標
     uniform float uBright;   // 明るさ (昼は 0 へ落とす)
+    uniform float uRefr;     // 1 = 地上ビュー (大気差を戻してから地図を引く)
     uniform sampler2D uTex;
 
     void main() {
-      vec3 q = normalize(uEq * normalize(vDir));
+      vec3 dir = normalize(vDir);
+      if (uRefr > 0.5) {
+        // この画素が指しているのは「見かけの向き」なので、地図を引く前に
+        // 大気差ぶん下げる。恒星・星座線を持ち上げているのと同じ量だけずらす
+        // (Bennett の式。見かけの高度 → 大気差 [分角])
+        float ha = degrees(asin(clamp(dir.y, -1.0, 1.0)));
+        float hc = max(ha, -1.0);
+        float r = 1.0 / tan(radians(hc + 7.31 / (hc + 4.4))) / 60.0;
+        r *= clamp(1.0 + (ha + 1.0) / 3.0, 0.0, 1.0);      // 地平線の下では効かせない
+        float h2 = radians(ha - r), ch = cos(radians(ha));
+        float k = ch > 1e-6 ? cos(h2) / ch : 1.0;
+        dir = vec3(dir.x * k, sin(h2), dir.z * k);
+      }
+      vec3 q = normalize(uEq * dir);
       // 地図は左端が赤経 0h、上端が赤緯 +90°。赤経は負側へ回っても REPEAT が畳む
       vec2 uv = vec2(atan(q.y, q.x) * 0.15915494,
                      0.5 - asin(clamp(q.z, -1.0, 1.0)) * 0.31830989);
@@ -6925,13 +6949,14 @@
 
   // 深度もブレンドも呼び出し側の状態をそのまま使う (背景として最初に描く前提)。
   // 視点は必ず球の中心にあるので、視線は球面と1度しか交わらない = カリング不要
-  function drawMilkyWay(vp32, eq9, radius, bright) {
+  function drawMilkyWay(vp32, eq9, radius, bright, refr) {
     if (bright <= 0.003) return;
     gl.useProgram(skyP.pr);
     gl.uniformMatrix4fv(skyP.u.uVP, false, vp32);
     gl.uniformMatrix3fv(skyP.u.uEq, false, eq9);
     gl.uniform1f(skyP.u.uRadius, radius);
     gl.uniform1f(skyP.u.uBright, bright);
+    gl.uniform1f(skyP.u.uRefr, refr || 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, mwTex);
     gl.uniform1i(skyP.u.uTex, 0);
@@ -7296,6 +7321,24 @@
     return out;
   }
 
+  // ---------- 大気差 ----------
+  // 地平ぎわほど像が持ち上がって見える (地平で 34′、高度5°で 9′、天頂で 0)。
+  // 出没時刻は h0 = −0.833° (大気差 34′ + 太陽の視半径 16′) で解いているのに
+  // 描画側に大気差が無く、画面では一覧の「入」より3分ほど早く沈み切っていた。
+  //
+  // 天体だけに掛けると、地平ぎわで星座線と星がずれる。地平フレームへ落とした
+  // 単位ベクトルを持ち上げる形にして、恒星・星座線・黄道・経緯線・天の川
+  // (シェーダ側) にも同じものを掛ける。式は Sæmundsson (真高度 → 大気差 [分角])
+  const _rf = [1, 0];                   // [水平成分の倍率, 見かけの sinAlt]
+  function refractUp(u) {
+    if (surfaceBody === "moon") { _rf[0] = 1; _rf[1] = u; return _rf; }   // 大気が無い
+    const h = Math.asin(Math.max(-1, Math.min(1, u)));
+    const h2 = h + refractRad(h), ch = Math.cos(h);
+    _rf[0] = ch > 1e-6 ? Math.cos(h2) / ch : 1;
+    _rf[1] = Math.sin(h2);
+    return _rf;
+  }
+
   // ---------- 観測者フレーム (地球/月の地表。ワールド空間の東・天頂・北 単位ベクトル) ----------
   // これを介して「宇宙(ワールド)方向 → 地平座標」を統一的に扱う。地球でも月でも同じ描画経路を使える
   let surfaceBody = "earth";              // "earth" | "moon"
@@ -7515,7 +7558,8 @@
     // 天の川。空ドームの上に加算で重ね、恒星より先に描く (地面ドームは後から
     // 不透明で描かれるので、地平線より下は隠れる)。昼は星と同じだけ薄れる
     drawMilkyWay(gVP32, mwEqGround(), SKYR * 1.4,
-                 (isMoonSurf ? MW_SPACE_BRIGHT : MW_GROUND_BRIGHT) * starVis);
+                 (isMoonSurf ? MW_SPACE_BRIGHT : MW_GROUND_BRIGHT) * starVis,
+                 isMoonSurf ? 0 : 1);
 
     // 星座線 (観測者フレームへ投影。地平線より上のセグメントのみ)。恒星より先に描く
     if (showConst && CONST_SEG.length) {
@@ -7528,8 +7572,10 @@
         const u1 = CONST_SEG[i+3]*obsU[0]+CONST_SEG[i+4]*obsU[1]+CONST_SEG[i+5]*obsU[2];
         const n1 = CONST_SEG[i+3]*obsN[0]+CONST_SEG[i+4]*obsN[1]+CONST_SEG[i+5]*obsN[2];
         if (u0 < -0.03 && u1 < -0.03) continue;      // 両端とも地平線下ならスキップ
-        constGroundBuf[cn++] = e0 * SKYR; constGroundBuf[cn++] = u0 * SKYR; constGroundBuf[cn++] = -n0 * SKYR;
-        constGroundBuf[cn++] = e1 * SKYR; constGroundBuf[cn++] = u1 * SKYR; constGroundBuf[cn++] = -n1 * SKYR;
+        let rf = refractUp(u0); const a0 = rf[0] * SKYR, v0 = rf[1] * SKYR;
+        rf = refractUp(u1);     const a1 = rf[0] * SKYR, v1 = rf[1] * SKYR;
+        constGroundBuf[cn++] = e0 * a0; constGroundBuf[cn++] = v0; constGroundBuf[cn++] = -n0 * a0;
+        constGroundBuf[cn++] = e1 * a1; constGroundBuf[cn++] = v1; constGroundBuf[cn++] = -n1 * a1;
       }
       if (cn) {
         gl.useProgram(lineP.pr);
@@ -7553,8 +7599,10 @@
           const e0 = ax*obsE[0]+ay*obsE[1]+az*obsE[2], u0 = ax*obsU[0]+ay*obsU[1]+az*obsU[2], n0 = ax*obsN[0]+ay*obsN[1]+az*obsN[2];
           const e1 = bx*obsE[0]+by*obsE[1]+bz*obsE[2], u1 = bx*obsU[0]+by*obsU[1]+bz*obsU[2], n1 = bx*obsN[0]+by*obsN[1]+bz*obsN[2];
           if (u0 < -0.03 && u1 < -0.03) continue;
-          eclGroundBuf[en++] = e0 * SKYR; eclGroundBuf[en++] = u0 * SKYR; eclGroundBuf[en++] = -n0 * SKYR;
-          eclGroundBuf[en++] = e1 * SKYR; eclGroundBuf[en++] = u1 * SKYR; eclGroundBuf[en++] = -n1 * SKYR;
+          let rf = refractUp(u0); const a0 = rf[0] * SKYR, v0 = rf[1] * SKYR;
+          rf = refractUp(u1);     const a1 = rf[0] * SKYR, v1 = rf[1] * SKYR;
+          eclGroundBuf[en++] = e0 * a0; eclGroundBuf[en++] = v0; eclGroundBuf[en++] = -n0 * a0;
+          eclGroundBuf[en++] = e1 * a1; eclGroundBuf[en++] = v1; eclGroundBuf[en++] = -n1 * a1;
         }
         if (en) {
           gl.useProgram(lineP.pr);
@@ -7583,8 +7631,10 @@
         const u1 = GRID_SEG[i+3]*obsU[0]+GRID_SEG[i+4]*obsU[1]+GRID_SEG[i+5]*obsU[2];
         const n1 = GRID_SEG[i+3]*obsN[0]+GRID_SEG[i+4]*obsN[1]+GRID_SEG[i+5]*obsN[2];
         if (u0 < -0.03 && u1 < -0.03) continue;      // 両端とも地平線下ならスキップ
-        gridGroundBuf[gn++] = e0 * SKYR; gridGroundBuf[gn++] = u0 * SKYR; gridGroundBuf[gn++] = -n0 * SKYR;
-        gridGroundBuf[gn++] = e1 * SKYR; gridGroundBuf[gn++] = u1 * SKYR; gridGroundBuf[gn++] = -n1 * SKYR;
+        let rf = refractUp(u0); const a0 = rf[0] * SKYR, v0 = rf[1] * SKYR;
+        rf = refractUp(u1);     const a1 = rf[0] * SKYR, v1 = rf[1] * SKYR;
+        gridGroundBuf[gn++] = e0 * a0; gridGroundBuf[gn++] = v0; gridGroundBuf[gn++] = -n0 * a0;
+        gridGroundBuf[gn++] = e1 * a1; gridGroundBuf[gn++] = v1; gridGroundBuf[gn++] = -n1 * a1;
       }
       if (gn) {
         const gv = 0.4 + 0.6 * starVis;
@@ -7614,8 +7664,9 @@
         if (up < 0.02) continue;
         const east = wx*obsE[0]+wy*obsE[1]+wz*obsE[2];
         const north = wx*obsN[0]+wy*obsN[1]+wz*obsN[2];
+        const rf = refractUp(up), hz = rf[0] * SKYR;
         const o = ns * 7;
-        starGArr[o] = east * SKYR; starGArr[o+1] = up * SKYR; starGArr[o+2] = -north * SKYR;
+        starGArr[o] = east * hz; starGArr[o+1] = rf[1] * SKYR; starGArr[o+2] = -north * hz;
         const m = STAR_MAG[i];
         starGArr[o+3] = Math.max(szMin, szK - 0.55 * m);
         const c = Math.max(brMin, Math.min(1, brK - brA * m));
@@ -8351,7 +8402,7 @@
     gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    drawMilkyWay(VP, mwEqSpace(), MW_R, MW_SPACE_BRIGHT);
+    drawMilkyWay(VP, mwEqSpace(), MW_R, MW_SPACE_BRIGHT, 0);
     gl.enable(gl.DEPTH_TEST);
 
     // --- 星空 (カメラ位置中心, 深度書き込みなし) ---
@@ -9071,7 +9122,13 @@
   let showMeteor = localStorage.getItem("ssMeteor") !== "0";   // 既定 ON
 
   // 放射点 (ワールド固定方向) → 地平フレーム [東, 天頂, -北]
-  function metRadiantG(s, out) { return worldDirToGround(s.dirW, out); }
+  // 放射点も大気差で持ち上がる (星と同じ扱いにしないと、地平ぎわで星図とずれる)
+  function metRadiantG(s, out) {
+    worldDirToGround(s.dirW, out);
+    const rf = refractUp(out[1]);
+    out[0] *= rf[0]; out[2] *= rf[0]; out[1] = rf[1];
+    return out;
+  }
   // 放射点の方位・高度 [度] (ツアーの照準・追尾用)
   function radiantAltAz(key) {
     const s = SHOWER_BY_KEY.get(key);
@@ -9891,7 +9948,11 @@
     const D = Math.hypot(_pv[0], _pv[1], _pv[2]);
     const ra = Math.atan2(_pv[1], _pv[0]), dec = Math.asin(_pv[2] / D);
     const lat = obsLat * DEG, H = lst - ra;
-    const alt = Math.asin(Math.max(-1, Math.min(1, Math.sin(dec)*Math.sin(lat) + Math.cos(dec)*Math.cos(lat)*Math.cos(H))));
+    // 高度は大気差を入れた「見かけの高度」を返す。地上ビューの描画・照準・
+    // 「地平線下」の判定はすべてこちらを使う (出没時刻は h0 に大気差が
+    // 織り込み済みなので、下の計算は真高度のまま dec と H から解く)
+    const altGeo = Math.asin(Math.max(-1, Math.min(1, Math.sin(dec)*Math.sin(lat) + Math.cos(dec)*Math.cos(lat)*Math.cos(H))));
+    const alt = altGeo + refractRad(altGeo);
     const A = Math.atan2(Math.sin(H), Math.cos(H)*Math.sin(lat) - Math.tan(dec)*Math.cos(lat));
     let az = (A/DEG + 180) % 360; if (az < 0) az += 360;
     // 日心距離・位相・視等級

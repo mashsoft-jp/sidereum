@@ -190,7 +190,11 @@
     const D = Math.hypot(_pv[0], _pv[1], _pv[2]);
     const ra = Math.atan2(_pv[1], _pv[0]), dec = Math.asin(_pv[2] / D);
     const lat = obsLat * DEG, H = lst - ra;
-    const alt = Math.asin(Math.max(-1, Math.min(1, Math.sin(dec)*Math.sin(lat) + Math.cos(dec)*Math.cos(lat)*Math.cos(H))));
+    // 高度は大気差を入れた「見かけの高度」を返す。地上ビューの描画・照準・
+    // 「地平線下」の判定はすべてこちらを使う (出没時刻は h0 に大気差が
+    // 織り込み済みなので、下の計算は真高度のまま dec と H から解く)
+    const altGeo = Math.asin(Math.max(-1, Math.min(1, Math.sin(dec)*Math.sin(lat) + Math.cos(dec)*Math.cos(lat)*Math.cos(H))));
+    const alt = altGeo + refractRad(altGeo);
     const A = Math.atan2(Math.sin(H), Math.cos(H)*Math.sin(lat) - Math.tan(dec)*Math.cos(lat));
     let az = (A/DEG + 180) % 360; if (az < 0) az += 360;
     // 日心距離・位相・視等級

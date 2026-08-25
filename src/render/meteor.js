@@ -27,7 +27,13 @@
   let showMeteor = localStorage.getItem("ssMeteor") !== "0";   // 既定 ON
 
   // 放射点 (ワールド固定方向) → 地平フレーム [東, 天頂, -北]
-  function metRadiantG(s, out) { return worldDirToGround(s.dirW, out); }
+  // 放射点も大気差で持ち上がる (星と同じ扱いにしないと、地平ぎわで星図とずれる)
+  function metRadiantG(s, out) {
+    worldDirToGround(s.dirW, out);
+    const rf = refractUp(out[1]);
+    out[0] *= rf[0]; out[2] *= rf[0]; out[1] = rf[1];
+    return out;
+  }
   // 放射点の方位・高度 [度] (ツアーの照準・追尾用)
   function radiantAltAz(key) {
     const s = SHOWER_BY_KEY.get(key);

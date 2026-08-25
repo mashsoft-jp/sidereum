@@ -36,13 +36,14 @@
 
   // 深度もブレンドも呼び出し側の状態をそのまま使う (背景として最初に描く前提)。
   // 視点は必ず球の中心にあるので、視線は球面と1度しか交わらない = カリング不要
-  function drawMilkyWay(vp32, eq9, radius, bright) {
+  function drawMilkyWay(vp32, eq9, radius, bright, refr) {
     if (bright <= 0.003) return;
     gl.useProgram(skyP.pr);
     gl.uniformMatrix4fv(skyP.u.uVP, false, vp32);
     gl.uniformMatrix3fv(skyP.u.uEq, false, eq9);
     gl.uniform1f(skyP.u.uRadius, radius);
     gl.uniform1f(skyP.u.uBright, bright);
+    gl.uniform1f(skyP.u.uRefr, refr || 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, mwTex);
     gl.uniform1i(skyP.u.uTex, 0);

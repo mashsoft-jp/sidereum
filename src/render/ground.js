@@ -50,6 +50,24 @@
     return out;
   }
 
+  // ---------- 大気差 ----------
+  // 地平ぎわほど像が持ち上がって見える (地平で 34′、高度5°で 9′、天頂で 0)。
+  // 出没時刻は h0 = −0.833° (大気差 34′ + 太陽の視半径 16′) で解いているのに
+  // 描画側に大気差が無く、画面では一覧の「入」より3分ほど早く沈み切っていた。
+  //
+  // 天体だけに掛けると、地平ぎわで星座線と星がずれる。地平フレームへ落とした
+  // 単位ベクトルを持ち上げる形にして、恒星・星座線・黄道・経緯線・天の川
+  // (シェーダ側) にも同じものを掛ける。式は Sæmundsson (真高度 → 大気差 [分角])
+  const _rf = [1, 0];                   // [水平成分の倍率, 見かけの sinAlt]
+  function refractUp(u) {
+    if (surfaceBody === "moon") { _rf[0] = 1; _rf[1] = u; return _rf; }   // 大気が無い
+    const h = Math.asin(Math.max(-1, Math.min(1, u)));
+    const h2 = h + refractRad(h), ch = Math.cos(h);
+    _rf[0] = ch > 1e-6 ? Math.cos(h2) / ch : 1;
+    _rf[1] = Math.sin(h2);
+    return _rf;
+  }
+
   // ---------- 観測者フレーム (地球/月の地表。ワールド空間の東・天頂・北 単位ベクトル) ----------
   // これを介して「宇宙(ワールド)方向 → 地平座標」を統一的に扱う。地球でも月でも同じ描画経路を使える
   let surfaceBody = "earth";              // "earth" | "moon"
@@ -269,7 +287,8 @@
     // 天の川。空ドームの上に加算で重ね、恒星より先に描く (地面ドームは後から
     // 不透明で描かれるので、地平線より下は隠れる)。昼は星と同じだけ薄れる
     drawMilkyWay(gVP32, mwEqGround(), SKYR * 1.4,
-                 (isMoonSurf ? MW_SPACE_BRIGHT : MW_GROUND_BRIGHT) * starVis);
+                 (isMoonSurf ? MW_SPACE_BRIGHT : MW_GROUND_BRIGHT) * starVis,
+                 isMoonSurf ? 0 : 1);
 
     // 星座線 (観測者フレームへ投影。地平線より上のセグメントのみ)。恒星より先に描く
     if (showConst && CONST_SEG.length) {
@@ -282,8 +301,10 @@
         const u1 = CONST_SEG[i+3]*obsU[0]+CONST_SEG[i+4]*obsU[1]+CONST_SEG[i+5]*obsU[2];
         const n1 = CONST_SEG[i+3]*obsN[0]+CONST_SEG[i+4]*obsN[1]+CONST_SEG[i+5]*obsN[2];
         if (u0 < -0.03 && u1 < -0.03) continue;      // 両端とも地平線下ならスキップ
-        constGroundBuf[cn++] = e0 * SKYR; constGroundBuf[cn++] = u0 * SKYR; constGroundBuf[cn++] = -n0 * SKYR;
-        constGroundBuf[cn++] = e1 * SKYR; constGroundBuf[cn++] = u1 * SKYR; constGroundBuf[cn++] = -n1 * SKYR;
+        let rf = refractUp(u0); const a0 = rf[0] * SKYR, v0 = rf[1] * SKYR;
+        rf = refractUp(u1);     const a1 = rf[0] * SKYR, v1 = rf[1] * SKYR;
+        constGroundBuf[cn++] = e0 * a0; constGroundBuf[cn++] = v0; constGroundBuf[cn++] = -n0 * a0;
+        constGroundBuf[cn++] = e1 * a1; constGroundBuf[cn++] = v1; constGroundBuf[cn++] = -n1 * a1;
       }
       if (cn) {
         gl.useProgram(lineP.pr);
@@ -307,8 +328,10 @@
           const e0 = ax*obsE[0]+ay*obsE[1]+az*obsE[2], u0 = ax*obsU[0]+ay*obsU[1]+az*obsU[2], n0 = ax*obsN[0]+ay*obsN[1]+az*obsN[2];
           const e1 = bx*obsE[0]+by*obsE[1]+bz*obsE[2], u1 = bx*obsU[0]+by*obsU[1]+bz*obsU[2], n1 = bx*obsN[0]+by*obsN[1]+bz*obsN[2];
           if (u0 < -0.03 && u1 < -0.03) continue;
-          eclGroundBuf[en++] = e0 * SKYR; eclGroundBuf[en++] = u0 * SKYR; eclGroundBuf[en++] = -n0 * SKYR;
-          eclGroundBuf[en++] = e1 * SKYR; eclGroundBuf[en++] = u1 * SKYR; eclGroundBuf[en++] = -n1 * SKYR;
+          let rf = refractUp(u0); const a0 = rf[0] * SKYR, v0 = rf[1] * SKYR;
+          rf = refractUp(u1);     const a1 = rf[0] * SKYR, v1 = rf[1] * SKYR;
+          eclGroundBuf[en++] = e0 * a0; eclGroundBuf[en++] = v0; eclGroundBuf[en++] = -n0 * a0;
+          eclGroundBuf[en++] = e1 * a1; eclGroundBuf[en++] = v1; eclGroundBuf[en++] = -n1 * a1;
         }
         if (en) {
           gl.useProgram(lineP.pr);
@@ -337,8 +360,10 @@
         const u1 = GRID_SEG[i+3]*obsU[0]+GRID_SEG[i+4]*obsU[1]+GRID_SEG[i+5]*obsU[2];
         const n1 = GRID_SEG[i+3]*obsN[0]+GRID_SEG[i+4]*obsN[1]+GRID_SEG[i+5]*obsN[2];
         if (u0 < -0.03 && u1 < -0.03) continue;      // 両端とも地平線下ならスキップ
-        gridGroundBuf[gn++] = e0 * SKYR; gridGroundBuf[gn++] = u0 * SKYR; gridGroundBuf[gn++] = -n0 * SKYR;
-        gridGroundBuf[gn++] = e1 * SKYR; gridGroundBuf[gn++] = u1 * SKYR; gridGroundBuf[gn++] = -n1 * SKYR;
+        let rf = refractUp(u0); const a0 = rf[0] * SKYR, v0 = rf[1] * SKYR;
+        rf = refractUp(u1);     const a1 = rf[0] * SKYR, v1 = rf[1] * SKYR;
+        gridGroundBuf[gn++] = e0 * a0; gridGroundBuf[gn++] = v0; gridGroundBuf[gn++] = -n0 * a0;
+        gridGroundBuf[gn++] = e1 * a1; gridGroundBuf[gn++] = v1; gridGroundBuf[gn++] = -n1 * a1;
       }
       if (gn) {
         const gv = 0.4 + 0.6 * starVis;
@@ -368,8 +393,9 @@
         if (up < 0.02) continue;
         const east = wx*obsE[0]+wy*obsE[1]+wz*obsE[2];
         const north = wx*obsN[0]+wy*obsN[1]+wz*obsN[2];
+        const rf = refractUp(up), hz = rf[0] * SKYR;
         const o = ns * 7;
-        starGArr[o] = east * SKYR; starGArr[o+1] = up * SKYR; starGArr[o+2] = -north * SKYR;
+        starGArr[o] = east * hz; starGArr[o+1] = rf[1] * SKYR; starGArr[o+2] = -north * hz;
         const m = STAR_MAG[i];
         starGArr[o+3] = Math.max(szMin, szK - 0.55 * m);
         const c = Math.max(brMin, Math.min(1, brK - brA * m));

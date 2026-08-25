@@ -59,7 +59,7 @@
     gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    drawMilkyWay(VP, mwEqSpace(), MW_R, MW_SPACE_BRIGHT);
+    drawMilkyWay(VP, mwEqSpace(), MW_R, MW_SPACE_BRIGHT, 0);
     gl.enable(gl.DEPTH_TEST);
 
     // --- 星空 (カメラ位置中心, 深度書き込みなし) ---
