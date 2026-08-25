@@ -664,10 +664,15 @@
     // Bloom はトーンマップ済みの画面を取り込むので、太陽の円盤は空や雲と同じ
     // 1.0 に潰れていて、Bloom だけでは太陽を特別扱いできない。
     //
-    // 地平線より下では出さない。深度バッファは球の描画前に消しているので
-    // 地形では隠せず、また昇る前から光っていたら嘘になる。地平線近くは
-    // 大気を長く通って実際に減光するので、高度で薄くする (月面には大気が
-    // 無いので、この減衰は入れない = 昇った瞬間から容赦なく眩しい)
+    // 地平線より下では出さない。地形は後から不透明で描くので隠れるが、
+    // 昇る前から光っていたら嘘になる。地平線近くは大気を長く通って実際に
+    // 減光するので、高度で薄くする (月面には大気が無いので、この減衰は
+    // 入れない = 昇った瞬間から容赦なく眩しい)
+    //
+    // 裾と芯で深度の扱いを分ける。裾は目やカメラの中で起きる散乱で、像が
+    // できたあとに全面へ乗るものなので何にも隠されない。芯は太陽の円盤その
+    // ものの眩しさなので、隠れているところからは出ない — 深度を効かせて月に
+    // 食わせる。これをやらないと、日食で月に隠された太陽の中心に丸い光が残る
     if (bloomOn) {
       const sv = groundVis.find((v) => v.b === SUN);
       const sinAlt = sv ? sv.py / SKYR : -1;
@@ -704,14 +709,22 @@
         gl.uniform3f(billP.u.uCol1, 0.55 * fade, 0.32 * fade * gm, 0.12 * fade * bm);
         gl.uniform3f(billP.u.uCol2, 1.00 * fade, 0.86 * fade * gm, 0.66 * fade * bm);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        // 芯は月に食わせる。ドーム上の天体は実距離順に 0.55〜1.0 の半径へ
+        // 並べてあり、太陽はいちばん遠い側 (1.0)・月はいちばん近い側 (0.55)
+        // なので、そのあいだへ置けば「太陽の円盤の手前・月の円盤の奥」になる。
+        // 位置と大きさを同じ率で縮めるので、見かけの広さは変わらない
+        const gz = 0.75;
+        gl.enable(gl.DEPTH_TEST);
+        gl.uniform3f(billP.u.uCenter, sv.px * gz, sv.py * gz, sv.pz * gz);
         // 芯の落ち方を平らにしない。加算で 1.0 に張り付いた領域が広がると、
         // その縁が輪郭として読めて「太陽が大きくなった」に見えてしまう
         gl.uniform1f(billP.u.uFall, 1.5);
-        gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide * 0.22);
+        gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide * 0.22 * gz);
         gl.uniform3f(billP.u.uCol1, 1.0 * fade, 0.80 * fade * gm, 0.45 * fade * bm);
         gl.uniform3f(billP.u.uCol2, 1.0 * fade, 1.00 * fade * gm, 1.00 * fade * bm);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         gl.disable(gl.BLEND);
+        gl.disable(gl.DEPTH_TEST);
         gl.depthMask(true);
       }
     }
