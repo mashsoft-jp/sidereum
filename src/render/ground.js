@@ -209,9 +209,7 @@
     const sunAU = bodySky(SUN, _sunG);
     const isMoonSurf = surfaceBody === "moon";
     // ---- 日食: 観測地から見て太陽面が何割隠れているか ----
-    // 地上では月が、月面では地球が太陽を隠す。皆既に近づくほど空が暗くなり、
-    // 昼のうちに星が現れる — 昼夜係数へ畳んでおけば、空・地面・星・天体の
-    // エアライト・Bloom のしきい値まで一度に効く
+    // 地上では月が、月面では地球が太陽を隠す
     const eclOcc = isMoonSurf ? BODY_BY_KEY.get("earth") : MOON;
     let sunCov = 0;
     {
@@ -221,30 +219,40 @@
       const cos = _gp[0]*_sunG[0] + _gp[1]*_sunG[1] + _gp[2]*_sunG[2];
       sunCov = diskCoverage(Math.acos(Math.max(-1, Math.min(1, cos))), rs, ro);
     }
-    // 隠れた面積をそのまま明るさに使うと、半分欠けただけで夕方になってしまう。
-    // 目は明るさの対数に反応するので、実際に暗さを感じるのは残りが1割を切って
-    // から — 残光を対数で写して、桁が落ちるほど急に暗くなる形にする。
-    // 皆既でも 0 にはしない: 実際の皆既中の空は深い薄明で、地平はぐるりと
-    // 夕焼け色に残る
+    // 空へ届いている太陽の光量。散乱は入射光量に比例するので、これを掛ければ
+    // 日食の暗転になる。皆既でも 0 にはしない — 本影の帯は幅 100km ほどしか
+    // なく、そのまわりの陽の当たった大気で散乱した光が入ってくる。実測でも
+    // 皆既中の空は昼の 1/1000 前後で、真っ暗にはならない
+    const sunFlux = (showTerrain && !isMoonSurf) ? Math.max(1e-3, 1 - sunCov) : 0;
+    // 地面の明るさは直射日光で決まるので、こちらは高度で決め打ちのままでよい
+    // (日食のぶんは、目が対数に反応することを見込んで残光を対数で写す)
     const sunLeft = Math.max(0.02, Math.min(1, 1 + Math.log10(Math.max(1e-4, 1 - sunCov)) / 3.5));
     // 月面は大気が無いので昼でも空は暗いまま (星も見える)
     const dayF = (showTerrain && !isMoonSurf)
       ? Math.max(0, Math.min(1, (_sunG[1] + 0.12) / 0.22)) * sunLeft : 0;
-    starVis = 1 - dayF * 0.98;   // 昼は星をほぼ消す
-    skyDayF = dayF;
+    // 空の明るさは、色を出しているのと同じ散乱の積分から取る (core/atmos.js)。
+    // 星の見え方・Bloom のしきい値・天体のエアライトはすべてこれで決まる
+    const skyLum = sunFlux > 0 ? skyZenithLum(_sunG[1]) * sunFlux : 0;
+    const skyF = skyLumToDay(skyLum);
+    const skyGain = skyAdaptGain(skyLum);
+    starVis = 1 - skyF * 0.98;   // 明るい空では星が見えない
+    skyDayF = skyF;
 
     gl.clearColor(0.015, 0.02, 0.045, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
 
     // 大気 (地上ビューのみ)。星より先に、背景として不透明で描く
-    if (showTerrain && !isMoonSurf && dayF > 0.001 && skyVB) {
+    if (skyF > 0.002 && skyVB) {
       gl.disable(gl.BLEND);
       gl.useProgram(terrainP.pr);
       gl.uniformMatrix4fv(terrainP.u.uVP, false, gVP32);
       gl.uniform3f(terrainP.u.uSun, _sunG[0], _sunG[1], _sunG[2]);
       gl.uniform1f(terrainP.u.uMoon, 0);
       gl.uniform1f(terrainP.u.uDay, dayF);
+      gl.uniform1f(terrainP.u.uSkyF, skyF);
+      gl.uniform1f(terrainP.u.uFlux, sunFlux);
+      gl.uniform1f(terrainP.u.uSkyGain, skyGain);
       gl.uniform1f(terrainP.u.uOcc, sunLeft);
       gl.uniform1f(terrainP.u.uSky, 1);
       gl.bindBuffer(gl.ARRAY_BUFFER, skyVB);
@@ -472,7 +480,7 @@
       bodyRenderer.beginPass({
         time: nowSec, cameraPosition: ZERO3,
         cullFace: gl.FRONT, depthTest: true, depthWrite: true,
-        airSun: _sunG, airDay: dayF,
+        airSun: _sunG, airDay: skyF, airFlux: sunFlux, airGain: skyGain,
       });
       let satLx = 0, satLy = 0, satLz = 0;   // 土星の環の照射方向 (ループ内で確定)
       let airBody = null;                    // 大気シェルを重ねる天体 (地球のみ)
@@ -728,6 +736,9 @@
       gl.uniform3f(terrainP.u.uSun, _sunG[0], _sunG[1], _sunG[2]);
       gl.uniform1f(terrainP.u.uMoon, isMoonSurf ? 1 : 0);
       gl.uniform1f(terrainP.u.uDay, dayF);
+      gl.uniform1f(terrainP.u.uSkyF, skyF);
+      gl.uniform1f(terrainP.u.uFlux, sunFlux);
+      gl.uniform1f(terrainP.u.uSkyGain, skyGain);
       gl.uniform1f(terrainP.u.uOcc, sunLeft);
       gl.uniform1f(terrainP.u.uSky, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, isMoonSurf ? ridgeVB.moon : ridgeVB.earth);

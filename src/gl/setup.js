@@ -65,7 +65,7 @@
 
   // 空の色は空ドームと天体のエアライトで共有する (GLSL は入れ子 include できないので
   // ここで前置きして両方に持たせる)
-  const SKY_FN = `@@glsl:sky-color@@`;
+  const SKY_FN = ATM_GLSL + `@@glsl:sky-color@@`;
   const bodyFS = EXT_DERIV
     + (hasTexLod ? "#extension GL_EXT_shader_texture_lod : enable\n#define TEXLOD 1\n" : "")
     + PRE + SKY_FN + `@@glsl:body.frag@@`;

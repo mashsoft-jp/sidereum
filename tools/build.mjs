@@ -38,6 +38,7 @@ const MANIFEST = [
   "data/i18n.js",        // UI 辞書・EN_DATA・画像クレジット
   "data/tours.js",       // ガイドツアーのシーン定義
   "core/math.js",        // 表示スケール・ケプラー軌道・mat4
+  "core/atmos.js",       // 大気の定数 (GLSL と共有) と空の明るさ
   "gl/setup.js",         // canvas/gl・シェーダ・プログラム・ジオメトリ  ※return を含む
   "data/models.js",      // 探査機の 3D モデル (base64, NASA 3D Resources)
   "data/textures.js",    // テクスチャ (base64)

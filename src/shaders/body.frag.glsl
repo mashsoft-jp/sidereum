@@ -3,7 +3,9 @@
     uniform float uType, uTime, uHasTex, uComet, uAmb;
     uniform vec3 uCam, uSun, uColA, uColB, uColC, uRim;
     uniform vec3 uAirSun;   // 大気の光の計算に使う太陽方向 (地平フレーム)
-    uniform float uAirDay;  // 昼夜係数。宇宙ビューは 0 (大気が無い)
+    uniform float uAirDay;  // 空の明るさ 0〜1。宇宙ビューは 0 (大気が無い)
+    uniform float uAirFlux; // 大気へ届いている太陽の光量 (0 = 大気が無い)
+    uniform float uAirGain; // 目の順応 (空ドームと同じ値)
     uniform vec4 uParams;
     uniform sampler2D uTex;
     uniform mat4 uModel;        // 中心・極方向・スケールを取り出すのに使う
@@ -361,6 +363,6 @@
       // 大気は天体より手前にあるので色を上乗せする。これが無いと、新月ごろの月が
       // 青空に黒い円盤として浮いてしまう (実際は夜側は空と見分けがつかない)。
       // 空ドームと同じリニア値のまま足し、最後にまとめてトーンマップする
-      c += skyDayColor(normalize(vW), uAirSun, uAirDay);
+      c += skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain;
       gl_FragColor = vec4(tonemap(c), 1.0);
     }

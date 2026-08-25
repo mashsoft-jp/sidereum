@@ -3980,6 +3980,112 @@
   }
 
   //#endregion
+  //#region src/core/atmos.js
+  // ============================================================
+  // 大気の定数と、空の明るさ (スカラー)
+  //
+  // 定数は shaders/sky-color.glsl と共有する。GLSL 側の const は下の
+  // ATM_GLSL を前置きして流し込むので、値の置き場所はここ1つだけ。
+  //
+  // skyZenithLum() は、その積分を「真上を向いた場合」に絞って JS で解いたもの。
+  // 星の見え方・Bloom のしきい値・天体に乗せるエアライトの強さは、どれも
+  // 「空がどれだけ明るいか」で決まる。以前はこれを太陽高度の一次式で置いて
+  // いたが、それだと薄明が市民薄明 (−6.9°) で打ち切られ、東京では1時間ほど
+  // 早く真っ暗になっていた。空の色を出しているのと同じ式から取れば、長さも
+  // 曲がり方も勝手に合う。
+  // ============================================================
+  const ATM = {
+    RG: 6360.0,        // 地表 [km]
+    RA: 6420.0,        // 大気の上端 [km]
+    HR: 8.0,           // レイリーのスケールハイト [km]
+    HM: 1.2,           // ミーのスケールハイト [km]
+    BR: [0.0058, 0.0135, 0.0331],   // レイリー散乱係数 [1/km]
+    BM: 0.0040,        // ミー散乱係数 [1/km]
+    G: 0.76,           // ミーの非対称因子 (前方散乱の強さ)
+    SUN: 7.0,          // 太陽の強さ (画面の明るさ合わせ)
+    MULT: 0.45,        // 多重散乱の近似 (地平の霞)
+    // 本影へにじむ多重散乱。単散乱だけだと、視線上の大気がすべて地球の影に
+    // 入った時点 (天頂で太陽高度 −8°) で薄明が終わってしまう。実際にそこから
+    // 先を照らしているのは、まだ陽の当たっている上層で何度も散乱した光。
+    // 影へ食い込んだ深さ [km] に対して指数で落とす — 減衰長 20km・強さ 0.05 で、
+    // 天頂の明るさの落ち方が実際の薄明 (日没〜−12° で約4桁) とほぼ重なる
+    SHADOW: 20.0,
+    LEAK: 0.05,
+  };
+  const ATM_GLSL =
+    "const float ATM_RG = " + ATM.RG.toFixed(1) + ";\n" +
+    "const float ATM_RA = " + ATM.RA.toFixed(1) + ";\n" +
+    "const float ATM_HR = " + ATM.HR.toFixed(1) + ";\n" +
+    "const float ATM_HM = " + ATM.HM.toFixed(1) + ";\n" +
+    "const vec3  ATM_BR = vec3(" + ATM.BR.map((v) => v.toFixed(4)).join(", ") + ");\n" +
+    "const float ATM_BM = " + ATM.BM.toFixed(4) + ";\n" +
+    "const float ATM_G  = " + ATM.G.toFixed(2) + ";\n" +
+    "const float ATM_SUN = " + ATM.SUN.toFixed(1) + ";\n" +
+    "const float ATM_MULT = " + ATM.MULT.toFixed(2) + ";\n" +
+    "const float ATM_SHADOW = " + ATM.SHADOW.toFixed(1) + ";\n" +
+    "const float ATM_LEAK = " + ATM.LEAK.toFixed(3) + ";\n";
+
+  // 天頂の空の明るさ (満照のとき)。sy = 太陽の高度の正弦。
+  // 視線が鉛直なので地面と交わらず、密度は高度そのままで決まる。色は要らない
+  // ので緑の係数を代表値にした1本の値で解く
+  function skyZenithLum(sy) {
+    const o1 = ATM.RG + 0.5;                    // 観測者の地心距離 (高度 0.5km)
+    const seg = (ATM.RA - o1) / 12;
+    const cz = Math.sqrt(Math.max(1 - sy * sy, 0));
+    let odR = 0, odM = 0, sR = 0, sM = 0, sMS = 0;
+    for (let i = 0; i < 12; i++) {
+      const py = o1 + seg * (i + 0.5), h = py - ATM.RG;
+      const hr = Math.exp(-h / ATM.HR) * seg, hm = Math.exp(-h / ATM.HM) * seg;
+      odR += hr; odM += hm;
+      const sb = py * sy, d0 = py * cz;         // 太陽への光路の地心最接近距離
+      if (sb < 0 && d0 < ATM.RG) {              // 手前で地球に遮られる = 本影
+        sMS += Math.exp(-(ATM.BR[1] * odR + ATM.BM * 1.1 * odM)) * hr
+             * Math.exp(-(ATM.RG - d0) / ATM.SHADOW) * ATM.LEAK;
+        continue;
+      }
+      const tSun = -sb + Math.sqrt(Math.max(ATM.RA * ATM.RA - d0 * d0, 0));
+      const sl = tSun / 4;
+      let odRs = 0, odMs = 0;
+      for (let j = 0; j < 4; j++) {
+        const u = sl * (j + 0.5);
+        const hs = Math.sqrt(py * py + 2 * py * sy * u + u * u) - ATM.RG;
+        odRs += Math.exp(-hs / ATM.HR) * sl;
+        odMs += Math.exp(-hs / ATM.HM) * sl;
+      }
+      const att = Math.exp(-(ATM.BR[1] * (odR + odRs) + ATM.BM * 1.1 * (odM + odMs)));
+      sR += att * hr; sM += att * hm; sMS += att * hr;
+    }
+    const gg = ATM.G * ATM.G;
+    const pR = 0.0596831 * (1 + sy * sy);
+    const pM = 0.1193662 * ((1 - gg) * (1 + sy * sy)) /
+               ((2 + gg) * Math.pow(Math.max(1 + gg - 2 * ATM.G * sy, 1e-4), 1.5));
+    return (sR * ATM.BR[1] * pR + sM * ATM.BM * pM) * ATM.SUN
+         + sMS * ATM.BR[1] * 0.0796 * ATM.MULT * ATM.SUN;
+  }
+
+  // 明るさ → 「空がどれだけ明るいか」0〜1。目は明るさの対数に反応するので
+  // 対数で写す。上端は昼の空、下端は薄明が見えなくなるあたりの値で、
+  // そのあいだ5桁ぶんで 1 → 0 になる
+  const SKY_LUM_DAY = 3e-2, SKY_LUM_NIGHT = 3e-7;
+  const SKY_LUM_LOG = Math.log10(SKY_LUM_DAY) - Math.log10(SKY_LUM_NIGHT);
+  function skyLumToDay(L) {
+    if (!(L > 0)) return 0;
+    return Math.max(0, Math.min(1,
+      (Math.log10(L) - Math.log10(SKY_LUM_NIGHT)) / SKY_LUM_LOG));
+  }
+
+  // 目の順応。空は日没から薄明の終わりまでに5桁ほど暗くなるが、画面が出せる
+  // のは2桁ほどしかない。輝度をそのまま出すと市民薄明のうちに真っ黒になって
+  // しまうので、暗いところほど感度を上げて描く。実際に目がしていることでも
+  // ある — 薄明の空が「見えている」のは、瞳孔と網膜が開いているから
+  const SKY_ADAPT_REF = 1.5e-2;   // これより暗くなったら感度を上げ始める
+  const SKY_ADAPT_POW = 0.55;     // 上げ方 (0 = 上げない, 1 = 明るさを一定に保つ)
+  const SKY_ADAPT_MAX = 300;      // 上げすぎると夜空にノイズだけが浮く
+  function skyAdaptGain(L) {
+    return Math.min(SKY_ADAPT_MAX,
+      Math.max(1, Math.pow(SKY_ADAPT_REF / Math.max(L, 1e-12), SKY_ADAPT_POW)));
+  }
+  //#endregion
   //#region src/gl/setup.js
   // ---------- WebGL 初期化 ----------
   const glc = document.getElementById("gl");
@@ -4079,7 +4185,7 @@
 
   // 空の色は空ドームと天体のエアライトで共有する (GLSL は入れ子 include できないので
   // ここで前置きして両方に持たせる)
-  const SKY_FN = `
+  const SKY_FN = ATM_GLSL + `
     // 昼の空の色 (地上ビュー)。空ドームと、天体に上乗せする大気の光 (エアライト)
     // で同じ式を使うため切り出してある。
     //   d = 視線方向 (地平フレーム [東, 天頂, -北])  s = 太陽方向  day = 昼夜係数
@@ -4097,16 +4203,9 @@
     // 日の入りぎわで発散して破綻する。
     //
     // 返すのはリニアの放射輝度 (呼び出し側で tonemap する)。色定数は無い —
-    // 散乱係数と太陽の強さだけで決まる
-    const float ATM_RG = 6360.0;                  // 地表 [km]
-    const float ATM_RA = 6420.0;                  // 大気の上端 [km]
-    const float ATM_HR = 8.0;                     // レイリーのスケールハイト [km]
-    const float ATM_HM = 1.2;                     // ミーのスケールハイト [km]
-    const vec3  ATM_BR = vec3(0.0058, 0.0135, 0.0331);   // レイリー散乱係数 [1/km]
-    const float ATM_BM = 0.0040;                  // ミー散乱係数 [1/km]
-    const float ATM_G  = 0.76;                    // ミーの非対称因子 (前方散乱の強さ)
-    const float ATM_SUN = 7.0;                    // 太陽の強さ (画面の明るさ合わせ)
-    const float ATM_MULT = 0.45;                   // 多重散乱の近似 (地平の霞)
+    // 散乱係数と太陽の強さだけで決まる。
+    // ATM_* の定数は core/atmos.js から前置きされる (JS 側でも同じ積分を天頂に
+    // ついてだけ解いており、値を2箇所に持たないため)
 
     // 中心 (地球の中心) を原点とする球と ray の交点。手前の解と奥の解を返す。
     // 交わらないときは x > y になる
@@ -4119,10 +4218,12 @@
       return vec2(-b - sq, -b + sq);
     }
 
-    vec3 skyDayColor(vec3 d, vec3 s, float day) {
-      // 宇宙ビュー (day = 0) では大気が無い。GLSL は遅延評価しないので、
+    // flux = 届いている太陽の光量 (1 = 満照、0 = 大気が無い/積分しない)。
+    // 単散乱は入射光量に比例するので、最後に掛けるだけで日食の暗転になる
+    vec3 skyDayColor(vec3 d, vec3 s, float flux) {
+      // 宇宙ビュー・月面 (flux = 0) では大気が無い。GLSL は遅延評価しないので、
       // ここで抜けないと天体の画素すべてで積分を回すことになる
-      if (day <= 0.001) return vec3(0.0);
+      if (flux <= 0.0005) return vec3(0.0);
 
       vec3 sun = normalize(s);
       vec3 o = vec3(0.0, ATM_RG + 0.5, 0.0);      // 観測者 (高度 0.5km ≒ 地表)
@@ -4148,10 +4249,20 @@
         odR += hr;
         odM += hm;
 
-        // この点から太陽へ。地球に遮られていれば陽は当たらない
+        // この点から太陽へ。地球に遮られていれば直射は当たらない
         // (これが地球の影 = 日没後に空が下から暗くなる理由になる)
-        vec2 sg = atmSphere(p, sun, ATM_RG);
-        if (sg.x < sg.y && sg.y > 0.0) continue;
+        float sb = dot(p, sun);
+        float d0 = sqrt(max(dot(p, p) - sb * sb, 0.0));   // 光路の地心最接近距離
+        if (sb < 0.0 && d0 < ATM_RG) {
+          // 本影の中。直射は届かないが、まだ陽の当たっている上層で何度も
+          // 散乱した光がにじみ込む。これが無いと、視線上の大気がすべて影に
+          // 入った時点 (天頂で太陽高度 −8°) で薄明が終わってしまう。
+          // 影へ食い込んだ深さで指数的に落とす (行きの減衰は使えない —
+          // 光はその光路を通ってきていない)
+          sumMS += exp(-(ATM_BR.g * odR + ATM_BM * 1.1 * odM)) * hr
+                 * exp(-(ATM_RG - d0) / ATM_SHADOW) * ATM_LEAK;
+          continue;
+        }
 
         float tSun = atmSphere(p, sun, ATM_RA).y;
         float sLen = tSun / float(SUN_N);
@@ -4190,7 +4301,7 @@
       // 散乱した光が青を戻し、昼の地平は白っぽい霞になる。きちんと解くには
       // 事前計算テーブルが要るので、単散乱と同じ形の等方成分を足して代える
       c += sumMS * ATM_BR * 0.0796 * ATM_MULT * ATM_SUN;   // 1/(4π) = 等方
-      return c * day;
+      return c * flux;
     }
 `;
   const bodyFS = EXT_DERIV
@@ -4200,7 +4311,9 @@
     uniform float uType, uTime, uHasTex, uComet, uAmb;
     uniform vec3 uCam, uSun, uColA, uColB, uColC, uRim;
     uniform vec3 uAirSun;   // 大気の光の計算に使う太陽方向 (地平フレーム)
-    uniform float uAirDay;  // 昼夜係数。宇宙ビューは 0 (大気が無い)
+    uniform float uAirDay;  // 空の明るさ 0〜1。宇宙ビューは 0 (大気が無い)
+    uniform float uAirFlux; // 大気へ届いている太陽の光量 (0 = 大気が無い)
+    uniform float uAirGain; // 目の順応 (空ドームと同じ値)
     uniform vec4 uParams;
     uniform sampler2D uTex;
     uniform mat4 uModel;        // 中心・極方向・スケールを取り出すのに使う
@@ -4558,7 +4671,7 @@
       // 大気は天体より手前にあるので色を上乗せする。これが無いと、新月ごろの月が
       // 青空に黒い円盤として浮いてしまう (実際は夜側は空と見分けがつかない)。
       // 空ドームと同じリニア値のまま足し、最後にまとめてトーンマップする
-      c += skyDayColor(normalize(vW), uAirSun, uAirDay);
+      c += skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain;
       gl_FragColor = vec4(tonemap(c), 1.0);
     }`;
 
@@ -4626,7 +4739,10 @@
     varying vec3 vD;
     uniform vec3 uSun;      // 太陽方向 (地平フレーム [東, 天頂, -北])
     uniform float uMoon;    // 1 = 月面, 0 = 地上
-    uniform float uDay;     // 昼夜係数 (0 = 夜, 1 = 昼)
+    uniform float uDay;     // 直射日光の強さ (0 = 日が沈んでいる, 1 = 昼)。地面用
+    uniform float uSkyF;    // 空の明るさ 0〜1 (core/atmos.js の積分から)
+    uniform float uFlux;    // 空へ届いている太陽の光量 (日食で落ちる。0 = 大気なし)
+    uniform float uSkyGain; // 目の順応 (暗い空ほど感度を上げる)
     uniform float uSky;     // 1 = 空ドーム, 0 = 地面ドーム
     uniform float uOcc;     // 日食で隠されずに残っている太陽面の割合 (1 = 食なし)。
                             // 地上は uDay 側へ畳んであるので、ここで使うのは月面だけ
@@ -4674,7 +4790,8 @@
       if (uSky > 0.5) {
         // ---- 大気 (地球のみ)。色は天体のエアライトと共有 (skyDayColor) ----
         vec3 night = vec3(0.0036, 0.0045, 0.0082);   // 画面上の (0.015, 0.02, 0.045)
-        gl_FragColor = vec4(tonemap(night * (1.0 - uDay) + skyDayColor(d, uSun, uDay)), 1.0);
+        gl_FragColor = vec4(tonemap(night * (1.0 - uSkyF)
+                                    + skyDayColor(d, uSun, uFlux) * uSkyGain), 1.0);
         return;
       }
 
@@ -6565,13 +6682,17 @@
     return {
       // program・バッファ・頂点属性・テクスチャユニット・depth/cull を確定させる。
       // cullFace は gl.FRONT / gl.BACK、不要なら null
-      // airSun / airDay は地上ビューのエアライト用。宇宙ビューは airDay = 0
+      // airSun / airDay / airFlux は地上ビューのエアライト用。
+      // airDay = 空の明るさ (0〜1)、airFlux = 大気へ届いている太陽の光量。
+      // 宇宙ビューと月面はどちらも 0 (大気が無い)
       beginPass({ time, cameraPosition, cullFace = null, depthTest = true, depthWrite = true,
-                  airSun = null, airDay = 0 }) {
+                  airSun = null, airDay = 0, airFlux = 0, airGain = 1 }) {
         if (inPass) throw new Error("bodyRenderer: beginPass が入れ子になっています");
         inPass = true;
         gl.useProgram(pr);
         gl.uniform1f(u.uAirDay, airDay);
+        gl.uniform1f(u.uAirFlux, airFlux);
+        gl.uniform1f(u.uAirGain, airGain);
         gl.uniform3f(u.uAirSun, airSun ? airSun[0] : 0, airSun ? airSun[1] : 1, airSun ? airSun[2] : 0);
         gl.bindBuffer(gl.ARRAY_BUFFER, sphereVB);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIB);
@@ -7284,9 +7405,7 @@
     const sunAU = bodySky(SUN, _sunG);
     const isMoonSurf = surfaceBody === "moon";
     // ---- 日食: 観測地から見て太陽面が何割隠れているか ----
-    // 地上では月が、月面では地球が太陽を隠す。皆既に近づくほど空が暗くなり、
-    // 昼のうちに星が現れる — 昼夜係数へ畳んでおけば、空・地面・星・天体の
-    // エアライト・Bloom のしきい値まで一度に効く
+    // 地上では月が、月面では地球が太陽を隠す
     const eclOcc = isMoonSurf ? BODY_BY_KEY.get("earth") : MOON;
     let sunCov = 0;
     {
@@ -7296,30 +7415,40 @@
       const cos = _gp[0]*_sunG[0] + _gp[1]*_sunG[1] + _gp[2]*_sunG[2];
       sunCov = diskCoverage(Math.acos(Math.max(-1, Math.min(1, cos))), rs, ro);
     }
-    // 隠れた面積をそのまま明るさに使うと、半分欠けただけで夕方になってしまう。
-    // 目は明るさの対数に反応するので、実際に暗さを感じるのは残りが1割を切って
-    // から — 残光を対数で写して、桁が落ちるほど急に暗くなる形にする。
-    // 皆既でも 0 にはしない: 実際の皆既中の空は深い薄明で、地平はぐるりと
-    // 夕焼け色に残る
+    // 空へ届いている太陽の光量。散乱は入射光量に比例するので、これを掛ければ
+    // 日食の暗転になる。皆既でも 0 にはしない — 本影の帯は幅 100km ほどしか
+    // なく、そのまわりの陽の当たった大気で散乱した光が入ってくる。実測でも
+    // 皆既中の空は昼の 1/1000 前後で、真っ暗にはならない
+    const sunFlux = (showTerrain && !isMoonSurf) ? Math.max(1e-3, 1 - sunCov) : 0;
+    // 地面の明るさは直射日光で決まるので、こちらは高度で決め打ちのままでよい
+    // (日食のぶんは、目が対数に反応することを見込んで残光を対数で写す)
     const sunLeft = Math.max(0.02, Math.min(1, 1 + Math.log10(Math.max(1e-4, 1 - sunCov)) / 3.5));
     // 月面は大気が無いので昼でも空は暗いまま (星も見える)
     const dayF = (showTerrain && !isMoonSurf)
       ? Math.max(0, Math.min(1, (_sunG[1] + 0.12) / 0.22)) * sunLeft : 0;
-    starVis = 1 - dayF * 0.98;   // 昼は星をほぼ消す
-    skyDayF = dayF;
+    // 空の明るさは、色を出しているのと同じ散乱の積分から取る (core/atmos.js)。
+    // 星の見え方・Bloom のしきい値・天体のエアライトはすべてこれで決まる
+    const skyLum = sunFlux > 0 ? skyZenithLum(_sunG[1]) * sunFlux : 0;
+    const skyF = skyLumToDay(skyLum);
+    const skyGain = skyAdaptGain(skyLum);
+    starVis = 1 - skyF * 0.98;   // 明るい空では星が見えない
+    skyDayF = skyF;
 
     gl.clearColor(0.015, 0.02, 0.045, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
 
     // 大気 (地上ビューのみ)。星より先に、背景として不透明で描く
-    if (showTerrain && !isMoonSurf && dayF > 0.001 && skyVB) {
+    if (skyF > 0.002 && skyVB) {
       gl.disable(gl.BLEND);
       gl.useProgram(terrainP.pr);
       gl.uniformMatrix4fv(terrainP.u.uVP, false, gVP32);
       gl.uniform3f(terrainP.u.uSun, _sunG[0], _sunG[1], _sunG[2]);
       gl.uniform1f(terrainP.u.uMoon, 0);
       gl.uniform1f(terrainP.u.uDay, dayF);
+      gl.uniform1f(terrainP.u.uSkyF, skyF);
+      gl.uniform1f(terrainP.u.uFlux, sunFlux);
+      gl.uniform1f(terrainP.u.uSkyGain, skyGain);
       gl.uniform1f(terrainP.u.uOcc, sunLeft);
       gl.uniform1f(terrainP.u.uSky, 1);
       gl.bindBuffer(gl.ARRAY_BUFFER, skyVB);
@@ -7547,7 +7676,7 @@
       bodyRenderer.beginPass({
         time: nowSec, cameraPosition: ZERO3,
         cullFace: gl.FRONT, depthTest: true, depthWrite: true,
-        airSun: _sunG, airDay: dayF,
+        airSun: _sunG, airDay: skyF, airFlux: sunFlux, airGain: skyGain,
       });
       let satLx = 0, satLy = 0, satLz = 0;   // 土星の環の照射方向 (ループ内で確定)
       let airBody = null;                    // 大気シェルを重ねる天体 (地球のみ)
@@ -7803,6 +7932,9 @@
       gl.uniform3f(terrainP.u.uSun, _sunG[0], _sunG[1], _sunG[2]);
       gl.uniform1f(terrainP.u.uMoon, isMoonSurf ? 1 : 0);
       gl.uniform1f(terrainP.u.uDay, dayF);
+      gl.uniform1f(terrainP.u.uSkyF, skyF);
+      gl.uniform1f(terrainP.u.uFlux, sunFlux);
+      gl.uniform1f(terrainP.u.uSkyGain, skyGain);
       gl.uniform1f(terrainP.u.uOcc, sunLeft);
       gl.uniform1f(terrainP.u.uSky, 0);
       gl.bindBuffer(gl.ARRAY_BUFFER, isMoonSurf ? ridgeVB.moon : ridgeVB.earth);

@@ -96,13 +96,17 @@
     return {
       // program・バッファ・頂点属性・テクスチャユニット・depth/cull を確定させる。
       // cullFace は gl.FRONT / gl.BACK、不要なら null
-      // airSun / airDay は地上ビューのエアライト用。宇宙ビューは airDay = 0
+      // airSun / airDay / airFlux は地上ビューのエアライト用。
+      // airDay = 空の明るさ (0〜1)、airFlux = 大気へ届いている太陽の光量。
+      // 宇宙ビューと月面はどちらも 0 (大気が無い)
       beginPass({ time, cameraPosition, cullFace = null, depthTest = true, depthWrite = true,
-                  airSun = null, airDay = 0 }) {
+                  airSun = null, airDay = 0, airFlux = 0, airGain = 1 }) {
         if (inPass) throw new Error("bodyRenderer: beginPass が入れ子になっています");
         inPass = true;
         gl.useProgram(pr);
         gl.uniform1f(u.uAirDay, airDay);
+        gl.uniform1f(u.uAirFlux, airFlux);
+        gl.uniform1f(u.uAirGain, airGain);
         gl.uniform3f(u.uAirSun, airSun ? airSun[0] : 0, airSun ? airSun[1] : 1, airSun ? airSun[2] : 0);
         gl.bindBuffer(gl.ARRAY_BUFFER, sphereVB);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIB);

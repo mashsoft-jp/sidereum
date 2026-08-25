@@ -16,16 +16,9 @@
     // 日の入りぎわで発散して破綻する。
     //
     // 返すのはリニアの放射輝度 (呼び出し側で tonemap する)。色定数は無い —
-    // 散乱係数と太陽の強さだけで決まる
-    const float ATM_RG = 6360.0;                  // 地表 [km]
-    const float ATM_RA = 6420.0;                  // 大気の上端 [km]
-    const float ATM_HR = 8.0;                     // レイリーのスケールハイト [km]
-    const float ATM_HM = 1.2;                     // ミーのスケールハイト [km]
-    const vec3  ATM_BR = vec3(0.0058, 0.0135, 0.0331);   // レイリー散乱係数 [1/km]
-    const float ATM_BM = 0.0040;                  // ミー散乱係数 [1/km]
-    const float ATM_G  = 0.76;                    // ミーの非対称因子 (前方散乱の強さ)
-    const float ATM_SUN = 7.0;                    // 太陽の強さ (画面の明るさ合わせ)
-    const float ATM_MULT = 0.45;                   // 多重散乱の近似 (地平の霞)
+    // 散乱係数と太陽の強さだけで決まる。
+    // ATM_* の定数は core/atmos.js から前置きされる (JS 側でも同じ積分を天頂に
+    // ついてだけ解いており、値を2箇所に持たないため)
 
     // 中心 (地球の中心) を原点とする球と ray の交点。手前の解と奥の解を返す。
     // 交わらないときは x > y になる
@@ -38,10 +31,12 @@
       return vec2(-b - sq, -b + sq);
     }
 
-    vec3 skyDayColor(vec3 d, vec3 s, float day) {
-      // 宇宙ビュー (day = 0) では大気が無い。GLSL は遅延評価しないので、
+    // flux = 届いている太陽の光量 (1 = 満照、0 = 大気が無い/積分しない)。
+    // 単散乱は入射光量に比例するので、最後に掛けるだけで日食の暗転になる
+    vec3 skyDayColor(vec3 d, vec3 s, float flux) {
+      // 宇宙ビュー・月面 (flux = 0) では大気が無い。GLSL は遅延評価しないので、
       // ここで抜けないと天体の画素すべてで積分を回すことになる
-      if (day <= 0.001) return vec3(0.0);
+      if (flux <= 0.0005) return vec3(0.0);
 
       vec3 sun = normalize(s);
       vec3 o = vec3(0.0, ATM_RG + 0.5, 0.0);      // 観測者 (高度 0.5km ≒ 地表)
@@ -67,10 +62,20 @@
         odR += hr;
         odM += hm;
 
-        // この点から太陽へ。地球に遮られていれば陽は当たらない
+        // この点から太陽へ。地球に遮られていれば直射は当たらない
         // (これが地球の影 = 日没後に空が下から暗くなる理由になる)
-        vec2 sg = atmSphere(p, sun, ATM_RG);
-        if (sg.x < sg.y && sg.y > 0.0) continue;
+        float sb = dot(p, sun);
+        float d0 = sqrt(max(dot(p, p) - sb * sb, 0.0));   // 光路の地心最接近距離
+        if (sb < 0.0 && d0 < ATM_RG) {
+          // 本影の中。直射は届かないが、まだ陽の当たっている上層で何度も
+          // 散乱した光がにじみ込む。これが無いと、視線上の大気がすべて影に
+          // 入った時点 (天頂で太陽高度 −8°) で薄明が終わってしまう。
+          // 影へ食い込んだ深さで指数的に落とす (行きの減衰は使えない —
+          // 光はその光路を通ってきていない)
+          sumMS += exp(-(ATM_BR.g * odR + ATM_BM * 1.1 * odM)) * hr
+                 * exp(-(ATM_RG - d0) / ATM_SHADOW) * ATM_LEAK;
+          continue;
+        }
 
         float tSun = atmSphere(p, sun, ATM_RA).y;
         float sLen = tSun / float(SUN_N);
@@ -109,5 +114,5 @@
       // 散乱した光が青を戻し、昼の地平は白っぽい霞になる。きちんと解くには
       // 事前計算テーブルが要るので、単散乱と同じ形の等方成分を足して代える
       c += sumMS * ATM_BR * 0.0796 * ATM_MULT * ATM_SUN;   // 1/(4π) = 等方
-      return c * day;
+      return c * flux;
     }

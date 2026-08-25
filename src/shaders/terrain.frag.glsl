@@ -2,7 +2,10 @@
     varying vec3 vD;
     uniform vec3 uSun;      // 太陽方向 (地平フレーム [東, 天頂, -北])
     uniform float uMoon;    // 1 = 月面, 0 = 地上
-    uniform float uDay;     // 昼夜係数 (0 = 夜, 1 = 昼)
+    uniform float uDay;     // 直射日光の強さ (0 = 日が沈んでいる, 1 = 昼)。地面用
+    uniform float uSkyF;    // 空の明るさ 0〜1 (core/atmos.js の積分から)
+    uniform float uFlux;    // 空へ届いている太陽の光量 (日食で落ちる。0 = 大気なし)
+    uniform float uSkyGain; // 目の順応 (暗い空ほど感度を上げる)
     uniform float uSky;     // 1 = 空ドーム, 0 = 地面ドーム
     uniform float uOcc;     // 日食で隠されずに残っている太陽面の割合 (1 = 食なし)。
                             // 地上は uDay 側へ畳んであるので、ここで使うのは月面だけ
@@ -50,7 +53,8 @@
       if (uSky > 0.5) {
         // ---- 大気 (地球のみ)。色は天体のエアライトと共有 (skyDayColor) ----
         vec3 night = vec3(0.0036, 0.0045, 0.0082);   // 画面上の (0.015, 0.02, 0.045)
-        gl_FragColor = vec4(tonemap(night * (1.0 - uDay) + skyDayColor(d, uSun, uDay)), 1.0);
+        gl_FragColor = vec4(tonemap(night * (1.0 - uSkyF)
+                                    + skyDayColor(d, uSun, uFlux) * uSkyGain), 1.0);
         return;
       }
 
