@@ -21,6 +21,7 @@
   }
   const _fwd = [0, 0, 0], _gp = [0, 0, 0], _sunG = [0, 0, 0];
   const _eclW = [0, 0, 0], _eclG = [0, 0, 0];   // 食: 天体 → 遮蔽体 (ワールド / 地平フレーム)
+  const _pf = [0, 0, 0];                       // 歳差を戻した観測地の基底 (赤道 J2000)
   // 極小画角 (超高倍率) では f32 行列の量子化で照準・描画が破綻するため、
   // 地上ビューの行列は f64 で合成し、GPU へ渡す直前に f32 化する
   const gVP = mIdent(new Float64Array(16)), gVP32 = new Float32Array(16);
@@ -81,9 +82,11 @@
       const eC = posW.get("earth");
       const lst = (gmstDeg(simDays)+obsLon)*DEG, la = obsLat*DEG;
       const cla = Math.cos(la), sla = Math.sin(la), cst = Math.cos(lst), sst = Math.sin(lst);
-      eqToWorld(cla*cst, cla*sst, sla, obsU);      // 天頂
-      eqToWorld(-sla*cst, -sla*sst, cla, obsN);    // 北
-      eqToWorld(-sst, cst, 0, obsE);               // 東
+      // 観測地はその日の平均分点で決まるが、恒星も天体も J2000 のまま描いて
+      // いるので、歳差ぶんを戻してから合わせる (回すのは3本だけで済む)
+      precessFrom(simDays, cla*cst, cla*sst, sla, _pf);  eqToWorld(_pf[0], _pf[1], _pf[2], obsU);   // 天頂
+      precessFrom(simDays, -sla*cst, -sla*sst, cla, _pf); eqToWorld(_pf[0], _pf[1], _pf[2], obsN);  // 北
+      precessFrom(simDays, -sst, cst, 0, _pf);            eqToWorld(_pf[0], _pf[1], _pf[2], obsE);  // 東
       const rW = 6378.14 * KM2W;
       obsPosW[0]=eC[0]+rW*obsU[0]; obsPosW[1]=eC[1]+rW*obsU[1]; obsPosW[2]=eC[2]+rW*obsU[2];
     }

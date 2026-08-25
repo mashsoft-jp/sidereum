@@ -3851,6 +3851,50 @@
     return b.rkm * KM2W;
   }
 
+  // ---------- 歳差 (J2000 平均分点 ⇄ その日の平均分点) ----------
+  // 天体の位置も恒星カタログも J2000 のままなのに、時角はその日のグリニッジ
+  // 恒星時と比べていた。空全体が一様に回転してずれるので、天体と星の位置関係は
+  // 合っているが、出没・南中・方位が実際からずれる (2026年で赤経 0.37°、
+  // 時刻にして約1.4分。100年で 3.3分ずつ増える)。
+  //
+  // 直し方は2通りある。空の側 (恒星8,400個 + 星座線 + 天体) を毎回その日の
+  // 分点へ回すか、観測地の側を J2000 へ戻すか。後者は3本のベクトルで済むので、
+  // 描画は J2000 のまま・観測地だけを合わせる形にしてある。
+  // 回転は IAU1976 の ζ・z・θ。章動 (±9″) は入れていない
+  const PREC = new Float64Array(9);
+  let precDays = NaN;
+  function precessMat(days) {
+    if (days === precDays) return PREC;
+    precDays = days;
+    const T = days / 36525, S = DEG / 3600;
+    const z1 = (2306.2181 + (0.30188 + 0.017998 * T) * T) * T * S;   // ζ
+    const z2 = (2306.2181 + (1.09468 + 0.018203 * T) * T) * T * S;   // z
+    const th = (2004.3109 - (0.42665 + 0.041833 * T) * T) * T * S;   // θ
+    const c1 = Math.cos(z1), s1 = Math.sin(z1);
+    const c2 = Math.cos(z2), s2 = Math.sin(z2);
+    const ct = Math.cos(th), st = Math.sin(th);
+    PREC[0] = c1*ct*c2 - s1*s2;  PREC[1] = -s1*ct*c2 - c1*s2;  PREC[2] = -st*c2;
+    PREC[3] = c1*ct*s2 + s1*c2;  PREC[4] = -s1*ct*s2 + c1*c2;  PREC[5] = -st*s2;
+    PREC[6] = c1*st;             PREC[7] = -s1*st;             PREC[8] = ct;
+    return PREC;
+  }
+  // 赤道座標 (J2000) → その日の平均分点
+  function precessTo(days, x, y, z, out) {
+    const P = precessMat(days);
+    out[0] = P[0]*x + P[1]*y + P[2]*z;
+    out[1] = P[3]*x + P[4]*y + P[5]*z;
+    out[2] = P[6]*x + P[7]*y + P[8]*z;
+    return out;
+  }
+  // その日の平均分点 → J2000 (回転行列の転置)
+  function precessFrom(days, x, y, z, out) {
+    const P = precessMat(days);
+    out[0] = P[0]*x + P[3]*y + P[6]*z;
+    out[1] = P[1]*x + P[4]*y + P[7]*z;
+    out[2] = P[2]*x + P[5]*y + P[8]*z;
+    return out;
+  }
+
   // ---------- ケプラー軌道 (3D) ----------
   for (const p of PLANETS) {
     const w = (p.peri - p.node) * DEG, O = p.node * DEG, inc = p.i * DEG;
@@ -6302,6 +6346,7 @@
     return Math.acos(Math.max(-1, Math.min(1, c)));
   };
   const _evA = [0,0,0], _evB = [0,0,0], _evC = [0,0,0], _evD = [0,0,0], _evE = [0,0,0];
+  const _evP = [0,0,0];   // 歳差をかけた/戻したベクトル
 
   // 地心黄道ベクトル [AU]。out に書いて返す (out へ _evD は渡さないこと)
   function evGeo(b, t, out) {
@@ -6347,10 +6392,12 @@
     keplerAU(EARTH_B, t, out);
     const lst = (((280.46061837 + 360.98564736629 * t) % 360 + 360) % 360 + obsLon) * DEG;
     const la = obsLat * DEG, RE = EV_RE_KM / AU_KM;
-    const ox = Math.cos(la) * Math.cos(lst), oy = Math.cos(la) * Math.sin(lst), oz = Math.sin(la);
-    out[0] += RE * ox;
-    out[1] += RE * (oy * Math.cos(ECL) + oz * Math.sin(ECL));   // 赤道 → 黄道
-    out[2] += RE * (-oy * Math.sin(ECL) + oz * Math.cos(ECL));
+    // 観測地はその日の平均分点。天体は J2000 なので歳差ぶんを戻してから足す
+    // (向きがそのまま「天頂」になるので、大きさが小さくても効く)
+    precessFrom(t, Math.cos(la) * Math.cos(lst), Math.cos(la) * Math.sin(lst), Math.sin(la), _evP);
+    out[0] += RE * _evP[0];
+    out[1] += RE * (_evP[1] * Math.cos(ECL) + _evP[2] * Math.sin(ECL));   // 赤道 → 黄道
+    out[2] += RE * (-_evP[1] * Math.sin(ECL) + _evP[2] * Math.cos(ECL));
     return out;
   }
   // 観測地から見た天体の高度 [rad]。天頂方向は「地心 → 観測地」そのもの
@@ -6526,7 +6573,10 @@
     const s = SHOWERS.find((x) => x.key === key);
     if (!s) return -1;
     const lst = (((280.46061837 + 360.98564736629 * t) % 360 + 360) % 360 + obsLon) * DEG;
-    const H = lst - s.ra * DEG, dec = s.dec * DEG, la = obsLat * DEG;
+    // 放射点は J2000。時角はその日の恒星時と比べるので歳差ぶんを掛けて揃える
+    const ra0 = s.ra * DEG, dc0 = s.dec * DEG;
+    precessTo(t, Math.cos(dc0) * Math.cos(ra0), Math.cos(dc0) * Math.sin(ra0), Math.sin(dc0), _evP);
+    const H = lst - Math.atan2(_evP[1], _evP[0]), dec = Math.asin(_evP[2]), la = obsLat * DEG;
     return Math.asin(Math.max(-1, Math.min(1,
       Math.sin(dec) * Math.sin(la) + Math.cos(dec) * Math.cos(la) * Math.cos(H))));
   }
@@ -7217,6 +7267,7 @@
   }
   const _fwd = [0, 0, 0], _gp = [0, 0, 0], _sunG = [0, 0, 0];
   const _eclW = [0, 0, 0], _eclG = [0, 0, 0];   // 食: 天体 → 遮蔽体 (ワールド / 地平フレーム)
+  const _pf = [0, 0, 0];                       // 歳差を戻した観測地の基底 (赤道 J2000)
   // 極小画角 (超高倍率) では f32 行列の量子化で照準・描画が破綻するため、
   // 地上ビューの行列は f64 で合成し、GPU へ渡す直前に f32 化する
   const gVP = mIdent(new Float64Array(16)), gVP32 = new Float32Array(16);
@@ -7277,9 +7328,11 @@
       const eC = posW.get("earth");
       const lst = (gmstDeg(simDays)+obsLon)*DEG, la = obsLat*DEG;
       const cla = Math.cos(la), sla = Math.sin(la), cst = Math.cos(lst), sst = Math.sin(lst);
-      eqToWorld(cla*cst, cla*sst, sla, obsU);      // 天頂
-      eqToWorld(-sla*cst, -sla*sst, cla, obsN);    // 北
-      eqToWorld(-sst, cst, 0, obsE);               // 東
+      // 観測地はその日の平均分点で決まるが、恒星も天体も J2000 のまま描いて
+      // いるので、歳差ぶんを戻してから合わせる (回すのは3本だけで済む)
+      precessFrom(simDays, cla*cst, cla*sst, sla, _pf);  eqToWorld(_pf[0], _pf[1], _pf[2], obsU);   // 天頂
+      precessFrom(simDays, -sla*cst, -sla*sst, cla, _pf); eqToWorld(_pf[0], _pf[1], _pf[2], obsN);  // 北
+      precessFrom(simDays, -sst, cst, 0, _pf);            eqToWorld(_pf[0], _pf[1], _pf[2], obsE);  // 東
       const rW = 6378.14 * KM2W;
       obsPosW[0]=eC[0]+rW*obsU[0]; obsPosW[1]=eC[1]+rW*obsU[1]; obsPosW[2]=eC[2]+rW*obsU[2];
     }
@@ -9791,27 +9844,52 @@
     moon:    (r, D, i) => 0.23 + 5*Math.log10(r*D) + 0.026*Math.abs(i) + 4e-9*i*i*i*i,
   };
   // world 座標 → 黄道 AU (toWorld の逆)
-  const _he = [0,0,0], _ge = [0,0,0], _ea = [0,0,0], _gw = [0,0,0];
+  const _he = [0,0,0], _ge = [0,0,0], _ea = [0,0,0], _gw = [0,0,0], _pv = [0,0,0];
   function wEcl(w, out) { out[0] = w[0]/K_REAL; out[1] = -w[2]/K_REAL; out[2] = w[1]/K_REAL; return out; }
   const gmstDeg = (days) => (((280.46061837 + 360.98564736629*days) % 360) + 360) % 360;
+
+  // 時角の進み [度/時]。恒星時の進み (RS_RATE) から、その天体自身の赤経の
+  // 動きを引いたもの。太陽はこれでちょうど 15.000 になる — 平均太陽日の定義
+  // そのもので、恒星時の進みのまま使うと日の入りが約1分早く出ていた。
+  // 月は赤経が 1時間に 0.55° 進むので 14.5 前後になり、ここが最大15分効く
+  const _hr = [0,0,0];
+  const geoRaDeg = (b, t) => {
+    evGeo(b, t, _hr);
+    return Math.atan2(_hr[1] * Math.cos(ECL) - _hr[2] * Math.sin(ECL), _hr[0]) / DEG;
+  };
+  function haRate(body) {
+    // 衛星は母惑星と一緒に動く (自分の公転ぶんは母惑星までの距離に比べて小さい)
+    const b = (body === MOON || !body.parent) ? body : BODY_BY_KEY.get(body.parent);
+    // 位置を任意の時刻で出せない相手 (探査機・地球そのもの) は恒星時の進みのまま
+    if (!b || b === BODY_BY_KEY.get("earth") || !(b === SUN || b === MOON || b.a !== undefined)) {
+      return RS_RATE;
+    }
+    const dt = 0.25;                                  // ±6時間の中央差分
+    let d = geoRaDeg(b, simDays + dt) - geoRaDeg(b, simDays - dt);
+    if (d > 180) d -= 360; else if (d < -180) d += 360;
+    return Math.max(1, RS_RATE - d / (2 * dt * 24));
+  }
   function computeObs(body) {
     const b = posW.get(body.key), e = posW.get("earth");
     _gw[0] = b[0]-e[0]; _gw[1] = b[1]-e[1]; _gw[2] = b[2]-e[2];
-    wEcl(_gw, _ge);                                         // 地心黄道
+    wEcl(_gw, _ge);                                         // 地心黄道 (J2000)
+    // 黄道 (J2000) → 赤道 (J2000) → その日の平均分点。時角はその日のグリニッジ
+    // 恒星時と比べるので、赤経赤緯もその日の分点へ揃えないと空全体がずれる
+    precessTo(simDays,
+      _ge[0],
+      _ge[1] * Math.cos(ECL) - _ge[2] * Math.sin(ECL),
+      _ge[1] * Math.sin(ECL) + _ge[2] * Math.cos(ECL), _pv);
     // 測心視差補正: 観測者は地心ではなく地表にいる (月では最大約1°の差)。
-    // 観測者の地心位置 (赤道座標) を黄道へ回して引く
+    // 観測地はその日の分点でそのまま書けるので、赤道座標のまま引く
     const lst = (gmstDeg(simDays) + obsLon) * DEG, latR = obsLat * DEG;
     {
       const RE = 6378.14 / AU_KM;
-      const ox = Math.cos(latR) * Math.cos(lst), oy = Math.cos(latR) * Math.sin(lst), oz = Math.sin(latR);
-      _ge[0] -= RE * ox;
-      _ge[1] -= RE * (oy * Math.cos(ECL) + oz * Math.sin(ECL));    // 赤道 → 黄道
-      _ge[2] -= RE * (-oy * Math.sin(ECL) + oz * Math.cos(ECL));
+      _pv[0] -= RE * Math.cos(latR) * Math.cos(lst);
+      _pv[1] -= RE * Math.cos(latR) * Math.sin(lst);
+      _pv[2] -= RE * Math.sin(latR);
     }
-    const D = Math.hypot(_ge[0], _ge[1], _ge[2]);
-    // 黄道 → 赤道 → 赤経・赤緯
-    const xe = _ge[0], ye = _ge[1]*Math.cos(ECL) - _ge[2]*Math.sin(ECL), ze = _ge[1]*Math.sin(ECL) + _ge[2]*Math.cos(ECL);
-    const ra = Math.atan2(ye, xe), dec = Math.asin(ze / Math.hypot(xe, ye, ze));
+    const D = Math.hypot(_pv[0], _pv[1], _pv[2]);
+    const ra = Math.atan2(_pv[1], _pv[0]), dec = Math.asin(_pv[2] / D);
     const lat = obsLat * DEG, H = lst - ra;
     const alt = Math.asin(Math.max(-1, Math.min(1, Math.sin(dec)*Math.sin(lat) + Math.cos(dec)*Math.cos(lat)*Math.cos(H))));
     const A = Math.atan2(Math.sin(H), Math.cos(H)*Math.sin(lat) - Math.tan(dec)*Math.cos(lat));
@@ -9826,17 +9904,21 @@
     const sizeAS = 2 * body.rkm / (D * AU_KM) / DEG * 3600;
     let elong = 0;
     if (body !== SUN) {
+      // 離角は地心で見るので、距離も地心のもの (D は測心)
+      const Dg = Math.hypot(_ge[0], _ge[1], _ge[2]);
       const dp = -(_ge[0]*_ea[0] + _ge[1]*_ea[1] + _ge[2]*_ea[2]);   // 太陽の地心方向 = -地球日心
-      elong = Math.acos(Math.max(-1, Math.min(1, dp/(D*R)))) / DEG;
+      elong = Math.acos(Math.max(-1, Math.min(1, dp/(Dg*R)))) / DEG;
     }
-    // 出没・南中 (瞬時の赤経赤緯で近似)
+    // 出没・南中 (瞬時の赤経赤緯で近似)。時角の進みは天体ごとに違う — 恒星時の
+    // 進みから、その天体自身の赤経の動きを引いたもの
+    const rate = haRate(body);
     const Hn = ((H/DEG + 180) % 360 + 360) % 360 - 180;
-    const transitMs = J2000 + simDays*DAY_MS - (Hn / RS_RATE) * 3600e3;
+    const transitMs = J2000 + simDays*DAY_MS - (Hn / rate) * 3600e3;
     const h0 = body === SUN ? -0.833 : (body.key === "moon" ? 0.125 : -0.567);
     const cosH0 = (Math.sin(h0*DEG) - Math.sin(lat)*Math.sin(dec)) / (Math.cos(lat)*Math.cos(dec));
     let rise = 0, set = 0, circ = 0;
     if (cosH0 < -1) circ = 1; else if (cosH0 > 1) circ = -1;
-    else { const H0 = Math.acos(cosH0)/DEG; rise = transitMs - H0/RS_RATE*3600e3; set = transitMs + H0/RS_RATE*3600e3; }
+    else { const H0 = Math.acos(cosH0)/DEG; rise = transitMs - H0/rate*3600e3; set = transitMs + H0/rate*3600e3; }
     return { alt: alt/DEG, az, distAU: D, illum, mag, sizeAS, elong, transitMs, rise, set, circ };
   }
   const fmtHM = (ms) => { const d = new Date(ms); return pad2(d.getHours()) + ":" + pad2(d.getMinutes()); };

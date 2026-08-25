@@ -143,27 +143,52 @@
     moon:    (r, D, i) => 0.23 + 5*Math.log10(r*D) + 0.026*Math.abs(i) + 4e-9*i*i*i*i,
   };
   // world 座標 → 黄道 AU (toWorld の逆)
-  const _he = [0,0,0], _ge = [0,0,0], _ea = [0,0,0], _gw = [0,0,0];
+  const _he = [0,0,0], _ge = [0,0,0], _ea = [0,0,0], _gw = [0,0,0], _pv = [0,0,0];
   function wEcl(w, out) { out[0] = w[0]/K_REAL; out[1] = -w[2]/K_REAL; out[2] = w[1]/K_REAL; return out; }
   const gmstDeg = (days) => (((280.46061837 + 360.98564736629*days) % 360) + 360) % 360;
+
+  // 時角の進み [度/時]。恒星時の進み (RS_RATE) から、その天体自身の赤経の
+  // 動きを引いたもの。太陽はこれでちょうど 15.000 になる — 平均太陽日の定義
+  // そのもので、恒星時の進みのまま使うと日の入りが約1分早く出ていた。
+  // 月は赤経が 1時間に 0.55° 進むので 14.5 前後になり、ここが最大15分効く
+  const _hr = [0,0,0];
+  const geoRaDeg = (b, t) => {
+    evGeo(b, t, _hr);
+    return Math.atan2(_hr[1] * Math.cos(ECL) - _hr[2] * Math.sin(ECL), _hr[0]) / DEG;
+  };
+  function haRate(body) {
+    // 衛星は母惑星と一緒に動く (自分の公転ぶんは母惑星までの距離に比べて小さい)
+    const b = (body === MOON || !body.parent) ? body : BODY_BY_KEY.get(body.parent);
+    // 位置を任意の時刻で出せない相手 (探査機・地球そのもの) は恒星時の進みのまま
+    if (!b || b === BODY_BY_KEY.get("earth") || !(b === SUN || b === MOON || b.a !== undefined)) {
+      return RS_RATE;
+    }
+    const dt = 0.25;                                  // ±6時間の中央差分
+    let d = geoRaDeg(b, simDays + dt) - geoRaDeg(b, simDays - dt);
+    if (d > 180) d -= 360; else if (d < -180) d += 360;
+    return Math.max(1, RS_RATE - d / (2 * dt * 24));
+  }
   function computeObs(body) {
     const b = posW.get(body.key), e = posW.get("earth");
     _gw[0] = b[0]-e[0]; _gw[1] = b[1]-e[1]; _gw[2] = b[2]-e[2];
-    wEcl(_gw, _ge);                                         // 地心黄道
+    wEcl(_gw, _ge);                                         // 地心黄道 (J2000)
+    // 黄道 (J2000) → 赤道 (J2000) → その日の平均分点。時角はその日のグリニッジ
+    // 恒星時と比べるので、赤経赤緯もその日の分点へ揃えないと空全体がずれる
+    precessTo(simDays,
+      _ge[0],
+      _ge[1] * Math.cos(ECL) - _ge[2] * Math.sin(ECL),
+      _ge[1] * Math.sin(ECL) + _ge[2] * Math.cos(ECL), _pv);
     // 測心視差補正: 観測者は地心ではなく地表にいる (月では最大約1°の差)。
-    // 観測者の地心位置 (赤道座標) を黄道へ回して引く
+    // 観測地はその日の分点でそのまま書けるので、赤道座標のまま引く
     const lst = (gmstDeg(simDays) + obsLon) * DEG, latR = obsLat * DEG;
     {
       const RE = 6378.14 / AU_KM;
-      const ox = Math.cos(latR) * Math.cos(lst), oy = Math.cos(latR) * Math.sin(lst), oz = Math.sin(latR);
-      _ge[0] -= RE * ox;
-      _ge[1] -= RE * (oy * Math.cos(ECL) + oz * Math.sin(ECL));    // 赤道 → 黄道
-      _ge[2] -= RE * (-oy * Math.sin(ECL) + oz * Math.cos(ECL));
+      _pv[0] -= RE * Math.cos(latR) * Math.cos(lst);
+      _pv[1] -= RE * Math.cos(latR) * Math.sin(lst);
+      _pv[2] -= RE * Math.sin(latR);
     }
-    const D = Math.hypot(_ge[0], _ge[1], _ge[2]);
-    // 黄道 → 赤道 → 赤経・赤緯
-    const xe = _ge[0], ye = _ge[1]*Math.cos(ECL) - _ge[2]*Math.sin(ECL), ze = _ge[1]*Math.sin(ECL) + _ge[2]*Math.cos(ECL);
-    const ra = Math.atan2(ye, xe), dec = Math.asin(ze / Math.hypot(xe, ye, ze));
+    const D = Math.hypot(_pv[0], _pv[1], _pv[2]);
+    const ra = Math.atan2(_pv[1], _pv[0]), dec = Math.asin(_pv[2] / D);
     const lat = obsLat * DEG, H = lst - ra;
     const alt = Math.asin(Math.max(-1, Math.min(1, Math.sin(dec)*Math.sin(lat) + Math.cos(dec)*Math.cos(lat)*Math.cos(H))));
     const A = Math.atan2(Math.sin(H), Math.cos(H)*Math.sin(lat) - Math.tan(dec)*Math.cos(lat));
@@ -178,17 +203,21 @@
     const sizeAS = 2 * body.rkm / (D * AU_KM) / DEG * 3600;
     let elong = 0;
     if (body !== SUN) {
+      // 離角は地心で見るので、距離も地心のもの (D は測心)
+      const Dg = Math.hypot(_ge[0], _ge[1], _ge[2]);
       const dp = -(_ge[0]*_ea[0] + _ge[1]*_ea[1] + _ge[2]*_ea[2]);   // 太陽の地心方向 = -地球日心
-      elong = Math.acos(Math.max(-1, Math.min(1, dp/(D*R)))) / DEG;
+      elong = Math.acos(Math.max(-1, Math.min(1, dp/(Dg*R)))) / DEG;
     }
-    // 出没・南中 (瞬時の赤経赤緯で近似)
+    // 出没・南中 (瞬時の赤経赤緯で近似)。時角の進みは天体ごとに違う — 恒星時の
+    // 進みから、その天体自身の赤経の動きを引いたもの
+    const rate = haRate(body);
     const Hn = ((H/DEG + 180) % 360 + 360) % 360 - 180;
-    const transitMs = J2000 + simDays*DAY_MS - (Hn / RS_RATE) * 3600e3;
+    const transitMs = J2000 + simDays*DAY_MS - (Hn / rate) * 3600e3;
     const h0 = body === SUN ? -0.833 : (body.key === "moon" ? 0.125 : -0.567);
     const cosH0 = (Math.sin(h0*DEG) - Math.sin(lat)*Math.sin(dec)) / (Math.cos(lat)*Math.cos(dec));
     let rise = 0, set = 0, circ = 0;
     if (cosH0 < -1) circ = 1; else if (cosH0 > 1) circ = -1;
-    else { const H0 = Math.acos(cosH0)/DEG; rise = transitMs - H0/RS_RATE*3600e3; set = transitMs + H0/RS_RATE*3600e3; }
+    else { const H0 = Math.acos(cosH0)/DEG; rise = transitMs - H0/rate*3600e3; set = transitMs + H0/rate*3600e3; }
     return { alt: alt/DEG, az, distAU: D, illum, mag, sizeAS, elong, transitMs, rise, set, circ };
   }
   const fmtHM = (ms) => { const d = new Date(ms); return pad2(d.getHours()) + ":" + pad2(d.getMinutes()); };

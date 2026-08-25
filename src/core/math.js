@@ -13,6 +13,50 @@
     return b.rkm * KM2W;
   }
 
+  // ---------- 歳差 (J2000 平均分点 ⇄ その日の平均分点) ----------
+  // 天体の位置も恒星カタログも J2000 のままなのに、時角はその日のグリニッジ
+  // 恒星時と比べていた。空全体が一様に回転してずれるので、天体と星の位置関係は
+  // 合っているが、出没・南中・方位が実際からずれる (2026年で赤経 0.37°、
+  // 時刻にして約1.4分。100年で 3.3分ずつ増える)。
+  //
+  // 直し方は2通りある。空の側 (恒星8,400個 + 星座線 + 天体) を毎回その日の
+  // 分点へ回すか、観測地の側を J2000 へ戻すか。後者は3本のベクトルで済むので、
+  // 描画は J2000 のまま・観測地だけを合わせる形にしてある。
+  // 回転は IAU1976 の ζ・z・θ。章動 (±9″) は入れていない
+  const PREC = new Float64Array(9);
+  let precDays = NaN;
+  function precessMat(days) {
+    if (days === precDays) return PREC;
+    precDays = days;
+    const T = days / 36525, S = DEG / 3600;
+    const z1 = (2306.2181 + (0.30188 + 0.017998 * T) * T) * T * S;   // ζ
+    const z2 = (2306.2181 + (1.09468 + 0.018203 * T) * T) * T * S;   // z
+    const th = (2004.3109 - (0.42665 + 0.041833 * T) * T) * T * S;   // θ
+    const c1 = Math.cos(z1), s1 = Math.sin(z1);
+    const c2 = Math.cos(z2), s2 = Math.sin(z2);
+    const ct = Math.cos(th), st = Math.sin(th);
+    PREC[0] = c1*ct*c2 - s1*s2;  PREC[1] = -s1*ct*c2 - c1*s2;  PREC[2] = -st*c2;
+    PREC[3] = c1*ct*s2 + s1*c2;  PREC[4] = -s1*ct*s2 + c1*c2;  PREC[5] = -st*s2;
+    PREC[6] = c1*st;             PREC[7] = -s1*st;             PREC[8] = ct;
+    return PREC;
+  }
+  // 赤道座標 (J2000) → その日の平均分点
+  function precessTo(days, x, y, z, out) {
+    const P = precessMat(days);
+    out[0] = P[0]*x + P[1]*y + P[2]*z;
+    out[1] = P[3]*x + P[4]*y + P[5]*z;
+    out[2] = P[6]*x + P[7]*y + P[8]*z;
+    return out;
+  }
+  // その日の平均分点 → J2000 (回転行列の転置)
+  function precessFrom(days, x, y, z, out) {
+    const P = precessMat(days);
+    out[0] = P[0]*x + P[3]*y + P[6]*z;
+    out[1] = P[1]*x + P[4]*y + P[7]*z;
+    out[2] = P[2]*x + P[5]*y + P[8]*z;
+    return out;
+  }
+
   // ---------- ケプラー軌道 (3D) ----------
   for (const p of PLANETS) {
     const w = (p.peri - p.node) * DEG, O = p.node * DEG, inc = p.i * DEG;

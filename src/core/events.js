@@ -24,6 +24,7 @@
     return Math.acos(Math.max(-1, Math.min(1, c)));
   };
   const _evA = [0,0,0], _evB = [0,0,0], _evC = [0,0,0], _evD = [0,0,0], _evE = [0,0,0];
+  const _evP = [0,0,0];   // 歳差をかけた/戻したベクトル
 
   // 地心黄道ベクトル [AU]。out に書いて返す (out へ _evD は渡さないこと)
   function evGeo(b, t, out) {
@@ -69,10 +70,12 @@
     keplerAU(EARTH_B, t, out);
     const lst = (((280.46061837 + 360.98564736629 * t) % 360 + 360) % 360 + obsLon) * DEG;
     const la = obsLat * DEG, RE = EV_RE_KM / AU_KM;
-    const ox = Math.cos(la) * Math.cos(lst), oy = Math.cos(la) * Math.sin(lst), oz = Math.sin(la);
-    out[0] += RE * ox;
-    out[1] += RE * (oy * Math.cos(ECL) + oz * Math.sin(ECL));   // 赤道 → 黄道
-    out[2] += RE * (-oy * Math.sin(ECL) + oz * Math.cos(ECL));
+    // 観測地はその日の平均分点。天体は J2000 なので歳差ぶんを戻してから足す
+    // (向きがそのまま「天頂」になるので、大きさが小さくても効く)
+    precessFrom(t, Math.cos(la) * Math.cos(lst), Math.cos(la) * Math.sin(lst), Math.sin(la), _evP);
+    out[0] += RE * _evP[0];
+    out[1] += RE * (_evP[1] * Math.cos(ECL) + _evP[2] * Math.sin(ECL));   // 赤道 → 黄道
+    out[2] += RE * (-_evP[1] * Math.sin(ECL) + _evP[2] * Math.cos(ECL));
     return out;
   }
   // 観測地から見た天体の高度 [rad]。天頂方向は「地心 → 観測地」そのもの
@@ -248,7 +251,10 @@
     const s = SHOWERS.find((x) => x.key === key);
     if (!s) return -1;
     const lst = (((280.46061837 + 360.98564736629 * t) % 360 + 360) % 360 + obsLon) * DEG;
-    const H = lst - s.ra * DEG, dec = s.dec * DEG, la = obsLat * DEG;
+    // 放射点は J2000。時角はその日の恒星時と比べるので歳差ぶんを掛けて揃える
+    const ra0 = s.ra * DEG, dc0 = s.dec * DEG;
+    precessTo(t, Math.cos(dc0) * Math.cos(ra0), Math.cos(dc0) * Math.sin(ra0), Math.sin(dc0), _evP);
+    const H = lst - Math.atan2(_evP[1], _evP[0]), dec = Math.asin(_evP[2]), la = obsLat * DEG;
     return Math.asin(Math.max(-1, Math.min(1,
       Math.sin(dec) * Math.sin(la) + Math.cos(dec) * Math.cos(la) * Math.cos(H))));
   }
