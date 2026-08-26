@@ -141,7 +141,7 @@ ON にしたときは、**先に適用してから「保存してよいか」を
 - 月の理論: ELP-2000 の主要周期項 (J. Meeus, "Astronomical Algorithms" 2nd ed., Ch.47 の短縮版)
 - 星座線: [d3-celestial](https://github.com/ofrohn/d3-celestial) (Olaf Frohn, BSD-2-Clause) の constellations.lines を座標ベースで再編集
 - 天の川: NASA SVS [Deep Star Maps 2020](https://svs.gsfc.nasa.gov/4851/) の拡散光版 (Gaia DR2 由来。米国政府著作物)
-- 月面ビュー: 潮汐ロック近似 (表側が地球を向く・月の極 ≈ 黄道北)。物理秤動・月の極の傾斜 (1.5°) は省略
+- 月の向き: カシニの法則 (自転周期 = 公転周期、極は黄道から 1.54° 傾き、交点は軌道と共通)。光学秤動 (経度 ±8.0°・緯度 ±6.8°) は出るが、物理秤動 (数分角) と日周秤動は省略
 
 ## フォント
 

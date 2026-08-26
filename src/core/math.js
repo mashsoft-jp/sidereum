@@ -222,6 +222,15 @@
     o.fill(0); o[0]=c; o[2]=-s; o[5]=1; o[8]=s; o[10]=c; o[15]=1;
     return o;
   }
+  // 3本の軸 (ワールドでの向き) から回転行列を組む。列0,1,2 = 天体の x,y,z 軸
+  function mAxes(x, y, z, out) {
+    const o = out || new Float32Array(16);
+    o[0]=x[0]; o[1]=x[1]; o[2]=x[2]; o[3]=0;
+    o[4]=y[0]; o[5]=y[1]; o[6]=y[2]; o[7]=0;
+    o[8]=z[0]; o[9]=z[1]; o[10]=z[2]; o[11]=0;
+    o[12]=0; o[13]=0; o[14]=0; o[15]=1;
+    return o;
+  }
   function mTRS(t, rot, s, out) {
     const o = out || new Float32Array(16);
     if (rot) {

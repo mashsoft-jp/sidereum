@@ -48,6 +48,10 @@
     if (b.key === "saturn") {
       mRotY(spin, SCR.ry);
       mMul(SAT_ROT, SCR.ry, SCR.rot);
+    } else if (b === MOON) {
+      // 月はカシニの法則で組んだ実際の向き。一様な自転で近似すると秤動が消える
+      const mb = moonBasisW(simDays);
+      mAxes(mb.x, mb.y, mb.z, SCR.rot);
     } else {
       mRotX(-(b.tilt || 0) * DEG, SCR.rx);
       mRotY(spin, SCR.ry);

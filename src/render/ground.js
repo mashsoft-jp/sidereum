@@ -81,13 +81,13 @@
   }
   function buildObsFrame() {
     if (surfaceBody === "moon") {
-      const mC = posW.get("moon"), eC = posW.get("earth");
-      const px = 0, py = 1, pz = 0;       // 月の極 ≈ 黄道北 (潮汐ロック近似, 傾き1.5°は無視)
-      let ex = eC[0]-mC[0], ey = eC[1]-mC[1], ez = eC[2]-mC[2];
-      const el = Math.hypot(ex, ey, ez) || 1; ex/=el; ey/=el; ez/=el;   // 地球方向 (sub-Earth)
-      const dp = ex*px + ey*py + ez*pz;
-      let x0x = ex-dp*px, x0y = ey-dp*py, x0z = ez-dp*pz;               // 赤道面へ射影 = 経度0
-      const x0l = Math.hypot(x0x, x0y, x0z) || 1; x0x/=x0l; x0y/=x0l; x0z/=x0l;
+      const mC = posW.get("moon");
+      // 月の実際の向き (カシニの法則)。「経度0が常に地球を向く」で作ると
+      // 秤動が消え、月面から見た地球が空に貼りついてしまう。実際は ±8°
+      // ほど動き回る
+      const mb = moonBasisW(simDays);
+      const px = mb.y[0], py = mb.y[1], pz = mb.y[2];                   // 北極
+      const x0x = mb.x[0], x0y = mb.x[1], x0z = mb.x[2];                // 経度0の子午線
       const y0x = py*x0z-pz*x0y, y0y = pz*x0x-px*x0z, y0z = px*x0y-py*x0x;  // p × x0 = 経度+90
       const la = moonLat*DEG, lo = moonLon*DEG, cla = Math.cos(la), sla = Math.sin(la), clo = Math.cos(lo), slo = Math.sin(lo);
       const bx = clo*x0x+slo*y0x, by = clo*x0y+slo*y0y, bz = clo*x0z+slo*y0z;
@@ -532,7 +532,12 @@
         // 変換して描く。これにより地球なら「その日時に月へ向いている面」が出る
         const spin = b.rot ? 2 * Math.PI * simDays / b.rot + (b.spin0 || 0) : 0;
         mRotY(spin, SCR.ry);
-        if (b.key === "saturn") mMul(SAT_ROT, SCR.ry, SCR.rot);
+        if (b === MOON) {
+          // 月だけはカシニの法則で組んだ実際の向き (秤動が出る)。宇宙ビューの
+          // bodyModel と同じものを使う
+          const mb = moonBasisW(simDays);
+          mAxes(mb.x, mb.y, mb.z, SCR.rot);
+        } else if (b.key === "saturn") { mMul(SAT_ROT, SCR.ry, SCR.rot); }
         else { mRotX(-(b.tilt || 0) * DEG, SCR.rx); mMul(SCR.rx, SCR.ry, SCR.rot); }
         const rw = SCR.rot;   // 列0,1,2 = 天体軸のワールド方向
         SCR.v2[0]=rw[0]; SCR.v2[1]=rw[1]; SCR.v2[2]=rw[2]; worldDirToGround(SCR.v2, SCR.v);

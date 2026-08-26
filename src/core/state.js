@@ -127,6 +127,56 @@
     return out;   // 地心黄道 J2000 [km]
   }
 
+  // ---------- 月の向き (カシニの法則) ----------
+  // 月は同期回転しているが、公転が楕円で軌道が傾いているので、地球からは
+  // 首を振って見える (秤動)。経度で ±8.0°・緯度で ±6.8° あり、月の縁は
+  // 行ったり来たりして、実際には全球の 59% が見える。
+  //
+  // 「常に地球の方を向く」で作ると、この首振りがまるごと消える。代わりに
+  // 実際の決まりごと (カシニの法則) で組む:
+  //   1. 自転周期 = 公転周期。自転は平均黄経 L' で一様に回る
+  //   2. 極は黄道の極から 1.54° 傾き、その交点は月の軌道の交点と共通。
+  //      黄道の極が、軌道の極と赤道の極のあいだに来る向き
+  // 一様に回している軸に対して実際の位置が平均からずれるので、秤動は
+  // 勝手に出てくる (この作りで振れ幅 ±8.01/±6.84°、平均 0.01/0.02° を確認)。
+  //
+  // 返すのはワールド座標の基底。x = 経度0の子午線 (テクスチャの中央 = 月の
+  // 表側の真ん中)、y = 北極、z = x × y。黄道 (ex,ey,ez) → ワールドは
+  // toWorld と同じ (ex, ez, −ey)
+  const MOON_I = 1.54242 * DEG;
+  const _mbX = [0, 0, 0], _mbY = [0, 0, 0], _mbZ = [0, 0, 0];
+  const _moonBasis = { x: _mbX, y: _mbY, z: _mbZ };
+  let _mbDays = NaN;
+  function moonBasisW(d) {
+    if (d === _mbDays) return _moonBasis;
+    _mbDays = d;
+    const T = d / 36525;
+    const F  = 93.2720950 + 483202.0175233 * T - 0.0036539 * T * T - T * T * T / 3526000;
+    const Lp = 218.3164477 + 481267.88123421 * T - 0.0015786 * T * T + T * T * T / 538841;
+    // 位置 (moonGeoEclKm) と同じく、その日の分点から J2000 へ戻す
+    const prec = 1.3969713 * T + 0.0003086 * T * T;
+    const Om = (Lp - F - prec) * DEG;            // 昇交点
+    const sO = Math.sin(Om), cO = Math.cos(Om);
+    const sI = Math.sin(MOON_I), cI = Math.cos(MOON_I);
+    // 極 (黄道)。軌道の極とは黄道の極をはさんで反対側へ倒す
+    const pex = -sI * sO, pey = sI * cO, pez = cI;
+    // 赤道の昇交点は Ω + 180°。そこから子午線までの回転角は L' − Ω
+    const w = (Lp - prec) * DEG - Om;
+    const nx = -cO, ny = -sO;                    // 昇交点方向 (黄道面内)
+    // (極 × 昇交点) は経度 +90°方向。この2本で子午線を回す
+    const kx = pey * 0 - pez * ny, ky = pez * nx - pex * 0, kz = pex * ny - pey * nx;
+    const cw = Math.cos(w), sw = Math.sin(w);
+    const xex = nx * cw + kx * sw, xey = ny * cw + ky * sw, xez = kz * sw;
+    // ワールドへ。x と y を移してから z = x × y を組む (移した後で組めば
+    // 右手系のまま揃う)
+    _mbX[0] = xex; _mbX[1] = xez; _mbX[2] = -xey;
+    _mbY[0] = pex; _mbY[1] = pez; _mbY[2] = -pey;
+    _mbZ[0] = _mbX[1] * _mbY[2] - _mbX[2] * _mbY[1];
+    _mbZ[1] = _mbX[2] * _mbY[0] - _mbX[0] * _mbY[2];
+    _mbZ[2] = _mbX[0] * _mbY[1] - _mbX[1] * _mbY[0];
+    return _moonBasis;
+  }
+
   // ---------- 探査機の軌跡 ----------
   // 経由点は日付が決まっているので、位置も起動時に一度だけ確定させる。
   // 区間は時間で径数付けした Hermite 補間 (区間の長さが大きく違うので、

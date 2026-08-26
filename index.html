@@ -4149,6 +4149,15 @@
     o.fill(0); o[0]=c; o[2]=-s; o[5]=1; o[8]=s; o[10]=c; o[15]=1;
     return o;
   }
+  // 3本の軸 (ワールドでの向き) から回転行列を組む。列0,1,2 = 天体の x,y,z 軸
+  function mAxes(x, y, z, out) {
+    const o = out || new Float32Array(16);
+    o[0]=x[0]; o[1]=x[1]; o[2]=x[2]; o[3]=0;
+    o[4]=y[0]; o[5]=y[1]; o[6]=y[2]; o[7]=0;
+    o[8]=z[0]; o[9]=z[1]; o[10]=z[2]; o[11]=0;
+    o[12]=0; o[13]=0; o[14]=0; o[15]=1;
+    return o;
+  }
   function mTRS(t, rot, s, out) {
     const o = out || new Float32Array(16);
     if (rot) {
@@ -6111,6 +6120,56 @@
     return out;   // 地心黄道 J2000 [km]
   }
 
+  // ---------- 月の向き (カシニの法則) ----------
+  // 月は同期回転しているが、公転が楕円で軌道が傾いているので、地球からは
+  // 首を振って見える (秤動)。経度で ±8.0°・緯度で ±6.8° あり、月の縁は
+  // 行ったり来たりして、実際には全球の 59% が見える。
+  //
+  // 「常に地球の方を向く」で作ると、この首振りがまるごと消える。代わりに
+  // 実際の決まりごと (カシニの法則) で組む:
+  //   1. 自転周期 = 公転周期。自転は平均黄経 L' で一様に回る
+  //   2. 極は黄道の極から 1.54° 傾き、その交点は月の軌道の交点と共通。
+  //      黄道の極が、軌道の極と赤道の極のあいだに来る向き
+  // 一様に回している軸に対して実際の位置が平均からずれるので、秤動は
+  // 勝手に出てくる (この作りで振れ幅 ±8.01/±6.84°、平均 0.01/0.02° を確認)。
+  //
+  // 返すのはワールド座標の基底。x = 経度0の子午線 (テクスチャの中央 = 月の
+  // 表側の真ん中)、y = 北極、z = x × y。黄道 (ex,ey,ez) → ワールドは
+  // toWorld と同じ (ex, ez, −ey)
+  const MOON_I = 1.54242 * DEG;
+  const _mbX = [0, 0, 0], _mbY = [0, 0, 0], _mbZ = [0, 0, 0];
+  const _moonBasis = { x: _mbX, y: _mbY, z: _mbZ };
+  let _mbDays = NaN;
+  function moonBasisW(d) {
+    if (d === _mbDays) return _moonBasis;
+    _mbDays = d;
+    const T = d / 36525;
+    const F  = 93.2720950 + 483202.0175233 * T - 0.0036539 * T * T - T * T * T / 3526000;
+    const Lp = 218.3164477 + 481267.88123421 * T - 0.0015786 * T * T + T * T * T / 538841;
+    // 位置 (moonGeoEclKm) と同じく、その日の分点から J2000 へ戻す
+    const prec = 1.3969713 * T + 0.0003086 * T * T;
+    const Om = (Lp - F - prec) * DEG;            // 昇交点
+    const sO = Math.sin(Om), cO = Math.cos(Om);
+    const sI = Math.sin(MOON_I), cI = Math.cos(MOON_I);
+    // 極 (黄道)。軌道の極とは黄道の極をはさんで反対側へ倒す
+    const pex = -sI * sO, pey = sI * cO, pez = cI;
+    // 赤道の昇交点は Ω + 180°。そこから子午線までの回転角は L' − Ω
+    const w = (Lp - prec) * DEG - Om;
+    const nx = -cO, ny = -sO;                    // 昇交点方向 (黄道面内)
+    // (極 × 昇交点) は経度 +90°方向。この2本で子午線を回す
+    const kx = pey * 0 - pez * ny, ky = pez * nx - pex * 0, kz = pex * ny - pey * nx;
+    const cw = Math.cos(w), sw = Math.sin(w);
+    const xex = nx * cw + kx * sw, xey = ny * cw + ky * sw, xez = kz * sw;
+    // ワールドへ。x と y を移してから z = x × y を組む (移した後で組めば
+    // 右手系のまま揃う)
+    _mbX[0] = xex; _mbX[1] = xez; _mbX[2] = -xey;
+    _mbY[0] = pex; _mbY[1] = pez; _mbY[2] = -pey;
+    _mbZ[0] = _mbX[1] * _mbY[2] - _mbX[2] * _mbY[1];
+    _mbZ[1] = _mbX[2] * _mbY[0] - _mbX[0] * _mbY[2];
+    _mbZ[2] = _mbX[0] * _mbY[1] - _mbX[1] * _mbY[0];
+    return _moonBasis;
+  }
+
   // ---------- 探査機の軌跡 ----------
   // 経由点は日付が決まっているので、位置も起動時に一度だけ確定させる。
   // 区間は時間で径数付けした Hermite 補間 (区間の長さが大きく違うので、
@@ -6851,6 +6910,10 @@
     if (b.key === "saturn") {
       mRotY(spin, SCR.ry);
       mMul(SAT_ROT, SCR.ry, SCR.rot);
+    } else if (b === MOON) {
+      // 月はカシニの法則で組んだ実際の向き。一様な自転で近似すると秤動が消える
+      const mb = moonBasisW(simDays);
+      mAxes(mb.x, mb.y, mb.z, SCR.rot);
     } else {
       mRotX(-(b.tilt || 0) * DEG, SCR.rx);
       mRotY(spin, SCR.ry);
@@ -7499,13 +7562,13 @@
   }
   function buildObsFrame() {
     if (surfaceBody === "moon") {
-      const mC = posW.get("moon"), eC = posW.get("earth");
-      const px = 0, py = 1, pz = 0;       // 月の極 ≈ 黄道北 (潮汐ロック近似, 傾き1.5°は無視)
-      let ex = eC[0]-mC[0], ey = eC[1]-mC[1], ez = eC[2]-mC[2];
-      const el = Math.hypot(ex, ey, ez) || 1; ex/=el; ey/=el; ez/=el;   // 地球方向 (sub-Earth)
-      const dp = ex*px + ey*py + ez*pz;
-      let x0x = ex-dp*px, x0y = ey-dp*py, x0z = ez-dp*pz;               // 赤道面へ射影 = 経度0
-      const x0l = Math.hypot(x0x, x0y, x0z) || 1; x0x/=x0l; x0y/=x0l; x0z/=x0l;
+      const mC = posW.get("moon");
+      // 月の実際の向き (カシニの法則)。「経度0が常に地球を向く」で作ると
+      // 秤動が消え、月面から見た地球が空に貼りついてしまう。実際は ±8°
+      // ほど動き回る
+      const mb = moonBasisW(simDays);
+      const px = mb.y[0], py = mb.y[1], pz = mb.y[2];                   // 北極
+      const x0x = mb.x[0], x0y = mb.x[1], x0z = mb.x[2];                // 経度0の子午線
       const y0x = py*x0z-pz*x0y, y0y = pz*x0x-px*x0z, y0z = px*x0y-py*x0x;  // p × x0 = 経度+90
       const la = moonLat*DEG, lo = moonLon*DEG, cla = Math.cos(la), sla = Math.sin(la), clo = Math.cos(lo), slo = Math.sin(lo);
       const bx = clo*x0x+slo*y0x, by = clo*x0y+slo*y0y, bz = clo*x0z+slo*y0z;
@@ -7950,7 +8013,12 @@
         // 変換して描く。これにより地球なら「その日時に月へ向いている面」が出る
         const spin = b.rot ? 2 * Math.PI * simDays / b.rot + (b.spin0 || 0) : 0;
         mRotY(spin, SCR.ry);
-        if (b.key === "saturn") mMul(SAT_ROT, SCR.ry, SCR.rot);
+        if (b === MOON) {
+          // 月だけはカシニの法則で組んだ実際の向き (秤動が出る)。宇宙ビューの
+          // bodyModel と同じものを使う
+          const mb = moonBasisW(simDays);
+          mAxes(mb.x, mb.y, mb.z, SCR.rot);
+        } else if (b.key === "saturn") { mMul(SAT_ROT, SCR.ry, SCR.rot); }
         else { mRotX(-(b.tilt || 0) * DEG, SCR.rx); mMul(SCR.rx, SCR.ry, SCR.rot); }
         const rw = SCR.rot;   // 列0,1,2 = 天体軸のワールド方向
         SCR.v2[0]=rw[0]; SCR.v2[1]=rw[1]; SCR.v2[2]=rw[2]; worldDirToGround(SCR.v2, SCR.v);
@@ -11518,7 +11586,7 @@
       imgBody: "以下の天体の表面には、NASA / USGS のパブリックドメイン画像を使用しています。",
       proc: "太陽・土星 (環を含む)・天王星・海王星・パラス・ジュノーは、シェーダによる生成テクスチャです (実写ではありません)。",
       data: "データと精度",
-      dataBody: "軌道間隔・天体の大きさとも実寸比で表示しています。天体位置は J2000 平均軌道要素 (NASA JPL 公表値) にもとづくケプラー軌道の近似計算です。教育・可視化目的であり、天文計算・観測用途の精度はありません。小惑星の軌道上の位相は概略です。恒星 (宇宙ビューの背景・地上ビューとも) は Yale Bright Star Catalogue 第5改訂版 (Hoffleit & Warren 1991, パブリックドメイン) の実位置・実等級 (6.5等まで・約8,400星)、色は B-V 色指数にもとづく近似です。星座線は d3-celestial (Olaf Frohn, BSD-2-Clause) を使用しています。天の川は Deep Star Maps 2020 の拡散光版 (NASA/Goddard Space Flight Center Scientific Visualization Studio。Gaia DR2: ESA/Gaia/DPAC) を天球に貼ったものです。月面ビューは潮汐ロック近似 (表側が地球を向く・月の極 ≈ 黄道北) によるもので、秤動などは省略しています。",
+      dataBody: "軌道間隔・天体の大きさとも実寸比で表示しています。天体位置は J2000 平均軌道要素 (NASA JPL 公表値) にもとづくケプラー軌道の近似計算です。教育・可視化目的であり、天文計算・観測用途の精度はありません。小惑星の軌道上の位相は概略です。恒星 (宇宙ビューの背景・地上ビューとも) は Yale Bright Star Catalogue 第5改訂版 (Hoffleit & Warren 1991, パブリックドメイン) の実位置・実等級 (6.5等まで・約8,400星)、色は B-V 色指数にもとづく近似です。星座線は d3-celestial (Olaf Frohn, BSD-2-Clause) を使用しています。天の川は Deep Star Maps 2020 の拡散光版 (NASA/Goddard Space Flight Center Scientific Visualization Studio。Gaia DR2: ESA/Gaia/DPAC) を天球に貼ったものです。月の向きはカシニの法則 (自転周期 = 公転周期、極は黄道から 1.54° 傾き、交点は軌道と共通) で組んでいるので、光学秤動 — 経度 ±8.0°・緯度 ±6.8° の首振り — は出ます。物理秤動 (数分角) と日周秤動は省略しています。",
       disc: "本アプリは NASA・USGS とは無関係であり、両機関による承認・推奨を意味するものではありません。",
     } : {
       lic: "License",
@@ -11530,7 +11598,7 @@
       imgBody: "The surfaces of the following bodies use public-domain imagery from NASA / USGS.",
       proc: "The Sun, Saturn (incl. rings), Uranus, Neptune, Pallas and Juno use procedurally generated textures (not actual imagery).",
       data: "Data & accuracy",
-      dataBody: "Orbital spacing and body sizes are displayed to actual scale. Positions are approximated with Keplerian orbits based on J2000 mean orbital elements published by NASA JPL. This app is for education and visualization; it is not suitable for astronomical or observational use. Orbital phases of the asteroids are approximate. Stars (both the space-view background and the ground view) use real positions and magnitudes (mag ≤ 6.5, ~8,400 stars) from the Yale Bright Star Catalogue, 5th Revised Ed. (Hoffleit & Warren 1991, public domain); colors are approximated from the B-V index. Constellation lines are from d3-celestial (Olaf Frohn, BSD-2-Clause). The Milky Way is the diffuse-only layer of Deep Star Maps 2020 (NASA/Goddard Space Flight Center Scientific Visualization Studio; Gaia DR2: ESA/Gaia/DPAC), mapped onto the celestial sphere. The Moon-surface view uses a tidal-lock approximation (near side faces Earth; lunar pole ≈ ecliptic north) and omits libration.",
+      dataBody: "Orbital spacing and body sizes are displayed to actual scale. Positions are approximated with Keplerian orbits based on J2000 mean orbital elements published by NASA JPL. This app is for education and visualization; it is not suitable for astronomical or observational use. Orbital phases of the asteroids are approximate. Stars (both the space-view background and the ground view) use real positions and magnitudes (mag ≤ 6.5, ~8,400 stars) from the Yale Bright Star Catalogue, 5th Revised Ed. (Hoffleit & Warren 1991, public domain); colors are approximated from the B-V index. Constellation lines are from d3-celestial (Olaf Frohn, BSD-2-Clause). The Milky Way is the diffuse-only layer of Deep Star Maps 2020 (NASA/Goddard Space Flight Center Scientific Visualization Studio; Gaia DR2: ESA/Gaia/DPAC), mapped onto the celestial sphere. The Moon's orientation follows Cassini's laws (rotation period = orbital period; pole tilted 1.54° from the ecliptic, sharing the orbit's node), so optical libration — the ±8.0° / ±6.8° nodding of the disc — is reproduced. Physical libration (a few arcminutes) and diurnal libration are omitted.",
       disc: "This app is not affiliated with, nor endorsed by, NASA or USGS.",
     };
     aboutEl.innerHTML =
