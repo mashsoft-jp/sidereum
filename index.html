@@ -14,6 +14,18 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>Sidereum (シデレウム β版) — 見上げる空から、太陽系の果てまで</title>
 <style>
+  /* ロゴの書体。Jura Light から SIDEREUM の7文字 (S I D E R E U M) だけを
+     切り出して埋め込んである。外部リクエストを増やさないための data: URL で、
+     1KB ほどなのでテクスチャと違って毎回引き直させても問題にならない。
+     7文字しか入っていないので、他の文字は自動的に --font-ui へ落ちる。
+     Copyright 2019 The Jura Project Authors (https://github.com/ossobuffo/jura)
+     SIL Open Font License 1.1 — https://scripts.sil.org/OFL */
+  @font-face {
+    font-family: "Jura Light";
+    font-style: normal;
+    font-weight: 300;
+    src: url(data:font/woff2;base64,d09GMgABAAAAAAREAA8AAAAACCgAAAPsAAUbIwAAAAAAAAAAAAAAAAAAAAAAAAAAGhYbIBwqBmA/U1RBVCoAVBEICoUUhCQBNgIkAyALEgAEIAWEfAcgG58GUZQvynSInwmmysajUHgGkUzETO16LvYQC6PQrV94fhdEkFdVB4MkCyl7oF8EMkfhJfrv5zRAqrqq92Q7CLnNlVmH8OfTQNgaNU2u54c4uD0JU8kTxPofoJfz/3+v6n+h8Ji2pnjEI3Iz5yqlgK1ggDrWBKsFqKdgBSsQ17YRohkPW4t4p6fWj60BAlgAgIIguBEEMIjVIVaYrE6CgQbwXwAQwCBdlwRZrdXZY7XQBiIu1tQXyYEKeqi2FZitrqIcJF9lsWSFf6DybafCv3Xu278VwbNAzoIAqPO1T5BIRhA8CBBKBGJJ/ZKUiQKgIAAikgMBUAAVCCUjQCiFMgQsPChoVDS3dnR+oYIBd/ie22+PHbYnkF8Q/x9sAMEDQCABL3ADMQAA7RGbRb2xvxXlnxBpFEo0J4p3hOnnXKWGXzFa9vHr10Udce2aYTmHAhyGG/6K33BZmgF8hvVtbIPprMMzfC2y4GR9pg6yKsRgiD+t/VrNb+dps3XAytXhuSU51KUw8drR38ALBBPgdKvbNUkYTA6/ajqUohTT9Qj78LXR5vVsugJSUuCKEUBmd6Te1aFj5tJ1G0Becs+2F9v2o6937nyt9eXO3a97jnudNdWqrXFqOXfQw85eQPYf9mDY5z49IjzSzoEzEdwveOlUswZbl2QmrDDyctIykzJNwPFq/W7fnuAC5dwGRWz6R5WoU1tqmr43th1z0ytr1q5dU2Lm2NWjA/M+7J1/ZL31o/oPGFnidUD/Uev5LbtWr9pZpm5a794zEmfQjtOm9+41I3rjooUbNiwUfTq5F6zHnDi2c6dx6eM6dx43rkvn8dG7V8Xqd7ax3ZS5evTo1Xyo/nx9S/l8pfp+6PsG3drXrsR8OQDDEKDHpOSs497eLKDEV4/qvgBws/quzQDPdvad9u/ov+6uma5lzgAuFAAE/gJ2d4GJ//1iG4R1G4/6Aj0fd62ScJeD7NT/fcV8v0yP5EvvLnwjgIfGVFpSUgyrCOCm4RjXvCCxCDBXCE0sV8Ff8nD9mCulOP4UyjUpAUux1lUwlEiGkMYnIpNIMcBlc7wAJ6kIWOAID9ghkFwkwIA+jkkhBAW6ac5jGtQriyWRgWB83mcKIBULQlGIj4vFEEteaKjHBI6CQlT02YrEW1lebVm46wjMmSNgbDmo6Fxa64EiFQKwQ93nKBOKEBGuAt5BPx2qeIiCWTBwEDG4UGkij8iUHZ05gdTK5Mrthph3EDkChlItBSL1sVAY5uptLG5teG4FbDXwxeSbV0nQk+mSoERlUAs6zNvGP0OBCpA21GAoU1CoZB766IRla2LlKjrqPLlklrz/Kx8A) format("woff2");
+  }
   :root {
     --bg: #04060e;
     --panel: rgba(9, 14, 28, 0.86);
@@ -23,6 +35,7 @@
     --accent: #f2b23e;
     --accent-dim: rgba(242, 178, 62, 0.35);
     --font-ui: "Avenir Next", "Futura", "Hiragino Sans", "Yu Gothic UI", system-ui, sans-serif;
+    --font-logo: "Jura Light", var(--font-ui);
     --font-num: "SF Mono", "Menlo", "Consolas", monospace;
     /* セーフエリア (iOS PWA の standalone ではノッチ/ステータスバー下までコンテンツが広がる) */
     --sat: env(safe-area-inset-top, 0px);
@@ -187,7 +200,8 @@
     letter-spacing: 0.2em;
     color: var(--accent);
   }
-  #about h2 .yomi, #howto h2 .yomi { font-size: 0.72em; letter-spacing: 0.1em; margin-left: 4px; }
+  #about h2 .yomi, #howto h2 .yomi { font-size: 0.72em; letter-spacing: 0.1em; margin-left: 0; }
+  #about h2.logo { font-size: 16px; letter-spacing: 0.26em; }
   #about h3, #howto h3 {
     margin: 16px 0 6px;
     font-size: 10px;
@@ -312,7 +326,7 @@
     background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   }
-  #welcomeCard h2 { margin: 0 0 4px; font-size: 16px; font-weight: 600; letter-spacing: 0.16em; color: var(--accent); }
+  #welcomeCard h2 { margin: 0 0 4px; font-size: 18px; letter-spacing: 0.26em; }
   #welcomeCard h2 .yomi { font-size: 0.68em; letter-spacing: 0.08em; margin-left: 4px; color: var(--dim); }
   #welcomeCard .lead { margin: 0 0 10px; font-size: 11.5px; line-height: 1.7; color: var(--dim); }
   #welcomeCard ul { margin: 4px 0 16px; padding-left: 1.2em; }
@@ -327,17 +341,26 @@
   /* 主役はガイドツアー。「とりあえず動かす」は枠線だけの控えめな見た目にする */
   #welcomeTour { color: #0a0d16; background: var(--accent); border-color: var(--accent); font-weight: 600; }
   #welcomeTour:hover { background: var(--accent); }
-  #title h1 {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0.24em;
+  /* ワードマーク。細い幾何学の大文字を大きく空ける — 細線と小さな文字で
+     組んだ画面に合わせ、計器の銘板のような見え方にする。文字を空けたぶん
+     最後の M の後ろにも空きが付くので、続くカッコ書きに margin は要らない */
+  .logo {
+    font-family: var(--font-logo);
+    font-weight: 300;
     color: var(--accent);
   }
-  /* β版であることを強調するため、ロゴと同じフォント・色 (アクセント) で表示 */
+  .logo .beta, .logo .yomi {
+    font-family: var(--font-ui); font-weight: 400;
+  }
+  #title h1 {
+    margin: 0;
+    font-size: 16px;
+    letter-spacing: 0.3em;
+  }
+  /* β版であることを強調するため、ロゴと同じ色 (アクセント) で表示 */
   #title h1 .beta {
-    font-size: 0.65em; letter-spacing: 0.06em; color: var(--accent);
-    margin-left: 4px; vertical-align: 0.2em;
+    font-size: 0.62em; letter-spacing: 0.06em; color: var(--accent);
+    margin-left: 0; vertical-align: 0.25em;
   }
 
   /* ---- 天体リストパネル (軌道/名前 + リストを囲う半透明の角丸板) ---- */
@@ -1028,7 +1051,7 @@
 
   @media (max-width: 720px) {
     #title { padding: 6px 10px 6px 6px; gap: 6px; }
-    #title h1 { font-size: 11px; letter-spacing: 0.14em; }
+    #title h1 { font-size: 13px; letter-spacing: 0.2em; }
     #menuBtn { padding: 4px 6px; font-size: 15px; }
     #clock { padding: 6px 10px; }
     #dateInput, #timeInput { font-size: 13px; }
@@ -1094,7 +1117,7 @@
     /* タイトルの枠線 1px と padding-left 6px ぶん戻すと、中の ☰ の左端が
        --barL に来る = 開いたメニューの左端とちょうど揃う */
     #title { padding: 6px 10px 6px 6px; gap: 6px; left: calc(var(--barL) - 7px); }
-    #title h1 { font-size: 11px; letter-spacing: 0.14em; }
+    #title h1 { font-size: 13px; letter-spacing: 0.2em; }
     #menuBtn { padding: 4px 6px; font-size: 15px; }
     /* 横持ちではメニューが画面より高くなる (13項目で 498px / 画面 393px)。
        はみ出したぶんは触れないので、収まらないときだけ中でスクロールさせる。
@@ -1268,7 +1291,7 @@
 
   <header id="title" class="hud">
     <button id="menuBtn" aria-label="メニュー" aria-haspopup="true">☰</button>
-    <h1>SIDEREUM<span class="beta">(β版)</span></h1>
+    <h1 class="logo">SIDEREUM<span class="beta">(β版)</span></h1>
   </header>
 
   <!-- 狭い画面は 3 つ並べる幅が無いので、選択中のビューを出す select にする
@@ -11359,7 +11382,10 @@
       .join("");
     const c = lang === "ja" ? {
       lic: "ライセンス",
-      licBody: '© 2026 <a href="https://www.mashsoft.co.jp" target="_blank" rel="noopener">Mashsoft Inc.</a> — コードは MIT License で公開されています。',
+      licBody: '© 2026 <a href="https://www.mashsoft.co.jp" target="_blank" rel="noopener">Mashsoft Inc.</a> — コードは MIT License で公開されています。' +
+        'ロゴの書体は <a href="https://github.com/ossobuffo/jura" target="_blank" rel="noopener">Jura</a> Light ' +
+        '(© 2019 The Jura Project Authors, <a href="https://scripts.sil.org/OFL" target="_blank" rel="noopener">SIL Open Font License 1.1</a>) ' +
+        'から SIDEREUM の7文字だけを切り出して埋め込んでいます。',
       img: "画像クレジット",
       imgBody: "以下の天体の表面には、NASA / USGS のパブリックドメイン画像を使用しています。",
       proc: "太陽・土星 (環を含む)・天王星・海王星・パラス・ジュノーは、シェーダによる生成テクスチャです (実写ではありません)。",
@@ -11368,7 +11394,10 @@
       disc: "本アプリは NASA・USGS とは無関係であり、両機関による承認・推奨を意味するものではありません。",
     } : {
       lic: "License",
-      licBody: '© 2026 <a href="https://www.mashsoft.co.jp" target="_blank" rel="noopener">Mashsoft Inc.</a> — The code is released under the MIT License.',
+      licBody: '© 2026 <a href="https://www.mashsoft.co.jp" target="_blank" rel="noopener">Mashsoft Inc.</a> — The code is released under the MIT License. ' +
+        'The wordmark embeds the seven letters of SIDEREUM subset from ' +
+        '<a href="https://github.com/ossobuffo/jura" target="_blank" rel="noopener">Jura</a> Light ' +
+        '(© 2019 The Jura Project Authors, <a href="https://scripts.sil.org/OFL" target="_blank" rel="noopener">SIL Open Font License 1.1</a>).',
       img: "Image credits",
       imgBody: "The surfaces of the following bodies use public-domain imagery from NASA / USGS.",
       proc: "The Sun, Saturn (incl. rings), Uranus, Neptune, Pallas and Juno use procedurally generated textures (not actual imagery).",
@@ -11378,7 +11407,7 @@
     };
     aboutEl.innerHTML =
       `<button id="aboutClose" aria-label="close">✕</button>` +
-      `<h2>SIDEREUM<span class="yomi">${lang === "ja" ? "(シデレウム β版)" : "(Beta)"}</span></h2>` +
+      `<h2 class="logo">SIDEREUM<span class="yomi">${lang === "ja" ? "(シデレウム β版)" : "(Beta)"}</span></h2>` +
       `<h3>${c.lic}</h3><p>${c.licBody}</p>` +
       `<h3>${c.img}</h3><p>${c.imgBody}</p>` +
       `<table><tbody>${rows}</tbody></table>` +
@@ -11498,7 +11527,7 @@
     };
     welcomeEl.innerHTML =
       `<div id="welcomeCard">` +
-        `<h2>SIDEREUM<span class="yomi">${c.yomi}</span></h2>` +
+        `<h2 class="logo">SIDEREUM<span class="yomi">${c.yomi}</span></h2>` +
         `<p class="lead">${c.lead}</p>` +
         `<ul>${c.rows.map((r) => `<li>${r}</li>`).join("")}</ul>` +
         // 操作方法の一覧はメニューからいつでも開けるので、ここには出さない。

@@ -1,3 +1,15 @@
+  /* ロゴの書体。Jura Light から SIDEREUM の7文字 (S I D E R E U M) だけを
+     切り出して埋め込んである。外部リクエストを増やさないための data: URL で、
+     1KB ほどなのでテクスチャと違って毎回引き直させても問題にならない。
+     7文字しか入っていないので、他の文字は自動的に --font-ui へ落ちる。
+     Copyright 2019 The Jura Project Authors (https://github.com/ossobuffo/jura)
+     SIL Open Font License 1.1 — https://scripts.sil.org/OFL */
+  @font-face {
+    font-family: "Jura Light";
+    font-style: normal;
+    font-weight: 300;
+    src: url(data:font/woff2;base64,@@font:jura-logo@@) format("woff2");
+  }
   :root {
     --bg: #04060e;
     --panel: rgba(9, 14, 28, 0.86);
@@ -7,6 +19,7 @@
     --accent: #f2b23e;
     --accent-dim: rgba(242, 178, 62, 0.35);
     --font-ui: "Avenir Next", "Futura", "Hiragino Sans", "Yu Gothic UI", system-ui, sans-serif;
+    --font-logo: "Jura Light", var(--font-ui);
     --font-num: "SF Mono", "Menlo", "Consolas", monospace;
     /* セーフエリア (iOS PWA の standalone ではノッチ/ステータスバー下までコンテンツが広がる) */
     --sat: env(safe-area-inset-top, 0px);
@@ -171,7 +184,8 @@
     letter-spacing: 0.2em;
     color: var(--accent);
   }
-  #about h2 .yomi, #howto h2 .yomi { font-size: 0.72em; letter-spacing: 0.1em; margin-left: 4px; }
+  #about h2 .yomi, #howto h2 .yomi { font-size: 0.72em; letter-spacing: 0.1em; margin-left: 0; }
+  #about h2.logo { font-size: 16px; letter-spacing: 0.26em; }
   #about h3, #howto h3 {
     margin: 16px 0 6px;
     font-size: 10px;
@@ -296,7 +310,7 @@
     background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   }
-  #welcomeCard h2 { margin: 0 0 4px; font-size: 16px; font-weight: 600; letter-spacing: 0.16em; color: var(--accent); }
+  #welcomeCard h2 { margin: 0 0 4px; font-size: 18px; letter-spacing: 0.26em; }
   #welcomeCard h2 .yomi { font-size: 0.68em; letter-spacing: 0.08em; margin-left: 4px; color: var(--dim); }
   #welcomeCard .lead { margin: 0 0 10px; font-size: 11.5px; line-height: 1.7; color: var(--dim); }
   #welcomeCard ul { margin: 4px 0 16px; padding-left: 1.2em; }
@@ -311,17 +325,26 @@
   /* 主役はガイドツアー。「とりあえず動かす」は枠線だけの控えめな見た目にする */
   #welcomeTour { color: #0a0d16; background: var(--accent); border-color: var(--accent); font-weight: 600; }
   #welcomeTour:hover { background: var(--accent); }
-  #title h1 {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0.24em;
+  /* ワードマーク。細い幾何学の大文字を大きく空ける — 細線と小さな文字で
+     組んだ画面に合わせ、計器の銘板のような見え方にする。文字を空けたぶん
+     最後の M の後ろにも空きが付くので、続くカッコ書きに margin は要らない */
+  .logo {
+    font-family: var(--font-logo);
+    font-weight: 300;
     color: var(--accent);
   }
-  /* β版であることを強調するため、ロゴと同じフォント・色 (アクセント) で表示 */
+  .logo .beta, .logo .yomi {
+    font-family: var(--font-ui); font-weight: 400;
+  }
+  #title h1 {
+    margin: 0;
+    font-size: 16px;
+    letter-spacing: 0.3em;
+  }
+  /* β版であることを強調するため、ロゴと同じ色 (アクセント) で表示 */
   #title h1 .beta {
-    font-size: 0.65em; letter-spacing: 0.06em; color: var(--accent);
-    margin-left: 4px; vertical-align: 0.2em;
+    font-size: 0.62em; letter-spacing: 0.06em; color: var(--accent);
+    margin-left: 0; vertical-align: 0.25em;
   }
 
   /* ---- 天体リストパネル (軌道/名前 + リストを囲う半透明の角丸板) ---- */
@@ -1012,7 +1035,7 @@
 
   @media (max-width: 720px) {
     #title { padding: 6px 10px 6px 6px; gap: 6px; }
-    #title h1 { font-size: 11px; letter-spacing: 0.14em; }
+    #title h1 { font-size: 13px; letter-spacing: 0.2em; }
     #menuBtn { padding: 4px 6px; font-size: 15px; }
     #clock { padding: 6px 10px; }
     #dateInput, #timeInput { font-size: 13px; }
@@ -1078,7 +1101,7 @@
     /* タイトルの枠線 1px と padding-left 6px ぶん戻すと、中の ☰ の左端が
        --barL に来る = 開いたメニューの左端とちょうど揃う */
     #title { padding: 6px 10px 6px 6px; gap: 6px; left: calc(var(--barL) - 7px); }
-    #title h1 { font-size: 11px; letter-spacing: 0.14em; }
+    #title h1 { font-size: 13px; letter-spacing: 0.2em; }
     #menuBtn { padding: 4px 6px; font-size: 15px; }
     /* 横持ちではメニューが画面より高くなる (13項目で 498px / 画面 393px)。
        はみ出したぶんは触れないので、収まらないときだけ中でスクロールさせる。

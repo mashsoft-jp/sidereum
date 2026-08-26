@@ -142,6 +142,20 @@ ON にしたときは、**先に適用してから「保存してよいか」を
 - 天の川: NASA SVS [Deep Star Maps 2020](https://svs.gsfc.nasa.gov/4851/) の拡散光版 (Gaia DR2 由来。米国政府著作物)
 - 月面ビュー: 潮汐ロック近似 (表側が地球を向く・月の極 ≈ 黄道北)。物理秤動・月の極の傾斜 (1.5°) は省略
 
+## フォント
+
+ロゴ (ワードマーク) は [Jura](https://github.com/ossobuffo/jura) Light から `SIDEREUM` の7文字 (S I D E R E U M) だけを切り出し、`src/fonts/jura-logo.woff2` (1.1KB) として `@font-face` の `data:` URL で埋め込んでいます。外部リクエストを増やさないためで、7文字しか入っていないので他の文字は自動的に `--font-ui` へ落ちます。
+
+© 2019 The Jura Project Authors — [SIL Open Font License 1.1](https://scripts.sil.org/OFL)。著作権表示とライセンスはフォント自身の name テーブルにも入れてあります。
+
+作り直すときは、Google Fonts の latin サブセットから further subset する:
+
+```
+python3 -m fontTools.subset jura-latin.woff2 --text="SIDEREUM" --flavor=woff2 \
+  --layout-features='' --no-hinting --desubroutinize --name-IDs=0,1,2,13,14 \
+  --output-file=src/fonts/jura-logo.woff2
+```
+
 ## ライセンス
 
 © 2026 [Mashsoft Inc.](https://www.mashsoft.co.jp)

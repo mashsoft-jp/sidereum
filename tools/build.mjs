@@ -162,7 +162,24 @@ async function build({ markers }) {
   }
 
   // --- CSS ---
-  const css = await readText(path.join(SRC, "styles.css"), "src/styles.css");
+  // @@font:名前@@ は src/fonts/名前.woff2 を base64 にして埋める。ロゴの書体は
+  // 外部リクエストを増やさないため data: URL で持つ (1KB ほどなので、テクスチャと
+  // 違って毎回引き直させても問題にならない)
+  let css = await readText(path.join(SRC, "styles.css"), "src/styles.css");
+  const fontNames = await listFiles(path.join(SRC, "fonts"), "", [], [".woff2"]);
+  const usedFont = new Set();
+  for (const m of css.matchAll(/@@font:([A-Za-z0-9._-]+)@@/g)) {
+    const name = m[1];
+    if (!fontNames.includes(name + ".woff2")) fail(`src/styles.css: フォント ${name}.woff2 が見つかりません`);
+    usedFont.add(name + ".woff2");
+  }
+  for (const n of fontNames) {
+    if (!usedFont.has(n)) fail(`参照されていないフォント: ${n}`);
+  }
+  for (const n of usedFont) {
+    const b64 = (await readFile(path.join(SRC, "fonts", n))).toString("base64");
+    css = css.split("@@font:" + n.replace(/\.woff2$/, "") + "@@").join(b64);
+  }
   if (/<\/style/i.test(css)) fail("CSS に </style> が含まれます (インラインを壊します)");
 
   // --- ページ骨格へ差し込む ---
