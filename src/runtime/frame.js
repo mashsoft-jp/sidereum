@@ -348,7 +348,9 @@
     gFov += (gFovTgt - gFov) * k;
 
     tourRideCam();     // ガイドツアー: 探査機視点のステップはカメラを直接置く
+    introStep(now / 1000);   // 初回の導入: カメラを寄せる (流していなければ素通り)
     render(now / 1000);
+    drawIntro();          // 初回の導入: 銀河系の絵をシーンの上へ重ねる
     bloomPass();          // 明るいところの滲み (シーンを描き終えてから)
     updateClock();
     tourWatch();          // ガイドツアー: 促した操作をされたら次のステップへ

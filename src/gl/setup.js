@@ -120,11 +120,14 @@
   const blurFS = PRE + `@@glsl:post-blur.frag@@`;
   const addFS = PRE + `@@glsl:post-add.frag@@`;
 
+  // ---- 初回の導入 (銀河系を上から見た絵)。同じく画面全体の三角形へ ----
+  const introFS = PRE + `@@glsl:intro.frag@@`;
+
   // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
   // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
   let bodyRenderer;
   let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP, skyP;
-  let threshP, blurP, addP;
+  let threshP, blurP, addP, introP;
   try {
     bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
     skyP = program(skyVS, skyFS);
@@ -140,6 +143,7 @@
     threshP = program(postVS, threshFS);
     blurP = program(postVS, blurFS);
     addP = program(postVS, addFS);
+    introP = program(postVS, introFS);
   } catch (err) {
     console.error(err);
     document.getElementById("noGL").style.display = "grid";

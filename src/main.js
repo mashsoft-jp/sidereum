@@ -34,9 +34,12 @@
   const fromShare = applyShareURL();
   // ?tour=... はさらに優先 (シーンの状態を上書きする)
   const fromTour = applyTourURL();
-  // 初回のみ操作ガイドを表示 (共有リンク・ツアーで開いた場合はそのまま見せる)
+  // 初回のみ操作ガイドを表示 (共有リンク・ツアーで開いた場合はそのまま見せる)。
+  // あわせて、銀河系から太陽系へ寄る導入を流し、着いたところでガイドを出す
+  // (動きを減らす設定の端末では導入を流さないので、そのまま出す)
   if (!fromShare && !fromTour && !localStorage.getItem("ssGuideSeen")) {
     buildWelcome();
-    welcomeEl.classList.add("open");
+    const showWelcome = () => welcomeEl.classList.add("open");
+    if (!startIntro(showWelcome)) showWelcome();
   }
   requestAnimationFrame(frame);

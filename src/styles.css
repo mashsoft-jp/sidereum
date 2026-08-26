@@ -693,6 +693,42 @@
   #app.tourMode #navPanel.tourShow,
   #app.tourMode #viewMode.tourShow { display: flex; }
   #app.tourMode #menuBtn.tourShow { display: block; }
+
+  /* ---- 初回の導入 (銀河系から太陽系へ寄る) ---- */
+  /* 銀河の絵は画面いっぱいなので、そのあいだ HUD は出さない。
+     終わったら (introMode が外れたら) 短く浮かび上がらせる */
+  #app.introMode #title,
+  #app.introMode #viewMode,
+  #app.introMode #navPanel,
+  #app.introMode #navExpand,
+  #app.introMode #clock,
+  #app.introMode #hint,
+  #app.introMode #controls,
+  #app.introMode #ctrlExpand,
+  #app.introMode #angleCell,
+  #app.introMode #gAltCell,
+  #app.introMode #obsSiteBar,
+  #app.introMode #info { display: none; }
+  #app.introOut #title,
+  #app.introOut #viewMode,
+  #app.introOut #navPanel,
+  #app.introOut #navExpand,
+  #app.introOut #clock,
+  #app.introOut #controls,
+  #app.introOut #ctrlExpand,
+  #welcome.open > #welcomeCard { animation: introIn 0.9s ease-out both; }
+  @keyframes introIn { from { opacity: 0; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    #app.introOut #title,
+    #app.introOut #viewMode,
+    #app.introOut #navPanel,
+    #app.introOut #navExpand,
+    #app.introOut #clock,
+    #app.introOut #controls,
+    #app.introOut #ctrlExpand,
+    #welcome.open > #welcomeCard { animation: none; }
+  }
+
   /* 天体リストはモバイルでは既定で引っ込んでいる (navHidden で画面外へ平行移動)。
      display だけ戻しても画面外のままで、出すための » も tourMode で隠しているため、
      「左のリストからも選べます」と言いながら何も無い状態になる。
