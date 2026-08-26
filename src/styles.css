@@ -715,7 +715,20 @@
   @media (prefers-reduced-motion: reduce) {
     .tourHi { animation: none; }
   }
-  /* 自動送りの残り時間 (幅のトランジションで伸ばすので rAF は増やさない) */
+  /* 待っているものが済んだかどうかを 次へ の見え方で出す。早送りの途中や
+     操作待ちのあいだは控えめにし、済んだら短く脈打たせる — どこで押せば
+     いいのかが、ナレーションを読んだだけでは分からないため */
+  #tourBar.pending #tourNext { opacity: 0.55; }
+  #tourBar.ready #tourNext { animation: tourReady 1.1s ease-out 3; }
+  @keyframes tourReady {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(242, 178, 62, 0); }
+    30%      { box-shadow: 0 0 0 5px rgba(242, 178, 62, 0.30); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #tourBar.ready #tourNext { animation: none; }
+  }
+  /* 早送りの進み具合と、自動送りの残り時間 (幅のトランジションで伸ばすので
+     rAF は増やさない。早送りのほうは毎フレーム幅を書き替える) */
   #tourProg {
     position: absolute; top: 0; left: 0; height: 2px; width: 0;
     background: var(--accent); border-radius: 6px 0 0 0;

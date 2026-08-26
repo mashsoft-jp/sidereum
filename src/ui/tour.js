@@ -36,6 +36,8 @@
   let tourHiEls = [];         // ハイライト中の要素 (hi は複数指定できる)
   let tourSceneDone = false;  // このツアーでシーンを一度でも適用したか
   let tourUntil = null;       // 早送りステップの停止日時 (simDays)
+  let tourUntil0 = 0;         // 同じく開始日時 (どこまで進んだかを帯で出すため)
+  let tourDoneKind = "";      // 合図の中身: "good" (操作を検知) / "played" (早送りが終わった)
   // 探査機視点の寄り (既定の倍率)。機体は記号として一定の画素数で描くので、
   // 寄せたぶんだけ天体だけが大きくなり、機体との大小の差が実物の比に近づく。
   // ステップの mag はこれに掛かる — 最接近距離は天体ごとに全く違うので
@@ -213,20 +215,28 @@
   function armTourAwait(s) {
     clearTimeout(tourDoneTimer);
     tourDoneTimer = 0;
-    tourBar.classList.remove("done");
+    tourBar.classList.remove("done", "ready");
     const f = s.await && TOUR_AWAIT[s.await];
     tourAwaitTest = f ? f(s) : null;
     // until は再生するステップでだけ効かせる。停止中のステップにも効くと、
     // 畳み込みで引き継がれた until を開始時点で満たして即座に進んでしまう
     const t = s.play && s.until ? Date.parse(s.until + "Z") : NaN;
     tourUntil = isFinite(t) ? (t - J2000) / DAY_MS : null;
+    tourUntil0 = simDays;
+    // このステップに「終わりを待つもの」があるかを見た目に出す。早送りの
+    // 途中や操作待ちのあいだは 次へ を控えめにしておく — ナレーションを
+    // 読んだだけでは、まだ何か起きるのか終わったのかが分からないため
+    tourBar.classList.toggle("pending", !!tourAwaitTest || tourUntil !== null);
   }
-  // 「できました」は操作を検知したときの合図なので、until で時間が来ただけの
-  // 早送りステップでは出さない。
+  // 待っていたものが済んだときの合図。操作を検知したときと、早送りが終わった
+  // ときとで言い方を変える (後者は利用者が何かしたわけではない)。
   // 次へ進むのは自動送りが ON のときだけ — OFF なら着いた場面のまま待つ。
   // 最後のステップでは進めない (自動送りでツアーが勝手に終わってしまう)
   function tourAdvance(showDone) {
-    if (showDone) tourBar.classList.add("done");
+    tourDoneKind = showDone ? "good" : "played";
+    tourDoneEl.textContent = showDone ? T().tourGood : T().tourPlayed;
+    tourBar.classList.remove("pending");
+    tourBar.classList.add("done", "ready");
     if (!tourAuto || tourIdx >= tour.steps.length - 1) return;
     tourDoneTimer = setTimeout(() => tourGo(tourIdx + 1), 900);
   }
@@ -238,14 +248,23 @@
         Math.abs(wrapPi(cam.yaw - cam.yawTgt)) < 0.03) {
       tourProbeHold = false;
     }
-    // 早送りのステップ: 指定日時に達したら止める。rAF が止まっていた時間は
-    // 復帰フレームで一気に進むので、行き過ぎないよう日時も丸める
-    if (tourUntil !== null && simDays >= tourUntil) {
-      simDays = tourUntil;
-      setPlaying(false);
-      tourUntil = null;
-      tourAdvance(false);
-      return;
+    // 早送りのステップ: どこまで進んだかを帯で出しつつ、指定日時に達したら
+    // 止める。止まる時刻は画面に出ていないので、帯が無いと「まだ動くのか、
+    // もう終わったのか」が分からない。
+    // rAF が止まっていた時間は復帰フレームで一気に進むので、行き過ぎない
+    // よう日時も丸める
+    if (tourUntil !== null) {
+      const span = tourUntil - tourUntil0;
+      tourProgEl.style.transition = "none";
+      tourProgEl.style.width =
+        (span > 0 ? Math.max(0, Math.min(1, (simDays - tourUntil0) / span)) : 1) * 100 + "%";
+      if (simDays >= tourUntil) {
+        simDays = tourUntil;
+        setPlaying(false);
+        tourUntil = null;
+        tourAdvance(false);
+        return;
+      }
     }
     if (!tourAwaitTest || !tourAwaitTest()) return;
     tourAwaitTest = null;
@@ -642,7 +661,7 @@
     tourAutoBtn.classList.toggle("on", tourAuto);
     tourResumeBtn.textContent = t.tourResume;
     tourCloseBtn.title = t.tourExit;
-    tourDoneEl.textContent = t.tourGood;
+    tourDoneEl.textContent = tourDoneKind === "played" ? t.tourPlayed : t.tourGood;
   }
 
   function tourGo(i) {
