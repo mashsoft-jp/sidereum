@@ -55,7 +55,11 @@
     if (d < -Math.PI) d += 2 * Math.PI;
     gAzTgt = gAz + d;
     gAltTgt = Math.max(-1.3, Math.min(GALT_MAX, c.alt * DEG));
-    if (instant) { gAz = gAzTgt; gAlt = gAltTgt; gTrkKey = ""; }
+    // 天体を追うときと同じ扱い (aimGroundAt の注記を参照)
+    if (instant) {
+      gAz = gAzTgt; gAlt = gAltTgt;
+      gTrkKey = "@" + key; gTrkAz = c.az * DEG; gTrkAlt = c.alt * DEG;
+    }
     return true;
   }
   // 視野の円錐 (対角) の半角。流星はこの中だけに出し、そのぶん出現数も
