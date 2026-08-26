@@ -186,6 +186,7 @@
     menuCalBtn.textContent = t.menuCal;
     menuAboutBtn.textContent = t.menuAbout;
     updateGridLabel();
+    updateDsoLabel();
     updateTerrainLabel();
     updateMeteorLabel();
     updateBloomLabel();

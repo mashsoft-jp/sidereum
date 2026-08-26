@@ -73,6 +73,23 @@
   let surfaceBody = "earth";              // "earth" | "moon"
   let moonLat = 0, moonLon = 0;           // 月面 (selenographic) 観測地点
   const obsE = [0, 0, 0], obsU = [0, 0, 0], obsN = [0, 0, 0], obsPosW = [0, 0, 0];
+  // 星雲・星団を観測者フレームへ置く (drawDso のコールバック)。恒星と同じく
+  // 大気差で持ち上げ、大気減光を掛ける
+  const _dsoR = [0, 0, 0], _dsoU = [0, 0, 0];
+  function groundDsoAt(i, out) {
+    const wx = dsoW[i*3], wy = dsoW[i*3+1], wz = dsoW[i*3+2];
+    const up = wx*obsU[0]+wy*obsU[1]+wz*obsU[2];
+    if (up < 0.005) return false;
+    const east = wx*obsE[0]+wy*obsE[1]+wz*obsE[2];
+    const north = wx*obsN[0]+wy*obsN[1]+wz*obsN[2];
+    const rf = refractUp(up), hz = rf[0] * SKYR;
+    out[0] = east * hz; out[1] = rf[1] * SKYR; out[2] = -north * hz;
+    if (surfaceBody !== "moon") {          // 月面には大気が無い
+      const eo = extIdx(up);
+      out[3] = EXT_TBL[eo]; out[4] = EXT_TBL[eo+1]; out[5] = EXT_TBL[eo+2];
+    }
+    return true;
+  }
   function eqToWorld(xq, yq, zq, out) {   // 赤道単位ベクトル → 黄道 → ワールド
     const ce = Math.cos(ECL), se = Math.sin(ECL);
     const ey = yq * ce + zq * se, ez = -yq * se + zq * ce;
@@ -289,6 +306,12 @@
     drawMilkyWay(gVP32, mwEqGround(), SKYR * 1.4,
                  (isMoonSurf ? MW_SPACE_BRIGHT : MW_GROUND_BRIGHT) * starVis,
                  isMoonSurf ? 0 : 1, isMoonSurf ? null : EXT_K);
+
+    // 星雲・星団。恒星より先に描く (淡いしみの上に星の点が乗る)。
+    // 板は常に画面を向くので、カメラの右・上をワールドで渡す
+    _dsoR[0] = gV64[0]; _dsoR[1] = gV64[4]; _dsoR[2] = gV64[8];
+    _dsoU[0] = gV64[1]; _dsoU[1] = gV64[5]; _dsoU[2] = gV64[9];
+    drawDso(gVP32, _dsoR, _dsoU, SKYR, starVis, gFov * 0.5, H * 0.5, groundDsoAt);
 
     // 星座線 (観測者フレームへ投影。地平線より上のセグメントのみ)。恒星より先に描く
     if (showConst && CONST_SEG.length) {
@@ -849,6 +872,26 @@
       azAltDir(az, 0, _gp);
       const s = projGround([_gp[0]*SKYR, _gp[1]*SKYR, _gp[2]*SKYR]);
       if (s && s.x >= 0 && s.x <= W && s.y >= 0 && s.y <= H) octx.fillText(lab, s.x, s.y - 4);
+    }
+    // 星雲・星団の名前。淡くて小さいものまで全部出すと画面が名前で埋まるので、
+    // 明るいか、画角に対してある程度の大きさがあるものだけに絞る
+    if (dsoOn && dsoW && starVis > 0.04) {
+      octx.fillStyle = "rgba(190,205,235," + (0.62 * starVis).toFixed(3) + ")";
+      const hf = gFov * 0.5;
+      for (let i = 0; i < DSO.length; i++) {
+        if (!dsoLabelled(i, hf)) continue;
+        const wx = dsoW[i*3], wy = dsoW[i*3+1], wz = dsoW[i*3+2];
+        const up = wx*obsU[0]+wy*obsU[1]+wz*obsU[2];
+        if (up < 0.02) continue;
+        const east = wx*obsE[0]+wy*obsE[1]+wz*obsE[2];
+        const north = wx*obsN[0]+wy*obsN[1]+wz*obsN[2];
+        const rf = refractUp(up), hz = rf[0] * SKYR;
+        const sp = projGround([east * hz, rf[1] * SKYR, -north * hz]);
+        if (!sp || sp.x < 0 || sp.x > W || sp.y < 0 || sp.y > H) continue;
+        // 名前は天体の下に。長径の半分ぶん下げて、しみに重ならないようにする
+        const rpx = DSO[i][4] / 120 * DEG / hf * (H * 0.5);
+        octx.fillText(dsoName(i), sp.x, sp.y + Math.min(rpx, H * 0.2) + 13);
+      }
     }
     // 星座名 (観測者フレームへ投影。地平線より上のもの)
     if (showConst && starVis > 0.04) {

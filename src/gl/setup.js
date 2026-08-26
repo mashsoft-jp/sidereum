@@ -114,6 +114,10 @@
   const meshFS = EXT_DERIV
     + PRE + `@@glsl:mesh.frag@@`;
 
+  // ---- 星雲・星団 (ぼんやりした楕円の板。加算) ----
+  const dsoVS = `@@glsl:dso.vert@@`;
+  const dsoFS = PRE + `@@glsl:dso.frag@@`;
+
   // ---- ポストエフェクト (Bloom)。画面全体を覆う三角形へ描く ----
   const postVS = `@@glsl:post.vert@@`;
   const threshFS = PRE + `@@glsl:post-thresh.frag@@`;
@@ -123,7 +127,7 @@
   // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
   // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
   let bodyRenderer;
-  let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP, skyP;
+  let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP, skyP, dsoP;
   let threshP, blurP, addP;
   try {
     bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
@@ -135,6 +139,7 @@
     tailP = program(tailVS, tailFS);
     comaP = program(comaVS, comaFS);
     meteorP = program(meteorVS, meteorFS);
+    dsoP = program(dsoVS, dsoFS);
     terrainP = program(terrainVS, terrainFS);
     meshP = program(meshVS, meshFS);
     threshP = program(postVS, threshFS);

@@ -60,6 +60,13 @@
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     drawMilkyWay(VP, mwEqSpace(), MW_R, MW_SPACE_BRIGHT, 0);
+
+    // --- 星雲・星団 (天の川の上、恒星より先) ---
+    // 板は画面を向くので、ビュー行列からカメラの右・上をワールドで取る。
+    // 真空なので大気減光は無い
+    _dsoR[0] = Vm[0]; _dsoR[1] = Vm[4]; _dsoR[2] = Vm[8];
+    _dsoU[0] = Vm[1]; _dsoU[1] = Vm[5]; _dsoU[2] = Vm[9];
+    drawDso(VP, _dsoR, _dsoU, DSO_R, 1, eFov() * 0.5, H * 0.5, spaceDsoAt);
     gl.enable(gl.DEPTH_TEST);
 
     // --- 星空 (カメラ位置中心, 深度書き込みなし) ---

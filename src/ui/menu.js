@@ -41,6 +41,17 @@
     updateGridLabel();
   });
 
+  // 星雲・星団・銀河 (メシエ天体)。恒星と同じく3ビューとも効く
+  const menuDsoBtn = document.getElementById("menuDso");
+  function updateDsoLabel() {
+    setMenuCheck(menuDsoBtn, T().menuDso, dsoOn);
+  }
+  menuDsoBtn.addEventListener("click", () => {
+    dsoOn = !dsoOn;
+    try { localStorage.setItem("ssDso", dsoOn ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
+    updateDsoLabel();
+  });
+
   // 風景 (地面の質感・地平の稜線・空の色) の表示切替。地上・月面ビューのみ効く
   const menuTerrainBtn = document.getElementById("menuTerrain");
   function updateTerrainLabel() {
@@ -333,7 +344,7 @@
       imgBody: "以下の天体の表面には、NASA / USGS のパブリックドメイン画像を使用しています。",
       proc: "太陽・土星 (環を含む)・天王星・海王星・パラス・ジュノーは、シェーダによる生成テクスチャです (実写ではありません)。",
       data: "データと精度",
-      dataBody: "軌道間隔・天体の大きさとも実寸比で表示しています。天体位置は J2000 平均軌道要素 (NASA JPL 公表値) にもとづくケプラー軌道の近似計算です。教育・可視化目的であり、天文計算・観測用途の精度はありません。小惑星の軌道上の位相は概略です。恒星 (宇宙ビューの背景・地上ビューとも) は Yale Bright Star Catalogue 第5改訂版 (Hoffleit & Warren 1991, パブリックドメイン) の実位置・実等級 (6.5等まで・約8,400星)、色は B-V 色指数にもとづく近似です。星座線は d3-celestial (Olaf Frohn, BSD-2-Clause) を使用しています。天の川は Deep Star Maps 2020 の拡散光版 (NASA/Goddard Space Flight Center Scientific Visualization Studio。Gaia DR2: ESA/Gaia/DPAC) を天球に貼ったものです。月の向きはカシニの法則 (自転周期 = 公転周期、極は黄道から 1.54° 傾き、交点は軌道と共通) で組んでいるので、光学秤動 — 経度 ±8.0°・緯度 ±6.8° の首振り — は出ます。物理秤動 (数分角) と日周秤動は省略しています。",
+      dataBody: "軌道間隔・天体の大きさとも実寸比で表示しています。天体位置は J2000 平均軌道要素 (NASA JPL 公表値) にもとづくケプラー軌道の近似計算です。教育・可視化目的であり、天文計算・観測用途の精度はありません。小惑星の軌道上の位相は概略です。恒星 (宇宙ビューの背景・地上ビューとも) は Yale Bright Star Catalogue 第5改訂版 (Hoffleit & Warren 1991, パブリックドメイン) の実位置・実等級 (6.5等まで・約8,400星)、色は B-V 色指数にもとづく近似です。星座線は d3-celestial (Olaf Frohn, BSD-2-Clause) を使用しています。星雲・星団・銀河 (メシエ天体109個と二重星団) は OpenNGC (Mattia Verga, CC-BY-SA-4.0) の位置・等級・視直径によるもので、面輝度として描いています。天の川は Deep Star Maps 2020 の拡散光版 (NASA/Goddard Space Flight Center Scientific Visualization Studio。Gaia DR2: ESA/Gaia/DPAC) を天球に貼ったものです。月の向きはカシニの法則 (自転周期 = 公転周期、極は黄道から 1.54° 傾き、交点は軌道と共通) で組んでいるので、光学秤動 — 経度 ±8.0°・緯度 ±6.8° の首振り — は出ます。物理秤動 (数分角) と日周秤動は省略しています。",
       disc: "本アプリは NASA・USGS とは無関係であり、両機関による承認・推奨を意味するものではありません。",
     } : {
       lic: "License",
@@ -345,7 +356,7 @@
       imgBody: "The surfaces of the following bodies use public-domain imagery from NASA / USGS.",
       proc: "The Sun, Saturn (incl. rings), Uranus, Neptune, Pallas and Juno use procedurally generated textures (not actual imagery).",
       data: "Data & accuracy",
-      dataBody: "Orbital spacing and body sizes are displayed to actual scale. Positions are approximated with Keplerian orbits based on J2000 mean orbital elements published by NASA JPL. This app is for education and visualization; it is not suitable for astronomical or observational use. Orbital phases of the asteroids are approximate. Stars (both the space-view background and the ground view) use real positions and magnitudes (mag ≤ 6.5, ~8,400 stars) from the Yale Bright Star Catalogue, 5th Revised Ed. (Hoffleit & Warren 1991, public domain); colors are approximated from the B-V index. Constellation lines are from d3-celestial (Olaf Frohn, BSD-2-Clause). The Milky Way is the diffuse-only layer of Deep Star Maps 2020 (NASA/Goddard Space Flight Center Scientific Visualization Studio; Gaia DR2: ESA/Gaia/DPAC), mapped onto the celestial sphere. The Moon's orientation follows Cassini's laws (rotation period = orbital period; pole tilted 1.54° from the ecliptic, sharing the orbit's node), so optical libration — the ±8.0° / ±6.8° nodding of the disc — is reproduced. Physical libration (a few arcminutes) and diurnal libration are omitted.",
+      dataBody: "Orbital spacing and body sizes are displayed to actual scale. Positions are approximated with Keplerian orbits based on J2000 mean orbital elements published by NASA JPL. This app is for education and visualization; it is not suitable for astronomical or observational use. Orbital phases of the asteroids are approximate. Stars (both the space-view background and the ground view) use real positions and magnitudes (mag ≤ 6.5, ~8,400 stars) from the Yale Bright Star Catalogue, 5th Revised Ed. (Hoffleit & Warren 1991, public domain); colors are approximated from the B-V index. Constellation lines are from d3-celestial (Olaf Frohn, BSD-2-Clause). Deep-sky objects (109 Messier objects and the Double Cluster) use positions, magnitudes and apparent sizes from OpenNGC (Mattia Verga, CC-BY-SA-4.0), rendered as surface brightness. The Milky Way is the diffuse-only layer of Deep Star Maps 2020 (NASA/Goddard Space Flight Center Scientific Visualization Studio; Gaia DR2: ESA/Gaia/DPAC), mapped onto the celestial sphere. The Moon's orientation follows Cassini's laws (rotation period = orbital period; pole tilted 1.54° from the ecliptic, sharing the orbit's node), so optical libration — the ±8.0° / ±6.8° nodding of the disc — is reproduced. Physical libration (a few arcminutes) and diurnal libration are omitted.",
       disc: "This app is not affiliated with, nor endorsed by, NASA or USGS.",
     };
     aboutEl.innerHTML =
