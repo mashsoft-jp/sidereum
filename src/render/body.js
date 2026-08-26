@@ -170,7 +170,9 @@
       // 「天体 → 実際の太陽」方向を遠方光源の位置として渡す
       // radiusPx = 画面上の見かけの半径。夜側の明るさ (満ち欠けの見え方) を決める
       // eclipse = 太陽面を隠している天体 {c, r, sunAng, col}。無ければ null
-      draw({ body, model, mvp, sunPosition, radiusPx, eclipse }) {
+      // ext は大気減光の透過率 (RGB)。地上ビューで天体ごとに変わる。
+      // 大気が無い経路 (宇宙・月面) は省略 = 1,1,1
+      draw({ body, model, mvp, sunPosition, radiusPx, eclipse, ext = null }) {
         if (!inPass) throw new Error("bodyRenderer: beginPass より前に draw が呼ばれました");
         const tx = texByKey.get(body.key);
         // 法線図を持つ天体だけユニット4を差し替える。持たない天体でも
@@ -187,6 +189,7 @@
         gl.uniformMatrix4fv(u.uModel, false, model);
         gl.uniform3f(u.uSun, sunPosition[0], sunPosition[1], sunPosition[2]);
         gl.uniform1f(u.uComet, body.comet ? 1 : 0);
+        gl.uniform3f(u.uExt, ext ? ext[0] : 1, ext ? ext[1] : 1, ext ? ext[2] : 1);
         // 扁平は天体ごと。真球は 1,1,1 (条件分岐で省くと前の天体の値が残る)
         gl.uniform3fv(u.uOblate, body.obl || NO_OBL);
         gl.uniform1f(u.uRingOn, body.ring ? 1 : 0);

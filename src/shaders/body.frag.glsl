@@ -6,6 +6,7 @@
     uniform float uAirDay;  // 空の明るさ 0〜1。宇宙ビューは 0 (大気が無い)
     uniform float uAirFlux; // 大気へ届いている太陽の光量 (0 = 大気が無い)
     uniform float uAirGain; // 目の順応 (空ドームと同じ値)
+    uniform vec3 uExt;      // 大気減光の透過率 (RGB)。大気が無い経路では 1
     uniform vec4 uParams;
     uniform sampler2D uTex;
     uniform mat4 uModel;        // 中心・極方向・スケールを取り出すのに使う
@@ -84,7 +85,7 @@
                        vec3(0.520, 0.220, 0.080),     // 前方散乱 (朝焼け色)
                        fwd * 0.7)
                  * (1.0 - exp(-tau)) * sun;
-        gl_FragColor = vec4(tonemap(col), 0.0);       // 乗算済みアルファでの加算
+        gl_FragColor = vec4(tonemap(col * uExt), 0.0);   // 乗算済みアルファでの加算
         return;
       }
 
@@ -148,7 +149,8 @@
         float rim = 1.0 - smoothstep(0.0, 0.22, mu);
         float flame = fbm(p * 9.0 + vec3(uTime * 0.03, 0.0, 0.0));
         c += vec3(2.30, 0.30, 0.16) * pow(rim, 2.2) * (0.35 + 0.9 * flame);
-        gl_FragColor = vec4(tonemap(c), 1.0);
+        // 大気減光。日の出入りの太陽が赤く、直視できるほど暗いのはこれ
+        gl_FragColor = vec4(tonemap(c * uExt), 1.0);
         return;
       }
 
@@ -363,6 +365,10 @@
       // 大気は天体より手前にあるので色を上乗せする。これが無いと、新月ごろの月が
       // 青空に黒い円盤として浮いてしまう (実際は夜側は空と見分けがつかない)。
       // 空ドームと同じリニア値のまま足し、最後にまとめてトーンマップする
+      // 大気減光。ここまでが「天体から届く光」なので、まとめて減らす。
+      // 続くエアライトは大気そのものが光っているぶんなので掛けない
+      // (掛けると二重に減ることになる)
+      c *= uExt;
       c += skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain;
       gl_FragColor = vec4(tonemap(c), 1.0);
     }

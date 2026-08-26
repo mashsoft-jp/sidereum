@@ -288,7 +288,7 @@
     // 不透明で描かれるので、地平線より下は隠れる)。昼は星と同じだけ薄れる
     drawMilkyWay(gVP32, mwEqGround(), SKYR * 1.4,
                  (isMoonSurf ? MW_SPACE_BRIGHT : MW_GROUND_BRIGHT) * starVis,
-                 isMoonSurf ? 0 : 1);
+                 isMoonSurf ? 0 : 1, isMoonSurf ? null : EXT_K);
 
     // 星座線 (観測者フレームへ投影。地平線より上のセグメントのみ)。恒星より先に描く
     if (showConst && CONST_SEG.length) {
@@ -382,7 +382,9 @@
     // 恒星 (実カタログ, 地平線より上のみ)。ワールド単位方向を観測者フレームへ投影
     if (N_CAT) {
       if (!starGVB) starGVB = gl.createBuffer();
-      // 大気の無い月面では減光が効かないので、地上より一段大きく・明るく描く
+      // 大気の無い月面では減光 (EXT_TBL) が効かないので、地上より一段
+      // 大きく・明るく描く
+      const extT = isMoonSurf ? null : EXT_TBL;
       const szK = isMoonSurf ? 4.9 : 4.0, szMin = isMoonSurf ? 1.6 : 0.9;
       const brK = isMoonSurf ? 1.35 : 1.15, brA = isMoonSurf ? 0.115 : 0.13;
       const brMin = isMoonSurf ? 0.62 : 0.3;
@@ -400,7 +402,12 @@
         starGArr[o+3] = Math.max(szMin, szK - 0.55 * m);
         const c = Math.max(brMin, Math.min(1, brK - brA * m));
         const col = STAR_COL[i];                  // B-V 色指数による実際の色味
-        starGArr[o+4] = col[0] * c; starGArr[o+5] = col[1] * c; starGArr[o+6] = col[2] * c;
+        // 大気減光。地平ぎわほど暗く、青から先に失われて赤く残る
+        let e0 = 1, e1 = 1, e2 = 1;
+        if (extT) { const eo = extIdx(up); e0 = extT[eo]; e1 = extT[eo+1]; e2 = extT[eo+2]; }
+        starGArr[o+4] = col[0] * c * e0;
+        starGArr[o+5] = col[1] * c * e1;
+        starGArr[o+6] = col[2] * c * e2;
         ns++;
       }
       if (ns) {
@@ -451,7 +458,8 @@
       const px = _gp[0]*SKYR, py = _gp[1]*SKYR, pz = _gp[2]*SKYR;
       groundVis.push({ b, px, py, pz, rpx: spherePx });
       if (spherePx >= 5) {                          // 画面上で十分大きい → 球
-        bigBodies.push({ b, px, py, pz, dist: distAU,
+        // 大気減光に使う sin(高度) は、ドームの半径を縮める前に控えておく
+        bigBodies.push({ b, px, py, pz, dist: distAU, sa: _gp[1],
                          wr: SKYR * Math.tan(angR), rpx: spherePx });
         continue;
       }
@@ -463,6 +471,11 @@
         size = 11; r = 0.9; g = 0.92; bl = 0.96;
       } else {
         size = magSize(magV == null ? 3.5 : magV); r = b.colA[0]*0.5+0.5; g = b.colA[1]*0.5+0.5; bl = b.colA[2]*0.5+0.5;
+      }
+      // 恒星と同じく大気減光を掛ける (月面では素通り)
+      if (!isMoonSurf) {
+        const eo = extIdx(_gp[1]);
+        r *= EXT_TBL[eo]; g *= EXT_TBL[eo+1]; bl *= EXT_TBL[eo+2];
       }
       const o = n * 7;
       groundPtArr[o]=px; groundPtArr[o+1]=py; groundPtArr[o+2]=pz;
@@ -561,7 +574,8 @@
         }
         const mvp = mMul(gVP, m, SCR.mvp);
         SCR.model.set(m);   // uModel は f32 で十分 (法線用)。f64 配列を直接渡さない
-        bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun, radiusPx: bb.rpx, eclipse });
+        bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun, radiusPx: bb.rpx,
+                            eclipse, ext: isMoonSurf ? null : extinct(bb.sa) });
         if (b.air) {
           // 行列とやりたいことは本体と同じで、大きさだけ (1 + air) 倍にする。
           // gM64 は次の天体で上書きされるので、ここで取っておく
@@ -680,14 +694,14 @@
       if (sv && sinAlt > 0) {
         // 日食で隠れているぶんは眩しくない。皆既ではグレアが完全に消え、
         // 空だけが暗く残る
-        const fade = (surfaceBody === "moon"
-          ? 1 : Math.min(1, sinAlt / 0.10)) * (1 - sunCov);
-        // 大気を長く通るほど青が抜けて赤くなる (夕日が赤い理由)。地平ぎわの
-        // 太陽を白いまま光らせると、周りが焼けているのにそこだけ昼の色になる。
-        // 月面には大気が無いので白のまま
-        const red = surfaceBody === "moon"
-          ? 1 : Math.min(1, Math.max(0, sinAlt) / 0.30);
-        const gm = 0.30 + 0.70 * red, bm = 0.08 + 0.92 * red * red;
+        // 眩しさは届いている光の量そのものなので、大気減光をそのまま使う。
+        // 大気を長く通るほど青から抜けて赤くなり (夕日が赤い理由)、量も減る
+        // ので、地平ぎわの太陽は直視できるほど暗い。月面には大気が無いので
+        // 昇った瞬間から白いまま容赦なく眩しい
+        const ge = surfaceBody === "moon" ? null : extinct(sinAlt);
+        const fade = (ge ? ge[0] : 1) * (1 - sunCov);
+        const gm = ge ? ge[1] / Math.max(ge[0], 1e-6) : 1;
+        const bm = ge ? ge[2] / Math.max(ge[0], 1e-6) : 1;
         // 残っている側の重心は、月の中心から太陽の中心へ向かう向きへ
         // 「食分ぶん × 太陽の半径」だけ進んだあたり
         let cx = sv.px, cy = sv.py, cz = sv.pz;

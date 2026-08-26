@@ -6,10 +6,12 @@
     uniform mat3 uEq;        // 描画フレームの方向 → 赤道座標
     uniform float uBright;   // 明るさ (昼は 0 へ落とす)
     uniform float uRefr;     // 1 = 地上ビュー (大気差を戻してから地図を引く)
+    uniform vec3 uExtK;      // 大気減光 [等級/大気路長]。大気の無い経路では 0
     uniform sampler2D uTex;
 
     void main() {
       vec3 dir = normalize(vDir);
+      float aAlt = degrees(asin(clamp(dir.y, -1.0, 1.0)));   // 見かけの高度 (減光に使う)
       if (uRefr > 0.5) {
         // この画素が指しているのは「見かけの向き」なので、地図を引く前に
         // 大気差ぶん下げる。恒星・星座線を持ち上げているのと同じ量だけずらす
@@ -39,5 +41,12 @@
 #else
       vec3 c = texture2D(uTex, uv).rgb;
 #endif
+      // 大気減光。地平ぎわの天の川は青から失われ、薄れて消える。
+      // 恒星に掛けているのと同じ式 (core/math.js の EXT_K)
+      if (uExtK.g > 0.0) {
+        float h = max(aAlt, -1.5);
+        float X = 1.0 / (sin(radians(h)) + 0.50572 * pow(h + 6.07995, -1.6364));
+        c *= exp2(-1.3287712 * uExtK * (X - 1.0));   // 10^(-0.4 k (X-1))
+      }
       gl_FragColor = vec4(c * uBright, 0.0);   // 乗算済みアルファでの加算
     }

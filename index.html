@@ -3950,6 +3950,45 @@
     return h >= -1.5 ? r : r * Math.max(0, 1 + (h + 1.5) / 2.5);
   }
 
+  // ---------- 大気減光 ----------
+  // 大気を長く通るほど光は減る。地平ぎわで星が消えるのも、日の出入りの太陽が
+  // 直視できるほど暗いのもこれ。大気差 (refractRad) と対になる量で、片方だけ
+  // 入れると「位置は正しいのに、地平まで天頂と同じ明るさで光っている」画になる。
+  //
+  // 大気路長 X は Kasten & Young (1989) の近似 (地平で 38 ほどまで伸びる)。
+  // 減光は青ほど強い — 夕日が赤いのはこれなので、係数は RGB で持つ。
+  // 大気の外との比ではなく画面上の相対でよいので、天頂を 1 に正規化する。
+  // こうしておけば、これまでの明るさの調整をやり直さずに済む。
+  //
+  // 高度から引く表を最初に一度だけ作る。恒星は毎フレーム 8,400 個ぶん引くので、
+  // そのたびに pow を回すと効いてくる。表は sin(高度) で引く — 恒星の側は
+  // 観測者の天頂ベクトルとの内積をそのまま持っており、asin を挟まずに済む
+  const EXT_K = [0.13, 0.19, 0.28];    // RGB [等級/大気路長] 快晴・海面のおおよそ
+  const EXT_N = 1024;
+  const EXT_TBL = new Float32Array(EXT_N * 3);
+  {
+    for (let i = 0; i < EXT_N; i++) {
+      const sinH = i / (EXT_N - 1);
+      const h = Math.max(Math.asin(Math.min(1, sinH)) / DEG, -1.5);
+      const X = 1 / (Math.sin(h * DEG) + 0.50572 * Math.pow(h + 6.07995, -1.6364));
+      for (let k = 0; k < 3; k++) {
+        EXT_TBL[i * 3 + k] = Math.pow(10, -0.4 * EXT_K[k] * (X - 1));
+      }
+    }
+  }
+  // sin(高度) → 透過率の表の先頭添字。地平線より下は地平の値で頭打ちにする
+  function extIdx(sinAlt) {
+    const i = sinAlt > 0 ? (sinAlt < 1 ? (sinAlt * (EXT_N - 1)) | 0 : EXT_N - 1) : 0;
+    return i * 3;
+  }
+  // 単発で使う用 (天体ごとなど、回数が少ないところ)
+  const _ext = [1, 1, 1];
+  function extinct(sinAlt) {
+    const o = extIdx(sinAlt);
+    _ext[0] = EXT_TBL[o]; _ext[1] = EXT_TBL[o + 1]; _ext[2] = EXT_TBL[o + 2];
+    return _ext;
+  }
+
   // ---------- 歳差 (J2000 平均分点 ⇄ その日の平均分点) ----------
   // 天体の位置も恒星カタログも J2000 のままなのに、時角はその日のグリニッジ
   // 恒星時と比べていた。空全体が一様に回転してずれるので、天体と星の位置関係は
@@ -4457,6 +4496,7 @@
     uniform float uAirDay;  // 空の明るさ 0〜1。宇宙ビューは 0 (大気が無い)
     uniform float uAirFlux; // 大気へ届いている太陽の光量 (0 = 大気が無い)
     uniform float uAirGain; // 目の順応 (空ドームと同じ値)
+    uniform vec3 uExt;      // 大気減光の透過率 (RGB)。大気が無い経路では 1
     uniform vec4 uParams;
     uniform sampler2D uTex;
     uniform mat4 uModel;        // 中心・極方向・スケールを取り出すのに使う
@@ -4535,7 +4575,7 @@
                        vec3(0.520, 0.220, 0.080),     // 前方散乱 (朝焼け色)
                        fwd * 0.7)
                  * (1.0 - exp(-tau)) * sun;
-        gl_FragColor = vec4(tonemap(col), 0.0);       // 乗算済みアルファでの加算
+        gl_FragColor = vec4(tonemap(col * uExt), 0.0);   // 乗算済みアルファでの加算
         return;
       }
 
@@ -4599,7 +4639,8 @@
         float rim = 1.0 - smoothstep(0.0, 0.22, mu);
         float flame = fbm(p * 9.0 + vec3(uTime * 0.03, 0.0, 0.0));
         c += vec3(2.30, 0.30, 0.16) * pow(rim, 2.2) * (0.35 + 0.9 * flame);
-        gl_FragColor = vec4(tonemap(c), 1.0);
+        // 大気減光。日の出入りの太陽が赤く、直視できるほど暗いのはこれ
+        gl_FragColor = vec4(tonemap(c * uExt), 1.0);
         return;
       }
 
@@ -4814,6 +4855,10 @@
       // 大気は天体より手前にあるので色を上乗せする。これが無いと、新月ごろの月が
       // 青空に黒い円盤として浮いてしまう (実際は夜側は空と見分けがつかない)。
       // 空ドームと同じリニア値のまま足し、最後にまとめてトーンマップする
+      // 大気減光。ここまでが「天体から届く光」なので、まとめて減らす。
+      // 続くエアライトは大気そのものが光っているぶんなので掛けない
+      // (掛けると二重に減ることになる)
+      c *= uExt;
       c += skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain;
       gl_FragColor = vec4(tonemap(c), 1.0);
     }`;
@@ -4839,10 +4884,12 @@
     uniform mat3 uEq;        // 描画フレームの方向 → 赤道座標
     uniform float uBright;   // 明るさ (昼は 0 へ落とす)
     uniform float uRefr;     // 1 = 地上ビュー (大気差を戻してから地図を引く)
+    uniform vec3 uExtK;      // 大気減光 [等級/大気路長]。大気の無い経路では 0
     uniform sampler2D uTex;
 
     void main() {
       vec3 dir = normalize(vDir);
+      float aAlt = degrees(asin(clamp(dir.y, -1.0, 1.0)));   // 見かけの高度 (減光に使う)
       if (uRefr > 0.5) {
         // この画素が指しているのは「見かけの向き」なので、地図を引く前に
         // 大気差ぶん下げる。恒星・星座線を持ち上げているのと同じ量だけずらす
@@ -4872,6 +4919,13 @@
 #else
       vec3 c = texture2D(uTex, uv).rgb;
 #endif
+      // 大気減光。地平ぎわの天の川は青から失われ、薄れて消える。
+      // 恒星に掛けているのと同じ式 (core/math.js の EXT_K)
+      if (uExtK.g > 0.0) {
+        float h = max(aAlt, -1.5);
+        float X = 1.0 / (sin(radians(h)) + 0.50572 * pow(h + 6.07995, -1.6364));
+        c *= exp2(-1.3287712 * uExtK * (X - 1.0));   // 10^(-0.4 k (X-1))
+      }
       gl_FragColor = vec4(c * uBright, 0.0);   // 乗算済みアルファでの加算
     }
 `;
@@ -6919,7 +6973,9 @@
       // 「天体 → 実際の太陽」方向を遠方光源の位置として渡す
       // radiusPx = 画面上の見かけの半径。夜側の明るさ (満ち欠けの見え方) を決める
       // eclipse = 太陽面を隠している天体 {c, r, sunAng, col}。無ければ null
-      draw({ body, model, mvp, sunPosition, radiusPx, eclipse }) {
+      // ext は大気減光の透過率 (RGB)。地上ビューで天体ごとに変わる。
+      // 大気が無い経路 (宇宙・月面) は省略 = 1,1,1
+      draw({ body, model, mvp, sunPosition, radiusPx, eclipse, ext = null }) {
         if (!inPass) throw new Error("bodyRenderer: beginPass より前に draw が呼ばれました");
         const tx = texByKey.get(body.key);
         // 法線図を持つ天体だけユニット4を差し替える。持たない天体でも
@@ -6936,6 +6992,7 @@
         gl.uniformMatrix4fv(u.uModel, false, model);
         gl.uniform3f(u.uSun, sunPosition[0], sunPosition[1], sunPosition[2]);
         gl.uniform1f(u.uComet, body.comet ? 1 : 0);
+        gl.uniform3f(u.uExt, ext ? ext[0] : 1, ext ? ext[1] : 1, ext ? ext[2] : 1);
         // 扁平は天体ごと。真球は 1,1,1 (条件分岐で省くと前の天体の値が残る)
         gl.uniform3fv(u.uOblate, body.obl || NO_OBL);
         gl.uniform1f(u.uRingOn, body.ring ? 1 : 0);
@@ -7038,7 +7095,7 @@
 
   // 深度もブレンドも呼び出し側の状態をそのまま使う (背景として最初に描く前提)。
   // 視点は必ず球の中心にあるので、視線は球面と1度しか交わらない = カリング不要
-  function drawMilkyWay(vp32, eq9, radius, bright, refr) {
+  function drawMilkyWay(vp32, eq9, radius, bright, refr, extK) {
     if (bright <= 0.003) return;
     gl.useProgram(skyP.pr);
     gl.uniformMatrix4fv(skyP.u.uVP, false, vp32);
@@ -7046,6 +7103,7 @@
     gl.uniform1f(skyP.u.uRadius, radius);
     gl.uniform1f(skyP.u.uBright, bright);
     gl.uniform1f(skyP.u.uRefr, refr || 0);
+    gl.uniform3f(skyP.u.uExtK, extK ? extK[0] : 0, extK ? extK[1] : 0, extK ? extK[2] : 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, mwTex);
     gl.uniform1i(skyP.u.uTex, 0);
@@ -7648,7 +7706,7 @@
     // 不透明で描かれるので、地平線より下は隠れる)。昼は星と同じだけ薄れる
     drawMilkyWay(gVP32, mwEqGround(), SKYR * 1.4,
                  (isMoonSurf ? MW_SPACE_BRIGHT : MW_GROUND_BRIGHT) * starVis,
-                 isMoonSurf ? 0 : 1);
+                 isMoonSurf ? 0 : 1, isMoonSurf ? null : EXT_K);
 
     // 星座線 (観測者フレームへ投影。地平線より上のセグメントのみ)。恒星より先に描く
     if (showConst && CONST_SEG.length) {
@@ -7742,7 +7800,9 @@
     // 恒星 (実カタログ, 地平線より上のみ)。ワールド単位方向を観測者フレームへ投影
     if (N_CAT) {
       if (!starGVB) starGVB = gl.createBuffer();
-      // 大気の無い月面では減光が効かないので、地上より一段大きく・明るく描く
+      // 大気の無い月面では減光 (EXT_TBL) が効かないので、地上より一段
+      // 大きく・明るく描く
+      const extT = isMoonSurf ? null : EXT_TBL;
       const szK = isMoonSurf ? 4.9 : 4.0, szMin = isMoonSurf ? 1.6 : 0.9;
       const brK = isMoonSurf ? 1.35 : 1.15, brA = isMoonSurf ? 0.115 : 0.13;
       const brMin = isMoonSurf ? 0.62 : 0.3;
@@ -7760,7 +7820,12 @@
         starGArr[o+3] = Math.max(szMin, szK - 0.55 * m);
         const c = Math.max(brMin, Math.min(1, brK - brA * m));
         const col = STAR_COL[i];                  // B-V 色指数による実際の色味
-        starGArr[o+4] = col[0] * c; starGArr[o+5] = col[1] * c; starGArr[o+6] = col[2] * c;
+        // 大気減光。地平ぎわほど暗く、青から先に失われて赤く残る
+        let e0 = 1, e1 = 1, e2 = 1;
+        if (extT) { const eo = extIdx(up); e0 = extT[eo]; e1 = extT[eo+1]; e2 = extT[eo+2]; }
+        starGArr[o+4] = col[0] * c * e0;
+        starGArr[o+5] = col[1] * c * e1;
+        starGArr[o+6] = col[2] * c * e2;
         ns++;
       }
       if (ns) {
@@ -7811,7 +7876,8 @@
       const px = _gp[0]*SKYR, py = _gp[1]*SKYR, pz = _gp[2]*SKYR;
       groundVis.push({ b, px, py, pz, rpx: spherePx });
       if (spherePx >= 5) {                          // 画面上で十分大きい → 球
-        bigBodies.push({ b, px, py, pz, dist: distAU,
+        // 大気減光に使う sin(高度) は、ドームの半径を縮める前に控えておく
+        bigBodies.push({ b, px, py, pz, dist: distAU, sa: _gp[1],
                          wr: SKYR * Math.tan(angR), rpx: spherePx });
         continue;
       }
@@ -7823,6 +7889,11 @@
         size = 11; r = 0.9; g = 0.92; bl = 0.96;
       } else {
         size = magSize(magV == null ? 3.5 : magV); r = b.colA[0]*0.5+0.5; g = b.colA[1]*0.5+0.5; bl = b.colA[2]*0.5+0.5;
+      }
+      // 恒星と同じく大気減光を掛ける (月面では素通り)
+      if (!isMoonSurf) {
+        const eo = extIdx(_gp[1]);
+        r *= EXT_TBL[eo]; g *= EXT_TBL[eo+1]; bl *= EXT_TBL[eo+2];
       }
       const o = n * 7;
       groundPtArr[o]=px; groundPtArr[o+1]=py; groundPtArr[o+2]=pz;
@@ -7921,7 +7992,8 @@
         }
         const mvp = mMul(gVP, m, SCR.mvp);
         SCR.model.set(m);   // uModel は f32 で十分 (法線用)。f64 配列を直接渡さない
-        bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun, radiusPx: bb.rpx, eclipse });
+        bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun, radiusPx: bb.rpx,
+                            eclipse, ext: isMoonSurf ? null : extinct(bb.sa) });
         if (b.air) {
           // 行列とやりたいことは本体と同じで、大きさだけ (1 + air) 倍にする。
           // gM64 は次の天体で上書きされるので、ここで取っておく
@@ -8040,14 +8112,14 @@
       if (sv && sinAlt > 0) {
         // 日食で隠れているぶんは眩しくない。皆既ではグレアが完全に消え、
         // 空だけが暗く残る
-        const fade = (surfaceBody === "moon"
-          ? 1 : Math.min(1, sinAlt / 0.10)) * (1 - sunCov);
-        // 大気を長く通るほど青が抜けて赤くなる (夕日が赤い理由)。地平ぎわの
-        // 太陽を白いまま光らせると、周りが焼けているのにそこだけ昼の色になる。
-        // 月面には大気が無いので白のまま
-        const red = surfaceBody === "moon"
-          ? 1 : Math.min(1, Math.max(0, sinAlt) / 0.30);
-        const gm = 0.30 + 0.70 * red, bm = 0.08 + 0.92 * red * red;
+        // 眩しさは届いている光の量そのものなので、大気減光をそのまま使う。
+        // 大気を長く通るほど青から抜けて赤くなり (夕日が赤い理由)、量も減る
+        // ので、地平ぎわの太陽は直視できるほど暗い。月面には大気が無いので
+        // 昇った瞬間から白いまま容赦なく眩しい
+        const ge = surfaceBody === "moon" ? null : extinct(sinAlt);
+        const fade = (ge ? ge[0] : 1) * (1 - sunCov);
+        const gm = ge ? ge[1] / Math.max(ge[0], 1e-6) : 1;
+        const bm = ge ? ge[2] / Math.max(ge[0], 1e-6) : 1;
         // 残っている側の重心は、月の中心から太陽の中心へ向かう向きへ
         // 「食分ぶん × 太陽の半径」だけ進んだあたり
         let cx = sv.px, cy = sv.py, cz = sv.pz;
