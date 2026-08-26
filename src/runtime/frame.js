@@ -138,11 +138,46 @@
     }
   }
 
-  // ---------- 日時の表示 & 入力 (表示はローカル時刻) ----------
+  // ---------- 日時の表示 & 入力 ----------
+  // 表示の基準は3つから選ぶ (時計の右端をタップで切替)。既定は端末のまま。
+  //   device 端末のタイムゾーン。夏時間も端末任せ
+  //   site   観測地の地方平均太陽時 (経度から出す)。観測地を東京から動かすと
+  //          端末の時刻では空が読めなくなるため。時差の区割りは政治的で
+  //          テーブルが要るので採らない — 地方時なら「12時に太陽が南中する」
+  //          という意味が常に立つ
+  //   utc    協定世界時
+  //
+  // 時刻を出すところ (時計・出没・天文カレンダー) はすべてここを通す。
+  // 片方だけ切り替わると、時計と出没時刻が食い違って前より読めなくなる
   const dateInput = document.getElementById("dateInput");
   const timeInput = document.getElementById("timeInput");
   const tzText = document.getElementById("tzText");
   const pad2 = (n) => String(n).padStart(2, "0");
+  const CLOCK_MODES = ["device", "site", "utc"];
+  let clockMode = "device";
+  try {
+    const v = localStorage.getItem("ssClock");
+    if (CLOCK_MODES.indexOf(v) >= 0) clockMode = v;
+  } catch (e) { /* プライベートモード等 */ }
+  // UTC からのずれ [ms]。端末は日時によって変わる (夏時間) ので毎回引き直す
+  function clockOffset(t) {
+    if (clockMode === "utc") return 0;
+    if (clockMode === "site") return obsLon / 360 * DAY_MS;
+    return -new Date(t).getTimezoneOffset() * 60000;
+  }
+  // 表示用にずらした Date。以後は getUTC* で読む — getHours() 等は端末の
+  // タイムゾーンで解釈し直してしまい、ずらした意味が消える
+  const clockDate = (ms) => new Date(ms + clockOffset(ms));
+  const clockHM = (ms) => {
+    const d = clockDate(ms);
+    return pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes());
+  };
+  // 表示の年月日時分 → UTC のミリ秒。端末のずれは時刻そのものに依存するので、
+  // 一度あてはめてから引き直して収束させる (夏時間の境目のため)
+  function clockToMs(y, mo, dd, hh, mi, ss, ms) {
+    const u = Date.UTC(y, mo, dd, hh, mi, ss || 0, ms || 0);
+    return u - clockOffset(u - clockOffset(u));
+  }
   // タイムゾーン略称 (JST / GMT / BST など)。日付・言語ごとにキャッシュ (夏時間対応)
   let tzKey = "", tzVal = "";
   function tzAbbr(d) {
@@ -161,25 +196,35 @@
   // DOM への書き込みは値が変わった時だけ行う (毎フレームのレイアウト誘発を防ぐ)
   let lastDateStr = "", lastTimeStr = "", lastTzStr = "";
   function updateClock() {
-    const d = new Date(J2000 + simDays * DAY_MS);
-    const ds = String(d.getFullYear()).padStart(4, "0") +
-      "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+    const t = J2000 + simDays * DAY_MS;
+    const d = clockDate(t);
+    const ds = String(d.getUTCFullYear()).padStart(4, "0") +
+      "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate());
     // 編集中は上書きしない
     if (document.activeElement !== dateInput && ds !== lastDateStr) {
       dateInput.value = ds;
       lastDateStr = ds;
     }
-    const ts = pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+    const ts = pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes());
     if (document.activeElement !== timeInput && ts !== lastTimeStr) {
       timeInput.value = ts;
       lastTimeStr = ts;
     }
-    const tz = tzAbbr(d);
+    const tz = clockMode === "utc" ? "UTC"
+             : clockMode === "site" ? "LMT" : tzAbbr(new Date(t));
     if (tz !== lastTzStr) {
       tzText.textContent = tz;
+      tzText.title = T().clockTzHint;
       lastTzStr = tz;
     }
   }
+  // 基準の切替。切り替えたら次のフレームで必ず書き直させる
+  tzText.addEventListener("click", () => {
+    clockMode = CLOCK_MODES[(CLOCK_MODES.indexOf(clockMode) + 1) % CLOCK_MODES.length];
+    try { localStorage.setItem("ssClock", clockMode); } catch (e) { /* プライベートモード等 */ }
+    lastDateStr = lastTimeStr = lastTzStr = "";
+    updateObs();
+  });
   // 入力欄の min/max はローカル日付なので、範囲もローカル時刻で揃える
   const MIN_T = new Date(1900, 0, 1).getTime();
   const MAX_T = new Date(2199, 11, 31, 23, 59, 59, 999).getTime();
@@ -199,9 +244,9 @@
     const [y, mo, dd] = v.split("-").map(Number);
     if (!(y >= 1000)) return;                 // 入力途中 (年が4桁未満)
     // 日付だけを差し替え、時刻は今の値をそのまま持ち越す
-    const c = new Date(J2000 + simDays * DAY_MS);
-    setSimTime(new Date(y, mo - 1, dd,
-      c.getHours(), c.getMinutes(), c.getSeconds(), c.getMilliseconds()).getTime());
+    const c = clockDate(J2000 + simDays * DAY_MS);
+    setSimTime(clockToMs(y, mo - 1, dd, c.getUTCHours(), c.getUTCMinutes(),
+      c.getUTCSeconds(), c.getUTCMilliseconds()));
     clockEdits++;
   });
   timeInput.addEventListener("change", () => {
@@ -210,8 +255,8 @@
     const [hh, mi] = v.split(":").map(Number);
     if (!Number.isFinite(hh) || !Number.isFinite(mi)) return;
     // 時刻だけを差し替え。入力欄に秒が無いので秒以下は 0 に揃える
-    const c = new Date(J2000 + simDays * DAY_MS);
-    setSimTime(new Date(c.getFullYear(), c.getMonth(), c.getDate(), hh, mi, 0, 0).getTime());
+    const c = clockDate(J2000 + simDays * DAY_MS);
+    setSimTime(clockToMs(c.getUTCFullYear(), c.getUTCMonth(), c.getUTCDate(), hh, mi));
     clockEdits++;
   });
   // Enter で入力を終える

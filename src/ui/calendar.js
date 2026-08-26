@@ -53,20 +53,21 @@
     } else {
       let curMonth = "";
       for (let i = 0; i < calRows.length; i++) {
-        const ev = calRows[i], d = new Date(J2000 + ev.t * DAY_MS);
-        const mk = d.getFullYear() + "/" + (d.getMonth() + 1);
+        // 日付も時計と同じ基準で出す (時計だけ地方時にすると日をまたぐ回で食い違う)
+        const ev = calRows[i], d = clockDate(J2000 + ev.t * DAY_MS);
+        const mk = d.getUTCFullYear() + "/" + (d.getUTCMonth() + 1);
         if (mk !== curMonth) {
           curMonth = mk;
           body += '<h3 class="calMonth">' +
-            (lang === "ja" ? d.getFullYear() + "年 " + (d.getMonth() + 1) + "月"
-                           : CAL_MON_EN[d.getMonth()] + " " + d.getFullYear()) + "</h3>";
+            (lang === "ja" ? d.getUTCFullYear() + "年 " + (d.getUTCMonth() + 1) + "月"
+                           : CAL_MON_EN[d.getUTCMonth()] + " " + d.getUTCFullYear()) + "</h3>";
         }
-        const wd = (lang === "ja" ? CAL_WD_JA : CAL_WD_EN)[d.getDay()];
+        const wd = (lang === "ja" ? CAL_WD_JA : CAL_WD_EN)[d.getUTCDay()];
         const tx = calText(ev);
         body += '<div class="calRow">' +
-          '<div class="calWhen"><span class="calDay">' + d.getDate() + "</span>" +
+          '<div class="calWhen"><span class="calDay">' + d.getUTCDate() + "</span>" +
           '<span class="calWd">' + wd + "</span>" +
-          '<span class="calTime">' + pad2(d.getHours()) + ":" + pad2(d.getMinutes()) + "</span></div>" +
+          '<span class="calTime">' + pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes()) + "</span></div>" +
           '<div class="calWhat"><span class="calTitle">' + tx.h + "</span>" +
           (tx.s ? '<span class="calSub">' + tx.s + "</span>" : "") + "</div>" +
           '<button class="calGo" data-i="' + i + '">' + c.go + "</button>" +

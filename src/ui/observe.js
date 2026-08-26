@@ -224,7 +224,7 @@
     else { const H0 = Math.acos(cosH0)/DEG; rise = transitMs - H0/rate*3600e3; set = transitMs + H0/rate*3600e3; }
     return { alt: alt/DEG, az, distAU: D, illum, mag, sizeAS, elong, transitMs, rise, set, circ };
   }
-  const fmtHM = (ms) => { const d = new Date(ms); return pad2(d.getHours()) + ":" + pad2(d.getMinutes()); };
+  const fmtHM = clockHM;   // 時計と同じ基準 (端末/地方時/UTC) で出す
   function fmtGeoDist(au) {
     const km = au * AU_KM;
     const kmStr = distUnit === "mi" ? Math.round(km/KM_PER_MI).toLocaleString("en-US") + " mi"

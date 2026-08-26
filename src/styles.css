@@ -474,11 +474,20 @@
     gap: 9px;
   }
   #clock .timeRow { display: inline-flex; align-items: baseline; gap: 9px; }
+  /* 時刻の基準 (端末 / 地方時 / UTC) の切替。時計の一部に見えるよう、
+     ボタンらしい枠や地色は持たせない */
   #tzText {
     font-size: 10px;
     letter-spacing: 0.06em;
     color: var(--dim);
+    font-family: var(--font-ui);
+    background: none;
+    border: none;
+    padding: 0 2px;
+    cursor: pointer;
   }
+  #tzText:hover { color: var(--text); background: none; }
+  #app.tourMode #tzText { pointer-events: none; }
   #nowBtn {
     margin-top: 6px;
     padding: 3px 10px;

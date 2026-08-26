@@ -490,11 +490,20 @@
     gap: 9px;
   }
   #clock .timeRow { display: inline-flex; align-items: baseline; gap: 9px; }
+  /* 時刻の基準 (端末 / 地方時 / UTC) の切替。時計の一部に見えるよう、
+     ボタンらしい枠や地色は持たせない */
   #tzText {
     font-size: 10px;
     letter-spacing: 0.06em;
     color: var(--dim);
+    font-family: var(--font-ui);
+    background: none;
+    border: none;
+    padding: 0 2px;
+    cursor: pointer;
   }
+  #tzText:hover { color: var(--text); background: none; }
+  #app.tourMode #tzText { pointer-events: none; }
   #nowBtn {
     margin-top: 6px;
     padding: 3px 10px;
@@ -1369,7 +1378,7 @@
   <div id="clock" class="hud">
     <div class="dtrow">
       <input type="date" id="dateInput" min="1900-01-01" max="2199-12-31" aria-label="日付を指定">
-      <span class="timeRow"><input type="time" id="timeInput" aria-label="時刻を指定"><span id="tzText"></span></span>
+      <span class="timeRow"><input type="time" id="timeInput" aria-label="時刻を指定"><button type="button" id="tzText"></button></span>
     </div>
     <button id="nowBtn">現在時刻に合わせる</button>
   </div>
@@ -2251,6 +2260,7 @@
       tourNext: "次へ ▶", tourDone: "終了", tourAuto: "自動送り",
       tourResume: "シーンに戻す", tourExit: "ツアーを終了",
       tourGood: "できました", tourPlayed: "ここまで", welcomeTour: "操作ガイドを見る",
+      clockTzHint: "時刻の基準を切替: 端末 / LMT (観測地の地方時) / UTC",
       tourUpdated: "Update!", tourAgain: "もう一度見る", tagNew: "New",
       menuGrid: "経緯線",
       menuTerrain: "風景",
@@ -2329,6 +2339,7 @@
       tourNext: "Next ▶", tourDone: "Finish", tourAuto: "Auto",
       tourResume: "Reset view", tourExit: "Exit tour",
       tourGood: "Nice", tourPlayed: "End of run", welcomeTour: "View the guide",
+      clockTzHint: "Switch time base: device / LMT (local mean time at the site) / UTC",
       tourUpdated: "Update!", tourAgain: "Watch again", tagNew: "New",
       menuGrid: "Coordinate grid",
       menuTerrain: "Scenery",
@@ -9741,11 +9752,46 @@
     }
   }
 
-  // ---------- 日時の表示 & 入力 (表示はローカル時刻) ----------
+  // ---------- 日時の表示 & 入力 ----------
+  // 表示の基準は3つから選ぶ (時計の右端をタップで切替)。既定は端末のまま。
+  //   device 端末のタイムゾーン。夏時間も端末任せ
+  //   site   観測地の地方平均太陽時 (経度から出す)。観測地を東京から動かすと
+  //          端末の時刻では空が読めなくなるため。時差の区割りは政治的で
+  //          テーブルが要るので採らない — 地方時なら「12時に太陽が南中する」
+  //          という意味が常に立つ
+  //   utc    協定世界時
+  //
+  // 時刻を出すところ (時計・出没・天文カレンダー) はすべてここを通す。
+  // 片方だけ切り替わると、時計と出没時刻が食い違って前より読めなくなる
   const dateInput = document.getElementById("dateInput");
   const timeInput = document.getElementById("timeInput");
   const tzText = document.getElementById("tzText");
   const pad2 = (n) => String(n).padStart(2, "0");
+  const CLOCK_MODES = ["device", "site", "utc"];
+  let clockMode = "device";
+  try {
+    const v = localStorage.getItem("ssClock");
+    if (CLOCK_MODES.indexOf(v) >= 0) clockMode = v;
+  } catch (e) { /* プライベートモード等 */ }
+  // UTC からのずれ [ms]。端末は日時によって変わる (夏時間) ので毎回引き直す
+  function clockOffset(t) {
+    if (clockMode === "utc") return 0;
+    if (clockMode === "site") return obsLon / 360 * DAY_MS;
+    return -new Date(t).getTimezoneOffset() * 60000;
+  }
+  // 表示用にずらした Date。以後は getUTC* で読む — getHours() 等は端末の
+  // タイムゾーンで解釈し直してしまい、ずらした意味が消える
+  const clockDate = (ms) => new Date(ms + clockOffset(ms));
+  const clockHM = (ms) => {
+    const d = clockDate(ms);
+    return pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes());
+  };
+  // 表示の年月日時分 → UTC のミリ秒。端末のずれは時刻そのものに依存するので、
+  // 一度あてはめてから引き直して収束させる (夏時間の境目のため)
+  function clockToMs(y, mo, dd, hh, mi, ss, ms) {
+    const u = Date.UTC(y, mo, dd, hh, mi, ss || 0, ms || 0);
+    return u - clockOffset(u - clockOffset(u));
+  }
   // タイムゾーン略称 (JST / GMT / BST など)。日付・言語ごとにキャッシュ (夏時間対応)
   let tzKey = "", tzVal = "";
   function tzAbbr(d) {
@@ -9764,25 +9810,35 @@
   // DOM への書き込みは値が変わった時だけ行う (毎フレームのレイアウト誘発を防ぐ)
   let lastDateStr = "", lastTimeStr = "", lastTzStr = "";
   function updateClock() {
-    const d = new Date(J2000 + simDays * DAY_MS);
-    const ds = String(d.getFullYear()).padStart(4, "0") +
-      "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+    const t = J2000 + simDays * DAY_MS;
+    const d = clockDate(t);
+    const ds = String(d.getUTCFullYear()).padStart(4, "0") +
+      "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate());
     // 編集中は上書きしない
     if (document.activeElement !== dateInput && ds !== lastDateStr) {
       dateInput.value = ds;
       lastDateStr = ds;
     }
-    const ts = pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+    const ts = pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes());
     if (document.activeElement !== timeInput && ts !== lastTimeStr) {
       timeInput.value = ts;
       lastTimeStr = ts;
     }
-    const tz = tzAbbr(d);
+    const tz = clockMode === "utc" ? "UTC"
+             : clockMode === "site" ? "LMT" : tzAbbr(new Date(t));
     if (tz !== lastTzStr) {
       tzText.textContent = tz;
+      tzText.title = T().clockTzHint;
       lastTzStr = tz;
     }
   }
+  // 基準の切替。切り替えたら次のフレームで必ず書き直させる
+  tzText.addEventListener("click", () => {
+    clockMode = CLOCK_MODES[(CLOCK_MODES.indexOf(clockMode) + 1) % CLOCK_MODES.length];
+    try { localStorage.setItem("ssClock", clockMode); } catch (e) { /* プライベートモード等 */ }
+    lastDateStr = lastTimeStr = lastTzStr = "";
+    updateObs();
+  });
   // 入力欄の min/max はローカル日付なので、範囲もローカル時刻で揃える
   const MIN_T = new Date(1900, 0, 1).getTime();
   const MAX_T = new Date(2199, 11, 31, 23, 59, 59, 999).getTime();
@@ -9802,9 +9858,9 @@
     const [y, mo, dd] = v.split("-").map(Number);
     if (!(y >= 1000)) return;                 // 入力途中 (年が4桁未満)
     // 日付だけを差し替え、時刻は今の値をそのまま持ち越す
-    const c = new Date(J2000 + simDays * DAY_MS);
-    setSimTime(new Date(y, mo - 1, dd,
-      c.getHours(), c.getMinutes(), c.getSeconds(), c.getMilliseconds()).getTime());
+    const c = clockDate(J2000 + simDays * DAY_MS);
+    setSimTime(clockToMs(y, mo - 1, dd, c.getUTCHours(), c.getUTCMinutes(),
+      c.getUTCSeconds(), c.getUTCMilliseconds()));
     clockEdits++;
   });
   timeInput.addEventListener("change", () => {
@@ -9813,8 +9869,8 @@
     const [hh, mi] = v.split(":").map(Number);
     if (!Number.isFinite(hh) || !Number.isFinite(mi)) return;
     // 時刻だけを差し替え。入力欄に秒が無いので秒以下は 0 に揃える
-    const c = new Date(J2000 + simDays * DAY_MS);
-    setSimTime(new Date(c.getFullYear(), c.getMonth(), c.getDate(), hh, mi, 0, 0).getTime());
+    const c = clockDate(J2000 + simDays * DAY_MS);
+    setSimTime(clockToMs(c.getUTCFullYear(), c.getUTCMonth(), c.getUTCDate(), hh, mi));
     clockEdits++;
   });
   // Enter で入力を終える
@@ -10196,7 +10252,7 @@
     else { const H0 = Math.acos(cosH0)/DEG; rise = transitMs - H0/rate*3600e3; set = transitMs + H0/rate*3600e3; }
     return { alt: alt/DEG, az, distAU: D, illum, mag, sizeAS, elong, transitMs, rise, set, circ };
   }
-  const fmtHM = (ms) => { const d = new Date(ms); return pad2(d.getHours()) + ":" + pad2(d.getMinutes()); };
+  const fmtHM = clockHM;   // 時計と同じ基準 (端末/地方時/UTC) で出す
   function fmtGeoDist(au) {
     const km = au * AU_KM;
     const kmStr = distUnit === "mi" ? Math.round(km/KM_PER_MI).toLocaleString("en-US") + " mi"
@@ -11461,6 +11517,7 @@
         ["ビュー切替", "上部の 宇宙 / 地上 / 月面"],
         ["ガイドツアー", "メニュー「ガイドツアー」(← → で移動・自動送りあり)"],
         ["日時", "右上の日付・時刻をタップ・「現在時刻に合わせる」"],
+        ["時刻の基準", "時計の右端 (JST など) をタップ → 端末 / LMT (観測地の地方時) / UTC"],
         ["再生・速度", "下部パネル"],
         ["表示切替", "左上の 軌道 / 名前 / 星座 (黄道も連動)"],
         ["経緯線", "メニュー「経緯線」(天球の赤経・赤緯)"],
@@ -11488,6 +11545,7 @@
         ["Switch view", "Space / Ground / Moon at the top"],
         ["Guided tour", "Menu “Guided tour” (← → to move · auto-advance available)"],
         ["Date & time", "Tap the date or time top-right · “Set to current time”"],
+        ["Time base", "Tap the zone label on the clock → device / LMT (local mean time at the site) / UTC"],
         ["Play & speed", "Bottom panel"],
         ["Toggles", "Orbits / Labels / Constellations (top-left)"],
         ["Coordinate grid", "Menu “Coordinate grid” (RA & Dec on the sky)"],
@@ -12637,20 +12695,21 @@
     } else {
       let curMonth = "";
       for (let i = 0; i < calRows.length; i++) {
-        const ev = calRows[i], d = new Date(J2000 + ev.t * DAY_MS);
-        const mk = d.getFullYear() + "/" + (d.getMonth() + 1);
+        // 日付も時計と同じ基準で出す (時計だけ地方時にすると日をまたぐ回で食い違う)
+        const ev = calRows[i], d = clockDate(J2000 + ev.t * DAY_MS);
+        const mk = d.getUTCFullYear() + "/" + (d.getUTCMonth() + 1);
         if (mk !== curMonth) {
           curMonth = mk;
           body += '<h3 class="calMonth">' +
-            (lang === "ja" ? d.getFullYear() + "年 " + (d.getMonth() + 1) + "月"
-                           : CAL_MON_EN[d.getMonth()] + " " + d.getFullYear()) + "</h3>";
+            (lang === "ja" ? d.getUTCFullYear() + "年 " + (d.getUTCMonth() + 1) + "月"
+                           : CAL_MON_EN[d.getUTCMonth()] + " " + d.getUTCFullYear()) + "</h3>";
         }
-        const wd = (lang === "ja" ? CAL_WD_JA : CAL_WD_EN)[d.getDay()];
+        const wd = (lang === "ja" ? CAL_WD_JA : CAL_WD_EN)[d.getUTCDay()];
         const tx = calText(ev);
         body += '<div class="calRow">' +
-          '<div class="calWhen"><span class="calDay">' + d.getDate() + "</span>" +
+          '<div class="calWhen"><span class="calDay">' + d.getUTCDate() + "</span>" +
           '<span class="calWd">' + wd + "</span>" +
-          '<span class="calTime">' + pad2(d.getHours()) + ":" + pad2(d.getMinutes()) + "</span></div>" +
+          '<span class="calTime">' + pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes()) + "</span></div>" +
           '<div class="calWhat"><span class="calTitle">' + tx.h + "</span>" +
           (tx.s ? '<span class="calSub">' + tx.s + "</span>" : "") + "</div>" +
           '<button class="calGo" data-i="' + i + '">' + c.go + "</button>" +
