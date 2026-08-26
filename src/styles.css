@@ -308,8 +308,9 @@
     #welcomeBtns { flex-direction: column; align-items: stretch; }
     #welcomeBtns button { padding: 10px 16px; }
   }
-  #welcomeStart { color: #0a0d16; background: var(--accent); border-color: var(--accent); font-weight: 600; }
-  #welcomeStart:hover { background: var(--accent); }
+  /* 主役はガイドツアー。「とりあえず動かす」は枠線だけの控えめな見た目にする */
+  #welcomeTour { color: #0a0d16; background: var(--accent); border-color: var(--accent); font-weight: 600; }
+  #welcomeTour:hover { background: var(--accent); }
   #title h1 {
     margin: 0;
     font-size: 15px;

@@ -324,8 +324,9 @@
     #welcomeBtns { flex-direction: column; align-items: stretch; }
     #welcomeBtns button { padding: 10px 16px; }
   }
-  #welcomeStart { color: #0a0d16; background: var(--accent); border-color: var(--accent); font-weight: 600; }
-  #welcomeStart:hover { background: var(--accent); }
+  /* 主役はガイドツアー。「とりあえず動かす」は枠線だけの控えめな見た目にする */
+  #welcomeTour { color: #0a0d16; background: var(--accent); border-color: var(--accent); font-weight: 600; }
+  #welcomeTour:hover { background: var(--accent); }
   #title h1 {
     margin: 0;
     font-size: 15px;
@@ -2226,7 +2227,7 @@
       tourStart: "はじめる", tourSteps: " シーン",
       tourNext: "次へ ▶", tourDone: "終了", tourAuto: "自動送り",
       tourResume: "シーンに戻す", tourExit: "ツアーを終了",
-      tourGood: "できました", tourPlayed: "ここまで", welcomeTour: "操作を試してみる",
+      tourGood: "できました", tourPlayed: "ここまで", welcomeTour: "操作ガイドを見る",
       tourUpdated: "Update!", tourAgain: "もう一度見る", tagNew: "New",
       menuGrid: "経緯線",
       menuTerrain: "風景",
@@ -2304,7 +2305,7 @@
       tourStart: "Start", tourSteps: " scenes",
       tourNext: "Next ▶", tourDone: "Finish", tourAuto: "Auto",
       tourResume: "Reset view", tourExit: "Exit tour",
-      tourGood: "Nice", tourPlayed: "End of run", welcomeTour: "Try the controls",
+      tourGood: "Nice", tourPlayed: "End of run", welcomeTour: "View the guide",
       tourUpdated: "Update!", tourAgain: "Watch again", tagNew: "New",
       menuGrid: "Coordinate grid",
       menuTerrain: "Scenery",
@@ -11488,22 +11489,23 @@
       yomi: "(シデレウム)",
       lead: "太陽系を自由に見てまわれる Web プラネタリウムです。",
       rows: ["ドラッグで回転", "ホイール / ピンチでズーム", "天体をタップで選択・接近", "画面上部で 宇宙 / 地上 / 月面 を切替"],
-      more: "操作方法を見る", start: "はじめる",
+      start: "とりあえず動かす",
     } : {
       yomi: "",
       lead: "A web planetarium for exploring the Solar System.",
       rows: ["Drag to rotate", "Wheel / pinch to zoom", "Tap a body to select & approach", "Switch Space / Ground / Moon at the top"],
-      more: "View controls", start: "Get started",
+      start: "Just explore",
     };
     welcomeEl.innerHTML =
       `<div id="welcomeCard">` +
         `<h2>SIDEREUM<span class="yomi">${c.yomi}</span></h2>` +
         `<p class="lead">${c.lead}</p>` +
         `<ul>${c.rows.map((r) => `<li>${r}</li>`).join("")}</ul>` +
+        // 操作方法の一覧はメニューからいつでも開けるので、ここには出さない。
+        // 初めての人にはガイドツアーの方が近道なので、そちらを主役にする
         `<div id="welcomeBtns">` +
-          `<button id="welcomeMore">${c.more}</button>` +
-          `<button id="welcomeTour">${T().welcomeTour}</button>` +
           `<button id="welcomeStart">${c.start}</button>` +
+          `<button id="welcomeTour">${T().welcomeTour}</button>` +
         `</div>` +
       `</div>`;
   }
@@ -11513,7 +11515,6 @@
   }
   welcomeEl.addEventListener("click", (e) => {
     if (e.target.id === "welcomeStart" || e.target === welcomeEl) closeWelcome();
-    else if (e.target.id === "welcomeMore") { closeWelcome(); openHowto(); }
     // 端末に合うチュートリアルを開始 (startTour が closeWelcome も行う)
     else if (e.target.id === "welcomeTour") startTour(tutorialTour(), 0);
   });
