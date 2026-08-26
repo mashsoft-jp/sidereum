@@ -393,6 +393,9 @@
 
   // ---------- 操作パネル設定の保存 (速度・ズーム・角度) ----------
   function saveSettings() {
+    // 導入のあいだは保存しない。演出のためにカメラをヘリオポーズまで引いて
+    // いるので、そのまま書くと次に開いたときの「既定」が 124au になる
+    if (introActive()) return;
     try {
       localStorage.setItem("ssSpeed", String(daysPerSec));
       localStorage.setItem("ssZoom", String(cam.distTgt));

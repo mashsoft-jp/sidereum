@@ -56,7 +56,7 @@ const MANIFEST = [
   "render/space.js",     // hitTestGround・render (宇宙ビュー)
   "render/comet.js",     // 彗星のコマ・尾 (両ビュー共用)
   "render/meteor.js",    // 流星 (地上ビュー)
-  "render/intro.js",     // 初回の導入 (銀河系から太陽系へ寄る)
+  "render/intro.js",     // 初回の導入 (太陽系のはるか外から寄る)
   "runtime/frame.js",    // オーバーレイ・時刻表示・メインループ
   "ui/observe.js",       // 選択・観測モード・観測地・天体リスト
   "ui/controls.js",      // 入力・操作パネル・設定保存
