@@ -669,10 +669,11 @@
     // 減光するので、高度で薄くする (月面には大気が無いので、この減衰は
     // 入れない = 昇った瞬間から容赦なく眩しい)
     //
-    // 裾と芯で深度の扱いを分ける。裾は目やカメラの中で起きる散乱で、像が
-    // できたあとに全面へ乗るものなので何にも隠されない。芯は太陽の円盤その
-    // ものの眩しさなので、隠れているところからは出ない — 深度を効かせて月に
-    // 食わせる。これをやらないと、日食で月に隠された太陽の中心に丸い光が残る
+    // 日食で欠けているときは、眩しさは残っている側 (三日月) から出る。板を
+    // 太陽の中心に置いたままだと隠れている側に丸い光が残るので、残った側へ
+    // 寄せて小さくする。あわせて、裾と芯で深度の扱いを分ける — 裾は目や
+    // カメラの中で起きる散乱で像ができたあとに全面へ乗るので何にも隠されない。
+    // 芯は太陽の円盤そのものの眩しさなので、月に食わせる
     if (bloomOn) {
       const sv = groundVis.find((v) => v.b === SUN);
       const sinAlt = sv ? sv.py / SKYR : -1;
@@ -687,12 +688,25 @@
         const red = surfaceBody === "moon"
           ? 1 : Math.min(1, Math.max(0, sinAlt) / 0.30);
         const gm = 0.30 + 0.70 * red, bm = 0.08 + 0.92 * red * red;
+        // 残っている側の重心は、月の中心から太陽の中心へ向かう向きへ
+        // 「食分ぶん × 太陽の半径」だけ進んだあたり
+        let cx = sv.px, cy = sv.py, cz = sv.pz;
+        const ov = sunCov > 0.002 ? groundVis.find((v) => v.b === eclOcc) : null;
+        if (ov) {
+          const dx = sv.px - ov.px, dy = sv.py - ov.py, dz = sv.pz - ov.pz;
+          const dl = Math.hypot(dx, dy, dz);
+          if (dl > 1e-6) {
+            const rs = SKYR * Math.tan(Math.asin(Math.min(0.9, SUN.rkm / (sunAU * AU_KM))));
+            const k = sunCov * rs / dl;
+            cx += dx * k; cy += dy * k; cz += dz * k;
+          }
+        }
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE);
         gl.depthMask(false);
         gl.useProgram(billP.pr);
         gl.uniformMatrix4fv(billP.u.uVP, false, gVP32);
-        gl.uniform3f(billP.u.uCenter, sv.px, sv.py, sv.pz);
+        gl.uniform3f(billP.u.uCenter, cx, cy, cz);
         gl.uniform3f(billP.u.uRight, gV64[0], gV64[4], gV64[8]);
         gl.uniform3f(billP.u.uUp, gV64[1], gV64[5], gV64[9]);
         gl.bindBuffer(gl.ARRAY_BUFFER, billVB);
@@ -715,11 +729,12 @@
         // 位置と大きさを同じ率で縮めるので、見かけの広さは変わらない
         const gz = 0.75;
         gl.enable(gl.DEPTH_TEST);
-        gl.uniform3f(billP.u.uCenter, sv.px * gz, sv.py * gz, sv.pz * gz);
+        gl.uniform3f(billP.u.uCenter, cx * gz, cy * gz, cz * gz);
         // 芯の落ち方を平らにしない。加算で 1.0 に張り付いた領域が広がると、
-        // その縁が輪郭として読めて「太陽が大きくなった」に見えてしまう
+        // その縁が輪郭として読めて「太陽が大きくなった」に見えてしまう。
+        // 欠けるほど光っている面積も小さくなるので、そのぶん縮める
         gl.uniform1f(billP.u.uFall, 1.5);
-        gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide * 0.22 * gz);
+        gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide * 0.22 * gz * (1 - sunCov * 0.7));
         gl.uniform3f(billP.u.uCol1, 1.0 * fade, 0.80 * fade * gm, 0.45 * fade * bm);
         gl.uniform3f(billP.u.uCol2, 1.0 * fade, 1.00 * fade * gm, 1.00 * fade * bm);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

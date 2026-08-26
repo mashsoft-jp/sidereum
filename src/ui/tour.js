@@ -458,6 +458,18 @@
     else if (isFinite(s.z)) dist = s.z;
     cam.distTgt = Math.min(1400, dist);
     resetPan();
+    // cut: 緩和を挟まず、その場でカメラを置く (カット割り)。食のように「同じ
+    // 構図で日時だけ違う」回が続くところでは、行きつ戻りつするたびに寄り引きが
+    // 大きく振られて酔う。ズームは緩和させず一致させる
+    if (s.cut) {
+      cam.yaw = cam.yawTgt;
+      cam.pitch = cam.pitchTgt;
+      cam.dist = cam.distTgt;
+      cam.focus[0] = cam.focusTgt[0];
+      cam.focus[1] = cam.focusTgt[1];
+      cam.focus[2] = cam.focusTgt[2];
+      camZoom = camZoomTgt;
+    }
   }
 
   // ride: 探査機の位置にカメラを置き、指定天体を見続ける (探査機視点)。

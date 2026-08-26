@@ -2458,6 +2458,9 @@
   //   pick  await: "select" の回で、この天体だけを選ばせる。他は押しても
   //         反応しない (画面上の天体も、天体リストのボタンも)
   //   mark  sel の天体に選択マーク (オレンジのリング) を出すか。既定は false
+  //   cut   カメラを緩和させず、その場に置く (カット割り)。同じ構図で日時だけ
+  //         違う回が続くところで使う — 行きつ戻りつのたびに寄り引きが大きく
+  //         振られると酔うため
   //   hold  自動送りでの滞留秒 (既定 12)
   //   text  ナレーション
   //   scene false ならシーン (ビュー・日時・カメラ・速度・選択) を触らない。
@@ -2485,7 +2488,7 @@
   //            タイトルの右に Update! が付く
   //
   // カメラは Tgt 側だけを設定し、実際の移動はメインループの緩和に任せる
-  // (通常操作と同じ動きで繋がる)。
+  // (通常操作と同じ動きで繋がる)。cut を書いた回だけ、その場で置く。
   //
   // 終了時は開始前の状態 (日時・ビュー・カメラ・速度・選択) へ戻す。
   // 終わった場面にそのまま留まらせたいツアーだけ、ツアー側に keep: true を書く。
@@ -3683,7 +3686,7 @@
     },
     {
       id: "eclipses",
-      ver: 2,
+      ver: 3,
       title: { ja: "日食と月食", en: "Eclipses" },
       lead: {
         ja: "太陽・地球・月が一直線に並ぶと何が起きるか。始まりから終わりまでを早回しで、影に入る側と落とす側の両方から眺めます。",
@@ -3719,7 +3722,7 @@
           },
         },
         {
-          view: "space", sel: "moon", km: 11000, lit: true, orbits: false,
+          view: "space", sel: "moon", km: 11000, lit: true, orbits: false, cut: true,
           d: "2025-09-07T18:45", spd: 0.0008, until: "2025-09-07T19:05",
           text: {
             ja: "同じ「影を出る瞬間」を宇宙から。1秒に1分ほどまで落としてあります。" +
@@ -7940,10 +7943,11 @@
     // 減光するので、高度で薄くする (月面には大気が無いので、この減衰は
     // 入れない = 昇った瞬間から容赦なく眩しい)
     //
-    // 裾と芯で深度の扱いを分ける。裾は目やカメラの中で起きる散乱で、像が
-    // できたあとに全面へ乗るものなので何にも隠されない。芯は太陽の円盤その
-    // ものの眩しさなので、隠れているところからは出ない — 深度を効かせて月に
-    // 食わせる。これをやらないと、日食で月に隠された太陽の中心に丸い光が残る
+    // 日食で欠けているときは、眩しさは残っている側 (三日月) から出る。板を
+    // 太陽の中心に置いたままだと隠れている側に丸い光が残るので、残った側へ
+    // 寄せて小さくする。あわせて、裾と芯で深度の扱いを分ける — 裾は目や
+    // カメラの中で起きる散乱で像ができたあとに全面へ乗るので何にも隠されない。
+    // 芯は太陽の円盤そのものの眩しさなので、月に食わせる
     if (bloomOn) {
       const sv = groundVis.find((v) => v.b === SUN);
       const sinAlt = sv ? sv.py / SKYR : -1;
@@ -7958,12 +7962,25 @@
         const red = surfaceBody === "moon"
           ? 1 : Math.min(1, Math.max(0, sinAlt) / 0.30);
         const gm = 0.30 + 0.70 * red, bm = 0.08 + 0.92 * red * red;
+        // 残っている側の重心は、月の中心から太陽の中心へ向かう向きへ
+        // 「食分ぶん × 太陽の半径」だけ進んだあたり
+        let cx = sv.px, cy = sv.py, cz = sv.pz;
+        const ov = sunCov > 0.002 ? groundVis.find((v) => v.b === eclOcc) : null;
+        if (ov) {
+          const dx = sv.px - ov.px, dy = sv.py - ov.py, dz = sv.pz - ov.pz;
+          const dl = Math.hypot(dx, dy, dz);
+          if (dl > 1e-6) {
+            const rs = SKYR * Math.tan(Math.asin(Math.min(0.9, SUN.rkm / (sunAU * AU_KM))));
+            const k = sunCov * rs / dl;
+            cx += dx * k; cy += dy * k; cz += dz * k;
+          }
+        }
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE);
         gl.depthMask(false);
         gl.useProgram(billP.pr);
         gl.uniformMatrix4fv(billP.u.uVP, false, gVP32);
-        gl.uniform3f(billP.u.uCenter, sv.px, sv.py, sv.pz);
+        gl.uniform3f(billP.u.uCenter, cx, cy, cz);
         gl.uniform3f(billP.u.uRight, gV64[0], gV64[4], gV64[8]);
         gl.uniform3f(billP.u.uUp, gV64[1], gV64[5], gV64[9]);
         gl.bindBuffer(gl.ARRAY_BUFFER, billVB);
@@ -7986,11 +8003,12 @@
         // 位置と大きさを同じ率で縮めるので、見かけの広さは変わらない
         const gz = 0.75;
         gl.enable(gl.DEPTH_TEST);
-        gl.uniform3f(billP.u.uCenter, sv.px * gz, sv.py * gz, sv.pz * gz);
+        gl.uniform3f(billP.u.uCenter, cx * gz, cy * gz, cz * gz);
         // 芯の落ち方を平らにしない。加算で 1.0 に張り付いた領域が広がると、
-        // その縁が輪郭として読めて「太陽が大きくなった」に見えてしまう
+        // その縁が輪郭として読めて「太陽が大きくなった」に見えてしまう。
+        // 欠けるほど光っている面積も小さくなるので、そのぶん縮める
         gl.uniform1f(billP.u.uFall, 1.5);
-        gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide * 0.22 * gz);
+        gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide * 0.22 * gz * (1 - sunCov * 0.7));
         gl.uniform3f(billP.u.uCol1, 1.0 * fade, 0.80 * fade * gm, 0.45 * fade * bm);
         gl.uniform3f(billP.u.uCol2, 1.0 * fade, 1.00 * fade * gm, 1.00 * fade * bm);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -11912,6 +11930,18 @@
     else if (isFinite(s.z)) dist = s.z;
     cam.distTgt = Math.min(1400, dist);
     resetPan();
+    // cut: 緩和を挟まず、その場でカメラを置く (カット割り)。食のように「同じ
+    // 構図で日時だけ違う」回が続くところでは、行きつ戻りつするたびに寄り引きが
+    // 大きく振られて酔う。ズームは緩和させず一致させる
+    if (s.cut) {
+      cam.yaw = cam.yawTgt;
+      cam.pitch = cam.pitchTgt;
+      cam.dist = cam.distTgt;
+      cam.focus[0] = cam.focusTgt[0];
+      cam.focus[1] = cam.focusTgt[1];
+      cam.focus[2] = cam.focusTgt[2];
+      camZoom = camZoomTgt;
+    }
   }
 
   // ride: 探査機の位置にカメラを置き、指定天体を見続ける (探査機視点)。
