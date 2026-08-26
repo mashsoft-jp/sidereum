@@ -6,8 +6,9 @@
   //
   // 距離の上限 1400 world は、海王星軌道 (30.11 au = 340 world) の縮尺で
   // 124 au ≒ ヘリオポーズ。ちょうど太陽系ぜんぶが視野に収まる引きになる。
-  const INTRO_SEC = 4.6;      // 全体の長さ [s]
+  const INTRO_SEC = 4.6;      // 寄り終える (着く) まで [s]
   const INTRO_HOLD = 1.0;     // 寄りはじめるまでの間 [s]
+  const INTRO_WAIT = 0.4;     // 着いてからガイドを出すまでの間 [s]
   const INTRO_DIST = 1400;    // カメラの出発点 (距離の上限 = ヘリオポーズ付近)
   const INTRO_PITCH = 0.10;   // 出発時の俯角 [rad] (円盤を横から見る)
   const INTRO_YAW = 0.55;     // 方位の振り出し [rad] (寄りながら戻す)
@@ -67,11 +68,12 @@
     if (!introOn) return;
     if (!introT0) introT0 = nowSec;
     const t = nowSec - introT0;
-    if (t >= INTRO_SEC) { endIntro(); return; }
+    // 着いてもすぐには出さず、ひと呼吸置いてからガイドを出す
+    if (t >= INTRO_SEC + INTRO_WAIT) { endIntro(); return; }
     // 距離と俯角は間を置いてから動かす。方位だけは最初から一定の速さで
     // 回しておく — 止まった画で1秒待たされると、固まったように見える
     const e = introEase((t - INTRO_HOLD) / (INTRO_SEC - INTRO_HOLD));
     cam.dist = cam.distTgt = INTRO_DIST + (introDist - INTRO_DIST) * e;
     cam.pitch = cam.pitchTgt = INTRO_PITCH + (introPitch - INTRO_PITCH) * e;
-    cam.yaw = cam.yawTgt = introYaw - INTRO_YAW * (1 - t / INTRO_SEC);
+    cam.yaw = cam.yawTgt = introYaw - INTRO_YAW * (1 - Math.min(1, t / INTRO_SEC));
   }
