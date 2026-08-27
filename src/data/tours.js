@@ -98,7 +98,7 @@
     {
       id: "basics-desktop",
       platform: "desktop",
-      ver: 20,
+      ver: 21,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -182,6 +182,19 @@
           },
         },
         {
+          scene: false, await: "clocktz", ui: ["clock"], hi: "#tzText",
+          text: {
+            ja: "時刻の右の小さな文字 (JST など) は、どこの時刻で読むかを表します。" +
+                "クリックすると 端末 → 観測地 → 世界時 と切り替わり、" +
+                "出没やカレンダーも一緒に変わります。" +
+                "観測地が端末と同じ時間帯のときは、観測地は出ません。押してみてください。",
+            en: "The small label right of the time (JST, GMT+1, …) says which clock you are " +
+                "reading. Click it to cycle device → observing site → UTC; rise/set times " +
+                "and the calendar follow along. The site is skipped when it shares the " +
+                "device's offset. Give it a click.",
+          },
+        },
+        {
           scene: false, ui: ["controls"], hi: "#play, #speed", await: "play",
           text: {
             ja: "操作パネルの再生ボタンで時間を進められます。速度は隣のスライダーで、" +
@@ -215,7 +228,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 23,
+      ver: 24,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -295,6 +308,19 @@
                 "1900年から2199年まで指定できます。変えてみてください。",
             en: "Type into the date and time at the top right to jump to any moment — " +
                 "anywhere from 1900 to 2199. Give it a try.",
+          },
+        },
+        {
+          scene: false, await: "clocktz", ui: ["clock"], hi: "#tzText",
+          text: {
+            ja: "時刻の右の小さな文字 (JST など) は、どこの時刻で読むかを表します。" +
+                "タップすると 端末 → 観測地 → 世界時 と切り替わり、" +
+                "出没やカレンダーも一緒に変わります。" +
+                "観測地が端末と同じ時間帯のときは、観測地は出ません。タップしてみてください。",
+            en: "The small label right of the time (JST, GMT+1, …) says which clock you are " +
+                "reading. Tap it to cycle device → observing site → UTC; rise/set times " +
+                "and the calendar follow along. The site is skipped when it shares the " +
+                "device's offset. Give it a tap.",
           },
         },
         {

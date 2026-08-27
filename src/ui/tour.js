@@ -144,6 +144,12 @@
       const n = clockEdits;
       return () => clockEdits !== n;
     },
+    // 時刻の基準 (端末 / 観測地 / UTC) の切替。観測地が端末と同じ時間帯だと
+    // 観測地は飛ばされるが、どちらにせよ押せば clockMode は動く
+    clocktz: () => {
+      const m = clockMode;
+      return () => clockMode !== m;
+    },
     // 開いた瞬間を捉える。開いたまま次のステップへ来ることがあるので、
     // 現在の状態ではなく「閉じている状態から開いた」を条件にする
     menu: () => {
