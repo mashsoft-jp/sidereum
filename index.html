@@ -101,8 +101,27 @@
     flex-direction: column;
     gap: 2px;
     z-index: 16;   /* 開いたメニューは観測地バー(12)・ビュー切替(15)より前面に */
+    /* 見出しを足したぶん背が伸びた。縦の短い端末で下がはみ出すと触れなくなるので、
+       収まらないときだけ中でスクロールさせる (横持ちの指定と同じ考え方) */
+    /* 88px = 上端 76 + 下の余白 12。枠と内側の余白 (border 2 + padding 12) は
+       max-height の外なので、そのぶんも引いておく */
+    max-height: calc(100vh - 102px);
+    max-height: calc(100dvh - 102px - var(--sat) - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
   }
   #menu.open { display: flex; }
+  /* 項目のかたまり (案内 / 表示 / 画質 / 設定・情報)。区切り線は間だけに引く */
+  #menu .menuGroup { display: flex; flex-direction: column; gap: 2px; }
+  #menu .menuGroup + .menuGroup {
+    margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--line);
+  }
+  #menu .menuHead {
+    padding: 2px 12px 3px;
+    font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--dim);
+  }
   #menu button {
     text-align: left;
     background: none;
@@ -113,13 +132,13 @@
   }
   #menu button:hover { background: rgba(150, 178, 224, 0.12); }
   /* 中身が増えた・変わった項目の印 (New / Update!) */
-  #menu > button[role="menuitem"],
-  #menu > button[role="menuitemcheckbox"] {
+  #menu button[role="menuitem"],
+  #menu button[role="menuitemcheckbox"] {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
   }
   /* ON/OFF を持つ項目のチェックボックス。押すとどうなるかではなく、
      いまどちらかを出す (ラベルは状態で変えない) */
-  #menu > button[role="menuitemcheckbox"]::after {
+  #menu button[role="menuitemcheckbox"]::after {
     content: "";
     flex: none;
     box-sizing: border-box;
@@ -129,7 +148,7 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 10px; line-height: 1;
   }
-  #menu > button[aria-checked="true"]::after {
+  #menu button[aria-checked="true"]::after {
     content: "✓";
     border-color: var(--accent);
     background: var(--accent);
@@ -1131,17 +1150,14 @@
     #title { padding: 6px 10px 6px 6px; gap: 6px; left: calc(var(--barL) - 7px); }
     #title h1 { font-size: 13px; letter-spacing: 0.2em; }
     #menuBtn { padding: 4px 6px; font-size: 15px; }
-    /* 横持ちではメニューが画面より高くなる (13項目で 498px / 画面 393px)。
-       はみ出したぶんは触れないので、収まらないときだけ中でスクロールさせる。
+    /* 横持ちではメニューが画面より高くなる (15項目で 550px / 画面 393px)。中で
+       スクロールさせるのは基本の指定と同じで、ここは上端が高いぶんだけ広く取る。
        左はリストやガイドと同じくノッチの帯を縦に横切るので同じ扱いにする */
     #menu {
       top: calc(54px + var(--sat));
       left: var(--barL);
-      max-height: calc(100vh - 62px);
-      max-height: calc(100dvh - 62px - var(--sat) - env(safe-area-inset-bottom, 0px));
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: thin;
+      max-height: calc(100vh - 76px);
+      max-height: calc(100dvh - 76px - var(--sat) - env(safe-area-inset-bottom, 0px));
     }
     /* 横持ちは縦が足りない。時計を2段 (日時 / 現在時刻に合わせる) で組むと 55px
        使い、その下に入る情報パネルがそのぶん痩せる。上部は横に空いているので、
@@ -1319,23 +1335,37 @@
     <button id="vmMoon">月面</button>
   </div>
 
-  <!-- 並び順: よく使う操作 (全画面・共有) → 環境設定 (単位・言語) → 情報。観測地は別枠 -->
+  <!-- 項目が15個まで増え、同じ見た目で連なると目的のものを探せない。案内 / 表示 /
+       画質 / 設定・情報 の4つの group に分ける (見出しの文言は applyLang が入れる)。
+       観測地は別枠 -->
   <div id="menu" class="hud" role="menu">
-    <button id="menuHelp" role="menuitem"></button>
-    <button id="menuTour" role="menuitem"></button>
-    <button id="menuCal" role="menuitem"></button>
-    <button id="menuGrid" role="menuitemcheckbox" aria-checked="false"></button>
-    <button id="menuConst" role="menuitemcheckbox" aria-checked="false"></button>
-    <button id="menuDso" role="menuitemcheckbox" aria-checked="false"></button>
-    <button id="menuTerrain" role="menuitemcheckbox" aria-checked="false"></button>
-    <button id="menuMeteor" role="menuitemcheckbox" aria-checked="false"></button>
-    <button id="menuBloom" role="menuitemcheckbox" aria-checked="false"></button>
-    <button id="menuHiRes" role="menuitemcheckbox" aria-checked="false"></button>
-    <button id="menuFullscreen" role="menuitem"></button>
-    <button id="menuShare" role="menuitem"></button>
-    <button id="menuUnit" role="menuitem"></button>
-    <button id="menuLang" role="menuitem"></button>
-    <button id="menuAbout" role="menuitem"></button>
+    <div class="menuGroup" role="group" aria-labelledby="menuGrpGuide">
+      <div class="menuHead" id="menuGrpGuide"></div>
+      <button id="menuHelp" role="menuitem"></button>
+      <button id="menuTour" role="menuitem"></button>
+      <button id="menuCal" role="menuitem"></button>
+    </div>
+    <div class="menuGroup" role="group" aria-labelledby="menuGrpShow">
+      <div class="menuHead" id="menuGrpShow"></div>
+      <button id="menuGrid" role="menuitemcheckbox" aria-checked="false"></button>
+      <button id="menuConst" role="menuitemcheckbox" aria-checked="false"></button>
+      <button id="menuDso" role="menuitemcheckbox" aria-checked="false"></button>
+      <button id="menuTerrain" role="menuitemcheckbox" aria-checked="false"></button>
+      <button id="menuMeteor" role="menuitemcheckbox" aria-checked="false"></button>
+    </div>
+    <div class="menuGroup" role="group" aria-labelledby="menuGrpQuality">
+      <div class="menuHead" id="menuGrpQuality"></div>
+      <button id="menuBloom" role="menuitemcheckbox" aria-checked="false"></button>
+      <button id="menuHiRes" role="menuitemcheckbox" aria-checked="false"></button>
+    </div>
+    <div class="menuGroup" role="group" aria-labelledby="menuGrpSet">
+      <div class="menuHead" id="menuGrpSet"></div>
+      <button id="menuFullscreen" role="menuitem"></button>
+      <button id="menuShare" role="menuitem"></button>
+      <button id="menuUnit" role="menuitem"></button>
+      <button id="menuLang" role="menuitem"></button>
+      <button id="menuAbout" role="menuitem"></button>
+    </div>
     <div id="menuBuild"></div>
   </div>
 
@@ -2236,6 +2266,7 @@
       monoTex: " — 輝度のみの画像のため、色は再現です",
       u: { yr: " 年", d: " 日", h: " 時間", min: " 分", s: " 秒" },
       menuLang: "English",
+      menuGrpGuide: "案内", menuGrpShow: "表示", menuGrpQuality: "画質", menuGrpSet: "設定・情報",
       menuHelp: "操作方法",
       menuTour: "ガイドツアー",
       menuCal: "天文カレンダー",
@@ -2317,6 +2348,7 @@
       monoTex: " — monochrome imagery; colour is approximated",
       u: { yr: " yr", d: " days", h: " hr", min: " min", s: " sec" },
       menuLang: "日本語",
+      menuGrpGuide: "Guide", menuGrpShow: "Show", menuGrpQuality: "Quality", menuGrpSet: "Settings & info",
       menuHelp: "Controls",
       menuTour: "Guided tour",
       menuCal: "Sky calendar",
@@ -11812,6 +11844,16 @@
     btn.setAttribute("aria-checked", on ? "true" : "false");
   }
 
+  // 項目のかたまりの見出し (案内 / 表示 / 画質 / 設定・情報)。page.html の group を
+  // aria-labelledby で指しているので、ここを空にすると読み上げの見出しも消える
+  function updateMenuHeads() {
+    const t = T();
+    document.getElementById("menuGrpGuide").textContent = t.menuGrpGuide;
+    document.getElementById("menuGrpShow").textContent = t.menuGrpShow;
+    document.getElementById("menuGrpQuality").textContent = t.menuGrpQuality;
+    document.getElementById("menuGrpSet").textContent = t.menuGrpSet;
+  }
+
   // 天球の経緯線 (赤経・赤緯)。星座線とは別の切替で、3ビューとも効く
   const menuGridBtn = document.getElementById("menuGrid");
   function updateGridLabel() {
@@ -12359,6 +12401,7 @@
     menuLangBtn.textContent = t.menuLang;
     menuShareBtn.textContent = t.menuShare;
     updateFsLabel();
+    updateMenuHeads();
     menuHelpBtn.textContent = t.menuHelp;
     menuTourBtn.textContent = t.menuTour;
     menuCalBtn.textContent = t.menuCal;

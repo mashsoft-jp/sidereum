@@ -38,23 +38,37 @@
     <button id="vmMoon">月面</button>
   </div>
 
-  <!-- 並び順: よく使う操作 (全画面・共有) → 環境設定 (単位・言語) → 情報。観測地は別枠 -->
+  <!-- 項目が15個まで増え、同じ見た目で連なると目的のものを探せない。案内 / 表示 /
+       画質 / 設定・情報 の4つの group に分ける (見出しの文言は applyLang が入れる)。
+       観測地は別枠 -->
   <div id="menu" class="hud" role="menu">
-    <button id="menuHelp" role="menuitem"></button>
-    <button id="menuTour" role="menuitem"></button>
-    <button id="menuCal" role="menuitem"></button>
-    <button id="menuGrid" role="menuitemcheckbox" aria-checked="false"></button>
-    <button id="menuConst" role="menuitemcheckbox" aria-checked="false"></button>
-    <button id="menuDso" role="menuitemcheckbox" aria-checked="false"></button>
-    <button id="menuTerrain" role="menuitemcheckbox" aria-checked="false"></button>
-    <button id="menuMeteor" role="menuitemcheckbox" aria-checked="false"></button>
-    <button id="menuBloom" role="menuitemcheckbox" aria-checked="false"></button>
-    <button id="menuHiRes" role="menuitemcheckbox" aria-checked="false"></button>
-    <button id="menuFullscreen" role="menuitem"></button>
-    <button id="menuShare" role="menuitem"></button>
-    <button id="menuUnit" role="menuitem"></button>
-    <button id="menuLang" role="menuitem"></button>
-    <button id="menuAbout" role="menuitem"></button>
+    <div class="menuGroup" role="group" aria-labelledby="menuGrpGuide">
+      <div class="menuHead" id="menuGrpGuide"></div>
+      <button id="menuHelp" role="menuitem"></button>
+      <button id="menuTour" role="menuitem"></button>
+      <button id="menuCal" role="menuitem"></button>
+    </div>
+    <div class="menuGroup" role="group" aria-labelledby="menuGrpShow">
+      <div class="menuHead" id="menuGrpShow"></div>
+      <button id="menuGrid" role="menuitemcheckbox" aria-checked="false"></button>
+      <button id="menuConst" role="menuitemcheckbox" aria-checked="false"></button>
+      <button id="menuDso" role="menuitemcheckbox" aria-checked="false"></button>
+      <button id="menuTerrain" role="menuitemcheckbox" aria-checked="false"></button>
+      <button id="menuMeteor" role="menuitemcheckbox" aria-checked="false"></button>
+    </div>
+    <div class="menuGroup" role="group" aria-labelledby="menuGrpQuality">
+      <div class="menuHead" id="menuGrpQuality"></div>
+      <button id="menuBloom" role="menuitemcheckbox" aria-checked="false"></button>
+      <button id="menuHiRes" role="menuitemcheckbox" aria-checked="false"></button>
+    </div>
+    <div class="menuGroup" role="group" aria-labelledby="menuGrpSet">
+      <div class="menuHead" id="menuGrpSet"></div>
+      <button id="menuFullscreen" role="menuitem"></button>
+      <button id="menuShare" role="menuitem"></button>
+      <button id="menuUnit" role="menuitem"></button>
+      <button id="menuLang" role="menuitem"></button>
+      <button id="menuAbout" role="menuitem"></button>
+    </div>
     <div id="menuBuild"></div>
   </div>
 

@@ -30,6 +30,16 @@
     btn.setAttribute("aria-checked", on ? "true" : "false");
   }
 
+  // 項目のかたまりの見出し (案内 / 表示 / 画質 / 設定・情報)。page.html の group を
+  // aria-labelledby で指しているので、ここを空にすると読み上げの見出しも消える
+  function updateMenuHeads() {
+    const t = T();
+    document.getElementById("menuGrpGuide").textContent = t.menuGrpGuide;
+    document.getElementById("menuGrpShow").textContent = t.menuGrpShow;
+    document.getElementById("menuGrpQuality").textContent = t.menuGrpQuality;
+    document.getElementById("menuGrpSet").textContent = t.menuGrpSet;
+  }
+
   // 天球の経緯線 (赤経・赤緯)。星座線とは別の切替で、3ビューとも効く
   const menuGridBtn = document.getElementById("menuGrid");
   function updateGridLabel() {

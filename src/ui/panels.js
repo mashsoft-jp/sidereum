@@ -182,6 +182,7 @@
     menuLangBtn.textContent = t.menuLang;
     menuShareBtn.textContent = t.menuShare;
     updateFsLabel();
+    updateMenuHeads();
     menuHelpBtn.textContent = t.menuHelp;
     menuTourBtn.textContent = t.menuTour;
     menuCalBtn.textContent = t.menuCal;
