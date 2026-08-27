@@ -291,6 +291,7 @@
   let followKey = null;                   // 前フレームで追従していた天体
   const followPrev = [0, 0, 0];
   function frame(now) {
+    perfFrame(now);          // 描画負荷の計測 (?perf=1 のときだけ動く)
     const raw = (now - last) / 1000;
     last = now;
     const dtc = Math.min(0.5, raw);       // カメラ緩和用 (低 fps でも追従)
@@ -394,8 +395,11 @@
 
     tourRideCam();     // ガイドツアー: 探査機視点のステップはカメラを直接置く
     introStep(now / 1000);   // 初回の導入: カメラを寄せる (流していなければ素通り)
+    perfLap("更新");
     render(now / 1000);
+    perfLap("描画(他)");
     bloomPass();          // 明るいところの滲み (シーンを描き終えてから)
+    perfLap("Bloom");
     updateClock();
     tourWatch();          // ガイドツアー: 促した操作をされたら次のステップへ
     updateZoomUI();
@@ -407,6 +411,8 @@
       lastSettingsSave = now;
       saveSettings();
     }
+    perfLap("UI");
+    perfDraw();           // 計測の表示はいちばん最後 (オーバーレイを消さないため)
     requestAnimationFrame(frame);
   }
 

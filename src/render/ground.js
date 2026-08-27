@@ -301,18 +301,22 @@
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
+    perfLap("空");
     // 天の川。空ドームの上に加算で重ね、恒星より先に描く (地面ドームは後から
     // 不透明で描かれるので、地平線より下は隠れる)。昼は星と同じだけ薄れる
     drawMilkyWay(gVP32, mwEqGround(), SKYR * 1.4,
                  (isMoonSurf ? MW_SPACE_BRIGHT : MW_GROUND_BRIGHT) * starVis,
                  isMoonSurf ? 0 : 1, isMoonSurf ? null : EXT_K);
 
+    perfLap("天の川");
     // 星雲・星団。恒星より先に描く (淡いしみの上に星の点が乗る)。
     // 板は常に画面を向くので、カメラの右・上をワールドで渡す
     _dsoR[0] = gV64[0]; _dsoR[1] = gV64[4]; _dsoR[2] = gV64[8];
     _dsoU[0] = gV64[1]; _dsoU[1] = gV64[5]; _dsoU[2] = gV64[9];
     drawDso(gVP32, _dsoR, _dsoU, SKYR, starVis, gFov * 0.5, H * 0.5, groundDsoAt);
 
+    perfCount("星雲", dsoN);
+    perfLap("星雲");
     // 星座線 (観測者フレームへ投影。地平線より上のセグメントのみ)。恒星より先に描く
     if (showConst && CONST_SEG.length) {
       let cn = 0;
@@ -402,6 +406,7 @@
       }
     }
 
+    perfLap("星座線");
     // 恒星 (実カタログ, 地平線より上のみ)。ワールド単位方向を観測者フレームへ投影
     if (N_CAT) {
       if (!starGVB) starGVB = gl.createBuffer();
@@ -448,6 +453,8 @@
         gl.vertexAttribPointer(pointP.a.aCol, 3, gl.FLOAT, false, 28, 16);
         gl.drawArrays(gl.POINTS, 0, ns);
       }
+      perfCount("恒星", ns);
+      perfLap("恒星");
     }
 
     // 太陽系天体: 小さいうちは点、拡大されたらテクスチャ球で描画
@@ -859,7 +866,9 @@
       gl.drawArrays(gl.LINE_STRIP, 0, horizonN);
     }
     gl.depthMask(true);
+    perfLap("天体・地形");
     drawGroundOverlay();
+    perfLap("文字");
   }
   function drawGroundOverlay() {
     octx.setTransform(DPR, 0, 0, DPR, 0, 0);
