@@ -506,7 +506,9 @@
   }
   #clock .timeRow { display: inline-flex; align-items: baseline; gap: 9px; }
   /* 時刻の基準 (端末 / 地方時 / UTC) の切替。時計の一部に見えるよう、
-     ボタンらしい枠や地色は持たせない */
+     ボタンらしい枠や地色は持たせない。
+     #clock は pointer-events: none (時計の余白でカメラを回せるように) なので、
+     押せるものは個別に auto へ戻す — 日付欄・時刻欄・現在時刻ボタンと同じ */
   #tzText {
     font-size: 10px;
     letter-spacing: 0.06em;
@@ -516,8 +518,14 @@
     border: none;
     padding: 0 2px;
     cursor: pointer;
+    pointer-events: auto;
   }
   #tzText:hover { color: var(--text); background: none; }
+  /* 字は 10px しかないので、指で押せるよう当たり判定だけ外へ広げる
+     (padding で広げると時計の並びがずれる)。下は現在時刻ボタンが後ろの要素で
+     手前に来るため、そちらの当たり判定を食わない */
+  #tzText { position: relative; }
+  #tzText::before { content: ""; position: absolute; inset: -8px -6px; }
   #app.tourMode #tzText { pointer-events: none; }
   #nowBtn {
     margin-top: 6px;
