@@ -35,7 +35,8 @@
         ["日時", "右上の日付・時刻をタップ・「現在時刻に合わせる」"],
         ["時刻の基準", "時計の右端 (JST など) をタップ → 端末 / LMT (観測地の地方時) / UTC"],
         ["再生・速度", "下部パネル"],
-        ["表示切替", "左上の 軌道 / 名前 / 星座 (黄道も連動)"],
+        ["表示切替", "左上の 軌道 / 名前 (天体リストの上)"],
+        ["星座", "メニュー「星座」(星座線・星座名。黄道も連動)"],
         ["経緯線", "メニュー「経緯線」(天球の赤経・赤緯)"],
         ["風景", "メニュー「風景を表示」(地面の質感・地平の稜線・空の色)"],
         ["共有・設定", "メニュー (共有リンク・単位・言語)"],
@@ -63,7 +64,8 @@
         ["Date & time", "Tap the date or time top-right · “Set to current time”"],
         ["Time base", "Tap the zone label on the clock → device / LMT (local mean time at the site) / UTC"],
         ["Play & speed", "Bottom panel"],
-        ["Toggles", "Orbits / Labels / Constellations (top-left)"],
+        ["Toggles", "Orbits / Labels (above the body list, top-left)"],
+        ["Constellations", "Menu → “Constellations” (lines and names; the ecliptic follows)"],
         ["Coordinate grid", "Menu “Coordinate grid” (RA & Dec on the sky)"],
         ["Scenery", "Menu “Show scenery” (ground texture, ridgeline, sky color)"],
         ["Share & settings", "Menu (share link · units · language)"],
@@ -153,7 +155,6 @@
     setCtlLabel("camIcon", t.camera);
     orbitsBtn.textContent = t.orbits;
     labelsBtn.textContent = t.labels;
-    constBtn.textContent = t.constellations;
     const camOpts = camSelect.options;
     camOpts[0].textContent = t.camera;
     camOpts[1].textContent = t.viewTop;
@@ -186,6 +187,7 @@
     menuCalBtn.textContent = t.menuCal;
     menuAboutBtn.textContent = t.menuAbout;
     updateGridLabel();
+    updateConstLabel();
     updateDsoLabel();
     updateTerrainLabel();
     updateMeteorLabel();

@@ -307,7 +307,7 @@
     // 星座 (連動して黄道も) の一時的な出し分け。localStorage は書き換えない
     if (s.constel !== undefined) {
       showConst = !!s.constel;
-      constBtn.classList.toggle("on", showConst);
+      updateConstLabel();
     }
     // 軌道線の一時的な出し分け。探査機視点のように「写真」として見せる場面では、
     // 画面を横切る線が邪魔になる。localStorage は書き換えない
@@ -693,7 +693,7 @@
   function restoreTourState(v, keepScene) {
     // 表示設定 (星座・経緯線・選択マーク) はツアー中だけの一時変更なので必ず戻す
     showConst = v.showConst;
-    constBtn.classList.toggle("on", showConst);
+    updateConstLabel();
     showGrid = v.showGrid;
     updateGridLabel();
     showTerrain = v.showTerrain;

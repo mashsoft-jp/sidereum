@@ -451,14 +451,6 @@
     syncToggleUI();
   });
 
-  const constBtn = document.getElementById("constBtn");
-  constBtn.classList.toggle("on", showConst);
-  constBtn.addEventListener("click", () => {
-    showConst = !showConst;
-    localStorage.setItem("ssConst", showConst ? "1" : "0");
-    constBtn.classList.toggle("on", showConst);
-  });
-
   // 視点アングル (ピッチのみ変更。ズーム・注視対象は保持、平行移動はリセット)
   function setPitch(p) {
     cam.pitchTgt = p;

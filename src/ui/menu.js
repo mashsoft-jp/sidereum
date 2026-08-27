@@ -41,6 +41,19 @@
     updateGridLabel();
   });
 
+  // 星座線と星座名 (黄道も連動)。以前は天体リストの上に置いていたが、あそこは
+  // リストに載っている天体の話 (軌道・名前) をする場所で、背景の空の話である
+  // 星座だけが浮いていた。経緯線・星雲・星団と並べる
+  const menuConstBtn = document.getElementById("menuConst");
+  function updateConstLabel() {
+    setMenuCheck(menuConstBtn, T().menuConst, showConst);
+  }
+  menuConstBtn.addEventListener("click", () => {
+    showConst = !showConst;
+    try { localStorage.setItem("ssConst", showConst ? "1" : "0"); } catch (e) { /* プライベートモード等 */ }
+    updateConstLabel();
+  });
+
   // 星雲・星団・銀河 (メシエ天体)。恒星と同じく3ビューとも効く
   const menuDsoBtn = document.getElementById("menuDso");
   function updateDsoLabel() {
