@@ -2318,7 +2318,7 @@
       tourNext: "次へ ▶", tourDone: "終了", tourAuto: "自動送り",
       tourResume: "シーンに戻す", tourExit: "ツアーを終了",
       tourGood: "できました", tourPlayed: "ここまで", welcomeTour: "操作ガイドを見る",
-      clockTzHint: "時刻の基準を切替: 端末 / LMT (観測地の地方時) / UTC",
+      clockTzHint: "時刻の基準を切替: 端末 / 観測地 / UTC",
       tourUpdated: "Update!", tourAgain: "もう一度見る", tagNew: "New",
       menuGrid: "経緯線",
       menuConst: "星座",
@@ -2402,7 +2402,7 @@
       tourNext: "Next ▶", tourDone: "Finish", tourAuto: "Auto",
       tourResume: "Reset view", tourExit: "Exit tour",
       tourGood: "Nice", tourPlayed: "End of run", welcomeTour: "View the guide",
-      clockTzHint: "Switch time base: device / LMT (local mean time at the site) / UTC",
+      clockTzHint: "Switch time base: device / observing site / UTC",
       tourUpdated: "Update!", tourAgain: "Watch again", tagNew: "New",
       menuGrid: "Coordinate grid",
       menuConst: "Constellations",
@@ -10485,11 +10485,16 @@
   // ---------- 日時の表示 & 入力 ----------
   // 表示の基準は3つから選ぶ (時計の右端をタップで切替)。既定は端末のまま。
   //   device 端末のタイムゾーン。夏時間も端末任せ
-  //   site   観測地の地方平均太陽時 (経度から出す)。観測地を東京から動かすと
-  //          端末の時刻では空が読めなくなるため。時差の区割りは政治的で
-  //          テーブルが要るので採らない — 地方時なら「12時に太陽が南中する」
-  //          という意味が常に立つ
+  //   site   観測地の時刻。観測地を東京から動かすと、端末の時刻では空が読めない
   //   utc    協定世界時
+  //
+  // site は、観測地が都市リストのどれか (または現在地取得) なら**その土地の
+  // 常用時** (JST・EST など。夏時間も込み)。緯度経度を直に入れた場合は常用時の
+  // 区割りが分からないので、経度から出す地方平均太陽時 (LMT) に落とす。
+  // LMT なら「12時に太陽が南中する」という意味が常に立つので、退避先として妥当。
+  //
+  // 観測地の常用時が端末と同じずれになるとき (東京 + 端末も日本など) は、同じ
+  // 表示が2度出るだけなので site を飛ばす。
   //
   // 時刻を出すところ (時計・出没・天文カレンダー) はすべてここを通す。
   // 片方だけ切り替わると、時計と出没時刻が食い違って前より読めなくなる
@@ -10503,10 +10508,40 @@
     const v = localStorage.getItem("ssClock");
     if (CLOCK_MODES.indexOf(v) >= 0) clockMode = v;
   } catch (e) { /* プライベートモード等 */ }
+  // ある時間帯の UTC からのずれ [ms]。その時間帯での壁時計を組み直して引き算する。
+  // Intl.DateTimeFormat の生成は重いので時間帯ごとに使い回す
+  const zoneFmt = new Map();
+  function zoneOffset(zone, t) {
+    let f = zoneFmt.get(zone);
+    if (f === undefined) {
+      try {
+        f = new Intl.DateTimeFormat("en-US", { timeZone: zone, hour12: false,
+          year: "numeric", month: "2-digit", day: "2-digit",
+          hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      } catch (e) {
+        f = null;                      // 未対応の時間帯名。以後は引かない
+      }
+      zoneFmt.set(zone, f);
+    }
+    if (!f) return null;
+    const g = {};
+    for (const p of f.formatToParts(new Date(t))) g[p.type] = p.value;
+    // hour12:false は真夜中を "24" と出す実装がある
+    const wall = Date.UTC(+g.year, +g.month - 1, +g.day, +g.hour % 24, +g.minute, +g.second);
+    return wall - (t - (t % 1000 + 1000) % 1000);   // 秒に丸めた t との差
+  }
+  // 観測地の常用時のずれ [ms]。時間帯が分からなければ null
+  function siteCivilOffset(t) {
+    const z = siteZone();
+    return z ? zoneOffset(z, t) : null;
+  }
   // UTC からのずれ [ms]。端末は日時によって変わる (夏時間) ので毎回引き直す
   function clockOffset(t) {
     if (clockMode === "utc") return 0;
-    if (clockMode === "site") return obsLon / 360 * DAY_MS;
+    if (clockMode === "site") {
+      const o = siteCivilOffset(t);
+      return o !== null ? o : obsLon / 360 * DAY_MS;   // 常用時が引けなければ LMT
+    }
     return -new Date(t).getTimezoneOffset() * 60000;
   }
   // 表示用にずらした Date。以後は getUTC* で読む — getHours() 等は端末の
@@ -10522,14 +10557,18 @@
     const u = Date.UTC(y, mo, dd, hh, mi, ss || 0, ms || 0);
     return u - clockOffset(u - clockOffset(u));
   }
-  // タイムゾーン略称 (JST / GMT / BST など)。日付・言語ごとにキャッシュ (夏時間対応)
+  // タイムゾーン略称 (JST / GMT / BST など)。zone を渡さなければ端末のもの。
+  // 日付・言語・時間帯ごとにキャッシュ (夏時間で変わるため日付も鍵に入れる)
   let tzKey = "", tzVal = "";
-  function tzAbbr(d) {
-    const key = lang + "|" + d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+  function tzAbbr(d, zone) {
+    const key = lang + "|" + (zone || "") + "|" +
+      d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
     if (key !== tzKey) {
       tzKey = key;
       try {
-        tzVal = new Intl.DateTimeFormat(lang === "ja" ? "ja-JP" : "en", { timeZoneName: "short" })
+        const opt = { timeZoneName: "short" };
+        if (zone) opt.timeZone = zone;
+        tzVal = new Intl.DateTimeFormat(lang === "ja" ? "ja-JP" : "en", opt)
           .formatToParts(d).find((p) => p.type === "timeZoneName").value || "";
       } catch (e) {
         tzVal = "";
@@ -10555,16 +10594,28 @@
       lastTimeStr = ts;
     }
     const tz = clockMode === "utc" ? "UTC"
-             : clockMode === "site" ? "LMT" : tzAbbr(new Date(t));
+             : clockMode === "site" ? (siteZone() ? tzAbbr(new Date(t), siteZone()) : "LMT")
+             : tzAbbr(new Date(t));
     if (tz !== lastTzStr) {
       tzText.textContent = tz;
       tzText.title = T().clockTzHint;
       lastTzStr = tz;
     }
   }
+  // 観測地の常用時が端末と同じずれなら、site を出しても同じ表示にしかならない
+  function siteSameAsDevice(t) {
+    const o = siteCivilOffset(t);
+    return o !== null && o === -new Date(t).getTimezoneOffset() * 60000;
+  }
   // 基準の切替。切り替えたら次のフレームで必ず書き直させる
   tzText.addEventListener("click", () => {
-    clockMode = CLOCK_MODES[(CLOCK_MODES.indexOf(clockMode) + 1) % CLOCK_MODES.length];
+    const t = J2000 + simDays * DAY_MS;
+    let i = CLOCK_MODES.indexOf(clockMode);
+    for (let k = 0; k < CLOCK_MODES.length; k++) {
+      i = (i + 1) % CLOCK_MODES.length;
+      if (CLOCK_MODES[i] !== "site" || !siteSameAsDevice(t)) break;   // 同じなら飛ばす
+    }
+    clockMode = CLOCK_MODES[i];
     try { localStorage.setItem("ssClock", clockMode); } catch (e) { /* プライベートモード等 */ }
     lastDateStr = lastTimeStr = lastTzStr = "";
     updateObs();
@@ -10881,20 +10932,33 @@
   let obsLat = parseFloat(localStorage.getItem("ssLat"));
   let obsLon = parseFloat(localStorage.getItem("ssLon"));
   if (!isFinite(obsLat) || !isFinite(obsLon)) { obsLat = 35.68; obsLon = 139.69; }   // 既定: 東京
+  // tz はその土地の常用時 (IANA)。時計の「観測地」表示と、出没・天文カレンダーの
+  // 時刻がこれに乗る。緯度経度を直に入れた場合は分からないので LMT に落とす
   const CITIES = [
-    { ja: "東京", en: "Tokyo", lat: 35.68, lon: 139.69 },
-    { ja: "ニューヨーク", en: "New York", lat: 40.71, lon: -74.01 },
-    { ja: "ロンドン", en: "London", lat: 51.51, lon: -0.13 },
-    { ja: "パリ", en: "Paris", lat: 48.85, lon: 2.35 },
-    { ja: "北京", en: "Beijing", lat: 39.90, lon: 116.41 },
-    { ja: "シンガポール", en: "Singapore", lat: 1.35, lon: 103.82 },
-    { ja: "ロサンゼルス", en: "Los Angeles", lat: 34.05, lon: -118.24 },
-    { ja: "ホノルル", en: "Honolulu", lat: 21.31, lon: -157.86 },
-    { ja: "シドニー", en: "Sydney", lat: -33.87, lon: 151.21 },
-    { ja: "リオデジャネイロ", en: "Rio de Janeiro", lat: -22.91, lon: -43.17 },
-    { ja: "ケープタウン", en: "Cape Town", lat: -33.92, lon: 18.42 },
-    { ja: "レイキャビク", en: "Reykjavík", lat: 64.15, lon: -21.94 },
+    { ja: "東京", en: "Tokyo", lat: 35.68, lon: 139.69, tz: "Asia/Tokyo" },
+    { ja: "ニューヨーク", en: "New York", lat: 40.71, lon: -74.01, tz: "America/New_York" },
+    { ja: "ロンドン", en: "London", lat: 51.51, lon: -0.13, tz: "Europe/London" },
+    { ja: "パリ", en: "Paris", lat: 48.85, lon: 2.35, tz: "Europe/Paris" },
+    { ja: "北京", en: "Beijing", lat: 39.90, lon: 116.41, tz: "Asia/Shanghai" },
+    { ja: "シンガポール", en: "Singapore", lat: 1.35, lon: 103.82, tz: "Asia/Singapore" },
+    { ja: "ロサンゼルス", en: "Los Angeles", lat: 34.05, lon: -118.24, tz: "America/Los_Angeles" },
+    { ja: "ホノルル", en: "Honolulu", lat: 21.31, lon: -157.86, tz: "Pacific/Honolulu" },
+    { ja: "シドニー", en: "Sydney", lat: -33.87, lon: 151.21, tz: "Australia/Sydney" },
+    { ja: "リオデジャネイロ", en: "Rio de Janeiro", lat: -22.91, lon: -43.17, tz: "America/Sao_Paulo" },
+    { ja: "ケープタウン", en: "Cape Town", lat: -33.92, lon: 18.42, tz: "Africa/Johannesburg" },
+    { ja: "レイキャビク", en: "Reykjavík", lat: 64.15, lon: -21.94, tz: "Atlantic/Reykjavik" },
   ];
+  // 観測地に重なる都市 (無ければ null)
+  const siteCity = () => CITIES.find(
+    (c) => Math.abs(c.lat - obsLat) < 0.02 && Math.abs(c.lon - obsLon) < 0.02) || null;
+  // 現在地から取った観測地の時間帯。その場所に居るのだから端末の設定が正しい。
+  // 都市の選択や緯度経度の手入力で観測地が動いたら捨てる (setObsSite)
+  let geoZone = null;
+  // 観測地の常用時の時間帯。分からなければ null = 地方平均太陽時 (LMT) に落とす
+  function siteZone() {
+    const c = siteCity();
+    return c ? c.tz : geoZone;
+  }
   // 視等級モデル (V = 基準 + 5log10(rΔ) + 位相項, i = 位相角[度]) — 主要天体のみ
   const MAG = {
     mercury: (r, D, i) => -0.42 + 5*Math.log10(r*D) + 0.038*i - 0.000273*i*i + 2e-6*i*i*i,
@@ -11094,8 +11158,9 @@
   }
   tabFactsBtn.addEventListener("click", () => { infoTab = "facts"; renderInfoBody(); });
   tabObsBtn.addEventListener("click", () => { infoTab = "obs"; renderInfoBody(); });
-  function setObsSite(lat, lon) {
+  function setObsSite(lat, lon, zone) {
     obsLat = lat; obsLon = lon;
+    geoZone = zone || null;   // 現在地から取ったときだけ渡ってくる
     localStorage.setItem("ssLat", String(lat));
     localStorage.setItem("ssLon", String(lon));
     lastObsStr = "";
@@ -11120,7 +11185,13 @@
     if (!navigator.geolocation) return;
     obsGeoBtn.disabled = true;
     navigator.geolocation.getCurrentPosition(
-      (p) => { obsGeoBtn.disabled = false; setObsSite(+p.coords.latitude.toFixed(3), +p.coords.longitude.toFixed(3)); },
+      (p) => {
+        obsGeoBtn.disabled = false;
+        // 端末が今いる場所なので、常用時は端末の時間帯でよい
+        let z = null;
+        try { z = Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch (e) { /* 未対応 */ }
+        setObsSite(+p.coords.latitude.toFixed(3), +p.coords.longitude.toFixed(3), z);
+      },
       () => { obsGeoBtn.disabled = false; },
       { timeout: 8000, maximumAge: 600000 }
     );
@@ -11141,9 +11212,8 @@
   placeObsSite();
   function siteLabel() {
     const o = T().obs;
-    for (const c of CITIES) {
-      if (Math.abs(c.lat - obsLat) < 0.02 && Math.abs(c.lon - obsLon) < 0.02) return lang === "ja" ? c.ja : c.en;
-    }
+    const c = siteCity();
+    if (c) return lang === "ja" ? c.ja : c.en;
     return Math.abs(obsLat).toFixed(1) + "°" + (obsLat >= 0 ? o.N : o.S) + " " +
            Math.abs(obsLon).toFixed(1) + "°" + (obsLon >= 0 ? o.E : o.W);
   }

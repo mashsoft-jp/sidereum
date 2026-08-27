@@ -145,11 +145,16 @@
   // ---------- 日時の表示 & 入力 ----------
   // 表示の基準は3つから選ぶ (時計の右端をタップで切替)。既定は端末のまま。
   //   device 端末のタイムゾーン。夏時間も端末任せ
-  //   site   観測地の地方平均太陽時 (経度から出す)。観測地を東京から動かすと
-  //          端末の時刻では空が読めなくなるため。時差の区割りは政治的で
-  //          テーブルが要るので採らない — 地方時なら「12時に太陽が南中する」
-  //          という意味が常に立つ
+  //   site   観測地の時刻。観測地を東京から動かすと、端末の時刻では空が読めない
   //   utc    協定世界時
+  //
+  // site は、観測地が都市リストのどれか (または現在地取得) なら**その土地の
+  // 常用時** (JST・EST など。夏時間も込み)。緯度経度を直に入れた場合は常用時の
+  // 区割りが分からないので、経度から出す地方平均太陽時 (LMT) に落とす。
+  // LMT なら「12時に太陽が南中する」という意味が常に立つので、退避先として妥当。
+  //
+  // 観測地の常用時が端末と同じずれになるとき (東京 + 端末も日本など) は、同じ
+  // 表示が2度出るだけなので site を飛ばす。
   //
   // 時刻を出すところ (時計・出没・天文カレンダー) はすべてここを通す。
   // 片方だけ切り替わると、時計と出没時刻が食い違って前より読めなくなる
@@ -163,10 +168,40 @@
     const v = localStorage.getItem("ssClock");
     if (CLOCK_MODES.indexOf(v) >= 0) clockMode = v;
   } catch (e) { /* プライベートモード等 */ }
+  // ある時間帯の UTC からのずれ [ms]。その時間帯での壁時計を組み直して引き算する。
+  // Intl.DateTimeFormat の生成は重いので時間帯ごとに使い回す
+  const zoneFmt = new Map();
+  function zoneOffset(zone, t) {
+    let f = zoneFmt.get(zone);
+    if (f === undefined) {
+      try {
+        f = new Intl.DateTimeFormat("en-US", { timeZone: zone, hour12: false,
+          year: "numeric", month: "2-digit", day: "2-digit",
+          hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      } catch (e) {
+        f = null;                      // 未対応の時間帯名。以後は引かない
+      }
+      zoneFmt.set(zone, f);
+    }
+    if (!f) return null;
+    const g = {};
+    for (const p of f.formatToParts(new Date(t))) g[p.type] = p.value;
+    // hour12:false は真夜中を "24" と出す実装がある
+    const wall = Date.UTC(+g.year, +g.month - 1, +g.day, +g.hour % 24, +g.minute, +g.second);
+    return wall - (t - (t % 1000 + 1000) % 1000);   // 秒に丸めた t との差
+  }
+  // 観測地の常用時のずれ [ms]。時間帯が分からなければ null
+  function siteCivilOffset(t) {
+    const z = siteZone();
+    return z ? zoneOffset(z, t) : null;
+  }
   // UTC からのずれ [ms]。端末は日時によって変わる (夏時間) ので毎回引き直す
   function clockOffset(t) {
     if (clockMode === "utc") return 0;
-    if (clockMode === "site") return obsLon / 360 * DAY_MS;
+    if (clockMode === "site") {
+      const o = siteCivilOffset(t);
+      return o !== null ? o : obsLon / 360 * DAY_MS;   // 常用時が引けなければ LMT
+    }
     return -new Date(t).getTimezoneOffset() * 60000;
   }
   // 表示用にずらした Date。以後は getUTC* で読む — getHours() 等は端末の
@@ -182,14 +217,18 @@
     const u = Date.UTC(y, mo, dd, hh, mi, ss || 0, ms || 0);
     return u - clockOffset(u - clockOffset(u));
   }
-  // タイムゾーン略称 (JST / GMT / BST など)。日付・言語ごとにキャッシュ (夏時間対応)
+  // タイムゾーン略称 (JST / GMT / BST など)。zone を渡さなければ端末のもの。
+  // 日付・言語・時間帯ごとにキャッシュ (夏時間で変わるため日付も鍵に入れる)
   let tzKey = "", tzVal = "";
-  function tzAbbr(d) {
-    const key = lang + "|" + d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+  function tzAbbr(d, zone) {
+    const key = lang + "|" + (zone || "") + "|" +
+      d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
     if (key !== tzKey) {
       tzKey = key;
       try {
-        tzVal = new Intl.DateTimeFormat(lang === "ja" ? "ja-JP" : "en", { timeZoneName: "short" })
+        const opt = { timeZoneName: "short" };
+        if (zone) opt.timeZone = zone;
+        tzVal = new Intl.DateTimeFormat(lang === "ja" ? "ja-JP" : "en", opt)
           .formatToParts(d).find((p) => p.type === "timeZoneName").value || "";
       } catch (e) {
         tzVal = "";
@@ -215,16 +254,28 @@
       lastTimeStr = ts;
     }
     const tz = clockMode === "utc" ? "UTC"
-             : clockMode === "site" ? "LMT" : tzAbbr(new Date(t));
+             : clockMode === "site" ? (siteZone() ? tzAbbr(new Date(t), siteZone()) : "LMT")
+             : tzAbbr(new Date(t));
     if (tz !== lastTzStr) {
       tzText.textContent = tz;
       tzText.title = T().clockTzHint;
       lastTzStr = tz;
     }
   }
+  // 観測地の常用時が端末と同じずれなら、site を出しても同じ表示にしかならない
+  function siteSameAsDevice(t) {
+    const o = siteCivilOffset(t);
+    return o !== null && o === -new Date(t).getTimezoneOffset() * 60000;
+  }
   // 基準の切替。切り替えたら次のフレームで必ず書き直させる
   tzText.addEventListener("click", () => {
-    clockMode = CLOCK_MODES[(CLOCK_MODES.indexOf(clockMode) + 1) % CLOCK_MODES.length];
+    const t = J2000 + simDays * DAY_MS;
+    let i = CLOCK_MODES.indexOf(clockMode);
+    for (let k = 0; k < CLOCK_MODES.length; k++) {
+      i = (i + 1) % CLOCK_MODES.length;
+      if (CLOCK_MODES[i] !== "site" || !siteSameAsDevice(t)) break;   // 同じなら飛ばす
+    }
+    clockMode = CLOCK_MODES[i];
     try { localStorage.setItem("ssClock", clockMode); } catch (e) { /* プライベートモード等 */ }
     lastDateStr = lastTimeStr = lastTzStr = "";
     updateObs();

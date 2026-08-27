@@ -117,20 +117,33 @@
   let obsLat = parseFloat(localStorage.getItem("ssLat"));
   let obsLon = parseFloat(localStorage.getItem("ssLon"));
   if (!isFinite(obsLat) || !isFinite(obsLon)) { obsLat = 35.68; obsLon = 139.69; }   // 既定: 東京
+  // tz はその土地の常用時 (IANA)。時計の「観測地」表示と、出没・天文カレンダーの
+  // 時刻がこれに乗る。緯度経度を直に入れた場合は分からないので LMT に落とす
   const CITIES = [
-    { ja: "東京", en: "Tokyo", lat: 35.68, lon: 139.69 },
-    { ja: "ニューヨーク", en: "New York", lat: 40.71, lon: -74.01 },
-    { ja: "ロンドン", en: "London", lat: 51.51, lon: -0.13 },
-    { ja: "パリ", en: "Paris", lat: 48.85, lon: 2.35 },
-    { ja: "北京", en: "Beijing", lat: 39.90, lon: 116.41 },
-    { ja: "シンガポール", en: "Singapore", lat: 1.35, lon: 103.82 },
-    { ja: "ロサンゼルス", en: "Los Angeles", lat: 34.05, lon: -118.24 },
-    { ja: "ホノルル", en: "Honolulu", lat: 21.31, lon: -157.86 },
-    { ja: "シドニー", en: "Sydney", lat: -33.87, lon: 151.21 },
-    { ja: "リオデジャネイロ", en: "Rio de Janeiro", lat: -22.91, lon: -43.17 },
-    { ja: "ケープタウン", en: "Cape Town", lat: -33.92, lon: 18.42 },
-    { ja: "レイキャビク", en: "Reykjavík", lat: 64.15, lon: -21.94 },
+    { ja: "東京", en: "Tokyo", lat: 35.68, lon: 139.69, tz: "Asia/Tokyo" },
+    { ja: "ニューヨーク", en: "New York", lat: 40.71, lon: -74.01, tz: "America/New_York" },
+    { ja: "ロンドン", en: "London", lat: 51.51, lon: -0.13, tz: "Europe/London" },
+    { ja: "パリ", en: "Paris", lat: 48.85, lon: 2.35, tz: "Europe/Paris" },
+    { ja: "北京", en: "Beijing", lat: 39.90, lon: 116.41, tz: "Asia/Shanghai" },
+    { ja: "シンガポール", en: "Singapore", lat: 1.35, lon: 103.82, tz: "Asia/Singapore" },
+    { ja: "ロサンゼルス", en: "Los Angeles", lat: 34.05, lon: -118.24, tz: "America/Los_Angeles" },
+    { ja: "ホノルル", en: "Honolulu", lat: 21.31, lon: -157.86, tz: "Pacific/Honolulu" },
+    { ja: "シドニー", en: "Sydney", lat: -33.87, lon: 151.21, tz: "Australia/Sydney" },
+    { ja: "リオデジャネイロ", en: "Rio de Janeiro", lat: -22.91, lon: -43.17, tz: "America/Sao_Paulo" },
+    { ja: "ケープタウン", en: "Cape Town", lat: -33.92, lon: 18.42, tz: "Africa/Johannesburg" },
+    { ja: "レイキャビク", en: "Reykjavík", lat: 64.15, lon: -21.94, tz: "Atlantic/Reykjavik" },
   ];
+  // 観測地に重なる都市 (無ければ null)
+  const siteCity = () => CITIES.find(
+    (c) => Math.abs(c.lat - obsLat) < 0.02 && Math.abs(c.lon - obsLon) < 0.02) || null;
+  // 現在地から取った観測地の時間帯。その場所に居るのだから端末の設定が正しい。
+  // 都市の選択や緯度経度の手入力で観測地が動いたら捨てる (setObsSite)
+  let geoZone = null;
+  // 観測地の常用時の時間帯。分からなければ null = 地方平均太陽時 (LMT) に落とす
+  function siteZone() {
+    const c = siteCity();
+    return c ? c.tz : geoZone;
+  }
   // 視等級モデル (V = 基準 + 5log10(rΔ) + 位相項, i = 位相角[度]) — 主要天体のみ
   const MAG = {
     mercury: (r, D, i) => -0.42 + 5*Math.log10(r*D) + 0.038*i - 0.000273*i*i + 2e-6*i*i*i,
@@ -330,8 +343,9 @@
   }
   tabFactsBtn.addEventListener("click", () => { infoTab = "facts"; renderInfoBody(); });
   tabObsBtn.addEventListener("click", () => { infoTab = "obs"; renderInfoBody(); });
-  function setObsSite(lat, lon) {
+  function setObsSite(lat, lon, zone) {
     obsLat = lat; obsLon = lon;
+    geoZone = zone || null;   // 現在地から取ったときだけ渡ってくる
     localStorage.setItem("ssLat", String(lat));
     localStorage.setItem("ssLon", String(lon));
     lastObsStr = "";
@@ -356,7 +370,13 @@
     if (!navigator.geolocation) return;
     obsGeoBtn.disabled = true;
     navigator.geolocation.getCurrentPosition(
-      (p) => { obsGeoBtn.disabled = false; setObsSite(+p.coords.latitude.toFixed(3), +p.coords.longitude.toFixed(3)); },
+      (p) => {
+        obsGeoBtn.disabled = false;
+        // 端末が今いる場所なので、常用時は端末の時間帯でよい
+        let z = null;
+        try { z = Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch (e) { /* 未対応 */ }
+        setObsSite(+p.coords.latitude.toFixed(3), +p.coords.longitude.toFixed(3), z);
+      },
       () => { obsGeoBtn.disabled = false; },
       { timeout: 8000, maximumAge: 600000 }
     );
@@ -377,9 +397,8 @@
   placeObsSite();
   function siteLabel() {
     const o = T().obs;
-    for (const c of CITIES) {
-      if (Math.abs(c.lat - obsLat) < 0.02 && Math.abs(c.lon - obsLon) < 0.02) return lang === "ja" ? c.ja : c.en;
-    }
+    const c = siteCity();
+    if (c) return lang === "ja" ? c.ja : c.en;
     return Math.abs(obsLat).toFixed(1) + "°" + (obsLat >= 0 ? o.N : o.S) + " " +
            Math.abs(obsLon).toFixed(1) + "°" + (obsLon >= 0 ? o.E : o.W);
   }
