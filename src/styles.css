@@ -376,12 +376,15 @@
     border: none;
   }
   #navCollapse:hover { color: var(--text); background: rgba(150, 178, 224, 0.12); }
+  /* 星座をメニューへ移して2つになったので、リストの幅いっぱいに割り付ける
+     (2つのまま左端に寄せると、右側が間の抜けた空きになる) */
   #masterToggles {
     display: flex;
     gap: 4px;
   }
   #masterToggles button {
-    padding: 4px 11px;
+    flex: 1;
+    padding: 4px 6px;
     font-size: 11px;
     letter-spacing: 0.1em;
     background: rgba(9, 14, 28, 0.6);
@@ -1075,7 +1078,7 @@
     #menu { top: calc(60px + var(--sat)); }
     /* top は指定しない。上端は観測地バーぶんを空けた 108px で全画面サイズ共通 */
     #navPanel { max-height: 40vh; max-height: 40dvh; }
-    #masterToggles button { padding: 3px 9px; font-size: 10px; }
+    #masterToggles button { padding: 3px 5px; font-size: 10px; }
     #nav { gap: 3px; }
     #nav button { padding: 4px 9px; font-size: 10px; }
     #controls {
