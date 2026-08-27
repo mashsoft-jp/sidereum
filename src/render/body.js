@@ -18,6 +18,82 @@
   }
   resize();
 
+  // ---------- オーバーレイの文字 (優先度つき衝突回避) ----------
+  // 画面に出す文字は 天体・衛星・探査機・方位・放射点・星雲・星座 と系統が多く、
+  // それぞれが自分の都合で描くと、内惑星まわりのように混み合ったところで全部
+  // 重なって読めなくなる。そこで直接描かず一旦ここへ積み、優先度の高いものから
+  // 場所を取らせ、確保済みの矩形と重なるものは捨てる。
+  //
+  // 優先度は小さいほど強い。同じ優先度どうしは積んだ順が勝つ (sort は安定) ので、
+  // 天体の並びが変わらないかぎり毎フレーム同じものが残る — 拮抗した2つが
+  // 交互に現れて点滅する、ということにはならない。
+  const LBL_SEL   = 0;   // 選択・注目天体、ツアーの視線ガイド (必ず出す)
+  const LBL_BODY  = 1;   // 太陽・惑星・月
+  const LBL_PROBE = 2;   // 探査機 (実寸比では点にもならないので名前だけが頼り)
+  const LBL_SAT   = 3;   // 衛星
+  const LBL_DIR   = 4;   // 方位 (N/E/S/W)
+  const LBL_MET   = 5;   // 流星群の放射点
+  const LBL_DSO   = 6;   // 星雲・星団
+  const LBL_SKY   = 7;   // 星座名・黄道 (背景の文脈。負けて消えてよい)
+  const LBL_FACE = '"Avenir Next","Hiragino Sans",sans-serif';
+  // 文字の大きさは高さの見積り (矩形) にも要るので、指定文字列と px を組で持つ
+  const LF10 = { s: '10.5px ' + LBL_FACE, px: 10.5 };
+  const LF11 = { s: '11px ' + LBL_FACE, px: 11 };
+  const LF12 = { s: '12px ' + LBL_FACE, px: 12 };
+  // 衛星は母天体より一段下げる。ただし月だけは地上ビューの主役なので惑星と同じ
+  const lblPri = (b) => (!b.parent || b === MOON) ? LBL_BODY : LBL_SAT;
+
+  const lblQ = [], lblQPool = [];        // 積んだ文字 (スロットは使い回す)
+  const lblBox = [], lblBoxPool = [];    // 確保済みの矩形 [x0,y0,x1,y1,弾く優先度]
+  const lblWCache = new Map();           // 幅は言語を切り替えた時しか変わらない
+  function lblRect(x0, y0, x1, y1, minPri) {
+    let b = lblBoxPool[lblBox.length];
+    if (!b) b = lblBoxPool[lblBox.length] = [0, 0, 0, 0, 0];
+    b[0] = x0; b[1] = y0; b[2] = x1; b[3] = y1; b[4] = minPri;
+    lblBox.push(b);
+  }
+  function lblBegin() { lblQ.length = 0; lblBox.length = 0; }
+  // 文字を置かせない場所を先に取る (天体の円盤)。背景側の文字だけを弾く —
+  // 木星面を通過中の衛星など、円盤の上にあること自体が意味を持つ名前は通す
+  function lblBlock(x, y, r) {
+    if (r >= 8) lblRect(x - r, y - r, x + r, y + r, LBL_MET);
+  }
+  // (x, y) は fillText と同じ。textAlign="center" の中央と、ベースライン
+  function lblPut(txt, x, y, pri, col, f) {
+    let L = lblQPool[lblQ.length];
+    if (!L) L = lblQPool[lblQ.length] = { txt: "", x: 0, y: 0, pri: 0, col: "", f: null };
+    L.txt = txt; L.x = x; L.y = y; L.pri = pri; L.col = col; L.f = f || LF11;
+    lblQ.push(L);
+  }
+  function lblEnd() {
+    lblQ.sort((a, b) => a.pri - b.pri);
+    for (const L of lblQ) {
+      const key = L.f.px + " " + L.txt;
+      let w = lblWCache.get(key);
+      if (w === undefined) {
+        octx.font = L.f.s;
+        w = octx.measureText(L.txt).width;
+        lblWCache.set(key, w);
+      }
+      // 高さは実測せず px から見積もる (measureText の ascent/descent は文字に
+      // よって変わるので、同じ大きさの文字が不揃いな箱を持つことになる)
+      const hw = w * 0.5 + 2;
+      const x0 = L.x - hw, x1 = L.x + hw;
+      const y0 = L.y - L.f.px * 0.85 - 1, y1 = L.y + L.f.px * 0.3 + 1;
+      if (L.pri > LBL_SEL) {
+        let hit = false;
+        for (const b of lblBox) {
+          if (L.pri >= b[4] && x0 < b[2] && x1 > b[0] && y0 < b[3] && y1 > b[1]) { hit = true; break; }
+        }
+        if (hit) continue;
+      }
+      lblRect(x0, y0, x1, y1, 0);
+      octx.font = L.f.s;
+      octx.fillStyle = L.col;
+      octx.fillText(L.txt, L.x, L.y);
+    }
+  }
+
   // ---------- 描画 ----------
   let VP = mIdent(), Vm = mIdent();
   let EYE = [0, 0, 0];          // カメラ位置 (描画はカメラ相対座標で行う)

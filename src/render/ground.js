@@ -870,22 +870,25 @@
     drawGroundOverlay();
     perfLap("文字");
   }
+  // 文字は lblPut で積むだけにして、最後に lblEnd でまとめて置く (宇宙ビューと
+  // 同じ仕組み。優先度つきの衝突回避は render/body.js 側)
   function drawGroundOverlay() {
     octx.setTransform(DPR, 0, 0, DPR, 0, 0);
     octx.clearRect(0, 0, W, H);
     octx.textAlign = "center";
-    octx.font = '12px "Avenir Next","Hiragino Sans",sans-serif';
+    lblBegin();
     const o = T().obs;
-    octx.fillStyle = "rgba(150,178,224,0.55)";
     for (const [az, lab] of [[0, o.N], [90, o.E], [180, o.S], [270, o.W]]) {
       azAltDir(az, 0, _gp);
       const s = projGround([_gp[0]*SKYR, _gp[1]*SKYR, _gp[2]*SKYR]);
-      if (s && s.x >= 0 && s.x <= W && s.y >= 0 && s.y <= H) octx.fillText(lab, s.x, s.y - 4);
+      if (s && s.x >= 0 && s.x <= W && s.y >= 0 && s.y <= H) {
+        lblPut(lab, s.x, s.y - 4, LBL_DIR, "rgba(150,178,224,0.55)", LF12);
+      }
     }
     // 星雲・星団の名前。淡くて小さいものまで全部出すと画面が名前で埋まるので、
     // 明るいか、画角に対してある程度の大きさがあるものだけに絞る
     if (dsoOn && dsoW && starVis > 0.04) {
-      octx.fillStyle = "rgba(190,205,235," + (0.62 * starVis).toFixed(3) + ")";
+      const dsoCol = "rgba(190,205,235," + (0.62 * starVis).toFixed(3) + ")";
       const hf = gFov * 0.5;
       for (let i = 0; i < DSO.length; i++) {
         if (!dsoLabelled(i, hf)) continue;
@@ -899,12 +902,12 @@
         if (!sp || sp.x < 0 || sp.x > W || sp.y < 0 || sp.y > H) continue;
         // 名前は天体の下に。長径の半分ぶん下げて、しみに重ならないようにする
         const rpx = DSO[i][4] / 120 * DEG / hf * (H * 0.5);
-        octx.fillText(dsoName(i), sp.x, sp.y + Math.min(rpx, H * 0.2) + 13);
+        lblPut(dsoName(i), sp.x, sp.y + Math.min(rpx, H * 0.2) + 13, LBL_DSO, dsoCol, LF12);
       }
     }
     // 星座名 (観測者フレームへ投影。地平線より上のもの)
     if (showConst && starVis > 0.04) {
-      octx.fillStyle = "rgba(150,178,224," + (0.5 * starVis).toFixed(3) + ")";
+      const cCol = "rgba(150,178,224," + (0.5 * starVis).toFixed(3) + ")";
       for (const c of CONST_LABELS) {
         // 画面内に見えている頂点の平均位置に名前を置く (中心点が画角外でも
         // 星座の一部が見えていれば、その見えている部分の中央に表示される)
@@ -919,7 +922,7 @@
           if (!s || s.x < 0 || s.x > W || s.y < 0 || s.y > H) continue;
           sumx += s.x; sumy += s.y; cnt++;
         }
-        if (cnt >= 2) octx.fillText(lang === "ja" ? c.ja : c.en, sumx / cnt, sumy / cnt);
+        if (cnt >= 2) lblPut(lang === "ja" ? c.ja : c.en, sumx / cnt, sumy / cnt, LBL_SKY, cCol, LF12);
       }
       // 黄道ラベル: 画面中央に最も近い可視点に1つ
       const ER = 1895;
@@ -935,12 +938,11 @@
         if (d < bd) { bd = d; bx = s.x; by = s.y; }
       }
       if (bd < Infinity) {
-        octx.fillStyle = "rgba(226,178,110," + (0.75 * starVis).toFixed(3) + ")";
-        octx.fillText(lang === "ja" ? "黄道" : "Ecliptic", bx, by - 6);
+        lblPut(lang === "ja" ? "黄道" : "Ecliptic", bx, by - 6, LBL_SKY,
+               "rgba(226,178,110," + (0.75 * starVis).toFixed(3) + ")", LF12);
       }
     }
     drawRadiants();   // 放射点 (降っている流星群があるときだけ)
-    octx.font = '11px "Avenir Next","Hiragino Sans",sans-serif';
     // 名前は天体リストの「名前」に従う (宇宙ビューと同じ)。名前を消すと選択天体の
     // 目印が無くなってしまうので、選択マークは名前とは別に出す
     const marked = showSelMark ? selected : null;
@@ -957,8 +959,10 @@
         octx.lineWidth = 1.2;
         octx.stroke();
       }
+      if (v.rpx < H * 0.3) lblBlock(s.x, s.y, v.rpx);   // 円盤の上に星座名などを置かせない
       if (!v.b.showLabel) continue;
-      octx.fillStyle = hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.82)";
-      octx.fillText(bName(v.b), s.x, s.y - Math.max(v.rpx, 3) - 8);
+      lblPut(bName(v.b), s.x, s.y - Math.max(v.rpx, 3) - 8, hit ? LBL_SEL : lblPri(v.b),
+             hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.82)", LF11);
     }
+    lblEnd();
   }

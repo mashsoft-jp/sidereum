@@ -273,7 +273,6 @@
   function drawRadiants() {
     if (!metActive.length) return;
     octx.textAlign = "center";
-    octx.font = '11px "Avenir Next","Hiragino Sans",sans-serif';
     for (const a of metActive) {
       if (a.dir[1] < 0.02) continue;
       const s = projGround([a.dir[0] * SKYR, a.dir[1] * SKYR, a.dir[2] * SKYR]);
@@ -291,7 +290,7 @@
       octx.moveTo(s.x, s.y - 12); octx.lineTo(s.x, s.y - 9);
       octx.moveTo(s.x, s.y + 9); octx.lineTo(s.x, s.y + 12);
       octx.stroke();
-      octx.fillStyle = "rgba(178,214,246," + v.toFixed(3) + ")";
-      octx.fillText(lang === "ja" ? a.s.ja : a.s.en, s.x, s.y - 17);
+      lblPut(lang === "ja" ? a.s.ja : a.s.en, s.x, s.y - 17, LBL_MET,
+             "rgba(178,214,246," + v.toFixed(3) + ")");
     }
   }

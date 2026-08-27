@@ -6919,6 +6919,82 @@
   }
   resize();
 
+  // ---------- オーバーレイの文字 (優先度つき衝突回避) ----------
+  // 画面に出す文字は 天体・衛星・探査機・方位・放射点・星雲・星座 と系統が多く、
+  // それぞれが自分の都合で描くと、内惑星まわりのように混み合ったところで全部
+  // 重なって読めなくなる。そこで直接描かず一旦ここへ積み、優先度の高いものから
+  // 場所を取らせ、確保済みの矩形と重なるものは捨てる。
+  //
+  // 優先度は小さいほど強い。同じ優先度どうしは積んだ順が勝つ (sort は安定) ので、
+  // 天体の並びが変わらないかぎり毎フレーム同じものが残る — 拮抗した2つが
+  // 交互に現れて点滅する、ということにはならない。
+  const LBL_SEL   = 0;   // 選択・注目天体、ツアーの視線ガイド (必ず出す)
+  const LBL_BODY  = 1;   // 太陽・惑星・月
+  const LBL_PROBE = 2;   // 探査機 (実寸比では点にもならないので名前だけが頼り)
+  const LBL_SAT   = 3;   // 衛星
+  const LBL_DIR   = 4;   // 方位 (N/E/S/W)
+  const LBL_MET   = 5;   // 流星群の放射点
+  const LBL_DSO   = 6;   // 星雲・星団
+  const LBL_SKY   = 7;   // 星座名・黄道 (背景の文脈。負けて消えてよい)
+  const LBL_FACE = '"Avenir Next","Hiragino Sans",sans-serif';
+  // 文字の大きさは高さの見積り (矩形) にも要るので、指定文字列と px を組で持つ
+  const LF10 = { s: '10.5px ' + LBL_FACE, px: 10.5 };
+  const LF11 = { s: '11px ' + LBL_FACE, px: 11 };
+  const LF12 = { s: '12px ' + LBL_FACE, px: 12 };
+  // 衛星は母天体より一段下げる。ただし月だけは地上ビューの主役なので惑星と同じ
+  const lblPri = (b) => (!b.parent || b === MOON) ? LBL_BODY : LBL_SAT;
+
+  const lblQ = [], lblQPool = [];        // 積んだ文字 (スロットは使い回す)
+  const lblBox = [], lblBoxPool = [];    // 確保済みの矩形 [x0,y0,x1,y1,弾く優先度]
+  const lblWCache = new Map();           // 幅は言語を切り替えた時しか変わらない
+  function lblRect(x0, y0, x1, y1, minPri) {
+    let b = lblBoxPool[lblBox.length];
+    if (!b) b = lblBoxPool[lblBox.length] = [0, 0, 0, 0, 0];
+    b[0] = x0; b[1] = y0; b[2] = x1; b[3] = y1; b[4] = minPri;
+    lblBox.push(b);
+  }
+  function lblBegin() { lblQ.length = 0; lblBox.length = 0; }
+  // 文字を置かせない場所を先に取る (天体の円盤)。背景側の文字だけを弾く —
+  // 木星面を通過中の衛星など、円盤の上にあること自体が意味を持つ名前は通す
+  function lblBlock(x, y, r) {
+    if (r >= 8) lblRect(x - r, y - r, x + r, y + r, LBL_MET);
+  }
+  // (x, y) は fillText と同じ。textAlign="center" の中央と、ベースライン
+  function lblPut(txt, x, y, pri, col, f) {
+    let L = lblQPool[lblQ.length];
+    if (!L) L = lblQPool[lblQ.length] = { txt: "", x: 0, y: 0, pri: 0, col: "", f: null };
+    L.txt = txt; L.x = x; L.y = y; L.pri = pri; L.col = col; L.f = f || LF11;
+    lblQ.push(L);
+  }
+  function lblEnd() {
+    lblQ.sort((a, b) => a.pri - b.pri);
+    for (const L of lblQ) {
+      const key = L.f.px + " " + L.txt;
+      let w = lblWCache.get(key);
+      if (w === undefined) {
+        octx.font = L.f.s;
+        w = octx.measureText(L.txt).width;
+        lblWCache.set(key, w);
+      }
+      // 高さは実測せず px から見積もる (measureText の ascent/descent は文字に
+      // よって変わるので、同じ大きさの文字が不揃いな箱を持つことになる)
+      const hw = w * 0.5 + 2;
+      const x0 = L.x - hw, x1 = L.x + hw;
+      const y0 = L.y - L.f.px * 0.85 - 1, y1 = L.y + L.f.px * 0.3 + 1;
+      if (L.pri > LBL_SEL) {
+        let hit = false;
+        for (const b of lblBox) {
+          if (L.pri >= b[4] && x0 < b[2] && x1 > b[0] && y0 < b[3] && y1 > b[1]) { hit = true; break; }
+        }
+        if (hit) continue;
+      }
+      lblRect(x0, y0, x1, y1, 0);
+      octx.font = L.f.s;
+      octx.fillStyle = L.col;
+      octx.fillText(L.txt, L.x, L.y);
+    }
+  }
+
   // ---------- 描画 ----------
   let VP = mIdent(), Vm = mIdent();
   let EYE = [0, 0, 0];          // カメラ位置 (描画はカメラ相対座標で行う)
@@ -8645,22 +8721,25 @@
     drawGroundOverlay();
     perfLap("文字");
   }
+  // 文字は lblPut で積むだけにして、最後に lblEnd でまとめて置く (宇宙ビューと
+  // 同じ仕組み。優先度つきの衝突回避は render/body.js 側)
   function drawGroundOverlay() {
     octx.setTransform(DPR, 0, 0, DPR, 0, 0);
     octx.clearRect(0, 0, W, H);
     octx.textAlign = "center";
-    octx.font = '12px "Avenir Next","Hiragino Sans",sans-serif';
+    lblBegin();
     const o = T().obs;
-    octx.fillStyle = "rgba(150,178,224,0.55)";
     for (const [az, lab] of [[0, o.N], [90, o.E], [180, o.S], [270, o.W]]) {
       azAltDir(az, 0, _gp);
       const s = projGround([_gp[0]*SKYR, _gp[1]*SKYR, _gp[2]*SKYR]);
-      if (s && s.x >= 0 && s.x <= W && s.y >= 0 && s.y <= H) octx.fillText(lab, s.x, s.y - 4);
+      if (s && s.x >= 0 && s.x <= W && s.y >= 0 && s.y <= H) {
+        lblPut(lab, s.x, s.y - 4, LBL_DIR, "rgba(150,178,224,0.55)", LF12);
+      }
     }
     // 星雲・星団の名前。淡くて小さいものまで全部出すと画面が名前で埋まるので、
     // 明るいか、画角に対してある程度の大きさがあるものだけに絞る
     if (dsoOn && dsoW && starVis > 0.04) {
-      octx.fillStyle = "rgba(190,205,235," + (0.62 * starVis).toFixed(3) + ")";
+      const dsoCol = "rgba(190,205,235," + (0.62 * starVis).toFixed(3) + ")";
       const hf = gFov * 0.5;
       for (let i = 0; i < DSO.length; i++) {
         if (!dsoLabelled(i, hf)) continue;
@@ -8674,12 +8753,12 @@
         if (!sp || sp.x < 0 || sp.x > W || sp.y < 0 || sp.y > H) continue;
         // 名前は天体の下に。長径の半分ぶん下げて、しみに重ならないようにする
         const rpx = DSO[i][4] / 120 * DEG / hf * (H * 0.5);
-        octx.fillText(dsoName(i), sp.x, sp.y + Math.min(rpx, H * 0.2) + 13);
+        lblPut(dsoName(i), sp.x, sp.y + Math.min(rpx, H * 0.2) + 13, LBL_DSO, dsoCol, LF12);
       }
     }
     // 星座名 (観測者フレームへ投影。地平線より上のもの)
     if (showConst && starVis > 0.04) {
-      octx.fillStyle = "rgba(150,178,224," + (0.5 * starVis).toFixed(3) + ")";
+      const cCol = "rgba(150,178,224," + (0.5 * starVis).toFixed(3) + ")";
       for (const c of CONST_LABELS) {
         // 画面内に見えている頂点の平均位置に名前を置く (中心点が画角外でも
         // 星座の一部が見えていれば、その見えている部分の中央に表示される)
@@ -8694,7 +8773,7 @@
           if (!s || s.x < 0 || s.x > W || s.y < 0 || s.y > H) continue;
           sumx += s.x; sumy += s.y; cnt++;
         }
-        if (cnt >= 2) octx.fillText(lang === "ja" ? c.ja : c.en, sumx / cnt, sumy / cnt);
+        if (cnt >= 2) lblPut(lang === "ja" ? c.ja : c.en, sumx / cnt, sumy / cnt, LBL_SKY, cCol, LF12);
       }
       // 黄道ラベル: 画面中央に最も近い可視点に1つ
       const ER = 1895;
@@ -8710,12 +8789,11 @@
         if (d < bd) { bd = d; bx = s.x; by = s.y; }
       }
       if (bd < Infinity) {
-        octx.fillStyle = "rgba(226,178,110," + (0.75 * starVis).toFixed(3) + ")";
-        octx.fillText(lang === "ja" ? "黄道" : "Ecliptic", bx, by - 6);
+        lblPut(lang === "ja" ? "黄道" : "Ecliptic", bx, by - 6, LBL_SKY,
+               "rgba(226,178,110," + (0.75 * starVis).toFixed(3) + ")", LF12);
       }
     }
     drawRadiants();   // 放射点 (降っている流星群があるときだけ)
-    octx.font = '11px "Avenir Next","Hiragino Sans",sans-serif';
     // 名前は天体リストの「名前」に従う (宇宙ビューと同じ)。名前を消すと選択天体の
     // 目印が無くなってしまうので、選択マークは名前とは別に出す
     const marked = showSelMark ? selected : null;
@@ -8732,10 +8810,12 @@
         octx.lineWidth = 1.2;
         octx.stroke();
       }
+      if (v.rpx < H * 0.3) lblBlock(s.x, s.y, v.rpx);   // 円盤の上に星座名などを置かせない
       if (!v.b.showLabel) continue;
-      octx.fillStyle = hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.82)";
-      octx.fillText(bName(v.b), s.x, s.y - Math.max(v.rpx, 3) - 8);
+      lblPut(bName(v.b), s.x, s.y - Math.max(v.rpx, 3) - 8, hit ? LBL_SEL : lblPri(v.b),
+             hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.82)", LF11);
     }
+    lblEnd();
   }
   //#endregion
   //#region src/ui/view-mode.js
@@ -9984,7 +10064,6 @@
   function drawRadiants() {
     if (!metActive.length) return;
     octx.textAlign = "center";
-    octx.font = '11px "Avenir Next","Hiragino Sans",sans-serif';
     for (const a of metActive) {
       if (a.dir[1] < 0.02) continue;
       const s = projGround([a.dir[0] * SKYR, a.dir[1] * SKYR, a.dir[2] * SKYR]);
@@ -10002,8 +10081,8 @@
       octx.moveTo(s.x, s.y - 12); octx.lineTo(s.x, s.y - 9);
       octx.moveTo(s.x, s.y + 9); octx.lineTo(s.x, s.y + 12);
       octx.stroke();
-      octx.fillStyle = "rgba(178,214,246," + v.toFixed(3) + ")";
-      octx.fillText(lang === "ja" ? a.s.ja : a.s.en, s.x, s.y - 17);
+      lblPut(lang === "ja" ? a.s.ja : a.s.en, s.x, s.y - 17, LBL_MET,
+             "rgba(178,214,246," + v.toFixed(3) + ")");
     }
   }
   //#endregion
@@ -10201,11 +10280,13 @@
   //#endregion
   //#region src/runtime/frame.js
   // ---------- オーバーレイ (ラベル・選択リング) ----------
+  // 文字は lblPut で積むだけにして、最後に lblEnd でまとめて置く (優先度つきの
+  // 衝突回避は render/body.js 側)。リングや破線は重なっても読めるので直に描く。
   function drawOverlay() {
     octx.setTransform(DPR, 0, 0, DPR, 0, 0);
     octx.clearRect(0, 0, W, H);
     octx.textAlign = "center";
-    octx.font = '10.5px "Avenir Next","Hiragino Sans",sans-serif';
+    lblBegin();
     // 注視しているだけの天体 (ツアー) には選択マークを付けない。
     // ツアーの注目天体 (spot) は選択とは別に、同じ見た目で強調する
     const marked = showSelMark ? selected : null;
@@ -10216,16 +10297,18 @@
       if (!s || s.hidden) continue;   // 手前の天体の円盤に隠れている
       if (s.x < -40 || s.x > W + 40 || s.y < -40 || s.y > H + 40) continue;
       if (s.r > H * 0.6) continue;
-      if (marked === b || spotB === b) {
+      const hit = marked === b || spotB === b;
+      if (hit) {
         octx.beginPath();
         octx.arc(s.x, s.y, Math.max(s.r, 3) + 6, 0, 2 * Math.PI);
         octx.strokeStyle = "rgba(242,178,62,0.9)";
         octx.lineWidth = 1.2;
         octx.stroke();
       }
+      lblBlock(s.x, s.y, s.r);   // 円盤の上に星座名などを置かせない
       if (b.showLabel) {
-        octx.fillStyle = (marked === b || spotB === b) ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.75)";
-        octx.fillText(bName(b), s.x, s.y - Math.max(s.r, 3) - 9);
+        lblPut(bName(b), s.x, s.y - Math.max(s.r, 3) - 9, hit ? LBL_SEL : LBL_BODY,
+               hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.75)", LF10);
       }
     }
 
@@ -10236,11 +10319,13 @@
       if (sp.x < -40 || sp.x > W + 40 || sp.y < -40 || sp.y > H + 40) continue;
       const pp = screenPos.get(s.parent);
       const away = pp ? Math.hypot(sp.x - pp.x, sp.y - pp.y) > 16 : true;
+      const hit = marked === s || spotB === s;
+      lblBlock(sp.x, sp.y, sp.r);
       if (s.showLabel && (sp.r > 2 || away)) {
-        octx.fillStyle = (marked === s || spotB === s) ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.6)";
-        octx.fillText(bName(s), sp.x, sp.y - Math.max(sp.r, 3) - 8);
+        lblPut(bName(s), sp.x, sp.y - Math.max(sp.r, 3) - 8, hit ? LBL_SEL : lblPri(s),
+               hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.6)", LF10);
       }
-      if (marked === s || spotB === s) {
+      if (hit) {
         octx.beginPath();
         octx.arc(sp.x, sp.y, Math.max(sp.r, 3) + 6, 0, 2 * Math.PI);
         octx.strokeStyle = "rgba(242,178,62,0.9)";
@@ -10255,9 +10340,9 @@
       const sp = screenPos.get(pr.key);
       if (!sp || sp.hidden) continue;
       if (sp.x < -40 || sp.x > W + 40 || sp.y < -40 || sp.y > H + 40) continue;
-      octx.fillStyle = (marked === pr || spotB === pr)
-        ? "rgba(242,178,62,0.95)" : "rgba(180,205,240,0.85)";
-      octx.fillText(bName(pr), sp.x, sp.y - (pr.px ? pr.px * 0.5 : 4) - 8);
+      const hit = marked === pr || spotB === pr;
+      lblPut(bName(pr), sp.x, sp.y - (pr.px ? pr.px * 0.5 : 4) - 8, hit ? LBL_SEL : LBL_PROBE,
+             hit ? "rgba(242,178,62,0.95)" : "rgba(180,205,240,0.85)", LF10);
     }
 
     // ツアーの視線ガイド。注視している天体から、指定した天体の方向へ破線を引く。
@@ -10302,7 +10387,7 @@
           octx.lineTo(ex - dx * 10 + dy * 5, ey - dy * 10 - dx * 5);
           octx.closePath();
           octx.fill();
-          octx.fillText(bName(tb), ex - dx * 22, ey - dy * 22 - 4);
+          lblPut(bName(tb), ex - dx * 22, ey - dy * 22 - 4, LBL_SEL, "rgba(242,178,62,0.95)", LF10);
           }
         }
       }
@@ -10310,8 +10395,6 @@
 
     // 星座名 (背景天球上のラベル)
     if (showConst) {
-      octx.fillStyle = "rgba(150,178,224,0.5)";
-      octx.font = '11px "Avenir Next","Hiragino Sans",sans-serif';
       for (const c of CONST_LABELS) {
         const w = VP[3] * c.wx + VP[7] * c.wy + VP[11] * c.wz + VP[15];
         if (w <= 0.001) continue;
@@ -10319,7 +10402,7 @@
         const y = (VP[1] * c.wx + VP[5] * c.wy + VP[9] * c.wz + VP[13]) / w;
         const px = (x * 0.5 + 0.5) * W, py = (1 - (y * 0.5 + 0.5)) * H;
         if (px < 0 || px > W || py < 0 || py > H) continue;
-        octx.fillText(lang === "ja" ? c.ja : c.en, px, py);
+        lblPut(lang === "ja" ? c.ja : c.en, px, py, LBL_SKY, "rgba(150,178,224,0.5)");
       }
       // 黄道ラベル: 画面中央に最も近い可視点に1つ
       let bx = 0, by = 0, bd = Infinity;
@@ -10334,10 +10417,10 @@
         if (d < bd) { bd = d; bx = px; by = py; }
       }
       if (bd < Infinity) {
-        octx.fillStyle = "rgba(226,178,110,0.75)";
-        octx.fillText(lang === "ja" ? "黄道" : "Ecliptic", bx, by - 6);
+        lblPut(lang === "ja" ? "黄道" : "Ecliptic", bx, by - 6, LBL_SKY, "rgba(226,178,110,0.75)");
       }
     }
+    lblEnd();
   }
 
   // ---------- 日時の表示 & 入力 ----------
