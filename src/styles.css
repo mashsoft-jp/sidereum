@@ -459,6 +459,9 @@
   /* 軌道・名前のトグルの絵 (◌ / N の代わり)。色は currentColor なので
      on/off の色分けはボタン側の指定がそのまま効く */
   .tglIcon { display: block; width: 13px; height: 13px; }
+  /* 太陽の行だけ軌道トグルが無い。中身は同じなので幅はひとりでに揃う
+     (枠は button 側の指定を受けないぶん、透明な枠で足す) */
+  #nav .tglGap { visibility: hidden; border: 1px solid transparent; }
   #nav .body.cat { color: var(--dim); letter-spacing: 0.06em; }
 
   /* ---- date readout ---- */

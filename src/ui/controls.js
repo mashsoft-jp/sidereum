@@ -439,8 +439,8 @@
   // まとめて ON/OFF (1つでも ON なら全 OFF、全 OFF なら全 ON)
   const orbitsBtn = document.getElementById("orbitsBtn");
   orbitsBtn.addEventListener("click", () => {
-    const on = !ALL_BODIES.some((b) => b.showOrbit);
-    for (const b of ALL_BODIES) b.showOrbit = on;
+    const on = !ORBIT_BODIES.some((b) => b.showOrbit);
+    for (const b of ORBIT_BODIES) b.showOrbit = on;
     syncToggleUI();
   });
 

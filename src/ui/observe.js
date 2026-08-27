@@ -420,6 +420,11 @@
   // ナビ (惑星の衛星、小惑星帯・彗星カテゴリは展開式)
   const NAV_BODIES = [SUN, ...PLANETS];
   const ALL_BODIES = [...NAV_BODIES, ...SATELLITES];
+  // 太陽だけは軌道を持たない。行にトグルを出さないので、まとめ切替・ツアーの
+  // 一括操作もここから外す (外さないと太陽の分だけ「軌道 ON」が残り続ける)。
+  // 太陽の自転軸 (傾き 7.25°) はまとめ切替に従って描く — render/space.js
+  const hasOrbit = (b) => b !== SUN;
+  const ORBIT_BODIES = ALL_BODIES.filter(hasOrbit);
   // 探査機は天体リストや表示トグルの対象ではないが、ツアーの sel / spot /
   // sight から引けるようにキー表には入れる
   const BODY_BY_KEY = new Map([...ALL_BODIES, ...PROBES].map((b) => [b.key, b]));
@@ -461,7 +466,7 @@
 
   const TOGGLE_BTNS = [];          // [body, 軌道トグル, 名前トグル]
   function makeNavRow(b, sub) {
-    b.showOrbit = true;
+    b.showOrbit = hasOrbit(b);
     b.showLabel = true;
     const row = document.createElement("div");
     row.className = sub ? "row sub" : "row";
@@ -476,12 +481,23 @@
       if (selected === b) toggleSelChrome(b);
       else { showSelMark = true; select(b, true); }
     });
-    const ob = makeTglBtn(ICON_ORBIT, () => T().ariaOrbit(bName(b)),
-                          () => { b.showOrbit = !b.showOrbit; syncToggleUI(); });
+    // 太陽の行は軌道トグルの代わりに、同じ幅の空きを置いて列を揃える
+    const ob = hasOrbit(b)
+      ? makeTglBtn(ICON_ORBIT, () => T().ariaOrbit(bName(b)),
+                   () => { b.showOrbit = !b.showOrbit; syncToggleUI(); })
+      : null;
     const lb = makeTglBtn(ICON_NAME, () => T().ariaName(bName(b)),
                           () => { b.showLabel = !b.showLabel; syncToggleUI(); });
     row.appendChild(btn);
-    row.appendChild(ob);
+    if (ob) {
+      row.appendChild(ob);
+    } else {
+      const gap = document.createElement("span");
+      gap.className = "tgl tglGap";
+      gap.setAttribute("aria-hidden", "true");
+      gap.innerHTML = ICON_ORBIT;      // 幅を .tgl と揃えるためだけに入れる
+      row.appendChild(gap);
+    }
     row.appendChild(lb);
     TOGGLE_BTNS.push([b, ob, lb]);
     return row;
@@ -590,14 +606,14 @@
   }
   function syncToggleUI() {
     for (const [b, ob, lb] of TOGGLE_BTNS) {
-      setTgl(ob, b.showOrbit);
+      if (ob) setTgl(ob, b.showOrbit);   // 太陽には軌道トグルが無い
       setTgl(lb, b.showLabel);
     }
     for (const [cs, ob, lb] of CAT_TGLS) {
       setTgl(ob, cs.some((c) => c.showOrbit));
       setTgl(lb, cs.some((c) => c.showLabel));
     }
-    orbitsBtn.classList.toggle("on", ALL_BODIES.some((b) => b.showOrbit));
+    orbitsBtn.classList.toggle("on", ORBIT_BODIES.some((b) => b.showOrbit));
     labelsBtn.classList.toggle("on", ALL_BODIES.some((b) => b.showLabel));
   }
   function updateNavSel() {

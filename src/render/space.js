@@ -345,7 +345,7 @@
     }
 
     // --- 自転軸 (各天体の軌道表示に連動。深度テストで天体の裏側は隠れる) ---
-    if (ALL_BODIES.some((b) => b.showOrbit)) {
+    if (ORBIT_BODIES.some((b) => b.showOrbit)) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.depthMask(false);
@@ -354,7 +354,9 @@
       gl.enableVertexAttribArray(lineP.a.aPos);
       gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
       for (const b of [SUN, ...PLANETS, ...SATELLITES]) {
-        if (!b.showOrbit) continue;
+        // 太陽は軌道を持たず行のトグルも無いので、自転軸 (傾き 7.25°) は
+        // まとめ切替 — つまり上の if — にだけ従う
+        if (b !== SUN && !b.showOrbit) continue;
         const t = posW.get(b.key);
         SCR.t[0] = t[0] - eye[0]; SCR.t[1] = t[1] - eye[1]; SCR.t[2] = t[2] - eye[2];
         mRotX(-(b.tilt || 0) * DEG, SCR.rx);

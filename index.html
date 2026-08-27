@@ -475,6 +475,9 @@
   /* 軌道・名前のトグルの絵 (◌ / N の代わり)。色は currentColor なので
      on/off の色分けはボタン側の指定がそのまま効く */
   .tglIcon { display: block; width: 13px; height: 13px; }
+  /* 太陽の行だけ軌道トグルが無い。中身は同じなので幅はひとりでに揃う
+     (枠は button 側の指定を受けないぶん、透明な枠で足す) */
+  #nav .tglGap { visibility: hidden; border: 1px solid transparent; }
   #nav .body.cat { color: var(--dim); letter-spacing: 0.06em; }
 
   /* ---- date readout ---- */
@@ -9423,7 +9426,7 @@
     }
 
     // --- 自転軸 (各天体の軌道表示に連動。深度テストで天体の裏側は隠れる) ---
-    if (ALL_BODIES.some((b) => b.showOrbit)) {
+    if (ORBIT_BODIES.some((b) => b.showOrbit)) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.depthMask(false);
@@ -9432,7 +9435,9 @@
       gl.enableVertexAttribArray(lineP.a.aPos);
       gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
       for (const b of [SUN, ...PLANETS, ...SATELLITES]) {
-        if (!b.showOrbit) continue;
+        // 太陽は軌道を持たず行のトグルも無いので、自転軸 (傾き 7.25°) は
+        // まとめ切替 — つまり上の if — にだけ従う
+        if (b !== SUN && !b.showOrbit) continue;
         const t = posW.get(b.key);
         SCR.t[0] = t[0] - eye[0]; SCR.t[1] = t[1] - eye[1]; SCR.t[2] = t[2] - eye[2];
         mRotX(-(b.tilt || 0) * DEG, SCR.rx);
@@ -11171,6 +11176,11 @@
   // ナビ (惑星の衛星、小惑星帯・彗星カテゴリは展開式)
   const NAV_BODIES = [SUN, ...PLANETS];
   const ALL_BODIES = [...NAV_BODIES, ...SATELLITES];
+  // 太陽だけは軌道を持たない。行にトグルを出さないので、まとめ切替・ツアーの
+  // 一括操作もここから外す (外さないと太陽の分だけ「軌道 ON」が残り続ける)。
+  // 太陽の自転軸 (傾き 7.25°) はまとめ切替に従って描く — render/space.js
+  const hasOrbit = (b) => b !== SUN;
+  const ORBIT_BODIES = ALL_BODIES.filter(hasOrbit);
   // 探査機は天体リストや表示トグルの対象ではないが、ツアーの sel / spot /
   // sight から引けるようにキー表には入れる
   const BODY_BY_KEY = new Map([...ALL_BODIES, ...PROBES].map((b) => [b.key, b]));
@@ -11212,7 +11222,7 @@
 
   const TOGGLE_BTNS = [];          // [body, 軌道トグル, 名前トグル]
   function makeNavRow(b, sub) {
-    b.showOrbit = true;
+    b.showOrbit = hasOrbit(b);
     b.showLabel = true;
     const row = document.createElement("div");
     row.className = sub ? "row sub" : "row";
@@ -11227,12 +11237,23 @@
       if (selected === b) toggleSelChrome(b);
       else { showSelMark = true; select(b, true); }
     });
-    const ob = makeTglBtn(ICON_ORBIT, () => T().ariaOrbit(bName(b)),
-                          () => { b.showOrbit = !b.showOrbit; syncToggleUI(); });
+    // 太陽の行は軌道トグルの代わりに、同じ幅の空きを置いて列を揃える
+    const ob = hasOrbit(b)
+      ? makeTglBtn(ICON_ORBIT, () => T().ariaOrbit(bName(b)),
+                   () => { b.showOrbit = !b.showOrbit; syncToggleUI(); })
+      : null;
     const lb = makeTglBtn(ICON_NAME, () => T().ariaName(bName(b)),
                           () => { b.showLabel = !b.showLabel; syncToggleUI(); });
     row.appendChild(btn);
-    row.appendChild(ob);
+    if (ob) {
+      row.appendChild(ob);
+    } else {
+      const gap = document.createElement("span");
+      gap.className = "tgl tglGap";
+      gap.setAttribute("aria-hidden", "true");
+      gap.innerHTML = ICON_ORBIT;      // 幅を .tgl と揃えるためだけに入れる
+      row.appendChild(gap);
+    }
     row.appendChild(lb);
     TOGGLE_BTNS.push([b, ob, lb]);
     return row;
@@ -11341,14 +11362,14 @@
   }
   function syncToggleUI() {
     for (const [b, ob, lb] of TOGGLE_BTNS) {
-      setTgl(ob, b.showOrbit);
+      if (ob) setTgl(ob, b.showOrbit);   // 太陽には軌道トグルが無い
       setTgl(lb, b.showLabel);
     }
     for (const [cs, ob, lb] of CAT_TGLS) {
       setTgl(ob, cs.some((c) => c.showOrbit));
       setTgl(lb, cs.some((c) => c.showLabel));
     }
-    orbitsBtn.classList.toggle("on", ALL_BODIES.some((b) => b.showOrbit));
+    orbitsBtn.classList.toggle("on", ORBIT_BODIES.some((b) => b.showOrbit));
     labelsBtn.classList.toggle("on", ALL_BODIES.some((b) => b.showLabel));
   }
   function updateNavSel() {
@@ -11800,8 +11821,8 @@
   // まとめて ON/OFF (1つでも ON なら全 OFF、全 OFF なら全 ON)
   const orbitsBtn = document.getElementById("orbitsBtn");
   orbitsBtn.addEventListener("click", () => {
-    const on = !ALL_BODIES.some((b) => b.showOrbit);
-    for (const b of ALL_BODIES) b.showOrbit = on;
+    const on = !ORBIT_BODIES.some((b) => b.showOrbit);
+    for (const b of ORBIT_BODIES) b.showOrbit = on;
     syncToggleUI();
   });
 
@@ -12826,7 +12847,7 @@
     // 軌道線の一時的な出し分け。探査機視点のように「写真」として見せる場面では、
     // 画面を横切る線が邪魔になる。localStorage は書き換えない
     if (s.orbits !== undefined) {
-      for (const b of ALL_BODIES) b.showOrbit = !!s.orbits;
+      for (const b of ORBIT_BODIES) b.showOrbit = !!s.orbits;
       syncToggleUI();   // 一覧の行のトグルもここで合わせる (まとめ切替だけでは食い違う)
     }
     // 風景 (地面の質感・空の色) は、書いた回だけ触る。経緯線のように既定 OFF を
@@ -13193,7 +13214,7 @@
   function captureTourState() {
     return {
       showConst, showSelMark, showGrid, showTerrain,
-      orbits: ALL_BODIES.map((b) => b.showOrbit),
+      orbits: ORBIT_BODIES.map((b) => b.showOrbit),
       simDays, daysPerSec, playing,
       groundView, surfaceBody,
       selected, lastCenter,
@@ -13212,7 +13233,7 @@
     updateGridLabel();
     showTerrain = v.showTerrain;
     updateTerrainLabel();
-    ALL_BODIES.forEach((b, i) => { b.showOrbit = v.orbits[i]; });
+    ORBIT_BODIES.forEach((b, i) => { b.showOrbit = v.orbits[i]; });
     syncToggleUI();
     showSelMark = v.showSelMark;
     if (keepScene) return;

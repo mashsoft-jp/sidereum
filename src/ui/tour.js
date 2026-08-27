@@ -312,7 +312,7 @@
     // 軌道線の一時的な出し分け。探査機視点のように「写真」として見せる場面では、
     // 画面を横切る線が邪魔になる。localStorage は書き換えない
     if (s.orbits !== undefined) {
-      for (const b of ALL_BODIES) b.showOrbit = !!s.orbits;
+      for (const b of ORBIT_BODIES) b.showOrbit = !!s.orbits;
       syncToggleUI();   // 一覧の行のトグルもここで合わせる (まとめ切替だけでは食い違う)
     }
     // 風景 (地面の質感・空の色) は、書いた回だけ触る。経緯線のように既定 OFF を
@@ -679,7 +679,7 @@
   function captureTourState() {
     return {
       showConst, showSelMark, showGrid, showTerrain,
-      orbits: ALL_BODIES.map((b) => b.showOrbit),
+      orbits: ORBIT_BODIES.map((b) => b.showOrbit),
       simDays, daysPerSec, playing,
       groundView, surfaceBody,
       selected, lastCenter,
@@ -698,7 +698,7 @@
     updateGridLabel();
     showTerrain = v.showTerrain;
     updateTerrainLabel();
-    ALL_BODIES.forEach((b, i) => { b.showOrbit = v.orbits[i]; });
+    ORBIT_BODIES.forEach((b, i) => { b.showOrbit = v.orbits[i]; });
     syncToggleUI();
     showSelMark = v.showSelMark;
     if (keepScene) return;
