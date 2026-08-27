@@ -23,13 +23,21 @@
       (location.protocol === "file:" ? " — file:// では画像を読み込めません。HTTP で配信してください" : ""));
   // 既存のテクスチャオブジェクトへ読み直す。解像度を切り替えても GL の
   // ハンドルは変えないので、これを持っている描画側に手を入れる必要がない
+  // 読み込み中の枚数。0 に戻ったところで Service Worker へ控えを頼む
+  // (読み込み中に頼むと、同じものをもう一度取りに行かせることになる)
+  let texPending = 0;
+  function texSettled() {
+    if (--texPending === 0) swKeepTextures();
+  }
   function loadTexInto(tex, key) {
+    texPending++;
     gl.bindTexture(gl.TEXTURE_2D, tex);
     // ミップ付きのまま differing サイズを入れると、生成し直すまでの間だけ
     // 不完全なテクスチャ (真っ黒) になる。生成後に付け直すので一旦 LINEAR へ
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     const img = new Image();
     img.onload = () => {
+      texSettled();
       // file:// で開くと画像自体は読めても不透明オリジン扱いになり、ここが
       // SecurityError で落ちる。取り込めなかったぶんは仮色のまま描く
       try {
@@ -48,7 +56,7 @@
       }
     };
     // tex/ を index.html と一緒に置き忘れた場合にここへ来る
-    img.onerror = () => texWarn(key, "取得できませんでした");
+    img.onerror = () => { texSettled(); texWarn(key, "取得できませんでした"); };
     img.src = texURL(key);
     return tex;
   }

@@ -68,3 +68,17 @@
     if (key.indexOf("nrm:") === 0) return TEX_DIR + (texHiRes ? "4k/" : "") + NORMALS[key.slice(4)];
     return TEX_DIR + (texHiRes ? "4k/" : "") + (TEXTURES[key] || TEXTURES_EXTRA[key]);
   };
+  // いま使っている解像度の一組。Service Worker に「控えておいて」と渡す一覧で、
+  // 一覧を sw.js 側にも書かずに済ませるためにここから作る
+  const texAllURLs = () => [
+    ...Object.keys(TEXTURES), ...Object.keys(TEXTURES_EXTRA),
+  ].map(texURL).concat(Object.keys(NORMALS).map((k) => texURL("nrm:" + k)));
+  // 全部読み終わってから頼む。読み込み中に頼むと、同じものをもう一度
+  // ネットワークから取りに行かせることになる (sw.js の keep は force-cache)
+  function swKeepTextures() {
+    if (!("serviceWorker" in navigator)) return;
+    const urls = texAllURLs();
+    navigator.serviceWorker.ready
+      .then((reg) => { if (reg.active) reg.active.postMessage({ type: "keep", urls }); })
+      .catch(() => { /* 未登録・非対応。控えないだけで動作には影響しない */ });
+  }

@@ -241,3 +241,12 @@
 <script>
 @@script@@
 </script>
+
+<script>
+// 一度取った画像を二度取らないよう Service Worker を登録する (方針は sw.js)。
+// 本体とは独立させてあり、登録に失敗しても表示には影響しない
+// (file:// や非対応ブラウザ、プライベートモードなど)
+if ("serviceWorker" in navigator) {
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+</script>

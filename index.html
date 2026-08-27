@@ -5733,6 +5733,20 @@
     if (key.indexOf("nrm:") === 0) return TEX_DIR + (texHiRes ? "4k/" : "") + NORMALS[key.slice(4)];
     return TEX_DIR + (texHiRes ? "4k/" : "") + (TEXTURES[key] || TEXTURES_EXTRA[key]);
   };
+  // いま使っている解像度の一組。Service Worker に「控えておいて」と渡す一覧で、
+  // 一覧を sw.js 側にも書かずに済ませるためにここから作る
+  const texAllURLs = () => [
+    ...Object.keys(TEXTURES), ...Object.keys(TEXTURES_EXTRA),
+  ].map(texURL).concat(Object.keys(NORMALS).map((k) => texURL("nrm:" + k)));
+  // 全部読み終わってから頼む。読み込み中に頼むと、同じものをもう一度
+  // ネットワークから取りに行かせることになる (sw.js の keep は force-cache)
+  function swKeepTextures() {
+    if (!("serviceWorker" in navigator)) return;
+    const urls = texAllURLs();
+    navigator.serviceWorker.ready
+      .then((reg) => { if (reg.active) reg.active.postMessage({ type: "keep", urls }); })
+      .catch(() => { /* 未登録・非対応。控えないだけで動作には影響しない */ });
+  }
   //#endregion
   //#region src/gl/resources.js
   const texByKey = new Map();
@@ -5760,13 +5774,21 @@
       (location.protocol === "file:" ? " — file:// では画像を読み込めません。HTTP で配信してください" : ""));
   // 既存のテクスチャオブジェクトへ読み直す。解像度を切り替えても GL の
   // ハンドルは変えないので、これを持っている描画側に手を入れる必要がない
+  // 読み込み中の枚数。0 に戻ったところで Service Worker へ控えを頼む
+  // (読み込み中に頼むと、同じものをもう一度取りに行かせることになる)
+  let texPending = 0;
+  function texSettled() {
+    if (--texPending === 0) swKeepTextures();
+  }
   function loadTexInto(tex, key) {
+    texPending++;
     gl.bindTexture(gl.TEXTURE_2D, tex);
     // ミップ付きのまま differing サイズを入れると、生成し直すまでの間だけ
     // 不完全なテクスチャ (真っ黒) になる。生成後に付け直すので一旦 LINEAR へ
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     const img = new Image();
     img.onload = () => {
+      texSettled();
       // file:// で開くと画像自体は読めても不透明オリジン扱いになり、ここが
       // SecurityError で落ちる。取り込めなかったぶんは仮色のまま描く
       try {
@@ -5785,7 +5807,7 @@
       }
     };
     // tex/ を index.html と一緒に置き忘れた場合にここへ来る
-    img.onerror = () => texWarn(key, "取得できませんでした");
+    img.onerror = () => { texSettled(); texWarn(key, "取得できませんでした"); };
     img.src = texURL(key);
     return tex;
   }
@@ -13757,4 +13779,13 @@
   requestAnimationFrame(frame);
   //#endregion
 })();
+</script>
+
+<script>
+// 一度取った画像を二度取らないよう Service Worker を登録する (方針は sw.js)。
+// 本体とは独立させてあり、登録に失敗しても表示には影響しない
+// (file:// や非対応ブラウザ、プライベートモードなど)
+if ("serviceWorker" in navigator) {
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
 </script>
