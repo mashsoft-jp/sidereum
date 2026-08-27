@@ -104,9 +104,11 @@
 
   <div id="navPanel" class="hud">
     <button id="navCollapse" aria-label="リストを隠す">«</button>
+    <!-- 各行の絵だけのトグルと同じ絵をここにも出し、絵と語を結びつける
+         (絵は applyLang が入れる。文字だけ差し替えられるよう span で分ける) -->
     <div id="masterToggles">
-      <button id="orbitsBtn" class="on">軌道</button>
-      <button id="labelsBtn" class="on">名前</button>
+      <button id="orbitsBtn" class="on"><span class="mtIcon"></span><span class="mtText">軌道</span></button>
+      <button id="labelsBtn" class="on"><span class="mtIcon"></span><span class="mtText">名前</span></button>
     </div>
     <nav id="nav" aria-label="天体を選択"></nav>
   </div>

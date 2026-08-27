@@ -313,7 +313,7 @@
     // 画面を横切る線が邪魔になる。localStorage は書き換えない
     if (s.orbits !== undefined) {
       for (const b of ALL_BODIES) b.showOrbit = !!s.orbits;
-      orbitsBtn.classList.toggle("on", !!s.orbits);
+      syncToggleUI();   // 一覧の行のトグルもここで合わせる (まとめ切替だけでは食い違う)
     }
     // 風景 (地面の質感・空の色) は、書いた回だけ触る。経緯線のように既定 OFF を
     // 毎回押しつけると、風景を出して使っている人の見え方をツアーが勝手に変えて
@@ -699,7 +699,7 @@
     showTerrain = v.showTerrain;
     updateTerrainLabel();
     ALL_BODIES.forEach((b, i) => { b.showOrbit = v.orbits[i]; });
-    orbitsBtn.classList.toggle("on", ALL_BODIES.some((b) => b.showOrbit));
+    syncToggleUI();
     showSelMark = v.showSelMark;
     if (keepScene) return;
     simDays = v.simDays;

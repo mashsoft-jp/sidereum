@@ -9,6 +9,10 @@
       pause: "停止", play: "再生", speed: "速度", distance: "距離", angle: "角度",
       ctrlHide: "操作パネルを隠す", ctrlShow: "操作パネルを表示",
       orbits: "軌道", labels: "名前", reset: "全体表示",
+      // 天体リストのトグルの読み上げ名。絵だけのボタンなので、これが無いと
+      // 「ボタン」としか読まれない (状態は aria-pressed が言う)
+      ariaOrbit: (n) => n + "の軌道", ariaName: (n) => n + "の名前",
+      ariaSats: (n) => n + "の衛星", ariaMembers: (n) => n + "の天体",
       nowBtn: "現在時刻に合わせる", rateSuffix: "/秒", rateReal: "実時間",
       viewTop: "真上", viewDef: "デフォルト", viewSide: "真横", camera: "カメラ",
       viewSpace: "宇宙", viewGround: "地上", viewMoon: "月面", gFovLabel: "ズーム", gAzLabel: "方位", gAltLabel: "高度",
@@ -91,6 +95,8 @@
       pause: "Pause", play: "Play", speed: "Speed", distance: "Distance", angle: "Angle",
       ctrlHide: "Hide controls", ctrlShow: "Show controls",
       orbits: "Orbits", labels: "Labels", reset: "Overview",
+      ariaOrbit: (n) => n + " orbit", ariaName: (n) => n + " name",
+      ariaSats: (n) => "Moons of " + n, ariaMembers: (n) => "Bodies in " + n,
       nowBtn: "Set to current time", rateSuffix: "/s", rateReal: "Real time",
       viewTop: "Top", viewDef: "Default", viewSide: "Side", camera: "Camera",
       viewSpace: "Space", viewGround: "Ground", viewMoon: "Moon", gFovLabel: "Zoom", gAzLabel: "Azimuth", gAltLabel: "Alt",

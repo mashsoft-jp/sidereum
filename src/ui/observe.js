@@ -428,6 +428,37 @@
     if (!SAT_BY_PARENT.has(s.parent)) SAT_BY_PARENT.set(s.parent, []);
     SAT_BY_PARENT.get(s.parent).push(s);
   }
+  // 軌道・名前のトグルの絵。操作パネルの ctlIcon と同じ線画で揃える。
+  // 記号 (◌ / N) では何のボタンか読み取れず、読み上げも記号のままになる
+  const ICON_ORBIT =
+    '<svg class="tglIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" ' +
+    'stroke-width="1.15" aria-hidden="true"><ellipse cx="6" cy="6" rx="4.6" ry="2.7"/>' +
+    '<circle cx="9.5" cy="4.3" r="1.15" fill="currentColor" stroke="none"/></svg>';
+  const ICON_NAME =
+    '<svg class="tglIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" ' +
+    'stroke-width="1.15" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M10.7 1.3H6.9L1.6 6.6 5.4 10.4 10.7 5.1V1.3Z"/>' +
+    '<circle cx="8.75" cy="3.25" r="1" fill="currentColor" stroke="none"/></svg>';
+
+  // 絵だけのボタンは、読み上げ名 (aria-label) とツールチップ (title) を言語が
+  // 変わるたびに入れ直す。その名前の作り方をボタンと一緒に控えておく
+  const ARIA_BTNS = [];            // { el, text() }
+  function makeTglBtn(icon, ariaText, onClick) {
+    const el = document.createElement("button");
+    el.className = "tgl on";
+    el.innerHTML = icon;
+    el.setAttribute("aria-pressed", "true");
+    el.addEventListener("click", onClick);
+    ARIA_BTNS.push({ el, text: ariaText });
+    return el;
+  }
+
+  // 一覧の上のまとめ切替。各行と同じ絵を語の左に添えて、絵の意味を結びつける
+  function setMasterTgl(btn, icon, text) {
+    btn.querySelector(".mtIcon").innerHTML = icon;
+    btn.querySelector(".mtText").textContent = text;
+  }
+
   const TOGGLE_BTNS = [];          // [body, 軌道トグル, 名前トグル]
   function makeNavRow(b, sub) {
     b.showOrbit = true;
@@ -445,14 +476,10 @@
       if (selected === b) toggleSelChrome(b);
       else { showSelMark = true; select(b, true); }
     });
-    const ob = document.createElement("button");
-    ob.className = "tgl on";
-    ob.textContent = "◌";
-    ob.addEventListener("click", () => { b.showOrbit = !b.showOrbit; syncToggleUI(); });
-    const lb = document.createElement("button");
-    lb.className = "tgl on";
-    lb.textContent = "N";
-    lb.addEventListener("click", () => { b.showLabel = !b.showLabel; syncToggleUI(); });
+    const ob = makeTglBtn(ICON_ORBIT, () => T().ariaOrbit(bName(b)),
+                          () => { b.showOrbit = !b.showOrbit; syncToggleUI(); });
+    const lb = makeTglBtn(ICON_NAME, () => T().ariaName(bName(b)),
+                          () => { b.showLabel = !b.showLabel; syncToggleUI(); });
     row.appendChild(btn);
     row.appendChild(ob);
     row.appendChild(lb);
@@ -473,15 +500,23 @@
     const btn = document.createElement("button");
     btn.className = "body cat";
     btn.textContent = lang === "ja" ? cat.ja : cat.en;
+    const catName = () => (lang === "ja" ? cat.ja : cat.en);
     const ex = document.createElement("button");
     ex.className = "tgl exp";
     ex.textContent = "▸";
-    const ob = document.createElement("button");
-    ob.className = "tgl on";
-    ob.textContent = "◌";
-    const lb = document.createElement("button");
-    lb.className = "tgl on";
-    lb.textContent = "N";
+    ex.setAttribute("aria-expanded", "false");
+    ARIA_BTNS.push({ el: ex, text: () => T().ariaMembers(catName()) });
+    // カテゴリの ◌/N は子をまとめて切り替える
+    const ob = makeTglBtn(ICON_ORBIT, () => T().ariaOrbit(catName()), () => {
+      const on = children.some((c) => c.showOrbit);
+      for (const c of children) c.showOrbit = !on;
+      syncToggleUI();
+    });
+    const lb = makeTglBtn(ICON_NAME, () => T().ariaName(catName()), () => {
+      const on = children.some((c) => c.showLabel);
+      for (const c of children) c.showLabel = !on;
+      syncToggleUI();
+    });
     row.appendChild(btn);
     row.appendChild(ex);
     row.appendChild(ob);
@@ -497,22 +532,12 @@
     const setExp = (v) => {
       expanded = v;
       ex.textContent = v ? "▾" : "▸";
+      ex.setAttribute("aria-expanded", v ? "true" : "false");
       for (const r2 of childRows) r2.style.display = v ? "flex" : "none";
     };
     for (const c of children) EXPAND_BY_CHILD.set(c.key, () => setExp(true));
     ex.addEventListener("click", () => setExp(!expanded));
     btn.addEventListener("click", () => setExp(!expanded));
-    // カテゴリの ◌/N は子をまとめて切替
-    ob.addEventListener("click", () => {
-      const on = children.some((c) => c.showOrbit);
-      for (const c of children) c.showOrbit = !on;
-      syncToggleUI();
-    });
-    lb.addEventListener("click", () => {
-      const on = children.some((c) => c.showLabel);
-      for (const c of children) c.showLabel = !on;
-      syncToggleUI();
-    });
     CAT_BTNS.push({ btn, cat });
     CAT_TGLS.push([children, ob, lb]);
   }
@@ -525,6 +550,8 @@
       const ex = document.createElement("button");
       ex.className = "tgl exp";
       ex.textContent = b.expanded ? "▾" : "▸";
+      ex.setAttribute("aria-expanded", b.expanded ? "true" : "false");
+      ARIA_BTNS.push({ el: ex, text: () => T().ariaSats(bName(b)) });
       row.insertBefore(ex, row.children[1]);
       navEl.appendChild(row);
       const satRows = sats.map((s) => {
@@ -536,6 +563,7 @@
       const setSatExp = (v) => {
         b.expanded = v;
         ex.textContent = v ? "▾" : "▸";
+        ex.setAttribute("aria-expanded", v ? "true" : "false");
         for (const r2 of satRows) r2.style.display = v ? "flex" : "none";
       };
       ex.addEventListener("click", () => setSatExp(!b.expanded));
@@ -546,14 +574,28 @@
     const cat = NAV_CATS.find((c) => c.after === b.key);
     if (cat) makeCatGroup(cat, NAV_BODIES.filter(cat.match));
   }
+  // 絵だけのボタンの読み上げ名とツールチップ。天体名が言語で変わるので、
+  // applyLang から呼び直す (作った時点では言語が確定していない行もある)
+  function refreshNavAria() {
+    for (const { el, text } of ARIA_BTNS) {
+      const t = text();
+      el.setAttribute("aria-label", t);
+      el.title = t;
+    }
+  }
+  // 見た目の on/off は色で、状態そのものは aria-pressed で伝える
+  function setTgl(el, on) {
+    el.classList.toggle("on", on);
+    el.setAttribute("aria-pressed", on ? "true" : "false");
+  }
   function syncToggleUI() {
     for (const [b, ob, lb] of TOGGLE_BTNS) {
-      ob.classList.toggle("on", b.showOrbit);
-      lb.classList.toggle("on", b.showLabel);
+      setTgl(ob, b.showOrbit);
+      setTgl(lb, b.showLabel);
     }
     for (const [cs, ob, lb] of CAT_TGLS) {
-      ob.classList.toggle("on", cs.some((c) => c.showOrbit));
-      lb.classList.toggle("on", cs.some((c) => c.showLabel));
+      setTgl(ob, cs.some((c) => c.showOrbit));
+      setTgl(lb, cs.some((c) => c.showLabel));
     }
     orbitsBtn.classList.toggle("on", ALL_BODIES.some((b) => b.showOrbit));
     labelsBtn.classList.toggle("on", ALL_BODIES.some((b) => b.showLabel));

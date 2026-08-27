@@ -320,7 +320,7 @@
   // applyLang が textContent でラベルを書き換えるとタグも消えるので、
   // メニューを開くたびに付け直す
   function refreshMenuBadges() {
-    for (const btn of menuEl.querySelectorAll(':scope > button[role="menuitem"]')) {
+    for (const btn of menuEl.querySelectorAll('button[role="menuitem"]')) {
       const st = menuBadgeState(btn.id);
       let tag = btn.querySelector(".menuTag");
       if (!st) { if (tag) tag.remove(); continue; }

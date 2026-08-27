@@ -403,11 +403,13 @@
   }
   #masterToggles button {
     flex: 1;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
     padding: 4px 6px;
     font-size: 11px;
     letter-spacing: 0.1em;
     background: rgba(9, 14, 28, 0.6);
   }
+  #masterToggles .mtIcon { display: flex; flex: none; }
   #navExpand {
     position: absolute;
     top: calc(76px + var(--sat)); left: var(--sal);
@@ -446,6 +448,7 @@
   #nav .row.sub { margin-left: 16px; }
   #nav .row .body { flex: 1; }
   #nav .tgl {
+    display: flex; align-items: center; justify-content: center;
     padding: 2px 6px;
     font-size: 10px;
     line-height: 1;
@@ -453,6 +456,9 @@
     background: rgba(9, 14, 28, 0.6);
   }
   #nav .tgl.on { color: var(--accent); border-color: var(--accent-dim); }
+  /* 軌道・名前のトグルの絵 (◌ / N の代わり)。色は currentColor なので
+     on/off の色分けはボタン側の指定がそのまま効く */
+  .tglIcon { display: block; width: 13px; height: 13px; }
   #nav .body.cat { color: var(--dim); letter-spacing: 0.06em; }
 
   /* ---- date readout ---- */

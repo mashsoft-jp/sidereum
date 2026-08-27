@@ -153,8 +153,8 @@
     setCtlLabel("magLabel", t.gFovLabel);
     setCtlLabel("angleLabel", t.angle);
     setCtlLabel("camIcon", t.camera);
-    orbitsBtn.textContent = t.orbits;
-    labelsBtn.textContent = t.labels;
+    setMasterTgl(orbitsBtn, ICON_ORBIT, t.orbits);
+    setMasterTgl(labelsBtn, ICON_NAME, t.labels);
     const camOpts = camSelect.options;
     camOpts[0].textContent = t.camera;
     camOpts[1].textContent = t.viewTop;
@@ -201,10 +201,7 @@
       if (b) el.textContent = bName(b);
     }
     for (const { btn, cat } of CAT_BTNS) btn.textContent = lang === "ja" ? cat.ja : cat.en;
-    for (const [, ob, lb] of TOGGLE_BTNS) {
-      ob.title = t.orbits;
-      lb.title = t.labels;
-    }
+    refreshNavAria();   // 天体リストの絵だけのボタン (軌道・名前・展開)
     setPlaying(playing);
     speedFromSlider();
     positionInfoPanel();
