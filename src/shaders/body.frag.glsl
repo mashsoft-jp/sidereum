@@ -149,8 +149,12 @@
         float rim = 1.0 - smoothstep(0.0, 0.22, mu);
         float flame = fbm(p * 9.0 + vec3(uTime * 0.03, 0.0, 0.0));
         c += vec3(2.30, 0.30, 0.16) * pow(rim, 2.2) * (0.35 + 0.9 * flame);
-        // 大気減光。日の出入りの太陽が赤く、直視できるほど暗いのはこれ
-        gl_FragColor = vec4(tonemap(c * uExt), 1.0);
+        // 大気減光。日の出入りの太陽が赤く、直視できるほど暗いのはこれ。
+        // そのうえでエアライトを足す — 太陽と目のあいだの大気が光っているぶんで、
+        // 空や他の天体には足しているのにここだけ抜けていた。無いと、減光された
+        // 円盤より周りの空の方が明るくなり、夕日が空に開いた黒い穴になる
+        // (下の天体の経路にある「新月の月が黒い円盤になる」のと同じ話)
+        gl_FragColor = vec4(tonemap(c * uExt + skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain), 1.0);
         return;
       }
 
