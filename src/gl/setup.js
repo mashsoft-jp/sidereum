@@ -8,6 +8,61 @@
   const ovl = document.getElementById("overlay");
   const octx = ovl.getContext("2d");
 
+  // ---------- コンテキストの喪失 ----------
+  // WebGL のコンテキストは GPU 側の都合で失われる — ドライバのリセット、
+  // スリープからの復帰、他のタブとの取り合い、そしてメモリ不足。高解像度
+  // テクスチャ (常駐 625MB) を選んだ端末では実際に起きうる。
+  //
+  // 何もしないと、キャンバスが固まったまま何の説明も出ない。まず
+  // preventDefault で「復帰したら教えてほしい」と伝える (これが無いと
+  // webglcontextrestored は来ない)。
+  //
+  // 復帰の合図が来ても、その場で作り直すことはしない。プログラム・バッファ・
+  // テクスチャの生成が起動時の一度きりで全ファイルに散っており、作り直せる形に
+  // するには全面的な組み替えが要る。代わりに、いまの日時・視点を共有 URL に
+  // 載せて開き直す。テクスチャは Service Worker が控えているので画像は
+  // 取り直さない (sw.js)。
+  let glLost = false;
+  // 開き直しは1セッションに1回だけ。原因が続いていると延々と往復するため
+  const GL_RELOADED = "ssGlReloaded";
+  const glReloadedOnce = () => {
+    try { return sessionStorage.getItem(GL_RELOADED) === "1"; } catch (e) { return false; }
+  };
+  function glReload() {
+    try { sessionStorage.setItem(GL_RELOADED, "1"); } catch (e) { /* プライベートモード等 */ }
+    // 高解像度テクスチャが原因のことがある。同じ設定のまま開き直すと同じ
+    // ところで落ちるので、既定へ戻してから開く
+    try { localStorage.removeItem("ssHiRes"); } catch (e) { /* 同上 */ }
+    // 起動の途中で落ちると共有 URL を組めない。そのときはそのまま開き直す
+    let url = null;
+    try { url = buildShareURL(); } catch (e) { /* 未初期化 */ }
+    if (url) location.replace(url);
+    else location.reload();
+  }
+  function showGlLost() {
+    // 天体名などのオーバーレイは別のキャンバスなので、消さないと空になった
+    // 画面の上に前のフレームの文字だけが残る
+    octx.setTransform(1, 0, 0, 1, 0, 0);
+    octx.clearRect(0, 0, ovl.width, ovl.height);
+    const t = T();
+    const el = document.getElementById("noGL");
+    el.innerHTML = t.glLost + (texHiRes ? t.glLostHiRes : "") +
+      '<div><button id="glReloadBtn"></button></div>';
+    const btn = el.querySelector("#glReloadBtn");
+    btn.textContent = t.glReload;
+    btn.addEventListener("click", glReload);
+    el.style.display = "grid";
+  }
+  glc.addEventListener("webglcontextlost", (e) => {
+    e.preventDefault();
+    glLost = true;            // 描画ループを止める (runtime/frame.js)
+    showGlLost();
+  });
+  glc.addEventListener("webglcontextrestored", () => {
+    if (glReloadedOnce()) return;   // 案内は出したまま。あとは利用者の操作を待つ
+    glReload();
+  });
+
   function compile(type, src) {
     const sh = gl.createShader(type);
     gl.shaderSource(sh, src);

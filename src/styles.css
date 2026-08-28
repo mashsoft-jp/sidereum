@@ -1081,7 +1081,13 @@
     color: var(--dim);
     text-align: center;
     line-height: 2;
+    /* 何も描けていない状態の案内なので、HUD より前面に出す。出したまま操作
+       パネルが上に乗ると、「読み込み直す」の指が操作パネルに取られる */
+    z-index: 21;
+    background: rgba(4, 6, 14, 0.72);
   }
+  /* コンテキスト喪失の案内に付く「読み込み直す」 (WebGL 非対応の文面には無い) */
+  #noGL button { margin-top: 12px; }
 
   @media (max-width: 720px) {
     #title { padding: 6px 10px 6px 6px; gap: 6px; }
