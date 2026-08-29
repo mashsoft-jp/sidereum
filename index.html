@@ -8170,6 +8170,7 @@
   // 地上ビューの行列は f64 で合成し、GPU へ渡す直前に f32 化する
   const gVP = mIdent(new Float64Array(16)), gVP32 = new Float32Array(16);
   const gP64 = new Float64Array(16), gV64 = new Float64Array(16), gM64 = new Float64Array(16);
+  const gM64F = new Float64Array(16);   // 上を地平ぎわの扁平で潰したもの (投影用)
   let groundVB = null, groundPtVB = null, horizonVB = null, horizonN = 0, groundDomeN = 0;
   // 風景表現 (稜線つきドーム + 空ドーム)。showTerrain が OFF なら従来の平坦ドームを使う
   let ridgeVB = { earth: null, moon: null }, ridgeN = 0, skyVB = null, skyN = 0;
@@ -8210,6 +8211,46 @@
     _rf[0] = ch > 1e-6 ? Math.cos(h2) / ch : 1;
     _rf[1] = Math.sin(h2);
     return _rf;
+  }
+
+  // ---------- 地平ぎわの扁平 ----------
+  // 大気差は高度が低いほど大きいので、円盤の下縁は上縁より強く持ち上げられ、
+  // 縦だけが縮む。地平の太陽は 32′×32′ が 27′×32′ の楕円になる (縦に 17%) —
+  // 夕日が横長のパンのように見えるのはこれ。
+  //
+  // 潰すのは「どこに見えるか」だけで、照らされ方は変えない。大気差は天体と目の
+  // あいだで起きるので、天体表面の入射角・出射角には効かないため。そこで
+  // uMVP だけを潰し、uModel (法線と照明に使う) は素のまま渡す。
+  //
+  // 縦の倍率 = d(見かけ高度)/d(真高度) = 1 + R'(h)。見かけの高度しか持って
+  // いないので、真高度へ1回戻してからそこでの傾きを取る (地平でも 0.5′ 以内)
+  function flatK(sinAlt) {
+    if (surfaceBody === "moon") return 1;              // 大気が無い
+    const hA = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
+    const h = hA - refractRad(hA);
+    const e = 1e-5;
+    const k = 1 + (refractRad(h + e) - refractRad(h - e)) / (2 * e);
+    return Math.max(0.5, Math.min(1, k));              // 地平線より下の発散よけ
+  }
+  // m の 3x3 を、視線に直交する「上」の向きにだけ k 倍する (中心は動かさない)。
+  // 天体の姿勢とは無関係な、地平フレームでの潰し方であることに注意
+  function flattenMat(m, dx, dy, dz, k, out) {
+    for (let i = 0; i < 16; i++) out[i] = m[i];
+    if (k >= 0.9999) return out;
+    const dl = Math.hypot(dx, dy, dz) || 1;
+    const ny = dy / dl;
+    // 天頂 (0,1,0) から視線方向の成分を抜いたもの = 画面の「上」
+    let ux = -dx / dl * ny, uy = 1 - ny * ny, uz = -dz / dl * ny;
+    const ul = Math.hypot(ux, uy, uz);
+    if (ul < 1e-4) return out;                         // ほぼ天頂。潰す向きが決まらない
+    ux /= ul; uy /= ul; uz /= ul;
+    const f = 1 - k;
+    for (let c = 0; c < 3; c++) {
+      const o = c * 4;
+      const d = ux * out[o] + uy * out[o + 1] + uz * out[o + 2];
+      out[o] -= f * ux * d; out[o + 1] -= f * uy * d; out[o + 2] -= f * uz * d;
+    }
+    return out;
   }
 
   // ---------- 観測者フレーム (地球/月の地表。ワールド空間の東・天頂・北 単位ベクトル) ----------
@@ -8700,6 +8741,7 @@
       });
       let satLx = 0, satLy = 0, satLz = 0;   // 土星の環の照射方向 (ループ内で確定)
       let airBody = null;                    // 大気シェルを重ねる天体 (地球のみ)
+      let airK = 1, airPx = 0, airPy = 1, airPz = 0;   // その天体の扁平 (月面ビューの地球)
       for (const bb of bigBodies) {
         const b = bb.b, R = bb.wr;
         // 天体の実際の自転姿勢 (宇宙ビューと同じ回転) をローカル観測者フレームへ
@@ -8751,7 +8793,9 @@
           SCR.ecl.r = ecl.r * sc; SCR.ecl.sunAng = ecl.sunAng; SCR.ecl.col = ecl.col;
           eclipse = SCR.ecl;
         }
-        const mvp = mMul(gVP, m, SCR.mvp);
+        // 投影だけを潰す。uModel は素のままなので、法線も照明も変わらない
+        const kF = flatK(bb.sa);
+        const mvp = mMul(gVP, flattenMat(m, bb.px, bb.py, bb.pz, kF, gM64F), SCR.mvp);
         SCR.model.set(m);   // uModel は f32 で十分 (法線用)。f64 配列を直接渡さない
         // 地球照。ワールドの向きで出したものを地平フレームへ回す
         // (moonShine() の返り値は使い回しなので、こちらの控えへ写してから直す)
@@ -8773,12 +8817,13 @@
           for (let i = 0; i < 12; i++) SCR.air64[i] = m[i] * s;
           SCR.air64[12] = m[12]; SCR.air64[13] = m[13]; SCR.air64[14] = m[14]; SCR.air64[15] = 1;
           SCR.airSun[0] = SCR.sun[0]; SCR.airSun[1] = SCR.sun[1]; SCR.airSun[2] = SCR.sun[2];
+          airK = kF; airPx = bb.px; airPy = bb.py; airPz = bb.pz;
           airBody = b;
         }
       }
       // 大気は加算で重ねるので、本体をすべて描き終えてから最後に足す
       if (airBody) {
-        const airMvp = mMul(gVP, SCR.air64, SCR.airMvp);
+        const airMvp = mMul(gVP, flattenMat(SCR.air64, airPx, airPy, airPz, airK, gM64F), SCR.airMvp);
         SCR.airModel.set(SCR.air64);
         bodyRenderer.drawAtmos({ body: airBody, model: SCR.airModel, mvp: airMvp, sunPosition: SCR.airSun });
       }
@@ -8802,7 +8847,11 @@
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         gl.depthMask(false);
         gl.useProgram(ringP.pr);
-        gl.uniformMatrix4fv(ringP.u.uMVP, false, mMul(gVP, m, SCR.mvp));
+        // 扁平は本体と同じ倍率で潰す。大きさによらず縦を一律に縮める効果なので、
+        // 環だけ真円のまま残すと地平ぎわで本体と食い違う
+        const kR = flatK(satBB.sa);
+        gl.uniformMatrix4fv(ringP.u.uMVP, false,
+                            mMul(gVP, flattenMat(m, satBB.px, satBB.py, satBB.pz, kR, gM64F), SCR.mvp));
         SCR.model.set(m);
         gl.uniformMatrix4fv(ringP.u.uModel, false, SCR.model);
         gl.uniform3f(ringP.u.uAxis, Ag[0], Ag[1], Ag[2]);
@@ -9118,8 +9167,13 @@
       const hit = marked === v.b || spotB === v.b;
       // 円盤が画面を覆うほど近い天体 (月面から見た地球など) にリングは要らない
       if (hit && v.rpx < H * 0.3) {
+        // 印は円盤に沿わせる。地平ぎわで天体だけ潰れていると、真円の印が
+        // 「潰れているのは間違い」に見えてしまう (印は画面の縦に潰せばよい —
+        // 地上ビューのカメラは傾かないので、天体の位置の鉛直は画面の縦)
+        const kv = flatK(v.py / (Math.hypot(v.px, v.py, v.pz) || 1));
+        const rr = Math.max(v.rpx, 3);
         octx.beginPath();
-        octx.arc(s.x, s.y, Math.max(v.rpx, 3) + 6, 0, 2 * Math.PI);
+        octx.ellipse(s.x, s.y, rr + 6, rr * kv + 6, 0, 0, 2 * Math.PI);
         octx.strokeStyle = "rgba(242,178,62,0.9)";
         octx.lineWidth = 1.2;
         octx.stroke();
