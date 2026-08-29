@@ -20,6 +20,7 @@
     return Math.max(2e-9, Math.min(GMIN_DEFAULT, angDiam * 1.1));
   }
   const _fwd = [0, 0, 0], _gp = [0, 0, 0], _sunG = [0, 0, 0];
+  const _shineG = { dir: [0, 0, 0], col: [0, 0, 0] };   // 地球照 (地平フレーム)
   const _eclW = [0, 0, 0], _eclG = [0, 0, 0];   // 食: 天体 → 遮蔽体 (ワールド / 地平フレーム)
   const _pf = [0, 0, 0];                       // 歳差を戻した観測地の基底 (赤道 J2000)
   // 極小画角 (超高倍率) では f32 行列の量子化で照準・描画が破綻するため、
@@ -609,8 +610,19 @@
         }
         const mvp = mMul(gVP, m, SCR.mvp);
         SCR.model.set(m);   // uModel は f32 で十分 (法線用)。f64 配列を直接渡さない
+        // 地球照。ワールドの向きで出したものを地平フレームへ回す
+        // (moonShine() の返り値は使い回しなので、こちらの控えへ写してから直す)
+        let shine = null;
+        if (b === MOON && !isMoonSurf) {
+          const sw = moonShine();
+          if (sw) {
+            worldDirToGround(sw.dir, _shineG.dir);
+            _shineG.col[0] = sw.col[0]; _shineG.col[1] = sw.col[1]; _shineG.col[2] = sw.col[2];
+            shine = _shineG;
+          }
+        }
         bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun, radiusPx: bb.rpx,
-                            eclipse, ext: isMoonSurf ? null : extinct(bb.sa) });
+                            eclipse, ext: isMoonSurf ? null : extinct(bb.sa), shine });
         if (b.air) {
           // 行列とやりたいことは本体と同じで、大きさだけ (1 + air) 倍にする。
           // gM64 は次の天体で上書きされるので、ここで取っておく

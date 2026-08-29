@@ -147,14 +147,47 @@
   // 場面で、影側が真っ黒だと画面ごと沈んでしまう
   // 返す値は「画面上でどれくらいの明るさに見せたいか」なので、シェーダへ渡す
   // 前にリニアへ直す (照明の計算はリニアで行う)
-  function nightAmbient(b, radiusPx) {
+  // shine = 暗い側を照らすもの (地球照) があるときは、見失い防止の底上げを
+  // しない。照らす側が物理で決まっているので、そこへ足すと二重になるうえ、
+  // 「拡大すると暗い側が消える」というおかしなふるまいが残る
+  function nightAmbient(b, radiusPx, shine) {
     const v = b.comet
       ? 0.15                               // 彗星核は宇宙空間らしく常に暗い
+      : shine
+      ? 0.09                               // 分解できる大きさのときと同じ底
       : (() => {
           const t = Math.min(1, Math.max(0, ((radiusPx || 0) - 3) / 14));
           return 0.30 - 0.21 * (t * t * (3 - 2 * t));
         })();
     return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  }
+
+  // ---------- 地球照 ----------
+  // 月の暗い側を照らしているのは地球。強さは「月から見た地球の位相」で決まり、
+  // 新月のころ (地球は満ちて見える) が最も明るく、満月では消える。地球から見る
+  // 月の位相の裏返しなので、太陽・地球・月の3点だけで出せる。
+  //
+  // 実際の地球照は満月の 1万分の1 ほどしかない。画面はその桁を出せないので、
+  // 「三日月のころに肉眼で見えるくらい」に見えるところへ置く (空の明るさを
+  // skyAdaptGain で持ち上げているのと同じ考え方)。
+  const ES_PEAK = 0.055;                 // 地球が満ちて見えるときの明るさ (リニア)
+  const ES_COL = [0.78, 0.86, 1.00];     // 海と大気で青みがかる
+  const _esDir = [0, 0, 0], _esCol = [0, 0, 0];
+  const _shine = { dir: _esDir, col: _esCol };
+  function moonShine() {
+    const e = posW.get("earth"), m = posW.get("moon");
+    if (!e || !m) return null;
+    // 太陽はワールドの原点。地球から見た「太陽の方向」と「月の方向」のなす角が、
+    // そのまま月から見た地球の位相角になる
+    const el = Math.hypot(e[0], e[1], e[2]) || 1;
+    let dx = m[0] - e[0], dy = m[1] - e[1], dz = m[2] - e[2];
+    const dl = Math.hypot(dx, dy, dz) || 1;
+    dx /= dl; dy /= dl; dz /= dl;
+    const cos = (-e[0] * dx - e[1] * dy - e[2] * dz) / el;
+    const k = ES_PEAK * (1 + cos) * 0.5;   // 1 = 満ちた地球 (= 新月)
+    _esDir[0] = -dx; _esDir[1] = -dy; _esDir[2] = -dz;   // 月 → 地球
+    _esCol[0] = ES_COL[0] * k; _esCol[1] = ES_COL[1] * k; _esCol[2] = ES_COL[2] * k;
+    return _shine;
   }
 
   // WebGL のプログラムと uniform はグローバルな状態なので、設定漏れがあると
@@ -252,7 +285,8 @@
       // eclipse = 太陽面を隠している天体 {c, r, sunAng, col}。無ければ null
       // ext は大気減光の透過率 (RGB)。地上ビューで天体ごとに変わる。
       // 大気が無い経路 (宇宙・月面) は省略 = 1,1,1
-      draw({ body, model, mvp, sunPosition, radiusPx, eclipse, ext = null }) {
+      // shine は暗い側を照らすもの {dir, col} (地球照)。月以外は null
+      draw({ body, model, mvp, sunPosition, radiusPx, eclipse, ext = null, shine = null }) {
         if (!inPass) throw new Error("bodyRenderer: beginPass より前に draw が呼ばれました");
         const tx = texByKey.get(body.key);
         // 法線図を持つ天体だけユニット4を差し替える。持たない天体でも
@@ -264,7 +298,11 @@
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, tx || noTex);
         gl.uniform1f(u.uHasTex, tx ? 1 : 0);
-        gl.uniform1f(u.uAmb, nightAmbient(body, radiusPx));
+        gl.uniform1f(u.uAmb, nightAmbient(body, radiusPx, shine));
+        // 地球照。無いフレームでも「無い」ことを毎回伝える (前の天体の値を
+        // 引きずると、関係のない天体の夜側が青く光る)
+        gl.uniform3f(u.uEsCol, shine ? shine.col[0] : 0, shine ? shine.col[1] : 0, shine ? shine.col[2] : 0);
+        gl.uniform3f(u.uEsDir, shine ? shine.dir[0] : 0, shine ? shine.dir[1] : 1, shine ? shine.dir[2] : 0);
         gl.uniformMatrix4fv(u.uMVP, false, mvp);
         gl.uniformMatrix4fv(u.uModel, false, model);
         gl.uniform3f(u.uSun, sunPosition[0], sunPosition[1], sunPosition[2]);
@@ -313,7 +351,9 @@
       SCR.ecl.r = e.r; SCR.ecl.sunAng = e.sunAng; SCR.ecl.col = e.col;
       eclipse = SCR.ecl;
     }
-    bodyRenderer.draw({ body: b, model, mvp: mMul(VP, model, SCR.mvp), sunPosition, radiusPx, eclipse });
+    // 地球照はワールドの向きのまま渡せる (カメラ相対座標は軸が同じ)
+    const shine = b === MOON ? moonShine() : null;
+    bodyRenderer.draw({ body: b, model, mvp: mMul(VP, model, SCR.mvp), sunPosition, radiusPx, eclipse, shine });
   }
 
   // 宇宙ビュー用。大気を持つ天体のシェルを1つ描く (本体をすべて描いたあとに呼ぶ)

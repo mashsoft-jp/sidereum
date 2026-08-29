@@ -15,6 +15,9 @@
     uniform sampler2D uRing;
     uniform sampler2D uCloud;   // 地球の雲 (被覆率。グレースケール)
     uniform sampler2D uNight;   // 地球の夜景 (街灯りの強さ。グレースケール)
+    // 地球照 (月の暗い側を照らす地球の光)。uEsCol = 色と強さ、0 なら無し。
+    // uEsDir = 天体から見た地球の方向 (uSun と同じ座標系の単位ベクトル)
+    uniform vec3 uEsCol, uEsDir;
     uniform float uCloudRot;    // 雲の経度オフセット。地表と別に流すため
     uniform float uSunT;        // 黒点の世代を決める暦の時刻 [日]
     uniform sampler2D uNrm;     // 実測標高から作った接空間の法線 (月・水星・火星)
@@ -191,7 +194,23 @@
       }
 
       vec3 L = normalize(uSun - vW);                // 光源 = 太陽 (カメラ相対座標)
-      float dif = max(dot(N, L), 0.0);
+      float mu0 = max(dot(N, L), 0.0);              // 入射角の cos
+      float muV = max(dot(N, V), 0.0);              // 出射角の cos
+
+      // ---- 反射のしかた ----
+      // 大気の無い岩の天体 (uType = 1: 月・水星・小惑星・氷衛星) は
+      // Lommel-Seeliger。粗いレゴリスは来た方向へ光を返すので、Lambert の
+      // ような cos 落ちにならない。満 (位相角 0) では μ0 = μ になって式が
+      // 定数へ落ち、円盤が縁まで一様に光る — **満月が球ではなく平たい円盤に
+      // 見えるのはこれ**で、縁を明るくする係数を手で置く必要がない。
+      // Lambert のままだと、誰もが知っている満月の見え方と食い違う。
+      //
+      // 厳密には単散乱の極限なので、アルベドの高い氷衛星 (エウロパなど) は
+      // 多重散乱のぶん Lambert 寄りに戻る。それでも Lambert よりは近い。
+      // 大気を持つ天体 (地球・金星・タイタン・ガス惑星) は Lambert のまま。
+      //
+      // 正規化は「正面から見た直下点で 1」= Lambert のピークに合わせてある
+      float dif = uType < 1.5 ? 2.0 * mu0 / (mu0 + muV + 1e-4) : mu0;
 
       // ---- 環が本体へ落とす影 (土星のみ) ----
       // 地表の点から太陽へ線を伸ばし、環面 (赤道面) との交点の半径を求めて、
@@ -338,14 +357,31 @@
       // 環境光とリム光の「光が当たっていないぶん」を落として空に溶け込ませる
       float dayFade = 1.0 - 0.92 * uAirDay;
       float fres = pow(1.0 - max(dot(N, V), 0.0), 2.6);
-      alb += uRim * fres * (0.25 * dayFade + 0.75 * dif) * 0.55;
+      // リム光は縁を持ち上げる見た目の項なので、Lommel-Seeliger の dif ではなく
+      // 素の cos で重みを付ける。dif は縁で 1 を超えうるので、そのまま掛けると
+      // 縁の光を二重に強めることになる (リムを持つのは冥王星と小惑星のいくつか)
+      alb += uRim * fres * (0.25 * dayFade + 0.75 * mu0) * 0.55;
 
       // uAmb = 夜側の明るさ。呼び出し側が見かけの大きさから決める。点にしか
       // 見えない遠くの天体は見失わないよう明るく、円盤として分解できる大きさ
       // では暗くして満ち欠けを見せる。昼側の明るさは uAmb によらず一定に保つ
       float ambient = uAmb * dayFade;
       float direct = mix(1.0, 1.03, uComet) - ambient;
-      vec3 c = alb * (ambient + dif * direct + eclLight) + vec3(spec) * dif;
+
+      // ---- 地球照 ----
+      // 月の暗い側がぼんやり光って見えるのは、そこに地球が昇っていて
+      // 地面を照らしているから。強さは「月から見た地球の位相」で決まり、
+      // 新月のころ (地球は満ちて見える) が最も明るく、満月では消える。
+      // 照らす向きは地球なので、地球から眺めているかぎり本体と同じ
+      // Lommel-Seeliger が μ0 = μ に落ちて円盤が一様に光る — 実際の地球照も
+      // のっぺりした灰色の面に見える。昼の空では見えないので dayFade を掛ける
+      vec3 esLight = vec3(0.0);
+      if (uEsCol.g > 0.0) {
+        float me = max(dot(N, uEsDir), 0.0);
+        esLight = uEsCol * (2.0 * me / (me + muV + 1e-4)) * dayFade;
+      }
+
+      vec3 c = alb * (ambient + dif * direct + eclLight + esLight) + vec3(spec) * dif;
 
       if (isEarth > 0.5) {
         float ndl = dot(N, L);

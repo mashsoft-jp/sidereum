@@ -4671,6 +4671,9 @@
     uniform sampler2D uRing;
     uniform sampler2D uCloud;   // 地球の雲 (被覆率。グレースケール)
     uniform sampler2D uNight;   // 地球の夜景 (街灯りの強さ。グレースケール)
+    // 地球照 (月の暗い側を照らす地球の光)。uEsCol = 色と強さ、0 なら無し。
+    // uEsDir = 天体から見た地球の方向 (uSun と同じ座標系の単位ベクトル)
+    uniform vec3 uEsCol, uEsDir;
     uniform float uCloudRot;    // 雲の経度オフセット。地表と別に流すため
     uniform float uSunT;        // 黒点の世代を決める暦の時刻 [日]
     uniform sampler2D uNrm;     // 実測標高から作った接空間の法線 (月・水星・火星)
@@ -4847,7 +4850,23 @@
       }
 
       vec3 L = normalize(uSun - vW);                // 光源 = 太陽 (カメラ相対座標)
-      float dif = max(dot(N, L), 0.0);
+      float mu0 = max(dot(N, L), 0.0);              // 入射角の cos
+      float muV = max(dot(N, V), 0.0);              // 出射角の cos
+
+      // ---- 反射のしかた ----
+      // 大気の無い岩の天体 (uType = 1: 月・水星・小惑星・氷衛星) は
+      // Lommel-Seeliger。粗いレゴリスは来た方向へ光を返すので、Lambert の
+      // ような cos 落ちにならない。満 (位相角 0) では μ0 = μ になって式が
+      // 定数へ落ち、円盤が縁まで一様に光る — **満月が球ではなく平たい円盤に
+      // 見えるのはこれ**で、縁を明るくする係数を手で置く必要がない。
+      // Lambert のままだと、誰もが知っている満月の見え方と食い違う。
+      //
+      // 厳密には単散乱の極限なので、アルベドの高い氷衛星 (エウロパなど) は
+      // 多重散乱のぶん Lambert 寄りに戻る。それでも Lambert よりは近い。
+      // 大気を持つ天体 (地球・金星・タイタン・ガス惑星) は Lambert のまま。
+      //
+      // 正規化は「正面から見た直下点で 1」= Lambert のピークに合わせてある
+      float dif = uType < 1.5 ? 2.0 * mu0 / (mu0 + muV + 1e-4) : mu0;
 
       // ---- 環が本体へ落とす影 (土星のみ) ----
       // 地表の点から太陽へ線を伸ばし、環面 (赤道面) との交点の半径を求めて、
@@ -4994,14 +5013,31 @@
       // 環境光とリム光の「光が当たっていないぶん」を落として空に溶け込ませる
       float dayFade = 1.0 - 0.92 * uAirDay;
       float fres = pow(1.0 - max(dot(N, V), 0.0), 2.6);
-      alb += uRim * fres * (0.25 * dayFade + 0.75 * dif) * 0.55;
+      // リム光は縁を持ち上げる見た目の項なので、Lommel-Seeliger の dif ではなく
+      // 素の cos で重みを付ける。dif は縁で 1 を超えうるので、そのまま掛けると
+      // 縁の光を二重に強めることになる (リムを持つのは冥王星と小惑星のいくつか)
+      alb += uRim * fres * (0.25 * dayFade + 0.75 * mu0) * 0.55;
 
       // uAmb = 夜側の明るさ。呼び出し側が見かけの大きさから決める。点にしか
       // 見えない遠くの天体は見失わないよう明るく、円盤として分解できる大きさ
       // では暗くして満ち欠けを見せる。昼側の明るさは uAmb によらず一定に保つ
       float ambient = uAmb * dayFade;
       float direct = mix(1.0, 1.03, uComet) - ambient;
-      vec3 c = alb * (ambient + dif * direct + eclLight) + vec3(spec) * dif;
+
+      // ---- 地球照 ----
+      // 月の暗い側がぼんやり光って見えるのは、そこに地球が昇っていて
+      // 地面を照らしているから。強さは「月から見た地球の位相」で決まり、
+      // 新月のころ (地球は満ちて見える) が最も明るく、満月では消える。
+      // 照らす向きは地球なので、地球から眺めているかぎり本体と同じ
+      // Lommel-Seeliger が μ0 = μ に落ちて円盤が一様に光る — 実際の地球照も
+      // のっぺりした灰色の面に見える。昼の空では見えないので dayFade を掛ける
+      vec3 esLight = vec3(0.0);
+      if (uEsCol.g > 0.0) {
+        float me = max(dot(N, uEsDir), 0.0);
+        esLight = uEsCol * (2.0 * me / (me + muV + 1e-4)) * dayFade;
+      }
+
+      vec3 c = alb * (ambient + dif * direct + eclLight + esLight) + vec3(spec) * dif;
 
       if (isEarth > 0.5) {
         float ndl = dot(N, L);
@@ -7264,14 +7300,47 @@
   // 場面で、影側が真っ黒だと画面ごと沈んでしまう
   // 返す値は「画面上でどれくらいの明るさに見せたいか」なので、シェーダへ渡す
   // 前にリニアへ直す (照明の計算はリニアで行う)
-  function nightAmbient(b, radiusPx) {
+  // shine = 暗い側を照らすもの (地球照) があるときは、見失い防止の底上げを
+  // しない。照らす側が物理で決まっているので、そこへ足すと二重になるうえ、
+  // 「拡大すると暗い側が消える」というおかしなふるまいが残る
+  function nightAmbient(b, radiusPx, shine) {
     const v = b.comet
       ? 0.15                               // 彗星核は宇宙空間らしく常に暗い
+      : shine
+      ? 0.09                               // 分解できる大きさのときと同じ底
       : (() => {
           const t = Math.min(1, Math.max(0, ((radiusPx || 0) - 3) / 14));
           return 0.30 - 0.21 * (t * t * (3 - 2 * t));
         })();
     return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  }
+
+  // ---------- 地球照 ----------
+  // 月の暗い側を照らしているのは地球。強さは「月から見た地球の位相」で決まり、
+  // 新月のころ (地球は満ちて見える) が最も明るく、満月では消える。地球から見る
+  // 月の位相の裏返しなので、太陽・地球・月の3点だけで出せる。
+  //
+  // 実際の地球照は満月の 1万分の1 ほどしかない。画面はその桁を出せないので、
+  // 「三日月のころに肉眼で見えるくらい」に見えるところへ置く (空の明るさを
+  // skyAdaptGain で持ち上げているのと同じ考え方)。
+  const ES_PEAK = 0.055;                 // 地球が満ちて見えるときの明るさ (リニア)
+  const ES_COL = [0.78, 0.86, 1.00];     // 海と大気で青みがかる
+  const _esDir = [0, 0, 0], _esCol = [0, 0, 0];
+  const _shine = { dir: _esDir, col: _esCol };
+  function moonShine() {
+    const e = posW.get("earth"), m = posW.get("moon");
+    if (!e || !m) return null;
+    // 太陽はワールドの原点。地球から見た「太陽の方向」と「月の方向」のなす角が、
+    // そのまま月から見た地球の位相角になる
+    const el = Math.hypot(e[0], e[1], e[2]) || 1;
+    let dx = m[0] - e[0], dy = m[1] - e[1], dz = m[2] - e[2];
+    const dl = Math.hypot(dx, dy, dz) || 1;
+    dx /= dl; dy /= dl; dz /= dl;
+    const cos = (-e[0] * dx - e[1] * dy - e[2] * dz) / el;
+    const k = ES_PEAK * (1 + cos) * 0.5;   // 1 = 満ちた地球 (= 新月)
+    _esDir[0] = -dx; _esDir[1] = -dy; _esDir[2] = -dz;   // 月 → 地球
+    _esCol[0] = ES_COL[0] * k; _esCol[1] = ES_COL[1] * k; _esCol[2] = ES_COL[2] * k;
+    return _shine;
   }
 
   // WebGL のプログラムと uniform はグローバルな状態なので、設定漏れがあると
@@ -7369,7 +7438,8 @@
       // eclipse = 太陽面を隠している天体 {c, r, sunAng, col}。無ければ null
       // ext は大気減光の透過率 (RGB)。地上ビューで天体ごとに変わる。
       // 大気が無い経路 (宇宙・月面) は省略 = 1,1,1
-      draw({ body, model, mvp, sunPosition, radiusPx, eclipse, ext = null }) {
+      // shine は暗い側を照らすもの {dir, col} (地球照)。月以外は null
+      draw({ body, model, mvp, sunPosition, radiusPx, eclipse, ext = null, shine = null }) {
         if (!inPass) throw new Error("bodyRenderer: beginPass より前に draw が呼ばれました");
         const tx = texByKey.get(body.key);
         // 法線図を持つ天体だけユニット4を差し替える。持たない天体でも
@@ -7381,7 +7451,11 @@
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, tx || noTex);
         gl.uniform1f(u.uHasTex, tx ? 1 : 0);
-        gl.uniform1f(u.uAmb, nightAmbient(body, radiusPx));
+        gl.uniform1f(u.uAmb, nightAmbient(body, radiusPx, shine));
+        // 地球照。無いフレームでも「無い」ことを毎回伝える (前の天体の値を
+        // 引きずると、関係のない天体の夜側が青く光る)
+        gl.uniform3f(u.uEsCol, shine ? shine.col[0] : 0, shine ? shine.col[1] : 0, shine ? shine.col[2] : 0);
+        gl.uniform3f(u.uEsDir, shine ? shine.dir[0] : 0, shine ? shine.dir[1] : 1, shine ? shine.dir[2] : 0);
         gl.uniformMatrix4fv(u.uMVP, false, mvp);
         gl.uniformMatrix4fv(u.uModel, false, model);
         gl.uniform3f(u.uSun, sunPosition[0], sunPosition[1], sunPosition[2]);
@@ -7430,7 +7504,9 @@
       SCR.ecl.r = e.r; SCR.ecl.sunAng = e.sunAng; SCR.ecl.col = e.col;
       eclipse = SCR.ecl;
     }
-    bodyRenderer.draw({ body: b, model, mvp: mMul(VP, model, SCR.mvp), sunPosition, radiusPx, eclipse });
+    // 地球照はワールドの向きのまま渡せる (カメラ相対座標は軸が同じ)
+    const shine = b === MOON ? moonShine() : null;
+    bodyRenderer.draw({ body: b, model, mvp: mMul(VP, model, SCR.mvp), sunPosition, radiusPx, eclipse, shine });
   }
 
   // 宇宙ビュー用。大気を持つ天体のシェルを1つ描く (本体をすべて描いたあとに呼ぶ)
@@ -8087,6 +8163,7 @@
     return Math.max(2e-9, Math.min(GMIN_DEFAULT, angDiam * 1.1));
   }
   const _fwd = [0, 0, 0], _gp = [0, 0, 0], _sunG = [0, 0, 0];
+  const _shineG = { dir: [0, 0, 0], col: [0, 0, 0] };   // 地球照 (地平フレーム)
   const _eclW = [0, 0, 0], _eclG = [0, 0, 0];   // 食: 天体 → 遮蔽体 (ワールド / 地平フレーム)
   const _pf = [0, 0, 0];                       // 歳差を戻した観測地の基底 (赤道 J2000)
   // 極小画角 (超高倍率) では f32 行列の量子化で照準・描画が破綻するため、
@@ -8676,8 +8753,19 @@
         }
         const mvp = mMul(gVP, m, SCR.mvp);
         SCR.model.set(m);   // uModel は f32 で十分 (法線用)。f64 配列を直接渡さない
+        // 地球照。ワールドの向きで出したものを地平フレームへ回す
+        // (moonShine() の返り値は使い回しなので、こちらの控えへ写してから直す)
+        let shine = null;
+        if (b === MOON && !isMoonSurf) {
+          const sw = moonShine();
+          if (sw) {
+            worldDirToGround(sw.dir, _shineG.dir);
+            _shineG.col[0] = sw.col[0]; _shineG.col[1] = sw.col[1]; _shineG.col[2] = sw.col[2];
+            shine = _shineG;
+          }
+        }
         bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun, radiusPx: bb.rpx,
-                            eclipse, ext: isMoonSurf ? null : extinct(bb.sa) });
+                            eclipse, ext: isMoonSurf ? null : extinct(bb.sa), shine });
         if (b.air) {
           // 行列とやりたいことは本体と同じで、大きさだけ (1 + air) 倍にする。
           // gM64 は次の天体で上書きされるので、ここで取っておく
