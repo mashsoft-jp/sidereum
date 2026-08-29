@@ -148,9 +148,13 @@
   const billVS = `@@glsl:bill.vert@@`;
   const billFS = PRE + `@@glsl:bill.frag@@`;
 
+  // 彗星のコマと尾は加算で描く光源なので、大気減光を画素ごとに掛ける。
+  // 2つのシェーダで同じ式を持たないよう、空の色と同じやり方で前置きする
+  const EXT_FN = `@@glsl:extinct@@`;
+
   // ---- 彗星の尾 (曲率を持つカメラ正対リボン, 加算) ----
   const tailVS = `@@glsl:tail.vert@@`;
-  const tailFS = PRE + `@@glsl:tail.frag@@`;
+  const tailFS = PRE + EXT_FN + `@@glsl:tail.frag@@`;
 
   // ---- 流星の光跡 (放射点から流れる細いリボン, 加算) ----
   const meteorVS = `@@glsl:meteor.vert@@`;
@@ -158,11 +162,12 @@
 
   // ---- 彗星のコマ (太陽側が圧縮された涙滴型の光。ガウシアン減衰で継ぎ目なし) ----
   const comaVS = `@@glsl:coma.vert@@`;
-  const comaFS = PRE + `@@glsl:coma.frag@@`;
+  const comaFS = PRE + EXT_FN + `@@glsl:coma.frag@@`;
 
   // ---- 土星の環 ----
   const ringVS = `@@glsl:ring.vert@@`;
-  const ringFS = PRE + `@@glsl:ring.frag@@`;
+  // 環にも地上ビューのエアライトが要るので、天体と同じ空の色を持たせる
+  const ringFS = PRE + SKY_FN + `@@glsl:ring.frag@@`;
 
   // ---- 探査機のメッシュ (法線は持たず面の微分から求めるので拡張が要る) ----
   const meshVS = `@@glsl:mesh.vert@@`;

@@ -4,6 +4,7 @@
     uniform vec3 uHead, uAxis, uCurve, uSide;
     uniform vec2 uDim;                  // x: 長さ  y: 半幅
     varying vec2 vUv;
+    varying vec3 vW;                    // 大気減光を画素ごとに解くための位置
     void main() {
       float x = aCorner.x * 0.5 + 0.5;
       float flow = x;
@@ -15,5 +16,6 @@
              + uCurve * (flow * flow * uDim.x)
              + uSide * (aCorner.y * uDim.y * fan);
       vUv = vec2(x, aCorner.y);
+      vW = w;
       gl_Position = uVP * vec4(w, 1.0);
     }

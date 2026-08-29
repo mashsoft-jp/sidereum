@@ -8,6 +8,11 @@
     uniform vec2 uRadii;   // 土星の赤道半径・極半径 (ワールド単位)
     uniform vec2 uRingR;   // プロファイルの参照範囲 (内径, 1/(外径-内径))
     uniform sampler2D uProfile;
+    // 地上ビューの大気。本体 (body.frag) と対で扱う — 減光だけ掛けて
+    // エアライトを足さないと、環だけが空に溶けずに浮く
+    uniform vec3 uExt;     // 大気減光の透過率 (宇宙・月面では 1,1,1)
+    uniform vec3 uAirSun;  // エアライト用の太陽方向
+    uniform float uAirFlux, uAirGain;
 
     void main() {
       // ---- 半径ごとの濃さと色 (実測プロファイル) ----
@@ -58,5 +63,9 @@
       // 影の中でも真っ黒にはならない (土星本体からの照り返し)。
       // プロファイルの色だけ sRGB なのでリニアへ戻す (a の透過率はリニア値)
       vec3 c = srgbToLinear(prof.rgb) * (I * 1.3 + 0.010 * alpha);
+      // 大気減光は「環から届く光」に、エアライトは「環と目のあいだの大気」に。
+      // エアライトへ alpha を掛けるのは、背景の空を隠したぶんだけ足し戻す
+      // ため (乗算済みアルファ。隠していない画素の空はそのまま背後に残る)
+      c = c * uExt + skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain * alpha;
       gl_FragColor = vec4(tonemap(c), alpha);
     }

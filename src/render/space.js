@@ -468,6 +468,12 @@
       gl.uniform3f(ringP.u.uCenter, SCR.t[0], SCR.t[1], SCR.t[2]);
       gl.uniform2f(ringP.u.uRadii, sat.rEq * KM2W, sat.rPol * KM2W);
       gl.uniform2f(ringP.u.uRingR, RING_IN, 1.0 / (RING_OUT - RING_IN));
+      // 宇宙には大気が無い。「無い」ことを毎フレーム伝える — 省くと地上ビューの
+      // 値が残り、宇宙の環に減光とエアライトが乗る
+      gl.uniform3f(ringP.u.uExt, 1, 1, 1);
+      gl.uniform3f(ringP.u.uAirSun, 0, 1, 0);
+      gl.uniform1f(ringP.u.uAirFlux, 0);
+      gl.uniform1f(ringP.u.uAirGain, 1);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, ringTex);
       gl.uniform1i(ringP.u.uProfile, 0);

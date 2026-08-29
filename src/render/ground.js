@@ -657,6 +657,13 @@
         gl.uniform3f(ringP.u.uCenter, satBB.px, satBB.py, satBB.pz);
         gl.uniform2f(ringP.u.uRadii, s * satBB.b.rEq / satBB.b.rkm, s * satBB.b.rPol / satBB.b.rkm);
         gl.uniform2f(ringP.u.uRingR, RING_IN, 1.0 / (RING_OUT - RING_IN));
+        // 大気は本体と同じものを渡す。本体だけに掛けると、地平ぎわで土星が
+        // 赤黒くなるのに環だけ白いまま残る
+        const rex = isMoonSurf ? null : extinct(satBB.sa);
+        gl.uniform3f(ringP.u.uExt, rex ? rex[0] : 1, rex ? rex[1] : 1, rex ? rex[2] : 1);
+        gl.uniform3f(ringP.u.uAirSun, _sunG[0], _sunG[1], _sunG[2]);
+        gl.uniform1f(ringP.u.uAirFlux, sunFlux);
+        gl.uniform1f(ringP.u.uAirGain, skyGain);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, ringTex);
         gl.uniform1i(ringP.u.uProfile, 0);
@@ -819,10 +826,13 @@
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         gl.depthMask(false);
+        // 空の明るさと大気減光。恒星・天の川・星雲・星座線には掛かっているのに
+        // 彗星だけ抜けていて、真昼の青空を尾が満光で横切っていた
         drawCometFX(c, act, gVP32, nowSec,
                     _gp[0] * SKYR, _gp[1] * SKYR, _gp[2] * SKYR,
                     ax, ay, az, SCR.v[0], SCR.v[1], SCR.v[2],
-                    gfpx, gV64[0], gV64[4], gV64[8], SKYR / dW);
+                    gfpx, gV64[0], gV64[4], gV64[8], SKYR / dW,
+                    starVis, isMoonSurf ? null : EXT_K);
         gl.disable(gl.BLEND);
         gl.depthMask(true);
       }

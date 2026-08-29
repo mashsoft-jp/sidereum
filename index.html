@@ -5276,6 +5276,26 @@
     }
 `;
 
+  // 彗星のコマと尾は加算で描く光源なので、大気減光を画素ごとに掛ける。
+  // 2つのシェーダで同じ式を持たないよう、空の色と同じやり方で前置きする
+  const EXT_FN = `    // 大気減光 (加算で描く光源用)。彗星のコマと尾で共有する。
+    //
+    // 尾は空を数十度またぐので、核1点の透過率を全体へ掛けると、地平ぎわの
+    // 核に合わせて天頂近くの尾まで同じだけ暗くなる。天の川 (sky.frag) と
+    // 同じく画素ごとに解く — 地平フレームでは位置ベクトルの y がそのまま
+    // 見かけの高度の sin になる。
+    //
+    // uExtK = 減光係数 [等級/大気路長] (core/math.js の EXT_K)。
+    // 大気の無い経路 (宇宙・月面) では 0 を渡す
+    uniform vec3 uExtK;
+    vec3 extinctAt(vec3 w) {
+      if (uExtK.g <= 0.0) return vec3(1.0);
+      float h = max(degrees(asin(clamp(normalize(w).y, -1.0, 1.0))), -1.5);
+      float X = 1.0 / (sin(radians(h)) + 0.50572 * pow(h + 6.07995, -1.6364));
+      return exp2(-1.3287712 * uExtK * (X - 1.0));   // 10^(-0.4 k (X-1))
+    }
+`;
+
   // ---- 彗星の尾 (曲率を持つカメラ正対リボン, 加算) ----
   const tailVS = `
     attribute vec2 aCorner;
@@ -5283,6 +5303,7 @@
     uniform vec3 uHead, uAxis, uCurve, uSide;
     uniform vec2 uDim;                  // x: 長さ  y: 半幅
     varying vec2 vUv;
+    varying vec3 vW;                    // 大気減光を画素ごとに解くための位置
     void main() {
       float x = aCorner.x * 0.5 + 0.5;
       float flow = x;
@@ -5294,10 +5315,12 @@
              + uCurve * (flow * flow * uDim.x)
              + uSide * (aCorner.y * uDim.y * fan);
       vUv = vec2(x, aCorner.y);
+      vW = w;
       gl_Position = uVP * vec4(w, 1.0);
     }`;
-  const tailFS = PRE + `
+  const tailFS = PRE + EXT_FN + `
     varying vec2 vUv;
+    varying vec3 vW;    // 大気減光を画素ごとに解くための位置
     uniform vec3 uCol1, uCol2;
     uniform float uAlpha, uKind, uTime, uSeed;
     float hash(float n) {
@@ -5344,7 +5367,7 @@
       }
       a *= head * end * uAlpha;
       vec3 col = mix(uCol1, uCol2, smoothstep(0.0, 0.85, flow));
-      gl_FragColor = vec4(col * a, 0.0);
+      gl_FragColor = vec4(col * a * extinctAt(vW), 0.0);
     }`;
 
   // ---- 流星の光跡 (放射点から流れる細いリボン, 加算) ----
@@ -5378,14 +5401,17 @@
     uniform vec3 uHead, uAxis, uSide;
     uniform vec2 uDim;                  // x: 軸方向スケール  y: 半幅
     varying vec2 vP;                    // x: 軸方向 (太陽側が負)  y: 横方向
+    varying vec3 vW;                    // 大気減光を画素ごとに解くための位置
     void main() {
       float x = mix(-1.2, 1.2, aCorner.x * 0.5 + 0.5);
       vP = vec2(x, aCorner.y);
       vec3 w = uHead + uAxis * (x * uDim.x) + uSide * (aCorner.y * uDim.y);
+      vW = w;
       gl_Position = uVP * vec4(w, 1.0);
     }`;
-  const comaFS = PRE + `
+  const comaFS = PRE + EXT_FN + `
     varying vec2 vP;
+    varying vec3 vW;    // 大気減光を画素ごとに解くための位置
     uniform vec3 uCol;
     uniform float uAlpha, uCore, uFacing;
     void main() {
@@ -5401,7 +5427,7 @@
       // 遠距離では未解像の明るい頭部、接近時は境界のない淡いガス雲だけを残す
       vec3 light = uCol * (glow * 0.36 + inner * 0.42)
                  + vec3(1.0, 0.98, 0.92) * core * 2.80 * uCore;
-      gl_FragColor = vec4(light * uAlpha, 0.0);
+      gl_FragColor = vec4(light * uAlpha * extinctAt(vW), 0.0);
     }`;
 
   // ---- 土星の環 ----
@@ -5416,7 +5442,8 @@
       vW = (uModel * vec4(aPos, 1.0)).xyz;
       gl_Position = uMVP * vec4(aPos, 1.0);
     }`;
-  const ringFS = PRE + `
+  // 環にも地上ビューのエアライトが要るので、天体と同じ空の色を持たせる
+  const ringFS = PRE + SKY_FN + `
     varying float vR;      // 土星の平均半径を 1 とした環上の半径
     varying vec3 vW;
     uniform vec3 uAxis;    // 環面の法線 (= 土星の極方向)
@@ -5426,6 +5453,11 @@
     uniform vec2 uRadii;   // 土星の赤道半径・極半径 (ワールド単位)
     uniform vec2 uRingR;   // プロファイルの参照範囲 (内径, 1/(外径-内径))
     uniform sampler2D uProfile;
+    // 地上ビューの大気。本体 (body.frag) と対で扱う — 減光だけ掛けて
+    // エアライトを足さないと、環だけが空に溶けずに浮く
+    uniform vec3 uExt;     // 大気減光の透過率 (宇宙・月面では 1,1,1)
+    uniform vec3 uAirSun;  // エアライト用の太陽方向
+    uniform float uAirFlux, uAirGain;
 
     void main() {
       // ---- 半径ごとの濃さと色 (実測プロファイル) ----
@@ -5476,6 +5508,10 @@
       // 影の中でも真っ黒にはならない (土星本体からの照り返し)。
       // プロファイルの色だけ sRGB なのでリニアへ戻す (a の透過率はリニア値)
       vec3 c = srgbToLinear(prof.rgb) * (I * 1.3 + 0.010 * alpha);
+      // 大気減光は「環から届く光」に、エアライトは「環と目のあいだの大気」に。
+      // エアライトへ alpha を掛けるのは、背景の空を隠したぶんだけ足し戻す
+      // ため (乗算済みアルファ。隠していない画素の空はそのまま背後に残る)
+      c = c * uExt + skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain * alpha;
       gl_FragColor = vec4(tonemap(c), alpha);
     }
 `;
@@ -8688,6 +8724,13 @@
         gl.uniform3f(ringP.u.uCenter, satBB.px, satBB.py, satBB.pz);
         gl.uniform2f(ringP.u.uRadii, s * satBB.b.rEq / satBB.b.rkm, s * satBB.b.rPol / satBB.b.rkm);
         gl.uniform2f(ringP.u.uRingR, RING_IN, 1.0 / (RING_OUT - RING_IN));
+        // 大気は本体と同じものを渡す。本体だけに掛けると、地平ぎわで土星が
+        // 赤黒くなるのに環だけ白いまま残る
+        const rex = isMoonSurf ? null : extinct(satBB.sa);
+        gl.uniform3f(ringP.u.uExt, rex ? rex[0] : 1, rex ? rex[1] : 1, rex ? rex[2] : 1);
+        gl.uniform3f(ringP.u.uAirSun, _sunG[0], _sunG[1], _sunG[2]);
+        gl.uniform1f(ringP.u.uAirFlux, sunFlux);
+        gl.uniform1f(ringP.u.uAirGain, skyGain);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, ringTex);
         gl.uniform1i(ringP.u.uProfile, 0);
@@ -8850,10 +8893,13 @@
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         gl.depthMask(false);
+        // 空の明るさと大気減光。恒星・天の川・星雲・星座線には掛かっているのに
+        // 彗星だけ抜けていて、真昼の青空を尾が満光で横切っていた
         drawCometFX(c, act, gVP32, nowSec,
                     _gp[0] * SKYR, _gp[1] * SKYR, _gp[2] * SKYR,
                     ax, ay, az, SCR.v[0], SCR.v[1], SCR.v[2],
-                    gfpx, gV64[0], gV64[4], gV64[8], SKYR / dW);
+                    gfpx, gV64[0], gV64[4], gV64[8], SKYR / dW,
+                    starVis, isMoonSurf ? null : EXT_K);
         gl.disable(gl.BLEND);
         gl.depthMask(true);
       }
@@ -9680,6 +9726,12 @@
       gl.uniform3f(ringP.u.uCenter, SCR.t[0], SCR.t[1], SCR.t[2]);
       gl.uniform2f(ringP.u.uRadii, sat.rEq * KM2W, sat.rPol * KM2W);
       gl.uniform2f(ringP.u.uRingR, RING_IN, 1.0 / (RING_OUT - RING_IN));
+      // 宇宙には大気が無い。「無い」ことを毎フレーム伝える — 省くと地上ビューの
+      // 値が残り、宇宙の環に減光とエアライトが乗る
+      gl.uniform3f(ringP.u.uExt, 1, 1, 1);
+      gl.uniform3f(ringP.u.uAirSun, 0, 1, 0);
+      gl.uniform1f(ringP.u.uAirFlux, 0);
+      gl.uniform1f(ringP.u.uAirGain, 1);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, ringTex);
       gl.uniform1i(ringP.u.uProfile, 0);
@@ -9798,10 +9850,21 @@
   //   rgt*: 画面右方向 (尾を正面から見て軸が縮退したときの予備軸)
   //   scl: ジオメトリを原点まわりに一様縮小した倍率。地上ビューでは天球ドーム上に
   //        置くため 1 未満になる。一様縮小は方向を変えないので見た目の角度は不変
+  //   vis: 空の暗さ (starVis)。明るい空では彗星も見えない — 恒星・天の川・
+  //        星雲・星座線には掛かっているのに、ここだけ抜けていて昼の青空に
+  //        尾が満光で出ていた。宇宙ビューは 1
+  //   extK: 大気減光の係数 [等級/大気路長] (core/math.js の EXT_K)。尾は空を
+  //        数十度またぐのでシェーダが画素ごとに解く。大気の無い経路 (宇宙・
+  //        月面) は null
   function drawCometFX(c, act, VPm, tSec, hx, hy, hz, ax, ay, az, vx, vy, vz,
-                       fpxV, rgtx, rgty, rgtz, scl) {
+                       fpxV, rgtx, rgty, rgtz, scl, vis = 1, extK = null) {
     {
       {
+        if (vis <= 0.004) return;   // 昼の空。4層の尾とコマをまとめて省く
+        // 明るさにだけ掛ける。act はジェットの長さも決めているので、ここへ
+        // 畳むと昼にジェットが縮んでしまう
+        const bri = act * vis;
+        const ek0 = extK ? extK[0] : 0, ek1 = extK ? extK[1] : 0, ek2 = extK ? extK[2] : 0;
         // 遠方では写真のような未解像の頭部と尾、接近時は暗い核と局所ジェットへ遷移
         const camCometDist = Math.hypot(hx, hy, hz) || 1;
         const nucleusPx = bodyR(c) * scl * fpxV / camCometDist;
@@ -9842,6 +9905,7 @@
         cvx /= cvl; cvy /= cvl; cvz /= cvl;
         let s;
         gl.useProgram(tailP.pr);
+        gl.uniform3f(tailP.u.uExtK, ek0, ek1, ek2);
         gl.uniformMatrix4fv(tailP.u.uVP, false, VPm);
         gl.uniform3f(tailP.u.uHead, hx, hy, hz);
         gl.uniform1f(tailP.u.uTime, tSec);
@@ -9864,14 +9928,14 @@
           gl.uniform3f(tailP.u.uCol2, 0.74, 0.66, 0.54);
           gl.uniform1f(tailP.u.uKind, 1);
           gl.uniform1f(tailP.u.uSeed, 2.7);
-          gl.uniform1f(tailP.u.uAlpha, 0.46 * act * tailVis);
+          gl.uniform1f(tailP.u.uAlpha, 0.46 * bri * tailVis);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
           // ダストの内層を重ね、コマから続く明るい流れを作る
           gl.uniform2f(tailP.u.uDim, L * 0.68, L * 0.15);
           gl.uniform3f(tailP.u.uCol1, 1.0, 0.99, 0.94);
           gl.uniform3f(tailP.u.uCol2, 0.84, 0.78, 0.66);
           gl.uniform1f(tailP.u.uSeed, 7.1);
-          gl.uniform1f(tailP.u.uAlpha, 0.34 * act * tailVis);
+          gl.uniform1f(tailP.u.uAlpha, 0.34 * bri * tailVis);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
           // イオンテイルの外層 (青白, 反太陽方向にほぼ直線)
           s = sideOf(ax, ay, az);
@@ -9883,14 +9947,14 @@
           gl.uniform3f(tailP.u.uCol2, 0.18, 0.38, 1.0);
           gl.uniform1f(tailP.u.uKind, 0);
           gl.uniform1f(tailP.u.uSeed, 4.3);
-          gl.uniform1f(tailP.u.uAlpha, 0.30 * act * tailVis);
+          gl.uniform1f(tailP.u.uAlpha, 0.30 * bri * tailVis);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
           // イオンテイルの細い発光芯
           gl.uniform2f(tailP.u.uDim, L * 1.08, L * 0.024);
           gl.uniform3f(tailP.u.uCol1, 0.88, 0.98, 1.0);
           gl.uniform3f(tailP.u.uCol2, 0.28, 0.52, 1.0);
           gl.uniform1f(tailP.u.uSeed, 9.4);
-          gl.uniform1f(tailP.u.uAlpha, 0.22 * act * tailVis);
+          gl.uniform1f(tailP.u.uAlpha, 0.22 * bri * tailVis);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
         }
         // 接近時: 太陽に熱せられた核表面から噴き、反太陽方向へ曲げられる局所ジェット
@@ -9911,7 +9975,7 @@
             gl.uniform3f(tailP.u.uCol2, 0.36, 0.43, 0.52);
             gl.uniform1f(tailP.u.uKind, 1);
             gl.uniform1f(tailP.u.uSeed, seed);
-            gl.uniform1f(tailP.u.uAlpha, alpha * act * jetVis);
+            gl.uniform1f(tailP.u.uAlpha, alpha * bri * jetVis);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
           };
           drawJet(-ax + cvx * 0.28 + qx * 0.10,
@@ -9923,6 +9987,7 @@
         }
         // コマ (太陽側が圧縮された涙滴型。反太陽側はそのまま尾に連続する)
         gl.useProgram(comaP.pr);
+        gl.uniform3f(comaP.u.uExtK, ek0, ek1, ek2);
         gl.uniformMatrix4fv(comaP.u.uVP, false, VPm);
         gl.uniform3f(comaP.u.uHead, hx, hy, hz);
         gl.uniform1f(comaP.u.uCore, 1 - pixelLod);
@@ -9952,7 +10017,7 @@
         const comaProjX = comaY + (comaX - comaY) * comaFacing;
         gl.uniform2f(comaP.u.uDim, comaProjX, comaY);
         gl.uniform3f(comaP.u.uCol, 0.70, 0.78, 0.86);
-        gl.uniform1f(comaP.u.uAlpha, 0.92 * act * comaVis);
+        gl.uniform1f(comaP.u.uAlpha, 0.92 * bri * comaVis);
         gl.bindBuffer(gl.ARRAY_BUFFER, billVB);
         gl.enableVertexAttribArray(comaP.a.aCorner);
         gl.vertexAttribPointer(comaP.a.aCorner, 2, gl.FLOAT, false, 0, 0);

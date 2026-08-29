@@ -1,5 +1,6 @@
 
     varying vec2 vUv;
+    varying vec3 vW;    // 大気減光を画素ごとに解くための位置
     uniform vec3 uCol1, uCol2;
     uniform float uAlpha, uKind, uTime, uSeed;
     float hash(float n) {
@@ -46,5 +47,5 @@
       }
       a *= head * end * uAlpha;
       vec3 col = mix(uCol1, uCol2, smoothstep(0.0, 0.85, flow));
-      gl_FragColor = vec4(col * a, 0.0);
+      gl_FragColor = vec4(col * a * extinctAt(vW), 0.0);
     }

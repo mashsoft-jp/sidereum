@@ -4,10 +4,21 @@
   //   rgt*: 画面右方向 (尾を正面から見て軸が縮退したときの予備軸)
   //   scl: ジオメトリを原点まわりに一様縮小した倍率。地上ビューでは天球ドーム上に
   //        置くため 1 未満になる。一様縮小は方向を変えないので見た目の角度は不変
+  //   vis: 空の暗さ (starVis)。明るい空では彗星も見えない — 恒星・天の川・
+  //        星雲・星座線には掛かっているのに、ここだけ抜けていて昼の青空に
+  //        尾が満光で出ていた。宇宙ビューは 1
+  //   extK: 大気減光の係数 [等級/大気路長] (core/math.js の EXT_K)。尾は空を
+  //        数十度またぐのでシェーダが画素ごとに解く。大気の無い経路 (宇宙・
+  //        月面) は null
   function drawCometFX(c, act, VPm, tSec, hx, hy, hz, ax, ay, az, vx, vy, vz,
-                       fpxV, rgtx, rgty, rgtz, scl) {
+                       fpxV, rgtx, rgty, rgtz, scl, vis = 1, extK = null) {
     {
       {
+        if (vis <= 0.004) return;   // 昼の空。4層の尾とコマをまとめて省く
+        // 明るさにだけ掛ける。act はジェットの長さも決めているので、ここへ
+        // 畳むと昼にジェットが縮んでしまう
+        const bri = act * vis;
+        const ek0 = extK ? extK[0] : 0, ek1 = extK ? extK[1] : 0, ek2 = extK ? extK[2] : 0;
         // 遠方では写真のような未解像の頭部と尾、接近時は暗い核と局所ジェットへ遷移
         const camCometDist = Math.hypot(hx, hy, hz) || 1;
         const nucleusPx = bodyR(c) * scl * fpxV / camCometDist;
@@ -48,6 +59,7 @@
         cvx /= cvl; cvy /= cvl; cvz /= cvl;
         let s;
         gl.useProgram(tailP.pr);
+        gl.uniform3f(tailP.u.uExtK, ek0, ek1, ek2);
         gl.uniformMatrix4fv(tailP.u.uVP, false, VPm);
         gl.uniform3f(tailP.u.uHead, hx, hy, hz);
         gl.uniform1f(tailP.u.uTime, tSec);
@@ -70,14 +82,14 @@
           gl.uniform3f(tailP.u.uCol2, 0.74, 0.66, 0.54);
           gl.uniform1f(tailP.u.uKind, 1);
           gl.uniform1f(tailP.u.uSeed, 2.7);
-          gl.uniform1f(tailP.u.uAlpha, 0.46 * act * tailVis);
+          gl.uniform1f(tailP.u.uAlpha, 0.46 * bri * tailVis);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
           // ダストの内層を重ね、コマから続く明るい流れを作る
           gl.uniform2f(tailP.u.uDim, L * 0.68, L * 0.15);
           gl.uniform3f(tailP.u.uCol1, 1.0, 0.99, 0.94);
           gl.uniform3f(tailP.u.uCol2, 0.84, 0.78, 0.66);
           gl.uniform1f(tailP.u.uSeed, 7.1);
-          gl.uniform1f(tailP.u.uAlpha, 0.34 * act * tailVis);
+          gl.uniform1f(tailP.u.uAlpha, 0.34 * bri * tailVis);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
           // イオンテイルの外層 (青白, 反太陽方向にほぼ直線)
           s = sideOf(ax, ay, az);
@@ -89,14 +101,14 @@
           gl.uniform3f(tailP.u.uCol2, 0.18, 0.38, 1.0);
           gl.uniform1f(tailP.u.uKind, 0);
           gl.uniform1f(tailP.u.uSeed, 4.3);
-          gl.uniform1f(tailP.u.uAlpha, 0.30 * act * tailVis);
+          gl.uniform1f(tailP.u.uAlpha, 0.30 * bri * tailVis);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
           // イオンテイルの細い発光芯
           gl.uniform2f(tailP.u.uDim, L * 1.08, L * 0.024);
           gl.uniform3f(tailP.u.uCol1, 0.88, 0.98, 1.0);
           gl.uniform3f(tailP.u.uCol2, 0.28, 0.52, 1.0);
           gl.uniform1f(tailP.u.uSeed, 9.4);
-          gl.uniform1f(tailP.u.uAlpha, 0.22 * act * tailVis);
+          gl.uniform1f(tailP.u.uAlpha, 0.22 * bri * tailVis);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
         }
         // 接近時: 太陽に熱せられた核表面から噴き、反太陽方向へ曲げられる局所ジェット
@@ -117,7 +129,7 @@
             gl.uniform3f(tailP.u.uCol2, 0.36, 0.43, 0.52);
             gl.uniform1f(tailP.u.uKind, 1);
             gl.uniform1f(tailP.u.uSeed, seed);
-            gl.uniform1f(tailP.u.uAlpha, alpha * act * jetVis);
+            gl.uniform1f(tailP.u.uAlpha, alpha * bri * jetVis);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, TAIL_VERTS);
           };
           drawJet(-ax + cvx * 0.28 + qx * 0.10,
@@ -129,6 +141,7 @@
         }
         // コマ (太陽側が圧縮された涙滴型。反太陽側はそのまま尾に連続する)
         gl.useProgram(comaP.pr);
+        gl.uniform3f(comaP.u.uExtK, ek0, ek1, ek2);
         gl.uniformMatrix4fv(comaP.u.uVP, false, VPm);
         gl.uniform3f(comaP.u.uHead, hx, hy, hz);
         gl.uniform1f(comaP.u.uCore, 1 - pixelLod);
@@ -158,7 +171,7 @@
         const comaProjX = comaY + (comaX - comaY) * comaFacing;
         gl.uniform2f(comaP.u.uDim, comaProjX, comaY);
         gl.uniform3f(comaP.u.uCol, 0.70, 0.78, 0.86);
-        gl.uniform1f(comaP.u.uAlpha, 0.92 * act * comaVis);
+        gl.uniform1f(comaP.u.uAlpha, 0.92 * bri * comaVis);
         gl.bindBuffer(gl.ARRAY_BUFFER, billVB);
         gl.enableVertexAttribArray(comaP.a.aCorner);
         gl.vertexAttribPointer(comaP.a.aCorner, 2, gl.FLOAT, false, 0, 0);
