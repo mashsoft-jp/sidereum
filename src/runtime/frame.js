@@ -153,8 +153,10 @@
   // 区割りが分からないので、経度から出す地方平均太陽時 (LMT) に落とす。
   // LMT なら「12時に太陽が南中する」という意味が常に立つので、退避先として妥当。
   //
-  // 観測地の常用時が端末と同じずれになるとき (東京 + 端末も日本など) は、同じ
-  // 表示が2度出るだけなので site を飛ばす。
+  // site は端末と同じずれになっても飛ばさない (東京 + 端末も日本、など)。
+  // 選べるものが状況で増えたり減ったりする方が分かりにくい。ただし表示が
+  // 端末と一字一句同じになってしまうので、site のときだけ 📍 を付ける —
+  // これが無いと、押しても何も起きていないように見える。
   //
   // 時刻を出すところ (時計・出没・天文カレンダー) はすべてここを通す。
   // 片方だけ切り替わると、時計と出没時刻が食い違って前より読めなくなる
@@ -254,7 +256,7 @@
       lastTimeStr = ts;
     }
     const tz = clockMode === "utc" ? "UTC"
-             : clockMode === "site" ? (siteZone() ? tzAbbr(new Date(t), siteZone()) : "LMT")
+             : clockMode === "site" ? "\uD83D\uDCCD" + (siteZone() ? tzAbbr(new Date(t), siteZone()) : "LMT")
              : tzAbbr(new Date(t));
     if (tz !== lastTzStr) {
       tzText.textContent = tz;
@@ -262,20 +264,9 @@
       lastTzStr = tz;
     }
   }
-  // 観測地の常用時が端末と同じずれなら、site を出しても同じ表示にしかならない
-  function siteSameAsDevice(t) {
-    const o = siteCivilOffset(t);
-    return o !== null && o === -new Date(t).getTimezoneOffset() * 60000;
-  }
   // 基準の切替。切り替えたら次のフレームで必ず書き直させる
   tzText.addEventListener("click", () => {
-    const t = J2000 + simDays * DAY_MS;
-    let i = CLOCK_MODES.indexOf(clockMode);
-    for (let k = 0; k < CLOCK_MODES.length; k++) {
-      i = (i + 1) % CLOCK_MODES.length;
-      if (CLOCK_MODES[i] !== "site" || !siteSameAsDevice(t)) break;   // 同じなら飛ばす
-    }
-    clockMode = CLOCK_MODES[i];
+    clockMode = CLOCK_MODES[(CLOCK_MODES.indexOf(clockMode) + 1) % CLOCK_MODES.length];
     try { localStorage.setItem("ssClock", clockMode); } catch (e) { /* プライベートモード等 */ }
     lastDateStr = lastTimeStr = lastTzStr = "";
     updateObs();

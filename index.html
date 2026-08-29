@@ -2330,7 +2330,7 @@
       tourNext: "次へ ▶", tourDone: "終了", tourAuto: "自動送り",
       tourResume: "シーンに戻す", tourExit: "ツアーを終了",
       tourGood: "できました", tourPlayed: "ここまで", welcomeTour: "操作ガイドを見る",
-      clockTzHint: "時刻の基準を切替: 端末 / 観測地 / UTC",
+      clockTzHint: "時刻の基準を切替: 端末 / 観測地 (📍) / UTC",
       tourUpdated: "Update!", tourAgain: "もう一度見る", tagNew: "New",
       menuGrid: "経緯線",
       menuConst: "星座",
@@ -2417,7 +2417,7 @@
       tourNext: "Next ▶", tourDone: "Finish", tourAuto: "Auto",
       tourResume: "Reset view", tourExit: "Exit tour",
       tourGood: "Nice", tourPlayed: "End of run", welcomeTour: "View the guide",
-      clockTzHint: "Switch time base: device / observing site / UTC",
+      clockTzHint: "Switch time base: device / observing site (📍) / UTC",
       tourUpdated: "Update!", tourAgain: "Watch again", tagNew: "New",
       menuGrid: "Coordinate grid",
       menuConst: "Constellations",
@@ -2752,11 +2752,11 @@
             ja: "時刻の右の小さな文字 (JST など) は、どこの時刻で読むかを表します。" +
                 "クリックすると 端末 → 観測地 → 世界時 と切り替わり、" +
                 "出没やカレンダーも一緒に変わります。" +
-                "観測地が端末と同じ時間帯のときは、観測地は出ません。押してみてください。",
+                "観測地のときは 📍 が付きます。押してみてください。",
             en: "The small label right of the time (JST, GMT+1, …) says which clock you are " +
                 "reading. Click it to cycle device → observing site → UTC; rise/set times " +
-                "and the calendar follow along. The site is skipped when it shares the " +
-                "device's offset. Give it a click.",
+                "and the calendar follow along. The site is marked with 📍. " +
+                "Give it a click.",
           },
         },
         {
@@ -2881,11 +2881,11 @@
             ja: "時刻の右の小さな文字 (JST など) は、どこの時刻で読むかを表します。" +
                 "タップすると 端末 → 観測地 → 世界時 と切り替わり、" +
                 "出没やカレンダーも一緒に変わります。" +
-                "観測地が端末と同じ時間帯のときは、観測地は出ません。タップしてみてください。",
+                "観測地のときは 📍 が付きます。タップしてみてください。",
             en: "The small label right of the time (JST, GMT+1, …) says which clock you are " +
                 "reading. Tap it to cycle device → observing site → UTC; rise/set times " +
-                "and the calendar follow along. The site is skipped when it shares the " +
-                "device's offset. Give it a tap.",
+                "and the calendar follow along. The site is marked with 📍. " +
+                "Give it a tap.",
           },
         },
         {
@@ -10620,8 +10620,10 @@
   // 区割りが分からないので、経度から出す地方平均太陽時 (LMT) に落とす。
   // LMT なら「12時に太陽が南中する」という意味が常に立つので、退避先として妥当。
   //
-  // 観測地の常用時が端末と同じずれになるとき (東京 + 端末も日本など) は、同じ
-  // 表示が2度出るだけなので site を飛ばす。
+  // site は端末と同じずれになっても飛ばさない (東京 + 端末も日本、など)。
+  // 選べるものが状況で増えたり減ったりする方が分かりにくい。ただし表示が
+  // 端末と一字一句同じになってしまうので、site のときだけ 📍 を付ける —
+  // これが無いと、押しても何も起きていないように見える。
   //
   // 時刻を出すところ (時計・出没・天文カレンダー) はすべてここを通す。
   // 片方だけ切り替わると、時計と出没時刻が食い違って前より読めなくなる
@@ -10721,7 +10723,7 @@
       lastTimeStr = ts;
     }
     const tz = clockMode === "utc" ? "UTC"
-             : clockMode === "site" ? (siteZone() ? tzAbbr(new Date(t), siteZone()) : "LMT")
+             : clockMode === "site" ? "\uD83D\uDCCD" + (siteZone() ? tzAbbr(new Date(t), siteZone()) : "LMT")
              : tzAbbr(new Date(t));
     if (tz !== lastTzStr) {
       tzText.textContent = tz;
@@ -10729,20 +10731,9 @@
       lastTzStr = tz;
     }
   }
-  // 観測地の常用時が端末と同じずれなら、site を出しても同じ表示にしかならない
-  function siteSameAsDevice(t) {
-    const o = siteCivilOffset(t);
-    return o !== null && o === -new Date(t).getTimezoneOffset() * 60000;
-  }
   // 基準の切替。切り替えたら次のフレームで必ず書き直させる
   tzText.addEventListener("click", () => {
-    const t = J2000 + simDays * DAY_MS;
-    let i = CLOCK_MODES.indexOf(clockMode);
-    for (let k = 0; k < CLOCK_MODES.length; k++) {
-      i = (i + 1) % CLOCK_MODES.length;
-      if (CLOCK_MODES[i] !== "site" || !siteSameAsDevice(t)) break;   // 同じなら飛ばす
-    }
-    clockMode = CLOCK_MODES[i];
+    clockMode = CLOCK_MODES[(CLOCK_MODES.indexOf(clockMode) + 1) % CLOCK_MODES.length];
     try { localStorage.setItem("ssClock", clockMode); } catch (e) { /* プライベートモード等 */ }
     lastDateStr = lastTimeStr = lastTzStr = "";
     updateObs();

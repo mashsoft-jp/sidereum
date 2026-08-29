@@ -187,11 +187,11 @@
             ja: "時刻の右の小さな文字 (JST など) は、どこの時刻で読むかを表します。" +
                 "クリックすると 端末 → 観測地 → 世界時 と切り替わり、" +
                 "出没やカレンダーも一緒に変わります。" +
-                "観測地が端末と同じ時間帯のときは、観測地は出ません。押してみてください。",
+                "観測地のときは 📍 が付きます。押してみてください。",
             en: "The small label right of the time (JST, GMT+1, …) says which clock you are " +
                 "reading. Click it to cycle device → observing site → UTC; rise/set times " +
-                "and the calendar follow along. The site is skipped when it shares the " +
-                "device's offset. Give it a click.",
+                "and the calendar follow along. The site is marked with 📍. " +
+                "Give it a click.",
           },
         },
         {
@@ -316,11 +316,11 @@
             ja: "時刻の右の小さな文字 (JST など) は、どこの時刻で読むかを表します。" +
                 "タップすると 端末 → 観測地 → 世界時 と切り替わり、" +
                 "出没やカレンダーも一緒に変わります。" +
-                "観測地が端末と同じ時間帯のときは、観測地は出ません。タップしてみてください。",
+                "観測地のときは 📍 が付きます。タップしてみてください。",
             en: "The small label right of the time (JST, GMT+1, …) says which clock you are " +
                 "reading. Tap it to cycle device → observing site → UTC; rise/set times " +
-                "and the calendar follow along. The site is skipped when it shares the " +
-                "device's offset. Give it a tap.",
+                "and the calendar follow along. The site is marked with 📍. " +
+                "Give it a tap.",
           },
         },
         {
