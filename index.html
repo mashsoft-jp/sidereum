@@ -521,31 +521,6 @@
     gap: 9px;
   }
   #clock .timeRow { display: inline-flex; align-items: baseline; gap: 9px; }
-  #clock .dateRow { display: inline-flex; align-items: baseline; gap: 3px; }
-  /* 日送り (前日 / 翌日)。時計の一部に見えるよう、時刻の基準の切替と同じく
-     ボタンらしい枠や地色は持たせない。
-     #clock は pointer-events: none (時計の余白でカメラを回せるように) なので、
-     押せるものはここで auto へ戻す。忘れるとクリックが背後のキャンバスへ抜け、
-     押しても無反応どころか天体の選択が外れる */
-  #dayPrev, #dayNext {
-    font-family: var(--font-ui);
-    font-size: 15px;
-    line-height: 1;
-    color: var(--dim);
-    background: none;
-    border: none;
-    padding: 0 1px;
-    cursor: pointer;
-    pointer-events: auto;
-    position: relative;
-  }
-  /* 字が細いので、見えない当たり判定を広げて指で押せる大きさにする。
-     広げる先は日付欄と逆の外側へ寄せる — 内側へ広げると、日付欄を押した
-     つもりでピッカーではなく日送りが動く */
-  #dayPrev::before, #dayNext::before { content: ""; position: absolute; }
-  #dayPrev::before { inset: -12px -4px -12px -14px; }
-  #dayNext::before { inset: -12px -14px -12px -4px; }
-  #dayPrev:hover, #dayNext:hover { color: var(--text); }
   /* 時刻の基準 (端末 / 地方時 / UTC) の切替。時計の一部に見えるよう、
      ボタンらしい枠や地色は持たせない。
      #clock は pointer-events: none (時計の余白でカメラを回せるように) なので、
@@ -789,9 +764,7 @@
   #app.tourMode #nowBtn { display: none; }
   /* 日時は時間の経過が見えるよう表示は残し、入力だけ止める */
   #app.tourMode #dateInput,
-  #app.tourMode #timeInput,
-  #app.tourMode #dayPrev,
-  #app.tourMode #dayNext { pointer-events: none; color: var(--dim); }
+  #app.tourMode #timeInput { pointer-events: none; color: var(--dim); }
   /* チュートリアルのステップが ui: [...] で一時的に出すもの。
      display は隠す前の値に戻す必要があるため、要素ごとに書く */
   #app.tourMode #controls.tourShow { display: grid; }
@@ -852,8 +825,6 @@
   #app.tourMode #clock.tourShow #nowBtn { display: block; }
   #app.tourMode #clock.tourShow #dateInput,
   #app.tourMode #clock.tourShow #timeInput { pointer-events: auto; color: var(--text); }
-  #app.tourMode #clock.tourShow #dayPrev,
-  #app.tourMode #clock.tourShow #dayNext { pointer-events: auto; color: var(--dim); }
   /* 時刻の基準の切替を案内する回だけ、押せるように戻す */
   #app.tourMode #clock.tourShow #tzText { pointer-events: auto; }
   /* 説明している要素のハイライト */
@@ -1467,9 +1438,7 @@
 
   <div id="clock" class="hud">
     <div class="dtrow">
-      <!-- 日送り。矢印キーの繰り上がりは日付欄には入れられない (桁ごとの編集状態へ
-           外から届かず、6月31日のような組み合わせが残る) ので、ここで受ける -->
-      <span class="dateRow"><button type="button" id="dayPrev" aria-label="前日">‹</button><input type="date" id="dateInput" min="1900-01-01" max="2199-12-31" aria-label="日付を指定"><button type="button" id="dayNext" aria-label="翌日">›</button></span>
+      <input type="date" id="dateInput" min="1900-01-01" max="2199-12-31" aria-label="日付を指定">
       <span class="timeRow"><input type="time" id="timeInput" aria-label="時刻を指定"><button type="button" id="tzText"></button></span>
     </div>
     <button id="nowBtn">現在時刻に合わせる</button>
@@ -2318,7 +2287,7 @@
       // 「ボタン」としか読まれない (状態は aria-pressed が言う)
       ariaOrbit: (n) => n + "の軌道", ariaName: (n) => n + "の名前",
       ariaSats: (n) => n + "の衛星", ariaMembers: (n) => n + "の天体",
-      nowBtn: "現在時刻に合わせる", dayPrev: "前日", dayNext: "翌日", rateSuffix: "/秒", rateReal: "実時間",
+      nowBtn: "現在時刻に合わせる", rateSuffix: "/秒", rateReal: "実時間",
       viewTop: "真上", viewDef: "デフォルト", viewSide: "真横", camera: "カメラ",
       viewSpace: "宇宙", viewGround: "地上", viewMoon: "月面", gFovLabel: "ズーム", gAzLabel: "方位", gAltLabel: "高度",
       hint: "ドラッグで回転 ・ 右ドラッグ / 2本指で移動 ・ ホイール / ピンチでズーム (Shift+で距離) ・ 天体クリックで接近",
@@ -2406,7 +2375,7 @@
       orbits: "Orbits", labels: "Labels", reset: "Overview",
       ariaOrbit: (n) => n + " orbit", ariaName: (n) => n + " name",
       ariaSats: (n) => "Moons of " + n, ariaMembers: (n) => "Bodies in " + n,
-      nowBtn: "Set to current time", dayPrev: "Previous day", dayNext: "Next day", rateSuffix: "/s", rateReal: "Real time",
+      nowBtn: "Set to current time", rateSuffix: "/s", rateReal: "Real time",
       viewTop: "Top", viewDef: "Default", viewSide: "Side", camera: "Camera",
       viewSpace: "Space", viewGround: "Ground", viewMoon: "Moon", gFovLabel: "Zoom", gAzLabel: "Azimuth", gAltLabel: "Alt",
       hint: "Drag to rotate · Right-drag / two fingers to pan · Wheel / pinch to zoom (Shift for distance) · Click a body to approach",
@@ -11050,20 +11019,6 @@
   // 入力欄を離れたら、実際の日時を必ず書き戻す (範囲外や打ちかけの表示を正す)
   dateInput.addEventListener("blur", () => { lastDateStr = ""; });
   timeInput.addEventListener("blur", () => { lastTimeStr = ""; timeStep = null; });
-  // ---- 日送り (前日 / 翌日) ----
-  // 矢印キーの繰り上がりは時刻欄には入れられたが、日付欄には入れられない。
-  // <input type="date"> は桁ごとの編集状態を内部に持っていて、value 代入でも
-  // stepUp/stepDown でも編集中の桁へは届かず、「6月31日」のような組み合わせが
-  // 残る (value は空になる)。日をまたぐ操作はボタンで受ける
-  function stepDay(n) {
-    const c = clockDate(J2000 + simDays * DAY_MS);
-    setSimTime(clockToMs(c.getUTCFullYear(), c.getUTCMonth(), c.getUTCDate() + n,
-      c.getUTCHours(), c.getUTCMinutes(), c.getUTCSeconds(), c.getUTCMilliseconds()));
-    lastDateStr = "";                 // 次のフレームで日付欄を必ず書き直させる
-    clockEdits++;
-  }
-  document.getElementById("dayPrev").addEventListener("click", () => stepDay(-1));
-  document.getElementById("dayNext").addEventListener("click", () => stepDay(1));
   document.getElementById("nowBtn").addEventListener("click", () => {
     simDays = (Date.now() - J2000) / DAY_MS;
     clockEdits++;
@@ -12959,12 +12914,6 @@
     refreshObsSiteUI();
     lastGAz = "";   // 方位テープの方角ラベルを言語に合わせて再描画
     document.getElementById("nowBtn").textContent = t.nowBtn;
-    // 絵だけのボタンは読み上げ名とツールチップを言語ごとに入れ直す
-    for (const [id, txt] of [["dayPrev", t.dayPrev], ["dayNext", t.dayNext]]) {
-      const el = document.getElementById(id);
-      el.setAttribute("aria-label", txt);
-      el.title = txt;
-    }
     document.querySelector("#title h1 .beta").textContent = t.betaTag;
     menuLangBtn.textContent = t.menuLang;
     menuShareBtn.textContent = t.menuShare;

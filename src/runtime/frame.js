@@ -349,20 +349,6 @@
   // 入力欄を離れたら、実際の日時を必ず書き戻す (範囲外や打ちかけの表示を正す)
   dateInput.addEventListener("blur", () => { lastDateStr = ""; });
   timeInput.addEventListener("blur", () => { lastTimeStr = ""; timeStep = null; });
-  // ---- 日送り (前日 / 翌日) ----
-  // 矢印キーの繰り上がりは時刻欄には入れられたが、日付欄には入れられない。
-  // <input type="date"> は桁ごとの編集状態を内部に持っていて、value 代入でも
-  // stepUp/stepDown でも編集中の桁へは届かず、「6月31日」のような組み合わせが
-  // 残る (value は空になる)。日をまたぐ操作はボタンで受ける
-  function stepDay(n) {
-    const c = clockDate(J2000 + simDays * DAY_MS);
-    setSimTime(clockToMs(c.getUTCFullYear(), c.getUTCMonth(), c.getUTCDate() + n,
-      c.getUTCHours(), c.getUTCMinutes(), c.getUTCSeconds(), c.getUTCMilliseconds()));
-    lastDateStr = "";                 // 次のフレームで日付欄を必ず書き直させる
-    clockEdits++;
-  }
-  document.getElementById("dayPrev").addEventListener("click", () => stepDay(-1));
-  document.getElementById("dayNext").addEventListener("click", () => stepDay(1));
   document.getElementById("nowBtn").addEventListener("click", () => {
     simDays = (Date.now() - J2000) / DAY_MS;
     clockEdits++;

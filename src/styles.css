@@ -505,31 +505,6 @@
     gap: 9px;
   }
   #clock .timeRow { display: inline-flex; align-items: baseline; gap: 9px; }
-  #clock .dateRow { display: inline-flex; align-items: baseline; gap: 3px; }
-  /* 日送り (前日 / 翌日)。時計の一部に見えるよう、時刻の基準の切替と同じく
-     ボタンらしい枠や地色は持たせない。
-     #clock は pointer-events: none (時計の余白でカメラを回せるように) なので、
-     押せるものはここで auto へ戻す。忘れるとクリックが背後のキャンバスへ抜け、
-     押しても無反応どころか天体の選択が外れる */
-  #dayPrev, #dayNext {
-    font-family: var(--font-ui);
-    font-size: 15px;
-    line-height: 1;
-    color: var(--dim);
-    background: none;
-    border: none;
-    padding: 0 1px;
-    cursor: pointer;
-    pointer-events: auto;
-    position: relative;
-  }
-  /* 字が細いので、見えない当たり判定を広げて指で押せる大きさにする。
-     広げる先は日付欄と逆の外側へ寄せる — 内側へ広げると、日付欄を押した
-     つもりでピッカーではなく日送りが動く */
-  #dayPrev::before, #dayNext::before { content: ""; position: absolute; }
-  #dayPrev::before { inset: -12px -4px -12px -14px; }
-  #dayNext::before { inset: -12px -14px -12px -4px; }
-  #dayPrev:hover, #dayNext:hover { color: var(--text); }
   /* 時刻の基準 (端末 / 地方時 / UTC) の切替。時計の一部に見えるよう、
      ボタンらしい枠や地色は持たせない。
      #clock は pointer-events: none (時計の余白でカメラを回せるように) なので、
@@ -773,9 +748,7 @@
   #app.tourMode #nowBtn { display: none; }
   /* 日時は時間の経過が見えるよう表示は残し、入力だけ止める */
   #app.tourMode #dateInput,
-  #app.tourMode #timeInput,
-  #app.tourMode #dayPrev,
-  #app.tourMode #dayNext { pointer-events: none; color: var(--dim); }
+  #app.tourMode #timeInput { pointer-events: none; color: var(--dim); }
   /* チュートリアルのステップが ui: [...] で一時的に出すもの。
      display は隠す前の値に戻す必要があるため、要素ごとに書く */
   #app.tourMode #controls.tourShow { display: grid; }
@@ -836,8 +809,6 @@
   #app.tourMode #clock.tourShow #nowBtn { display: block; }
   #app.tourMode #clock.tourShow #dateInput,
   #app.tourMode #clock.tourShow #timeInput { pointer-events: auto; color: var(--text); }
-  #app.tourMode #clock.tourShow #dayPrev,
-  #app.tourMode #clock.tourShow #dayNext { pointer-events: auto; color: var(--dim); }
   /* 時刻の基準の切替を案内する回だけ、押せるように戻す */
   #app.tourMode #clock.tourShow #tzText { pointer-events: auto; }
   /* 説明している要素のハイライト */
