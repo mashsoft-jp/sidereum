@@ -10965,14 +10965,52 @@
       c.getUTCSeconds(), c.getUTCMilliseconds()));
     clockEdits++;
   });
+  // ---- 矢印キーの桁上がり ----
+  // <input type="time"> の ↑↓ は、分が 59→00 で折り返すだけで時を繰り上げない。
+  // 「1分進める」つもりの操作が59分戻る操作になってしまい、日の入りを1分ずつ
+  // 追うような使い方ができない。
+  //
+  // どの桁にフォーカスがあるかを知る API は無いので、押す前と後の値を比べて
+  // 折り返しから桁を見分ける。分だけが 59→00 に変わったなら分の桁、時だけが
+  // 23→00 に変わったなら時の桁 — このふたつは同時には起きない。12時間表記の
+  // 環境にある AM/PM 桁は ±12時間動くので、どちらの判定にも掛からない。
+  //
+  // イベントは keydown → input → change の順で、1ステップごとに change が飛ぶ
+  let timeStep = null;                        // {v: 押す前の値, up: ↑か}
+  timeInput.addEventListener("keydown", (e) => {
+    timeStep = (e.key === "ArrowUp" || e.key === "ArrowDown")
+      ? { v: timeInput.value, up: e.key === "ArrowUp" } : null;
+  });
   timeInput.addEventListener("change", () => {
     const v = timeInput.value;                // "HH:MM"
+    const st = timeStep;
+    timeStep = null;                          // 1回のステップで1回だけ効かせる
     if (!v) return;
-    const [hh, mi] = v.split(":").map(Number);
+    let [hh, mi] = v.split(":").map(Number);
     if (!Number.isFinite(hh) || !Number.isFinite(mi)) return;
+    let dayCarry = 0;
+    const pv = st && st.v ? st.v.split(":").map(Number) : null;
+    if (pv && Number.isFinite(pv[0]) && Number.isFinite(pv[1])) {
+      const ph = pv[0], pm = pv[1];
+      if (hh === ph) {
+        // 分の桁。折り返していたら時へ繰り上げる (繰り下げる)
+        if (st.up && pm === 59 && mi === 0) hh += 1;
+        else if (!st.up && pm === 0 && mi === 59) hh -= 1;
+        if (hh > 23) { hh = 0; dayCarry = 1; }
+        else if (hh < 0) { hh = 23; dayCarry = -1; }
+        // 編集中の欄は updateClock が書き換えないので、ここで直す
+        if (hh !== ph) timeInput.value = pad2(hh) + ":" + pad2(mi);
+      } else if (mi === pm) {
+        // 時の桁。同じ話が一段上でも起きる — 23時から進めたら翌日にする
+        if (st.up && ph === 23 && hh === 0) dayCarry = 1;
+        else if (!st.up && ph === 0 && hh === 23) dayCarry = -1;
+      }
+    }
     // 時刻だけを差し替え。入力欄に秒が無いので秒以下は 0 に揃える
+    // (日をまたいだときだけ、日付も一緒に動かす。日付欄はフォーカスが無いので
+    //  updateClock が次のフレームで書き直す)
     const c = clockDate(J2000 + simDays * DAY_MS);
-    setSimTime(clockToMs(c.getUTCFullYear(), c.getUTCMonth(), c.getUTCDate(), hh, mi));
+    setSimTime(clockToMs(c.getUTCFullYear(), c.getUTCMonth(), c.getUTCDate() + dayCarry, hh, mi));
     clockEdits++;
   });
   // Enter で入力を終える
@@ -10980,7 +11018,7 @@
   timeInput.addEventListener("keydown", (e) => { if (e.key === "Enter") timeInput.blur(); });
   // 入力欄を離れたら、実際の日時を必ず書き戻す (範囲外や打ちかけの表示を正す)
   dateInput.addEventListener("blur", () => { lastDateStr = ""; });
-  timeInput.addEventListener("blur", () => { lastTimeStr = ""; });
+  timeInput.addEventListener("blur", () => { lastTimeStr = ""; timeStep = null; });
   document.getElementById("nowBtn").addEventListener("click", () => {
     simDays = (Date.now() - J2000) / DAY_MS;
     clockEdits++;
