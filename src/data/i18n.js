@@ -13,7 +13,7 @@
       // 「ボタン」としか読まれない (状態は aria-pressed が言う)
       ariaOrbit: (n) => n + "の軌道", ariaName: (n) => n + "の名前",
       ariaSats: (n) => n + "の衛星", ariaMembers: (n) => n + "の天体",
-      nowBtn: "現在時刻に合わせる", rateSuffix: "/秒", rateReal: "実時間",
+      nowBtn: "現在時刻に合わせる", dayPrev: "前日", dayNext: "翌日", rateSuffix: "/秒", rateReal: "実時間",
       viewTop: "真上", viewDef: "デフォルト", viewSide: "真横", camera: "カメラ",
       viewSpace: "宇宙", viewGround: "地上", viewMoon: "月面", gFovLabel: "ズーム", gAzLabel: "方位", gAltLabel: "高度",
       hint: "ドラッグで回転 ・ 右ドラッグ / 2本指で移動 ・ ホイール / ピンチでズーム (Shift+で距離) ・ 天体クリックで接近",
@@ -101,7 +101,7 @@
       orbits: "Orbits", labels: "Labels", reset: "Overview",
       ariaOrbit: (n) => n + " orbit", ariaName: (n) => n + " name",
       ariaSats: (n) => "Moons of " + n, ariaMembers: (n) => "Bodies in " + n,
-      nowBtn: "Set to current time", rateSuffix: "/s", rateReal: "Real time",
+      nowBtn: "Set to current time", dayPrev: "Previous day", dayNext: "Next day", rateSuffix: "/s", rateReal: "Real time",
       viewTop: "Top", viewDef: "Default", viewSide: "Side", camera: "Camera",
       viewSpace: "Space", viewGround: "Ground", viewMoon: "Moon", gFovLabel: "Zoom", gAzLabel: "Azimuth", gAltLabel: "Alt",
       hint: "Drag to rotate · Right-drag / two fingers to pan · Wheel / pinch to zoom (Shift for distance) · Click a body to approach",

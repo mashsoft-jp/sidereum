@@ -116,7 +116,9 @@
 
   <div id="clock" class="hud">
     <div class="dtrow">
-      <input type="date" id="dateInput" min="1900-01-01" max="2199-12-31" aria-label="日付を指定">
+      <!-- 日送り。矢印キーの繰り上がりは日付欄には入れられない (桁ごとの編集状態へ
+           外から届かず、6月31日のような組み合わせが残る) ので、ここで受ける -->
+      <span class="dateRow"><button type="button" id="dayPrev" aria-label="前日">‹</button><input type="date" id="dateInput" min="1900-01-01" max="2199-12-31" aria-label="日付を指定"><button type="button" id="dayNext" aria-label="翌日">›</button></span>
       <span class="timeRow"><input type="time" id="timeInput" aria-label="時刻を指定"><button type="button" id="tzText"></button></span>
     </div>
     <button id="nowBtn">現在時刻に合わせる</button>

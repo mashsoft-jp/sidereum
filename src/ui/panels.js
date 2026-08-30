@@ -178,6 +178,12 @@
     refreshObsSiteUI();
     lastGAz = "";   // 方位テープの方角ラベルを言語に合わせて再描画
     document.getElementById("nowBtn").textContent = t.nowBtn;
+    // 絵だけのボタンは読み上げ名とツールチップを言語ごとに入れ直す
+    for (const [id, txt] of [["dayPrev", t.dayPrev], ["dayNext", t.dayNext]]) {
+      const el = document.getElementById(id);
+      el.setAttribute("aria-label", txt);
+      el.title = txt;
+    }
     document.querySelector("#title h1 .beta").textContent = t.betaTag;
     menuLangBtn.textContent = t.menuLang;
     menuShareBtn.textContent = t.menuShare;
