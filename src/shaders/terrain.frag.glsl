@@ -84,11 +84,12 @@
       } else {
         // 地上: 土と草地のまだら
         float base = fbm(g * 0.05);
-        float patch = fbm(g * 0.22 + 13.0);
+        // patch は GLSL ES 3.00 の予約語 (?gl=2 で通らなくなる) なので使わない
+        float mottle = fbm(g * 0.22 + 13.0);
         float grain = fbm(g * 1.1) * fade;
         vec3 soil = srgbToLinear(vec3(0.20, 0.17, 0.13));
         vec3 gras = srgbToLinear(vec3(0.13, 0.19, 0.11));
-        col = mix(soil, gras, smoothstep(0.35, 0.65, patch));
+        col = mix(soil, gras, smoothstep(0.35, 0.65, mottle));
         col *= 0.72 + 0.34 * base + 0.20 * grain;
         col *= mix(0.12, 1.0, uDay);                       // 夜は暗く、昼は明るく
         col = mix(col, col * vec3(1.25, 0.95, 0.78), (1.0 - smoothstep(0.0, 0.3, uSun.y)) * uDay * 0.7);

@@ -1,6 +1,15 @@
   // ---------- WebGL 初期化 ----------
+  // 既定は WebGL 1。?gl=2 のときだけ WebGL 2 で開く実験経路で、パラメータを
+  // 外せば必ず元の経路に戻る。取れない環境では黙って 1 へ落ちる。
+  //
+  // シェーダは src/shaders/*.glsl に GLSL ES 1.00 のまま1組だけ置き、方言の差は
+  // 下の to300() が機械的に書き換える (二重に持たない = 片方だけ腐らない)。
   const glc = document.getElementById("gl");
-  const gl = glc.getContext("webgl", { antialias: true, alpha: false });
+  const GL_ATTR = { antialias: true, alpha: false };
+  const gl2 = /(^|[?&])gl=2(&|$)/.test(location.search)
+    ? glc.getContext("webgl2", GL_ATTR) : null;
+  const isGL2 = !!gl2;
+  const gl = gl2 || glc.getContext("webgl", GL_ATTR);
   if (!gl) {
     document.getElementById("noGL").style.display = "grid";
     return;
@@ -63,9 +72,32 @@
     glReload();
   });
 
+  // ---------- GLSL ES 1.00 → 3.00 ----------
+  // WebGL 2 は #version 300 es を要求する。差は機械的なので、ここで書き換える。
+  //   attribute → in / varying → in・out / texture2D → texture
+  //   texture2DGradEXT → textureGrad (3.00 では標準。拡張の宣言は消す)
+  //   gl_FragColor は 3.00 に無いので out を1本宣言して差し替える
+  //     (gl_ で始まる名前は #define できないので、置換でやるしかない)
+  // #version はコメントと空白を除いて先頭でなければならないので、必ず先に置く。
+  function to300(src, isVert) {
+    const body = src
+      .replace(/^[ \t]*#extension .*$/gm, "")        // 3.00 では標準の機能
+      .replace(/\btexture2DGradEXT\s*\(/g, "textureGrad(")
+      .replace(/\btexture2D\s*\(/g, "texture(")
+      .replace(/\battribute\b/g, "in")
+      .replace(/\bvarying\b/g, isVert ? "out" : "in")
+      .replace(/\bgl_FragColor\b/g, "fragColor");
+    // フラグメントの出力を宣言する前に精度を決めておく。3.00 の float には
+    // 既定の精度が無く、先に out vec4 を書くと "No precision specified" になる
+    // (本体の PRE がもう一度宣言するが、精度の再宣言は許されている)
+    return "#version 300 es\n"
+      + (isVert ? "" : "precision highp float;\nprecision highp int;\nout vec4 fragColor;\n")
+      + body;
+  }
+
   function compile(type, src) {
     const sh = gl.createShader(type);
-    gl.shaderSource(sh, src);
+    gl.shaderSource(sh, isGL2 ? to300(src, type === gl.VERTEX_SHADER) : src);
     gl.compileShader(sh);
     if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
       throw new Error("shader: " + gl.getShaderInfoLog(sh));
@@ -111,8 +143,10 @@
 `;
   // 画素ごとの微分と、微分を指定したテクスチャ取得。どちらも天体テクスチャの
   // 継ぎ目対策に要る (下の bodyFS)
-  const hasDeriv = !!gl.getExtension("OES_standard_derivatives");
-  const hasTexLod = hasDeriv && !!gl.getExtension("EXT_shader_texture_lod");
+  // WebGL 2 ではどちらも標準機能。拡張として取れないので true を立てる
+  // (#extension の行は to300 が落とし、#define TEXLOD 1 だけが残る)
+  const hasDeriv = isGL2 || !!gl.getExtension("OES_standard_derivatives");
+  const hasTexLod = isGL2 || (hasDeriv && !!gl.getExtension("EXT_shader_texture_lod"));
   const EXT_DERIV = hasDeriv ? "#extension GL_OES_standard_derivatives : enable\n" : "";
 
   // ---- 天体シェーダ (全種別を uType で分岐) ----

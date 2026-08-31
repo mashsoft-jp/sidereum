@@ -4381,8 +4381,17 @@
   //#endregion
   //#region src/gl/setup.js
   // ---------- WebGL 初期化 ----------
+  // 既定は WebGL 1。?gl=2 のときだけ WebGL 2 で開く実験経路で、パラメータを
+  // 外せば必ず元の経路に戻る。取れない環境では黙って 1 へ落ちる。
+  //
+  // シェーダは src/shaders/*.glsl に GLSL ES 1.00 のまま1組だけ置き、方言の差は
+  // 下の to300() が機械的に書き換える (二重に持たない = 片方だけ腐らない)。
   const glc = document.getElementById("gl");
-  const gl = glc.getContext("webgl", { antialias: true, alpha: false });
+  const GL_ATTR = { antialias: true, alpha: false };
+  const gl2 = /(^|[?&])gl=2(&|$)/.test(location.search)
+    ? glc.getContext("webgl2", GL_ATTR) : null;
+  const isGL2 = !!gl2;
+  const gl = gl2 || glc.getContext("webgl", GL_ATTR);
   if (!gl) {
     document.getElementById("noGL").style.display = "grid";
     return;
@@ -4445,9 +4454,32 @@
     glReload();
   });
 
+  // ---------- GLSL ES 1.00 → 3.00 ----------
+  // WebGL 2 は #version 300 es を要求する。差は機械的なので、ここで書き換える。
+  //   attribute → in / varying → in・out / texture2D → texture
+  //   texture2DGradEXT → textureGrad (3.00 では標準。拡張の宣言は消す)
+  //   gl_FragColor は 3.00 に無いので out を1本宣言して差し替える
+  //     (gl_ で始まる名前は #define できないので、置換でやるしかない)
+  // #version はコメントと空白を除いて先頭でなければならないので、必ず先に置く。
+  function to300(src, isVert) {
+    const body = src
+      .replace(/^[ \t]*#extension .*$/gm, "")        // 3.00 では標準の機能
+      .replace(/\btexture2DGradEXT\s*\(/g, "textureGrad(")
+      .replace(/\btexture2D\s*\(/g, "texture(")
+      .replace(/\battribute\b/g, "in")
+      .replace(/\bvarying\b/g, isVert ? "out" : "in")
+      .replace(/\bgl_FragColor\b/g, "fragColor");
+    // フラグメントの出力を宣言する前に精度を決めておく。3.00 の float には
+    // 既定の精度が無く、先に out vec4 を書くと "No precision specified" になる
+    // (本体の PRE がもう一度宣言するが、精度の再宣言は許されている)
+    return "#version 300 es\n"
+      + (isVert ? "" : "precision highp float;\nprecision highp int;\nout vec4 fragColor;\n")
+      + body;
+  }
+
   function compile(type, src) {
     const sh = gl.createShader(type);
-    gl.shaderSource(sh, src);
+    gl.shaderSource(sh, isGL2 ? to300(src, type === gl.VERTEX_SHADER) : src);
     gl.compileShader(sh);
     if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
       throw new Error("shader: " + gl.getShaderInfoLog(sh));
@@ -4493,8 +4525,10 @@
 `;
   // 画素ごとの微分と、微分を指定したテクスチャ取得。どちらも天体テクスチャの
   // 継ぎ目対策に要る (下の bodyFS)
-  const hasDeriv = !!gl.getExtension("OES_standard_derivatives");
-  const hasTexLod = hasDeriv && !!gl.getExtension("EXT_shader_texture_lod");
+  // WebGL 2 ではどちらも標準機能。拡張として取れないので true を立てる
+  // (#extension の行は to300 が落とし、#define TEXLOD 1 だけが残る)
+  const hasDeriv = isGL2 || !!gl.getExtension("OES_standard_derivatives");
+  const hasTexLod = isGL2 || (hasDeriv && !!gl.getExtension("EXT_shader_texture_lod"));
   const EXT_DERIV = hasDeriv ? "#extension GL_OES_standard_derivatives : enable\n" : "";
 
   // ---- 天体シェーダ (全種別を uType で分岐) ----
@@ -5238,11 +5272,12 @@
       } else {
         // 地上: 土と草地のまだら
         float base = fbm(g * 0.05);
-        float patch = fbm(g * 0.22 + 13.0);
+        // patch は GLSL ES 3.00 の予約語 (?gl=2 で通らなくなる) なので使わない
+        float mottle = fbm(g * 0.22 + 13.0);
         float grain = fbm(g * 1.1) * fade;
         vec3 soil = srgbToLinear(vec3(0.20, 0.17, 0.13));
         vec3 gras = srgbToLinear(vec3(0.13, 0.19, 0.11));
-        col = mix(soil, gras, smoothstep(0.35, 0.65, patch));
+        col = mix(soil, gras, smoothstep(0.35, 0.65, mottle));
         col *= 0.72 + 0.34 * base + 0.20 * grain;
         col *= mix(0.12, 1.0, uDay);                       // 夜は暗く、昼は明るく
         col = mix(col, col * vec3(1.25, 0.95, 0.78), (1.0 - smoothstep(0.0, 0.3, uSun.y)) * uDay * 0.7);
@@ -10630,8 +10665,29 @@
   //   - GPU_DISJOINT_EXT が立った回は値が無意味なので捨てる。読むと下りるので
   //     フレームに1回だけ読む
   //
-  // ?perf=1 のときしか拡張を取らない。通常の再生では何も起きない
-  const gpuExt = perfOn ? gl.getExtension("EXT_disjoint_timer_query") : null;
+  // 拡張は WebGL 1 と 2 で名前も API も違うので、ここで差を吸収する。
+  // ?perf=1 のときしか取らない (通常の再生では何も起きない)
+  const gpu = (() => {
+    if (!perfOn) return null;
+    if (isGL2) {
+      const e = gl.getExtension("EXT_disjoint_timer_query_webgl2");
+      if (!e) return null;
+      return { TE: e.TIME_ELAPSED_EXT, DJ: e.GPU_DISJOINT_EXT,
+        create: () => gl.createQuery(),
+        begin: (t, q) => gl.beginQuery(t, q),
+        end: (t) => gl.endQuery(t),
+        ready: (q) => gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE),
+        value: (q) => gl.getQueryParameter(q, gl.QUERY_RESULT) };
+    }
+    const e = gl.getExtension("EXT_disjoint_timer_query");
+    if (!e) return null;
+    return { TE: e.TIME_ELAPSED_EXT, DJ: e.GPU_DISJOINT_EXT,
+      create: () => e.createQueryEXT(),
+      begin: (t, q) => e.beginQueryEXT(t, q),
+      end: (t) => e.endQueryEXT(t),
+      ready: (q) => e.getQueryObjectEXT(q, e.QUERY_RESULT_AVAILABLE_EXT),
+      value: (q) => e.getQueryObjectEXT(q, e.QUERY_RESULT_EXT) };
+  })();
   const gpuAcc = new Map();      // 区間名 → 直近の平均 [ms]
   const gpuFree = [];            // 回収済みのクエリ (使い回す)
   const gpuWait = [];            // { name, q } 結果待ち
@@ -10639,27 +10695,27 @@
   const GPU_MAX = 32;            // 抱える上限。回収が追いつかない間は測らない
 
   function gpuBegin() {
-    if (!gpuExt || gpuOpen || gpuWait.length >= GPU_MAX) return;
-    const q = gpuFree.pop() || gpuExt.createQueryEXT();
-    gpuExt.beginQueryEXT(gpuExt.TIME_ELAPSED_EXT, q);
+    if (!gpu || gpuOpen || gpuWait.length >= GPU_MAX) return;
+    const q = gpuFree.pop() || gpu.create();
+    gpu.begin(gpu.TE, q);
     gpuOpen = q;
   }
   // name が null のときは測るだけ測って捨てる (フレーム末尾の端数)
   function gpuEnd(name) {
     if (!gpuOpen) return;
-    gpuExt.endQueryEXT(gpuExt.TIME_ELAPSED_EXT);
+    gpu.end(gpu.TE);
     gpuWait.push({ name, q: gpuOpen });
     gpuOpen = null;
   }
   function gpuPoll() {
-    if (!gpuExt) return;
+    if (!gpu) return;
     // 途中で GPU を他に取られた回は、その間の値がすべて無意味になる
-    const bad = gl.getParameter(gpuExt.GPU_DISJOINT_EXT);
+    const bad = gl.getParameter(gpu.DJ);
     for (let i = gpuWait.length - 1; i >= 0; i--) {
       const w = gpuWait[i];
-      if (!gpuExt.getQueryObjectEXT(w.q, gpuExt.QUERY_RESULT_AVAILABLE_EXT)) continue;
+      if (!gpu.ready(w.q)) continue;
       if (!bad && w.name) {
-        const ms = gpuExt.getQueryObjectEXT(w.q, gpuExt.QUERY_RESULT_EXT) / 1e6;
+        const ms = gpu.value(w.q) / 1e6;
         const pv = gpuAcc.has(w.name) ? gpuAcc.get(w.name) : ms;
         gpuAcc.set(w.name, pv * (1 - PERF_EMA) + ms * PERF_EMA);
       }
@@ -10685,7 +10741,7 @@
     lines.push((1000 / avg).toFixed(1) + " fps   " + avg.toFixed(1) + " ms  (最悪 " + mx.toFixed(1) + ")");
     // 区間の行だけは [名前, CPU, GPU] の配列で持ち、数字を右寄せで別に描く。
     // 名前に全角が混ざるので、等幅フォントでも文字数では桁が揃わない
-    if (gpuExt) {
+    if (gpu) {
       let gpuSum = 0;
       for (const k of perfKeys) gpuSum += gpuAcc.get(k) || 0;
       lines.push("合計  CPU " + secSum.toFixed(2) + "  GPU " + gpuSum.toFixed(2) + " ms");
@@ -10701,7 +10757,8 @@
     let cnt = "";
     for (const [k, v] of perfCnt) cnt += (cnt ? "  " : "") + k + " " + v;
     if (cnt) lines.push(cnt);
-    lines.push(glc.width + "×" + glc.height + "  DPR " + DPR.toFixed(2));
+    lines.push(glc.width + "×" + glc.height + "  DPR " + DPR.toFixed(2)
+      + "  WebGL " + (isGL2 ? "2" : "1"));
 
     const pad = 7, lh = 14, gw = PERF_N, gh = 26;
     octx.setTransform(DPR, 0, 0, DPR, 0, 0);

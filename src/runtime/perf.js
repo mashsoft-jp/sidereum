@@ -55,8 +55,29 @@
   //   - GPU_DISJOINT_EXT が立った回は値が無意味なので捨てる。読むと下りるので
   //     フレームに1回だけ読む
   //
-  // ?perf=1 のときしか拡張を取らない。通常の再生では何も起きない
-  const gpuExt = perfOn ? gl.getExtension("EXT_disjoint_timer_query") : null;
+  // 拡張は WebGL 1 と 2 で名前も API も違うので、ここで差を吸収する。
+  // ?perf=1 のときしか取らない (通常の再生では何も起きない)
+  const gpu = (() => {
+    if (!perfOn) return null;
+    if (isGL2) {
+      const e = gl.getExtension("EXT_disjoint_timer_query_webgl2");
+      if (!e) return null;
+      return { TE: e.TIME_ELAPSED_EXT, DJ: e.GPU_DISJOINT_EXT,
+        create: () => gl.createQuery(),
+        begin: (t, q) => gl.beginQuery(t, q),
+        end: (t) => gl.endQuery(t),
+        ready: (q) => gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE),
+        value: (q) => gl.getQueryParameter(q, gl.QUERY_RESULT) };
+    }
+    const e = gl.getExtension("EXT_disjoint_timer_query");
+    if (!e) return null;
+    return { TE: e.TIME_ELAPSED_EXT, DJ: e.GPU_DISJOINT_EXT,
+      create: () => e.createQueryEXT(),
+      begin: (t, q) => e.beginQueryEXT(t, q),
+      end: (t) => e.endQueryEXT(t),
+      ready: (q) => e.getQueryObjectEXT(q, e.QUERY_RESULT_AVAILABLE_EXT),
+      value: (q) => e.getQueryObjectEXT(q, e.QUERY_RESULT_EXT) };
+  })();
   const gpuAcc = new Map();      // 区間名 → 直近の平均 [ms]
   const gpuFree = [];            // 回収済みのクエリ (使い回す)
   const gpuWait = [];            // { name, q } 結果待ち
@@ -64,27 +85,27 @@
   const GPU_MAX = 32;            // 抱える上限。回収が追いつかない間は測らない
 
   function gpuBegin() {
-    if (!gpuExt || gpuOpen || gpuWait.length >= GPU_MAX) return;
-    const q = gpuFree.pop() || gpuExt.createQueryEXT();
-    gpuExt.beginQueryEXT(gpuExt.TIME_ELAPSED_EXT, q);
+    if (!gpu || gpuOpen || gpuWait.length >= GPU_MAX) return;
+    const q = gpuFree.pop() || gpu.create();
+    gpu.begin(gpu.TE, q);
     gpuOpen = q;
   }
   // name が null のときは測るだけ測って捨てる (フレーム末尾の端数)
   function gpuEnd(name) {
     if (!gpuOpen) return;
-    gpuExt.endQueryEXT(gpuExt.TIME_ELAPSED_EXT);
+    gpu.end(gpu.TE);
     gpuWait.push({ name, q: gpuOpen });
     gpuOpen = null;
   }
   function gpuPoll() {
-    if (!gpuExt) return;
+    if (!gpu) return;
     // 途中で GPU を他に取られた回は、その間の値がすべて無意味になる
-    const bad = gl.getParameter(gpuExt.GPU_DISJOINT_EXT);
+    const bad = gl.getParameter(gpu.DJ);
     for (let i = gpuWait.length - 1; i >= 0; i--) {
       const w = gpuWait[i];
-      if (!gpuExt.getQueryObjectEXT(w.q, gpuExt.QUERY_RESULT_AVAILABLE_EXT)) continue;
+      if (!gpu.ready(w.q)) continue;
       if (!bad && w.name) {
-        const ms = gpuExt.getQueryObjectEXT(w.q, gpuExt.QUERY_RESULT_EXT) / 1e6;
+        const ms = gpu.value(w.q) / 1e6;
         const pv = gpuAcc.has(w.name) ? gpuAcc.get(w.name) : ms;
         gpuAcc.set(w.name, pv * (1 - PERF_EMA) + ms * PERF_EMA);
       }
@@ -110,7 +131,7 @@
     lines.push((1000 / avg).toFixed(1) + " fps   " + avg.toFixed(1) + " ms  (最悪 " + mx.toFixed(1) + ")");
     // 区間の行だけは [名前, CPU, GPU] の配列で持ち、数字を右寄せで別に描く。
     // 名前に全角が混ざるので、等幅フォントでも文字数では桁が揃わない
-    if (gpuExt) {
+    if (gpu) {
       let gpuSum = 0;
       for (const k of perfKeys) gpuSum += gpuAcc.get(k) || 0;
       lines.push("合計  CPU " + secSum.toFixed(2) + "  GPU " + gpuSum.toFixed(2) + " ms");
@@ -126,7 +147,8 @@
     let cnt = "";
     for (const [k, v] of perfCnt) cnt += (cnt ? "  " : "") + k + " " + v;
     if (cnt) lines.push(cnt);
-    lines.push(glc.width + "×" + glc.height + "  DPR " + DPR.toFixed(2));
+    lines.push(glc.width + "×" + glc.height + "  DPR " + DPR.toFixed(2)
+      + "  WebGL " + (isGL2 ? "2" : "1"));
 
     const pad = 7, lh = 14, gw = PERF_N, gh = 26;
     octx.setTransform(DPR, 0, 0, DPR, 0, 0);
