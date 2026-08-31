@@ -25,6 +25,10 @@
     const A = 2.51 - 2.43 * y, B = 0.59 * y - 0.03, C = 0.14 * y;
     return (B + Math.sqrt(Math.max(B * B + 4 * A * C, 0))) / Math.max(2 * A, 1e-4) / 1.15;
   }
+  // 点・板で太陽を描くときの明るさ。HDR ではリニアの放射輝度として渡す
+  // (body.frag の光球が 3.7〜8.0 なので、それに合わせる)。WebGL 1 経路は
+  // 画面色のままなので 1 = 白飛び
+  const SUN_RAD = hdrOn ? 8.0 : 1.0;
   function setClearColor(r, g, b) {
     if (hdrOn) gl.clearColor(unTone(r), unTone(g), unTone(b), 1);
     else gl.clearColor(r, g, b, 1);
@@ -173,7 +177,12 @@
       vec3 A = 2.51 - 2.43 * y, B = 0.59 * y - 0.03, C = 0.14 * y;
       return (B + sqrt(max(B * B + 4.0 * A * C, 0.0))) / max(2.0 * A, 1e-4);
     }
-    vec3 outAdd(vec3 disp) { return acesInv(srgbToLinear(clamp(disp, 0.0, 1.0))) / EXPOSURE; }
+    // 1 以下は「画面へ足したい表示色」として往復し、1 を超えたぶんは
+    // 放射輝度としてそのまま足す。太陽のように画面色では表しきれない
+    // 明るさを、点で描くパスからも渡せるようにするため
+    vec3 outAdd(vec3 disp) {
+      return acesInv(srgbToLinear(clamp(disp, 0.0, 1.0))) / EXPOSURE + max(disp - 1.0, 0.0);
+    }
 ` : `
     // WebGL 1 経路: これまでどおり各パスでトーンマップし、加算は画面色のまま
     vec3 outLit(vec3 lin) { return tonemap(lin); }
@@ -256,12 +265,13 @@
   const blurFS = PRE + `@@glsl:post-blur.frag@@`;
   const addFS = PRE + `@@glsl:post-add.frag@@`;
   const toneFS = PRE + `@@glsl:post-tone.frag@@`;
+  const hdrThreshFS = PRE + `@@glsl:post-hdr-thresh.frag@@`;
 
   // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
   // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
   let bodyRenderer;
   let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP, skyP, dsoP;
-  let threshP, blurP, addP, toneP;
+  let threshP, blurP, addP, toneP, hdrThreshP;
   try {
     bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
     skyP = program(skyVS, skyFS);
@@ -278,7 +288,10 @@
     threshP = program(postVS, threshFS);
     blurP = program(postVS, blurFS);
     addP = program(postVS, addFS);
-    if (hdrOn) toneP = program(postVS, toneFS);
+    if (hdrOn) {
+      toneP = program(postVS, toneFS);
+      hdrThreshP = program(postVS, hdrThreshFS);
+    }
   } catch (err) {
     console.error(err);
     document.getElementById("noGL").style.display = "grid";

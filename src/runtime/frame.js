@@ -485,8 +485,8 @@
     perfLap("更新");
     hdrBegin();          // HDR 経路のときだけオフスクリーンへ向ける
     render(now / 1000);
-    hdrEnd();            // 解決 → トーンマップ → 画面
     perfLap("描画(他)");
+    hdrEnd();            // HDR: 解決 → 滲み → 合成 (WebGL 1 のときは何もしない)
     bloomPass();          // 明るいところの滲み (シーンを描き終えてから)
     perfLap("Bloom");
     updateClock();

@@ -538,7 +538,10 @@
       let size, r, g, bl;
       if (b === SUN) {
         // 日食で欠けているぶん暗くする (点で描かれる倍率では形は出せない)
-        size = 18 * (0.35 + 0.65 * sunLeft); r = 1.0 * sunLeft; g = 0.9 * sunLeft; bl = 0.6 * sunLeft;
+        size = 18 * (0.35 + 0.65 * sunLeft);
+        // 点で描くときも、HDR 経路では放射輝度で渡す。画面色の 1.0 で頭打ちに
+        // すると、リニアのしきい値 (1.0) を超えられず滲みが太陽を見つけられない
+        r = SUN_RAD * sunLeft; g = SUN_RAD * 0.9 * sunLeft; bl = SUN_RAD * 0.6 * sunLeft;
       } else if (b.key === "moon") {
         size = 11; r = 0.9; g = 0.92; bl = 0.96;
       } else {

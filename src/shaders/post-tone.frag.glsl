@@ -1,12 +1,15 @@
 
-    // HDR 経路の合成。オフスクリーンへリニアの放射輝度のまま描いたシーンを、
-    // ここでまとめてトーンマップして画面へ出す。
+    // HDR 経路の合成。オフスクリーンへリニアの放射輝度のまま描いたシーンに、
+    // 同じくリニアで作った滲みを足してから、まとめてトーンマップする。
     //
-    // WebGL 1 経路ではシェーダごとに tonemap() を呼んでいる。そちらは 1.0 を
-    // 超える明るさが各パスの時点で潰れるので、太陽と明るい雲の区別が滲みへ
-    // 渡らない。HDR 経路はここまで潰さずに運ぶための入口 (滲み側の利用は次段)
+    // 足すのがトーンマップの前だという点が WebGL 1 経路との違い。あちらは
+    // 画面 (トーンマップ後) へ足すので、明るい背景の上でも同じだけ明るくなる。
+    // こちらは目の圧縮を通るので、昼の空の上では控えめに、夜空では強く出る
     varying vec2 vUv;
     uniform sampler2D uTex;
+    uniform sampler2D uBloom;
+    uniform float uAmount;   // 0 = 滲みなし
     void main() {
-      gl_FragColor = vec4(tonemap(texture2D(uTex, vUv).rgb), 1.0);
+      vec3 c = texture2D(uTex, vUv).rgb + texture2D(uBloom, vUv).rgb * uAmount;
+      gl_FragColor = vec4(tonemap(c), 1.0);
     }

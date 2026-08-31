@@ -91,6 +91,25 @@
   // 変えていない)。
   let hdrW = 0, hdrH = 0, hdrReady = false, hdrFailed = false;
   let msFB = null, msCol = null, msDep = null, hdrFB = null, hdrTex = null;
+  let hbW = 0, hbH = 0;
+  const hbTex = [null, null], hbFB = [null, null];
+  // リニアでのしきい値。1.0 = 正面から照らされた白い面。昼の空は 0.2 前後
+  // なので自然に外れ、太陽 (8 前後) や恒星だけが残る
+  const HDR_THRESH = 1.0;
+  const HDR_AMOUNT = 0.55;
+
+  // HDR のぼかし先。8bit だと 1.0 で頭打ちになり、太陽のような
+  // 桁違いに明るいものの情報がここで消える
+  function hdrTex16(w, h) {
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return t;
+  }
 
   function hdrTargets() {
     if (!hdrOn || hdrFailed) return false;
@@ -100,6 +119,7 @@
     if (msFB) {
       gl.deleteFramebuffer(msFB); gl.deleteRenderbuffer(msCol); gl.deleteRenderbuffer(msDep);
       gl.deleteFramebuffer(hdrFB); gl.deleteTexture(hdrTex);
+      for (let i = 0; i < 2; i++) { gl.deleteTexture(hbTex[i]); gl.deleteFramebuffer(hbFB[i]); }
     }
     hdrReady = false;
     hdrW = w; hdrH = h;
@@ -133,6 +153,23 @@
       console.warn("HDR 用のフレームバッファを作れませんでした。既定の経路で描きます");
       return false;
     }
+    // 滲み用 (1/4 解像度)。WebGL 1 経路の bloomTex とは別に持つ —
+    // あちらは 8bit で、リニアの値を入れると 1.0 で潰れる
+    hbW = Math.max(2, Math.floor(w / BLOOM_DIV));
+    hbH = Math.max(2, Math.floor(h / BLOOM_DIV));
+    for (let i = 0; i < 2; i++) {
+      hbTex[i] = hdrTex16(hbW, hbH);
+      hbFB[i] = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, hbFB[i]);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, hbTex[i], 0);
+      if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        hdrFailed = true;
+        console.warn("HDR 用のフレームバッファを作れませんでした。既定の経路で描きます");
+        return false;
+      }
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     hdrReady = true;
     return true;
   }
@@ -148,24 +185,54 @@
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, msFB);
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, hdrFB);
     gl.blitFramebuffer(0, 0, hdrW, hdrH, 0, 0, hdrW, hdrH, gl.COLOR_BUFFER_BIT, gl.NEAREST);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, hdrW, hdrH);
     gl.disable(gl.DEPTH_TEST);
     gl.depthMask(false);
     gl.disable(gl.BLEND);
     gl.disable(gl.CULL_FACE);
     gl.bindBuffer(gl.ARRAY_BUFFER, postVB);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, hdrTex);
+
+    // 滲み。リニアのまましきい値を切り、ぼかす (合成でシーンへ足す)
+    if (bloomOn) {
+      gl.viewport(0, 0, hbW, hbH);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, hbFB[0]);
+      gl.bindTexture(gl.TEXTURE_2D, hdrTex);
+      gl.useProgram(hdrThreshP.pr);
+      gl.uniform1i(hdrThreshP.u.uTex, 0);
+      gl.uniform2f(hdrThreshP.u.uTexel, 1 / hdrW, 1 / hdrH);
+      gl.uniform1f(hdrThreshP.u.uThresh, HDR_THRESH);
+      postDraw(hdrThreshP);
+      gl.useProgram(blurP.pr);
+      gl.uniform1i(blurP.u.uTex, 0);
+      for (let i = 0; i < 2; i++) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, hbFB[1 - i]);
+        gl.bindTexture(gl.TEXTURE_2D, hbTex[i]);
+        if (i === 0) gl.uniform2f(blurP.u.uDir, 1 / hbW, 0);
+        else gl.uniform2f(blurP.u.uDir, 0, 1 / hbH);
+        postDraw(blurP);
+      }
+    }
+
+    // 合成。シーン + 滲みをリニアで足してからトーンマップして画面へ
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, hdrW, hdrH);
     gl.useProgram(toneP.pr);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, hdrTex);
     gl.uniform1i(toneP.u.uTex, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, hbTex[0]);
+    gl.uniform1i(toneP.u.uBloom, 1);
+    gl.uniform1f(toneP.u.uAmount, bloomOn ? HDR_AMOUNT : 0);
     postDraw(toneP);
+    gl.activeTexture(gl.TEXTURE0);
     gl.enable(gl.DEPTH_TEST);
     gl.depthMask(true);
   }
 
   // シーンを描き終えたあとに呼ぶ
   function bloomPass() {
+    if (hdrOn) return;        // HDR 経路の滲みは hdrEnd がリニアで作る
     if (!bloomOn || !bloomTargets()) return;
     const w = bloomSrcW, h = bloomSrcH;
 

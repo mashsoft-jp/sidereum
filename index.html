@@ -4407,6 +4407,10 @@
     const A = 2.51 - 2.43 * y, B = 0.59 * y - 0.03, C = 0.14 * y;
     return (B + Math.sqrt(Math.max(B * B + 4 * A * C, 0))) / Math.max(2 * A, 1e-4) / 1.15;
   }
+  // 点・板で太陽を描くときの明るさ。HDR ではリニアの放射輝度として渡す
+  // (body.frag の光球が 3.7〜8.0 なので、それに合わせる)。WebGL 1 経路は
+  // 画面色のままなので 1 = 白飛び
+  const SUN_RAD = hdrOn ? 8.0 : 1.0;
   function setClearColor(r, g, b) {
     if (hdrOn) gl.clearColor(unTone(r), unTone(g), unTone(b), 1);
     else gl.clearColor(r, g, b, 1);
@@ -4555,7 +4559,12 @@
       vec3 A = 2.51 - 2.43 * y, B = 0.59 * y - 0.03, C = 0.14 * y;
       return (B + sqrt(max(B * B + 4.0 * A * C, 0.0))) / max(2.0 * A, 1e-4);
     }
-    vec3 outAdd(vec3 disp) { return acesInv(srgbToLinear(clamp(disp, 0.0, 1.0))) / EXPOSURE; }
+    // 1 以下は「画面へ足したい表示色」として往復し、1 を超えたぶんは
+    // 放射輝度としてそのまま足す。太陽のように画面色では表しきれない
+    // 明るさを、点で描くパスからも渡せるようにするため
+    vec3 outAdd(vec3 disp) {
+      return acesInv(srgbToLinear(clamp(disp, 0.0, 1.0))) / EXPOSURE + max(disp - 1.0, 0.0);
+    }
 ` : `
     // WebGL 1 経路: これまでどおり各パスでトーンマップし、加算は画面色のまま
     vec3 outLit(vec3 lin) { return tonemap(lin); }
@@ -5758,16 +5767,43 @@
     }
 `;
   const toneFS = PRE + `
-    // HDR 経路の合成。オフスクリーンへリニアの放射輝度のまま描いたシーンを、
-    // ここでまとめてトーンマップして画面へ出す。
+    // HDR 経路の合成。オフスクリーンへリニアの放射輝度のまま描いたシーンに、
+    // 同じくリニアで作った滲みを足してから、まとめてトーンマップする。
     //
-    // WebGL 1 経路ではシェーダごとに tonemap() を呼んでいる。そちらは 1.0 を
-    // 超える明るさが各パスの時点で潰れるので、太陽と明るい雲の区別が滲みへ
-    // 渡らない。HDR 経路はここまで潰さずに運ぶための入口 (滲み側の利用は次段)
+    // 足すのがトーンマップの前だという点が WebGL 1 経路との違い。あちらは
+    // 画面 (トーンマップ後) へ足すので、明るい背景の上でも同じだけ明るくなる。
+    // こちらは目の圧縮を通るので、昼の空の上では控えめに、夜空では強く出る
     varying vec2 vUv;
     uniform sampler2D uTex;
+    uniform sampler2D uBloom;
+    uniform float uAmount;   // 0 = 滲みなし
     void main() {
-      gl_FragColor = vec4(tonemap(texture2D(uTex, vUv).rgb), 1.0);
+      vec3 c = texture2D(uTex, vUv).rgb + texture2D(uBloom, vUv).rgb * uAmount;
+      gl_FragColor = vec4(tonemap(c), 1.0);
+    }
+`;
+  const hdrThreshFS = PRE + `
+    // HDR 経路のしきい値。リニアの放射輝度から「1.0 を超えたぶん」だけを
+    // 取り出しながら 1/4 に縮小する。
+    //
+    // WebGL 1 経路 (post-thresh) は表示色に対して 0.72 で切っていた。そちらは
+    // トーンマップ後の画面を見ているので、太陽も明るい雲も 1.0 に潰れていて
+    // 区別できず、昼は空そのものがしきい値を超えるため skyDayF で持ち上げる
+    // 細工が要った。リニアなら「1.0 = 正面から照らされた白い面」が基準なので、
+    // 昼の空 (0.2 前後) は自然に外れ、太陽 (8 前後) だけが残る。
+    varying vec2 vUv;
+    uniform sampler2D uTex;
+    uniform vec2 uTexel;     // 元画像の 1テクセル
+    uniform float uThresh;   // これを超えたぶんだけ滲ませる [リニア]
+
+    void main() {
+      vec3 c = texture2D(uTex, vUv + uTexel * vec2(-1.0, -1.0)).rgb
+             + texture2D(uTex, vUv + uTexel * vec2( 1.0, -1.0)).rgb
+             + texture2D(uTex, vUv + uTexel * vec2(-1.0,  1.0)).rgb
+             + texture2D(uTex, vUv + uTexel * vec2( 1.0,  1.0)).rgb;
+      c *= 0.25;
+      // 硬く切らず、超えたぶんをそのまま渡す。リニアなので階段は出ない
+      gl_FragColor = vec4(max(c - uThresh, 0.0), 1.0);
     }
 `;
 
@@ -5775,7 +5811,7 @@
   // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
   let bodyRenderer;
   let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP, skyP, dsoP;
-  let threshP, blurP, addP, toneP;
+  let threshP, blurP, addP, toneP, hdrThreshP;
   try {
     bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
     skyP = program(skyVS, skyFS);
@@ -5792,7 +5828,10 @@
     threshP = program(postVS, threshFS);
     blurP = program(postVS, blurFS);
     addP = program(postVS, addFS);
-    if (hdrOn) toneP = program(postVS, toneFS);
+    if (hdrOn) {
+      toneP = program(postVS, toneFS);
+      hdrThreshP = program(postVS, hdrThreshFS);
+    }
   } catch (err) {
     console.error(err);
     document.getElementById("noGL").style.display = "grid";
@@ -6328,6 +6367,25 @@
   // 変えていない)。
   let hdrW = 0, hdrH = 0, hdrReady = false, hdrFailed = false;
   let msFB = null, msCol = null, msDep = null, hdrFB = null, hdrTex = null;
+  let hbW = 0, hbH = 0;
+  const hbTex = [null, null], hbFB = [null, null];
+  // リニアでのしきい値。1.0 = 正面から照らされた白い面。昼の空は 0.2 前後
+  // なので自然に外れ、太陽 (8 前後) や恒星だけが残る
+  const HDR_THRESH = 1.0;
+  const HDR_AMOUNT = 0.55;
+
+  // HDR のぼかし先。8bit だと 1.0 で頭打ちになり、太陽のような
+  // 桁違いに明るいものの情報がここで消える
+  function hdrTex16(w, h) {
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return t;
+  }
 
   function hdrTargets() {
     if (!hdrOn || hdrFailed) return false;
@@ -6337,6 +6395,7 @@
     if (msFB) {
       gl.deleteFramebuffer(msFB); gl.deleteRenderbuffer(msCol); gl.deleteRenderbuffer(msDep);
       gl.deleteFramebuffer(hdrFB); gl.deleteTexture(hdrTex);
+      for (let i = 0; i < 2; i++) { gl.deleteTexture(hbTex[i]); gl.deleteFramebuffer(hbFB[i]); }
     }
     hdrReady = false;
     hdrW = w; hdrH = h;
@@ -6370,6 +6429,23 @@
       console.warn("HDR 用のフレームバッファを作れませんでした。既定の経路で描きます");
       return false;
     }
+    // 滲み用 (1/4 解像度)。WebGL 1 経路の bloomTex とは別に持つ —
+    // あちらは 8bit で、リニアの値を入れると 1.0 で潰れる
+    hbW = Math.max(2, Math.floor(w / BLOOM_DIV));
+    hbH = Math.max(2, Math.floor(h / BLOOM_DIV));
+    for (let i = 0; i < 2; i++) {
+      hbTex[i] = hdrTex16(hbW, hbH);
+      hbFB[i] = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, hbFB[i]);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, hbTex[i], 0);
+      if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        hdrFailed = true;
+        console.warn("HDR 用のフレームバッファを作れませんでした。既定の経路で描きます");
+        return false;
+      }
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     hdrReady = true;
     return true;
   }
@@ -6385,24 +6461,54 @@
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, msFB);
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, hdrFB);
     gl.blitFramebuffer(0, 0, hdrW, hdrH, 0, 0, hdrW, hdrH, gl.COLOR_BUFFER_BIT, gl.NEAREST);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, hdrW, hdrH);
     gl.disable(gl.DEPTH_TEST);
     gl.depthMask(false);
     gl.disable(gl.BLEND);
     gl.disable(gl.CULL_FACE);
     gl.bindBuffer(gl.ARRAY_BUFFER, postVB);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, hdrTex);
+
+    // 滲み。リニアのまましきい値を切り、ぼかす (合成でシーンへ足す)
+    if (bloomOn) {
+      gl.viewport(0, 0, hbW, hbH);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, hbFB[0]);
+      gl.bindTexture(gl.TEXTURE_2D, hdrTex);
+      gl.useProgram(hdrThreshP.pr);
+      gl.uniform1i(hdrThreshP.u.uTex, 0);
+      gl.uniform2f(hdrThreshP.u.uTexel, 1 / hdrW, 1 / hdrH);
+      gl.uniform1f(hdrThreshP.u.uThresh, HDR_THRESH);
+      postDraw(hdrThreshP);
+      gl.useProgram(blurP.pr);
+      gl.uniform1i(blurP.u.uTex, 0);
+      for (let i = 0; i < 2; i++) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, hbFB[1 - i]);
+        gl.bindTexture(gl.TEXTURE_2D, hbTex[i]);
+        if (i === 0) gl.uniform2f(blurP.u.uDir, 1 / hbW, 0);
+        else gl.uniform2f(blurP.u.uDir, 0, 1 / hbH);
+        postDraw(blurP);
+      }
+    }
+
+    // 合成。シーン + 滲みをリニアで足してからトーンマップして画面へ
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, hdrW, hdrH);
     gl.useProgram(toneP.pr);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, hdrTex);
     gl.uniform1i(toneP.u.uTex, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, hbTex[0]);
+    gl.uniform1i(toneP.u.uBloom, 1);
+    gl.uniform1f(toneP.u.uAmount, bloomOn ? HDR_AMOUNT : 0);
     postDraw(toneP);
+    gl.activeTexture(gl.TEXTURE0);
     gl.enable(gl.DEPTH_TEST);
     gl.depthMask(true);
   }
 
   // シーンを描き終えたあとに呼ぶ
   function bloomPass() {
+    if (hdrOn) return;        // HDR 経路の滲みは hdrEnd がリニアで作る
     if (!bloomOn || !bloomTargets()) return;
     const w = bloomSrcW, h = bloomSrcH;
 
@@ -8856,7 +8962,10 @@
       let size, r, g, bl;
       if (b === SUN) {
         // 日食で欠けているぶん暗くする (点で描かれる倍率では形は出せない)
-        size = 18 * (0.35 + 0.65 * sunLeft); r = 1.0 * sunLeft; g = 0.9 * sunLeft; bl = 0.6 * sunLeft;
+        size = 18 * (0.35 + 0.65 * sunLeft);
+        // 点で描くときも、HDR 経路では放射輝度で渡す。画面色の 1.0 で頭打ちに
+        // すると、リニアのしきい値 (1.0) を超えられず滲みが太陽を見つけられない
+        r = SUN_RAD * sunLeft; g = SUN_RAD * 0.9 * sunLeft; bl = SUN_RAD * 0.6 * sunLeft;
       } else if (b.key === "moon") {
         size = 11; r = 0.9; g = 0.92; bl = 0.96;
       } else {
@@ -11432,8 +11541,8 @@
     perfLap("更新");
     hdrBegin();          // HDR 経路のときだけオフスクリーンへ向ける
     render(now / 1000);
-    hdrEnd();            // 解決 → トーンマップ → 画面
     perfLap("描画(他)");
+    hdrEnd();            // HDR: 解決 → 滲み → 合成 (WebGL 1 のときは何もしない)
     bloomPass();          // 明るいところの滲み (シーンを描き終えてから)
     perfLap("Bloom");
     updateClock();
