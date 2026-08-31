@@ -93,9 +93,14 @@
   let msFB = null, msCol = null, msDep = null, hdrFB = null, hdrTex = null;
   let hbW = 0, hbH = 0;
   const hbTex = [null, null], hbFB = [null, null];
-  // リニアでのしきい値。1.0 = 正面から照らされた白い面。昼の空は 0.2 前後
-  // なので自然に外れ、太陽 (8 前後) や恒星だけが残る
-  const HDR_THRESH = 1.0;
+  // リニアでのしきい値。1.0 = 正面から照らされた白い面。
+  //
+  // 固定にしてはいけない。夕方は大気減光で太陽の円盤が 1.3 程度まで落ち、
+  // 1.0 をかろうじて超えるだけになって滲みがほとんど出なかった。一方で空の
+  // 側は skyAdaptGain (目の順応) で持ち上げているので、暗い場面ほど「何を
+  // 明るいと見なすか」の基準が下がる。WebGL 1 経路が skyDayF でしきい値を
+  // 動かしているのと同じ考え方で、昼は高く・薄明から夜は低くする
+  const hdrThresh = () => 0.25 + skyDayF * 0.90;
   const HDR_AMOUNT = 0.55;
 
   // HDR のぼかし先。8bit だと 1.0 で頭打ちになり、太陽のような
@@ -200,7 +205,7 @@
       gl.useProgram(hdrThreshP.pr);
       gl.uniform1i(hdrThreshP.u.uTex, 0);
       gl.uniform2f(hdrThreshP.u.uTexel, 1 / hdrW, 1 / hdrH);
-      gl.uniform1f(hdrThreshP.u.uThresh, HDR_THRESH);
+      gl.uniform1f(hdrThreshP.u.uThresh, hdrThresh());
       postDraw(hdrThreshP);
       gl.useProgram(blurP.pr);
       gl.uniform1i(blurP.u.uTex, 0);
