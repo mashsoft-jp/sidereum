@@ -24,5 +24,5 @@
       // 皿より下で軸から離れたところ (ブームの先の機器・電源) は暗い側へ寄せる。
       // ここを金色のままにすると、機体が金一色に見えてしまう
       mat = mix(mat, uCol, smoothstep(0.26, 0.34, length(vL - uAxis * t)) * (1.0 - hi));
-      gl_FragColor = vec4(tonemap(srgbToLinear(mat) * (0.28 + 0.85 * d)), 1.0);
+      gl_FragColor = vec4(outLit(srgbToLinear(mat) * (0.28 + 0.85 * d)), 1.0);
     }

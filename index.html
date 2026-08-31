@@ -4392,6 +4392,25 @@
     ? glc.getContext("webgl2", GL_ATTR) : null;
   const isGL2 = !!gl2;
   const gl = gl2 || glc.getContext("webgl", GL_ATTR);
+  // リニア HDR 経路。シーンをリニアの放射輝度のままオフスクリーンへ描き、
+  // 最後にまとめてトーンマップする (合成は gl/post.js の hdrEnd)。
+  // 半精度の描画先が要るので、拡張が取れるときだけ有効にする
+  const hdrOn = isGL2 && !!gl.getExtension("EXT_color_buffer_float");
+
+  // 画面へ出したい色 (表示色) から、実際に clearColor へ渡す値を作る。
+  // HDR 経路ではバッファの中身がリニアの放射輝度なので、合成でトーンマップ
+  // されたときに狙った色になるよう逆算する (シェーダの outAdd と同じ式)。
+  // これを忘れると、背景の暗い紺色が 6倍ほど持ち上がって空が白ばむ
+  const srgbToLin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  function unTone(disp) {
+    const y = srgbToLin(Math.min(Math.max(disp, 0), 1));
+    const A = 2.51 - 2.43 * y, B = 0.59 * y - 0.03, C = 0.14 * y;
+    return (B + Math.sqrt(Math.max(B * B + 4 * A * C, 0))) / Math.max(2 * A, 1e-4) / 1.15;
+  }
+  function setClearColor(r, g, b) {
+    if (hdrOn) gl.clearColor(unTone(r), unTone(g), unTone(b), 1);
+    else gl.clearColor(r, g, b, 1);
+  }
   if (!gl) {
     document.getElementById("noGL").style.display = "grid";
     return;
@@ -4522,7 +4541,26 @@
     }
     // リニアの放射輝度 → 画面へ出す sRGB
     vec3 tonemap(vec3 lin) { return linearToSrgb(acesToneMap(lin * EXPOSURE)); }
-`;
+` + (hdrOn ? `
+    // ---- HDR 経路 ----
+    // 面の色はトーンマップせずにリニアのまま出す (合成パスでまとめて掛ける)
+    vec3 outLit(vec3 lin) { return lin; }
+    // 加算のパスは「画面にこの色を足す」つもりで値が書かれている。HDR の
+    // バッファへそのまま足すと合成でもう一度トーンマップされて濃くなるので、
+    // 逆算してリニアの放射輝度へ戻す。ACES の当てはめ式は
+    //   y = x(2.51x+0.03) / (x(2.43x+0.59)+0.14)
+    // の有理式なので、x について解ける (二次方程式の正の根)。
+    // y=1 でも x≈7.24 と有限に収まるので、発散の心配は要らない
+    vec3 acesInv(vec3 y) {
+      vec3 A = 2.51 - 2.43 * y, B = 0.59 * y - 0.03, C = 0.14 * y;
+      return (B + sqrt(max(B * B + 4.0 * A * C, 0.0))) / max(2.0 * A, 1e-4);
+    }
+    vec3 outAdd(vec3 disp) { return acesInv(srgbToLinear(clamp(disp, 0.0, 1.0))) / EXPOSURE; }
+` : `
+    // WebGL 1 経路: これまでどおり各パスでトーンマップし、加算は画面色のまま
+    vec3 outLit(vec3 lin) { return tonemap(lin); }
+    vec3 outAdd(vec3 disp) { return disp; }
+`);
   // 画素ごとの微分と、微分を指定したテクスチャ取得。どちらも天体テクスチャの
   // 継ぎ目対策に要る (下の bodyFS)
   // WebGL 2 ではどちらも標準機能。拡張として取れないので true を立てる
@@ -4778,7 +4816,7 @@
                        vec3(0.520, 0.220, 0.080),     // 前方散乱 (朝焼け色)
                        fwd * 0.7)
                  * (1.0 - exp(-tau)) * sun;
-        gl_FragColor = vec4(tonemap(col * uExt), 0.0);   // 乗算済みアルファでの加算
+        gl_FragColor = vec4(outLit(col * uExt), 0.0);   // 乗算済みアルファでの加算
         return;
       }
 
@@ -4847,7 +4885,7 @@
         // 空や他の天体には足しているのにここだけ抜けていた。無いと、減光された
         // 円盤より周りの空の方が明るくなり、夕日が空に開いた黒い穴になる
         // (下の天体の経路にある「新月の月が黒い円盤になる」のと同じ話)
-        gl_FragColor = vec4(tonemap(c * uExt + skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain), 1.0);
+        gl_FragColor = vec4(outLit(c * uExt + skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain), 1.0);
         return;
       }
 
@@ -5100,7 +5138,7 @@
       // (掛けると二重に減ることになる)
       c *= uExt;
       c += skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain;
-      gl_FragColor = vec4(tonemap(c), 1.0);
+      gl_FragColor = vec4(outLit(c), 1.0);
     }`;
 
   // ---- 天の川 (全天マップを天球へ貼る。継ぎ目対策で bodyFS と同じ微分拡張を使う) ----
@@ -5166,7 +5204,7 @@
         float X = 1.0 / (sin(radians(h)) + 0.50572 * pow(h + 6.07995, -1.6364));
         c *= exp2(-1.3287712 * uExtK * (X - 1.0));   // 10^(-0.4 k (X-1))
       }
-      gl_FragColor = vec4(c * uBright, 0.0);   // 乗算済みアルファでの加算
+      gl_FragColor = vec4(outAdd(c * uBright), 0.0);   // 乗算済みアルファでの加算
     }
 `;
 
@@ -5177,7 +5215,7 @@
     void main() { gl_Position = uVP * vec4(aPos, 1.0); }`;
   const lineFS = PRE + `
     uniform vec4 uColor;
-    void main() { gl_FragColor = uColor; }`;
+    void main() { gl_FragColor = vec4(outAdd(uColor.rgb), uColor.a); }`;
 
   // ---- 風景 (地面の質感 / 空の色。地上・月面ビュー用。すべてプロシージャル生成) ----
   const terrainVS = `
@@ -5241,7 +5279,7 @@
       if (uSky > 0.5) {
         // ---- 大気 (地球のみ)。色は天体のエアライトと共有 (skyDayColor) ----
         vec3 night = vec3(0.0036, 0.0045, 0.0082);   // 画面上の (0.015, 0.02, 0.045)
-        gl_FragColor = vec4(tonemap(night * (1.0 - uSkyF)
+        gl_FragColor = vec4(outLit(night * (1.0 - uSkyF)
                                     + skyDayColor(d, uSun, uFlux) * uSkyGain), 1.0);
         return;
       }
@@ -5289,7 +5327,7 @@
                         uDay);
         col = mix(col, haze, 1.0 - smoothstep(0.0, 0.030, dy));
       }
-      gl_FragColor = vec4(tonemap(col), 1.0);
+      gl_FragColor = vec4(outLit(col), 1.0);
     }`;
 
   // ---- 点 (星・小惑星・惑星マーカー) ----
@@ -5317,7 +5355,7 @@
       // 「背景を置き換える」ことになり、暗い光源が明るい背景に穴を開ける —
       // 夕空の太陽が黒い円盤になっていたのはこれ。夜空 (背景がほぼ 0) では
       // どちらの式も同じ値になるので、星の見え方は変わらない
-      gl_FragColor = vec4(vCol * a, 0.0);
+      gl_FragColor = vec4(outAdd(vCol * a), 0.0);
     }`;
 
   // ---- ビルボード (太陽コロナ) ----
@@ -5343,7 +5381,7 @@
       float d = length(vUv);
       float a = pow(max(1.0 - d, 0.0), uFall);
       vec3 c = mix(uCol1, uCol2, a);
-      gl_FragColor = vec4(c * a * 0.9, 0.0);
+      gl_FragColor = vec4(outAdd(c * a * 0.9), 0.0);
     }
 `;
 
@@ -5438,7 +5476,7 @@
       }
       a *= head * end * uAlpha;
       vec3 col = mix(uCol1, uCol2, smoothstep(0.0, 0.85, flow));
-      gl_FragColor = vec4(col * a * extinctAt(vW), 0.0);
+      gl_FragColor = vec4(outAdd(col * a * extinctAt(vW)), 0.0);
     }`;
 
   // ---- 流星の光跡 (放射点から流れる細いリボン, 加算) ----
@@ -5462,7 +5500,7 @@
     varying float vY;
     void main() {
       float a = exp(-vY * vY * 3.2);
-      gl_FragColor = vec4(vCol * a, 0.0);
+      gl_FragColor = vec4(outAdd(vCol * a), 0.0);
     }`;
 
   // ---- 彗星のコマ (太陽側が圧縮された涙滴型の光。ガウシアン減衰で継ぎ目なし) ----
@@ -5498,7 +5536,7 @@
       // 遠距離では未解像の明るい頭部、接近時は境界のない淡いガス雲だけを残す
       vec3 light = uCol * (glow * 0.36 + inner * 0.42)
                  + vec3(1.0, 0.98, 0.92) * core * 2.80 * uCore;
-      gl_FragColor = vec4(light * uAlpha * extinctAt(vW), 0.0);
+      gl_FragColor = vec4(outAdd(light * uAlpha * extinctAt(vW)), 0.0);
     }`;
 
   // ---- 土星の環 ----
@@ -5583,7 +5621,7 @@
       // エアライトへ alpha を掛けるのは、背景の空を隠したぶんだけ足し戻す
       // ため (乗算済みアルファ。隠していない画素の空はそのまま背後に残る)
       c = c * uExt + skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain * alpha;
-      gl_FragColor = vec4(tonemap(c), alpha);
+      gl_FragColor = vec4(outLit(c), alpha);
     }
 `;
 
@@ -5626,7 +5664,7 @@
       // 皿より下で軸から離れたところ (ブームの先の機器・電源) は暗い側へ寄せる。
       // ここを金色のままにすると、機体が金一色に見えてしまう
       mat = mix(mat, uCol, smoothstep(0.26, 0.34, length(vL - uAxis * t)) * (1.0 - hi));
-      gl_FragColor = vec4(tonemap(srgbToLinear(mat) * (0.28 + 0.85 * d)), 1.0);
+      gl_FragColor = vec4(outLit(srgbToLinear(mat) * (0.28 + 0.85 * d)), 1.0);
     }
 `;
 
@@ -5656,7 +5694,7 @@
       float r2 = dot(vQ, vQ);
       if (r2 > 1.0) discard;
       float a = exp(-3.2 * r2) - 0.040762;
-      gl_FragColor = vec4(vCol * max(a, 0.0), 0.0);   // 乗算済みアルファでの加算
+      gl_FragColor = vec4(outAdd(vCol * max(a, 0.0)), 0.0);   // 乗算済みアルファでの加算
     }
 `;
 
@@ -5719,12 +5757,25 @@
       gl_FragColor = vec4(texture2D(uTex, vUv).rgb * uAmount, 0.0);
     }
 `;
+  const toneFS = PRE + `
+    // HDR 経路の合成。オフスクリーンへリニアの放射輝度のまま描いたシーンを、
+    // ここでまとめてトーンマップして画面へ出す。
+    //
+    // WebGL 1 経路ではシェーダごとに tonemap() を呼んでいる。そちらは 1.0 を
+    // 超える明るさが各パスの時点で潰れるので、太陽と明るい雲の区別が滲みへ
+    // 渡らない。HDR 経路はここまで潰さずに運ぶための入口 (滲み側の利用は次段)
+    varying vec2 vUv;
+    uniform sampler2D uTex;
+    void main() {
+      gl_FragColor = vec4(tonemap(texture2D(uTex, vUv).rgb), 1.0);
+    }
+`;
 
   // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
   // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
   let bodyRenderer;
   let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP, skyP, dsoP;
-  let threshP, blurP, addP;
+  let threshP, blurP, addP, toneP;
   try {
     bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
     skyP = program(skyVS, skyFS);
@@ -5741,6 +5792,7 @@
     threshP = program(postVS, threshFS);
     blurP = program(postVS, blurFS);
     addP = program(postVS, addFS);
+    if (hdrOn) toneP = program(postVS, toneFS);
   } catch (err) {
     console.error(err);
     document.getElementById("noGL").style.display = "grid";
@@ -6259,6 +6311,94 @@
     gl.vertexAttribPointer(p.a.aPos, 2, gl.FLOAT, false, 0, 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.disableVertexAttribArray(p.a.aPos);
+  }
+
+  // ---------- HDR オフスクリーン (?gl=2 のときだけ) ----------
+  // シーンをリニアの放射輝度のまま RGBA16F へ描き、最後にまとめてトーンマップ
+  // する。各パスでトーンマップしてしまうと 1.0 を超える明るさ (太陽・恒星) が
+  // その時点で潰れ、滲みへ渡す情報が残らない。
+  //
+  // MSAA は自前で持つ。canvas の antialias は既定のフレームバッファにしか
+  // 効かないので、そのままオフスクリーンへ描くと軌道線がギザギザになる
+  // (WebGL 1 経路で画面を copyTexSubImage2D している理由がこれ)。
+  // マルチサンプルのレンダーバッファへ描き、blitFramebuffer で解決する。
+  //
+  // 合成したあとの画面は WebGL 1 のときとまったく同じ内容なので、Bloom は
+  // これまでどおり画面を取り込む経路のまま動く (この段では滲みの計算は
+  // 変えていない)。
+  let hdrW = 0, hdrH = 0, hdrReady = false, hdrFailed = false;
+  let msFB = null, msCol = null, msDep = null, hdrFB = null, hdrTex = null;
+
+  function hdrTargets() {
+    if (!hdrOn || hdrFailed) return false;
+    const w = glc.width, h = glc.height;
+    if (w < 8 || h < 8) return false;
+    if (hdrReady && w === hdrW && h === hdrH) return true;
+    if (msFB) {
+      gl.deleteFramebuffer(msFB); gl.deleteRenderbuffer(msCol); gl.deleteRenderbuffer(msDep);
+      gl.deleteFramebuffer(hdrFB); gl.deleteTexture(hdrTex);
+    }
+    hdrReady = false;
+    hdrW = w; hdrH = h;
+    const smp = Math.max(1, Math.min(4, gl.getParameter(gl.MAX_SAMPLES)));
+    msCol = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, msCol);
+    gl.renderbufferStorageMultisample(gl.RENDERBUFFER, smp, gl.RGBA16F, w, h);
+    msDep = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, msDep);
+    gl.renderbufferStorageMultisample(gl.RENDERBUFFER, smp, gl.DEPTH_COMPONENT24, w, h);
+    msFB = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, msFB);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, msCol);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, msDep);
+    const okMS = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    // 解決先。ここから合成パスが読む
+    hdrTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, hdrTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    hdrFB = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, hdrFB);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, hdrTex, 0);
+    const okRS = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    if (!okMS || !okRS) {
+      hdrFailed = true;
+      console.warn("HDR 用のフレームバッファを作れませんでした。既定の経路で描きます");
+      return false;
+    }
+    hdrReady = true;
+    return true;
+  }
+  // シーンを描く前。オフスクリーンへ向ける (使えないときは既定のまま)
+  function hdrBegin() {
+    if (!hdrTargets()) return;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, msFB);
+    gl.viewport(0, 0, hdrW, hdrH);
+  }
+  // シーンを描き終えたら、解決してトーンマップし、画面へ出す
+  function hdrEnd() {
+    if (!hdrReady || hdrFailed) return;
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, msFB);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, hdrFB);
+    gl.blitFramebuffer(0, 0, hdrW, hdrH, 0, 0, hdrW, hdrH, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, hdrW, hdrH);
+    gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(false);
+    gl.disable(gl.BLEND);
+    gl.disable(gl.CULL_FACE);
+    gl.bindBuffer(gl.ARRAY_BUFFER, postVB);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, hdrTex);
+    gl.useProgram(toneP.pr);
+    gl.uniform1i(toneP.u.uTex, 0);
+    postDraw(toneP);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(true);
   }
 
   // シーンを描き終えたあとに呼ぶ
@@ -8496,7 +8636,7 @@
     starVis = 1 - skyF * 0.98;   // 明るい空では星が見えない
     skyDayF = skyF;
 
-    gl.clearColor(0.015, 0.02, 0.045, 1);
+    setClearColor(0.015, 0.02, 0.045);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
 
@@ -9484,7 +9624,7 @@
     }
 
     skyDayF = 0;   // 宇宙ビューに明るい空は無い (Bloom のしきい値を戻す)
-    gl.clearColor(0.016, 0.023, 0.055, 1);
+    setClearColor(0.016, 0.023, 0.055);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
@@ -11290,7 +11430,9 @@
     tourRideCam();     // ガイドツアー: 探査機視点のステップはカメラを直接置く
     introStep(now / 1000);   // 初回の導入: カメラを寄せる (流していなければ素通り)
     perfLap("更新");
+    hdrBegin();          // HDR 経路のときだけオフスクリーンへ向ける
     render(now / 1000);
+    hdrEnd();            // 解決 → トーンマップ → 画面
     perfLap("描画(他)");
     bloomPass();          // 明るいところの滲み (シーンを描き終えてから)
     perfLap("Bloom");

@@ -10,6 +10,25 @@
     ? glc.getContext("webgl2", GL_ATTR) : null;
   const isGL2 = !!gl2;
   const gl = gl2 || glc.getContext("webgl", GL_ATTR);
+  // リニア HDR 経路。シーンをリニアの放射輝度のままオフスクリーンへ描き、
+  // 最後にまとめてトーンマップする (合成は gl/post.js の hdrEnd)。
+  // 半精度の描画先が要るので、拡張が取れるときだけ有効にする
+  const hdrOn = isGL2 && !!gl.getExtension("EXT_color_buffer_float");
+
+  // 画面へ出したい色 (表示色) から、実際に clearColor へ渡す値を作る。
+  // HDR 経路ではバッファの中身がリニアの放射輝度なので、合成でトーンマップ
+  // されたときに狙った色になるよう逆算する (シェーダの outAdd と同じ式)。
+  // これを忘れると、背景の暗い紺色が 6倍ほど持ち上がって空が白ばむ
+  const srgbToLin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  function unTone(disp) {
+    const y = srgbToLin(Math.min(Math.max(disp, 0), 1));
+    const A = 2.51 - 2.43 * y, B = 0.59 * y - 0.03, C = 0.14 * y;
+    return (B + Math.sqrt(Math.max(B * B + 4 * A * C, 0))) / Math.max(2 * A, 1e-4) / 1.15;
+  }
+  function setClearColor(r, g, b) {
+    if (hdrOn) gl.clearColor(unTone(r), unTone(g), unTone(b), 1);
+    else gl.clearColor(r, g, b, 1);
+  }
   if (!gl) {
     document.getElementById("noGL").style.display = "grid";
     return;
@@ -140,7 +159,26 @@
     }
     // リニアの放射輝度 → 画面へ出す sRGB
     vec3 tonemap(vec3 lin) { return linearToSrgb(acesToneMap(lin * EXPOSURE)); }
-`;
+` + (hdrOn ? `
+    // ---- HDR 経路 ----
+    // 面の色はトーンマップせずにリニアのまま出す (合成パスでまとめて掛ける)
+    vec3 outLit(vec3 lin) { return lin; }
+    // 加算のパスは「画面にこの色を足す」つもりで値が書かれている。HDR の
+    // バッファへそのまま足すと合成でもう一度トーンマップされて濃くなるので、
+    // 逆算してリニアの放射輝度へ戻す。ACES の当てはめ式は
+    //   y = x(2.51x+0.03) / (x(2.43x+0.59)+0.14)
+    // の有理式なので、x について解ける (二次方程式の正の根)。
+    // y=1 でも x≈7.24 と有限に収まるので、発散の心配は要らない
+    vec3 acesInv(vec3 y) {
+      vec3 A = 2.51 - 2.43 * y, B = 0.59 * y - 0.03, C = 0.14 * y;
+      return (B + sqrt(max(B * B + 4.0 * A * C, 0.0))) / max(2.0 * A, 1e-4);
+    }
+    vec3 outAdd(vec3 disp) { return acesInv(srgbToLinear(clamp(disp, 0.0, 1.0))) / EXPOSURE; }
+` : `
+    // WebGL 1 経路: これまでどおり各パスでトーンマップし、加算は画面色のまま
+    vec3 outLit(vec3 lin) { return tonemap(lin); }
+    vec3 outAdd(vec3 disp) { return disp; }
+`);
   // 画素ごとの微分と、微分を指定したテクスチャ取得。どちらも天体テクスチャの
   // 継ぎ目対策に要る (下の bodyFS)
   // WebGL 2 ではどちらも標準機能。拡張として取れないので true を立てる
@@ -217,12 +255,13 @@
   const threshFS = PRE + `@@glsl:post-thresh.frag@@`;
   const blurFS = PRE + `@@glsl:post-blur.frag@@`;
   const addFS = PRE + `@@glsl:post-add.frag@@`;
+  const toneFS = PRE + `@@glsl:post-tone.frag@@`;
 
   // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
   // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
   let bodyRenderer;
   let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP, skyP, dsoP;
-  let threshP, blurP, addP;
+  let threshP, blurP, addP, toneP;
   try {
     bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
     skyP = program(skyVS, skyFS);
@@ -239,6 +278,7 @@
     threshP = program(postVS, threshFS);
     blurP = program(postVS, blurFS);
     addP = program(postVS, addFS);
+    if (hdrOn) toneP = program(postVS, toneFS);
   } catch (err) {
     console.error(err);
     document.getElementById("noGL").style.display = "grid";

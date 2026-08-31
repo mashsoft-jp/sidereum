@@ -76,6 +76,94 @@
     gl.disableVertexAttribArray(p.a.aPos);
   }
 
+  // ---------- HDR オフスクリーン (?gl=2 のときだけ) ----------
+  // シーンをリニアの放射輝度のまま RGBA16F へ描き、最後にまとめてトーンマップ
+  // する。各パスでトーンマップしてしまうと 1.0 を超える明るさ (太陽・恒星) が
+  // その時点で潰れ、滲みへ渡す情報が残らない。
+  //
+  // MSAA は自前で持つ。canvas の antialias は既定のフレームバッファにしか
+  // 効かないので、そのままオフスクリーンへ描くと軌道線がギザギザになる
+  // (WebGL 1 経路で画面を copyTexSubImage2D している理由がこれ)。
+  // マルチサンプルのレンダーバッファへ描き、blitFramebuffer で解決する。
+  //
+  // 合成したあとの画面は WebGL 1 のときとまったく同じ内容なので、Bloom は
+  // これまでどおり画面を取り込む経路のまま動く (この段では滲みの計算は
+  // 変えていない)。
+  let hdrW = 0, hdrH = 0, hdrReady = false, hdrFailed = false;
+  let msFB = null, msCol = null, msDep = null, hdrFB = null, hdrTex = null;
+
+  function hdrTargets() {
+    if (!hdrOn || hdrFailed) return false;
+    const w = glc.width, h = glc.height;
+    if (w < 8 || h < 8) return false;
+    if (hdrReady && w === hdrW && h === hdrH) return true;
+    if (msFB) {
+      gl.deleteFramebuffer(msFB); gl.deleteRenderbuffer(msCol); gl.deleteRenderbuffer(msDep);
+      gl.deleteFramebuffer(hdrFB); gl.deleteTexture(hdrTex);
+    }
+    hdrReady = false;
+    hdrW = w; hdrH = h;
+    const smp = Math.max(1, Math.min(4, gl.getParameter(gl.MAX_SAMPLES)));
+    msCol = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, msCol);
+    gl.renderbufferStorageMultisample(gl.RENDERBUFFER, smp, gl.RGBA16F, w, h);
+    msDep = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, msDep);
+    gl.renderbufferStorageMultisample(gl.RENDERBUFFER, smp, gl.DEPTH_COMPONENT24, w, h);
+    msFB = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, msFB);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, msCol);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, msDep);
+    const okMS = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    // 解決先。ここから合成パスが読む
+    hdrTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, hdrTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    hdrFB = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, hdrFB);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, hdrTex, 0);
+    const okRS = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    if (!okMS || !okRS) {
+      hdrFailed = true;
+      console.warn("HDR 用のフレームバッファを作れませんでした。既定の経路で描きます");
+      return false;
+    }
+    hdrReady = true;
+    return true;
+  }
+  // シーンを描く前。オフスクリーンへ向ける (使えないときは既定のまま)
+  function hdrBegin() {
+    if (!hdrTargets()) return;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, msFB);
+    gl.viewport(0, 0, hdrW, hdrH);
+  }
+  // シーンを描き終えたら、解決してトーンマップし、画面へ出す
+  function hdrEnd() {
+    if (!hdrReady || hdrFailed) return;
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, msFB);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, hdrFB);
+    gl.blitFramebuffer(0, 0, hdrW, hdrH, 0, 0, hdrW, hdrH, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, hdrW, hdrH);
+    gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(false);
+    gl.disable(gl.BLEND);
+    gl.disable(gl.CULL_FACE);
+    gl.bindBuffer(gl.ARRAY_BUFFER, postVB);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, hdrTex);
+    gl.useProgram(toneP.pr);
+    gl.uniform1i(toneP.u.uTex, 0);
+    postDraw(toneP);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(true);
+  }
+
   // シーンを描き終えたあとに呼ぶ
   function bloomPass() {
     if (!bloomOn || !bloomTargets()) return;

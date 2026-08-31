@@ -53,7 +53,7 @@
       if (uSky > 0.5) {
         // ---- 大気 (地球のみ)。色は天体のエアライトと共有 (skyDayColor) ----
         vec3 night = vec3(0.0036, 0.0045, 0.0082);   // 画面上の (0.015, 0.02, 0.045)
-        gl_FragColor = vec4(tonemap(night * (1.0 - uSkyF)
+        gl_FragColor = vec4(outLit(night * (1.0 - uSkyF)
                                     + skyDayColor(d, uSun, uFlux) * uSkyGain), 1.0);
         return;
       }
@@ -101,5 +101,5 @@
                         uDay);
         col = mix(col, haze, 1.0 - smoothstep(0.0, 0.030, dy));
       }
-      gl_FragColor = vec4(tonemap(col), 1.0);
+      gl_FragColor = vec4(outLit(col), 1.0);
     }

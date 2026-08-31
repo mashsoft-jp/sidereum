@@ -9,5 +9,5 @@
       float d = length(vUv);
       float a = pow(max(1.0 - d, 0.0), uFall);
       vec3 c = mix(uCol1, uCol2, a);
-      gl_FragColor = vec4(c * a * 0.9, 0.0);
+      gl_FragColor = vec4(outAdd(c * a * 0.9), 0.0);
     }

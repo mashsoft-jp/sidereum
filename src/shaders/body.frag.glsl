@@ -88,7 +88,7 @@
                        vec3(0.520, 0.220, 0.080),     // 前方散乱 (朝焼け色)
                        fwd * 0.7)
                  * (1.0 - exp(-tau)) * sun;
-        gl_FragColor = vec4(tonemap(col * uExt), 0.0);   // 乗算済みアルファでの加算
+        gl_FragColor = vec4(outLit(col * uExt), 0.0);   // 乗算済みアルファでの加算
         return;
       }
 
@@ -157,7 +157,7 @@
         // 空や他の天体には足しているのにここだけ抜けていた。無いと、減光された
         // 円盤より周りの空の方が明るくなり、夕日が空に開いた黒い穴になる
         // (下の天体の経路にある「新月の月が黒い円盤になる」のと同じ話)
-        gl_FragColor = vec4(tonemap(c * uExt + skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain), 1.0);
+        gl_FragColor = vec4(outLit(c * uExt + skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain), 1.0);
         return;
       }
 
@@ -410,5 +410,5 @@
       // (掛けると二重に減ることになる)
       c *= uExt;
       c += skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain;
-      gl_FragColor = vec4(tonemap(c), 1.0);
+      gl_FragColor = vec4(outLit(c), 1.0);
     }

@@ -318,7 +318,7 @@
     starVis = 1 - skyF * 0.98;   // 明るい空では星が見えない
     skyDayF = skyF;
 
-    gl.clearColor(0.015, 0.02, 0.045, 1);
+    setClearColor(0.015, 0.02, 0.045);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
 

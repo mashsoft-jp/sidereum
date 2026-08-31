@@ -6,5 +6,5 @@
     varying float vY;
     void main() {
       float a = exp(-vY * vY * 3.2);
-      gl_FragColor = vec4(vCol * a, 0.0);
+      gl_FragColor = vec4(outAdd(vCol * a), 0.0);
     }

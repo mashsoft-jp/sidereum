@@ -67,5 +67,5 @@
       // エアライトへ alpha を掛けるのは、背景の空を隠したぶんだけ足し戻す
       // ため (乗算済みアルファ。隠していない画素の空はそのまま背後に残る)
       c = c * uExt + skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain * alpha;
-      gl_FragColor = vec4(tonemap(c), alpha);
+      gl_FragColor = vec4(outLit(c), alpha);
     }
