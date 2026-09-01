@@ -11960,6 +11960,14 @@
   // ---------- 入力 ----------
   const pointers = new Map();
   let dragMoved = 0, pinchDist = 0, pinchMidX = 0, pinchMidY = 0;
+  let dollyY = 0, dollyN = 0;   // 3本指ドラッグ (距離)。dollyN は本数が変わった回を捨てるため
+
+  // 3本指の重心の縦位置。指の本数が変わると飛ぶので、変わった回は使わない
+  function ptrAvgY() {
+    let s = 0;
+    for (const p of pointers.values()) { s += p.y; }
+    return s / pointers.size;
+  }
 
   // 平行移動 (パン): 注視点を画面平行にずらす。宇宙ビューのみ。
   // PC: 右ドラッグ or Shift+ドラッグ、スマホ: 2本指スワイプ
@@ -11992,6 +12000,10 @@
       pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
       pinchMidX = (a.x + b.x) / 2;
       pinchMidY = (a.y + b.y) / 2;
+    }
+    if (pointers.size >= 3) {
+      dollyY = ptrAvgY();
+      dollyN = pointers.size;
     }
     glc.classList.add("dragging");
   });
@@ -12036,6 +12048,17 @@
       pinchDist = d;
       pinchMidX = mx;
       pinchMidY = my;
+    } else if (pointers.size >= 3) {
+      // 3本指の上下ドラッグで注視点との距離。ピンチ (拡大率) と2本指スワイプ
+      // (平行移動) が埋まっているので、距離だけスライダーへ手を伸ばす必要が
+      // あった。向きは「上 = 近づく」— スライダー右 = 接近、＋ = 近づくと揃える。
+      // 係数は Shift+ホイール (0.0016/delta) の5ノッチぶんが 150px に当たる量
+      const y = ptrAvgY();
+      if (dollyN === pointers.size && !groundView) {
+        cam.distTgt = Math.max(minDist(), Math.min(1400, cam.distTgt * Math.exp((y - dollyY) * 0.006)));
+      }
+      dollyY = y;
+      dollyN = pointers.size;
     }
     if (dragMoved > 3) hideHint();
   });
@@ -12068,10 +12091,11 @@
     }
     pointers.delete(e.pointerId);
     pinchDist = 0;
+    dollyN = 0;
     if (!pointers.size) glc.classList.remove("dragging");
   }
   glc.addEventListener("pointerup", endPointer);
-  glc.addEventListener("pointercancel", (e) => { pointers.delete(e.pointerId); pinchDist = 0; });
+  glc.addEventListener("pointercancel", (e) => { pointers.delete(e.pointerId); pinchDist = 0; dollyN = 0; });
 
   glc.addEventListener("wheel", (e) => {
     e.preventDefault();
@@ -12890,7 +12914,7 @@
       space_rows: [
         ["回転", "ドラッグ (1本指ドラッグ)"],
         ["ズーム", "ホイール / ピンチ"],
-        ["距離", "Shift+ホイール、またはパネルの {dist} の行"],
+        ["距離", "Shift+ホイール / 3本指の上下ドラッグ (上で接近)、またはパネルの {dist} の行"],
         ["平行移動", "右ドラッグ / 2本指ドラッグ"],
         ["天体", "クリック / タップで選択・接近 (再度で枠と説明を隠す・何もない所で解除)"],
         ["視点", "パネルの {cam} プルダウン・右端の縦のスライダー"],
@@ -12919,7 +12943,7 @@
       space_rows: [
         ["Rotate", "Drag (one-finger drag)"],
         ["Zoom", "Wheel / pinch"],
-        ["Distance", "Shift+wheel, or the {dist} row in the panel"],
+        ["Distance", "Shift+wheel / three-finger drag (up to approach), or the {dist} row in the panel"],
         ["Pan", "Right-drag / two-finger drag"],
         ["Bodies", "Click / tap to select & approach (again hides the ring & panel · empty space deselects)"],
         ["Viewpoint", "The {cam} dropdown & the vertical slider at the right edge"],
