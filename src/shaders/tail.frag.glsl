@@ -47,5 +47,5 @@
       }
       a *= head * end * uAlpha;
       vec3 col = mix(uCol1, uCol2, smoothstep(0.0, 0.85, flow));
-      gl_FragColor = vec4(outAdd(col * a * extinctAt(vW)), 0.0);
+      gl_FragColor = vec4(col * a * extinctAt(vW), 0.0);
     }

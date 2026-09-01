@@ -318,7 +318,7 @@
     starVis = 1 - skyF * 0.98;   // 明るい空では星が見えない
     skyDayF = skyF;
 
-    setClearColor(0.015, 0.02, 0.045);
+    gl.clearColor(0.015, 0.02, 0.045, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
 
@@ -535,30 +535,17 @@
                          wr: SKYR * Math.tan(angR), rpx: spherePx });
         continue;
       }
-      let size, r, g, bl, extDone = false;
-      // 日食で欠けているぶん暗くする (点で描かれる倍率では形は出せない)
-      if (b === SUN && hdrOn) {
-        // 球で描いたときと同じ放射輝度になるように渡す。大気減光はリニアで
-        // 掛けてからトーンマップする — 表示色へ減光を掛けると、球と点で
-        // 明るさが食い違い、切り替わる大きさ (spherePx = 5) で 4倍飛ぶ。
-        // tonemap を掛けてから渡すのは、outAdd がちょうど元へ戻すため
-        size = 18 * (0.35 + 0.65 * sunLeft);
-        const eo = isMoonSurf ? -1 : extIdx(_gp[1]);
-        const ex = (i) => (eo < 0 ? 1 : EXT_TBL[eo + i]);
-        r = toneJS(SUN_RAD * sunLeft * ex(0));
-        g = toneJS(SUN_RAD * 0.9 * sunLeft * ex(1));
-        bl = toneJS(SUN_RAD * 0.6 * sunLeft * ex(2));
-        extDone = true;                       // 減光はここで済ませた
-      } else if (b === SUN) {
-        size = 18 * (0.35 + 0.65 * sunLeft);
-        r = 1.0 * sunLeft; g = 0.9 * sunLeft; bl = 0.6 * sunLeft;
+      let size, r, g, bl;
+      if (b === SUN) {
+        // 日食で欠けているぶん暗くする (点で描かれる倍率では形は出せない)
+        size = 18 * (0.35 + 0.65 * sunLeft); r = 1.0 * sunLeft; g = 0.9 * sunLeft; bl = 0.6 * sunLeft;
       } else if (b.key === "moon") {
         size = 11; r = 0.9; g = 0.92; bl = 0.96;
       } else {
         size = magSize(magV == null ? 3.5 : magV); r = b.colA[0]*0.5+0.5; g = b.colA[1]*0.5+0.5; bl = b.colA[2]*0.5+0.5;
       }
       // 恒星と同じく大気減光を掛ける (月面では素通り)
-      if (!isMoonSurf && !extDone) {
+      if (!isMoonSurf) {
         const eo = extIdx(_gp[1]);
         r *= EXT_TBL[eo]; g *= EXT_TBL[eo+1]; bl *= EXT_TBL[eo+2];
       }

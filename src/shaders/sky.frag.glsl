@@ -48,5 +48,5 @@
         float X = 1.0 / (sin(radians(h)) + 0.50572 * pow(h + 6.07995, -1.6364));
         c *= exp2(-1.3287712 * uExtK * (X - 1.0));   // 10^(-0.4 k (X-1))
       }
-      gl_FragColor = vec4(outAdd(c * uBright), 0.0);   // 乗算済みアルファでの加算
+      gl_FragColor = vec4(c * uBright, 0.0);   // 乗算済みアルファでの加算
     }

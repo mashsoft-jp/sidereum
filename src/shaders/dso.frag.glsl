@@ -8,5 +8,5 @@
       float r2 = dot(vQ, vQ);
       if (r2 > 1.0) discard;
       float a = exp(-3.2 * r2) - 0.040762;
-      gl_FragColor = vec4(outAdd(vCol * max(a, 0.0)), 0.0);   // 乗算済みアルファでの加算
+      gl_FragColor = vec4(vCol * max(a, 0.0), 0.0);   // 乗算済みアルファでの加算
     }

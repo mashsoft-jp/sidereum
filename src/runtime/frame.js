@@ -483,10 +483,8 @@
     tourRideCam();     // ガイドツアー: 探査機視点のステップはカメラを直接置く
     introStep(now / 1000);   // 初回の導入: カメラを寄せる (流していなければ素通り)
     perfLap("更新");
-    hdrBegin();          // HDR 経路のときだけオフスクリーンへ向ける
     render(now / 1000);
     perfLap("描画(他)");
-    hdrEnd();            // HDR: 解決 → 滲み → 合成 (WebGL 1 のときは何もしない)
     bloomPass();          // 明るいところの滲み (シーンを描き終えてから)
     perfLap("Bloom");
     updateClock();

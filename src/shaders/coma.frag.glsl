@@ -16,5 +16,5 @@
       // 遠距離では未解像の明るい頭部、接近時は境界のない淡いガス雲だけを残す
       vec3 light = uCol * (glow * 0.36 + inner * 0.42)
                  + vec3(1.0, 0.98, 0.92) * core * 2.80 * uCore;
-      gl_FragColor = vec4(outAdd(light * uAlpha * extinctAt(vW)), 0.0);
+      gl_FragColor = vec4(light * uAlpha * extinctAt(vW), 0.0);
     }
