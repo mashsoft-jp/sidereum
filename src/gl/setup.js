@@ -25,10 +25,18 @@
     const A = 2.51 - 2.43 * y, B = 0.59 * y - 0.03, C = 0.14 * y;
     return (B + Math.sqrt(Math.max(B * B + 4 * A * C, 0))) / Math.max(2 * A, 1e-4) / 1.15;
   }
-  // 点・板で太陽を描くときの明るさ。HDR ではリニアの放射輝度として渡す
-  // (body.frag の光球が 3.7〜8.0 なので、それに合わせる)。WebGL 1 経路は
-  // 画面色のままなので 1 = 白飛び
-  const SUN_RAD = hdrOn ? 8.0 : 1.0;
+  // 太陽を点で描くときの明るさ。球 (body.frag) の光球は 3.7〜8.0 のリニア値
+  // なので、点も同じ放射輝度で渡さないと、球と点が切り替わる大きさ
+  // (spherePx = 5) で明るさが飛ぶ。
+  //
+  // 渡し方に注意が要る。outAdd は 1 以下を表示色として往復させるので、
+  // 放射輝度をそのまま入れると嵩上げされる (1.76 → 7.06 と 4倍になっていた)。
+  // 逆に tonemap を掛けてから渡せば outAdd がちょうど元へ戻すので、球と
+  // 一致する。WebGL 1 経路は従来の画面色のままにする (見た目を変えない)
+  const SUN_RAD = 8.0;
+  const linToSrgb = (c) => (c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
+  const acesJS = (x) => Math.min(1, Math.max(0, (x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14)));
+  const toneJS = (lin) => linToSrgb(acesJS(lin * 1.15));
   function setClearColor(r, g, b) {
     if (hdrOn) gl.clearColor(unTone(r), unTone(g), unTone(b), 1);
     else gl.clearColor(r, g, b, 1);
