@@ -226,7 +226,7 @@
     {
       id: "basics-touch",
       platform: "touch",
-      ver: 24,
+      ver: 25,
       title: { ja: "はじめての操作", en: "Getting Started" },
       lead: {
         ja: "回転・拡大・天体の選択など、基本の操作を実際に試しながら覚えます。",
@@ -264,9 +264,11 @@
           scene: false, await: "dist", ui: ["controls"], hi: "#zoom",
           text: {
             ja: "{dist} の行は太陽系との距離を表します。" +
-                "スライダーを動かすか − ＋ をタップすると、距離が変わります。",
+                "スライダーを動かすか − ＋ をタップすると、距離が変わります。" +
+                "3本の指で上下にドラッグしても同じことができます (上で近づきます)。",
             en: "The {dist} row is your distance from the Solar System. Drag the slider, " +
-                "or tap − and +, to change it.",
+                "or tap − and +, to change it. Dragging up or down with three fingers " +
+                "does the same thing — up to move closer.",
           },
         },
         {
