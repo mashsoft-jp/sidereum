@@ -1118,6 +1118,15 @@
     }
     #tourText { margin: 6px 0 8px; font-size: 11.5px; line-height: 1.7; min-height: 0; }
     #tourPrev, #tourNext { min-width: 0; }
+    /* 段のドットは飾り (押せない。何段目かは見出しの「1 / 12」が示している)。
+       375px では ◀31 + ドット115 + 自動送り62 + 次へ55 + 隙間32 = 295px に
+       対して帯が287pxしかなく、8px 足りずにボタンの字が2行に折れていた
+       (「自動送 / り」)。ドットは13段で125pxまで伸びるうえ、「シーンに戻す」
+       が出る段ではさらに90px 要るので、詰めるだけでは足りない。出さない。
+       ◀ を左端へ残す押しは、ドットの margin-right: auto を引き継ぐ */
+    #tourDots { display: none; }
+    #tourPrev { margin-right: auto; }
+    #tourNav button { white-space: nowrap; }
     /* 縦持ち: 日付を上、時刻を下の2行にしてタイトルと重ならないよう幅を詰める */
     #clock .dtrow { flex-direction: column; align-items: flex-end; gap: 1px; }
     /* 情報パネル: 操作パネルの直上に、同程度の高さで内部スクロール。
