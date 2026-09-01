@@ -1319,3 +1319,80 @@
     #tourList .tourStart { padding: 4px 12px; font-size: 10px; }
   }
 
+
+  /* ---- タッチの当たり判定 ----
+     指の的は 44px 欲しいが、このアプリの操作は意図して小さく詰めてある。
+     見た目を変えずに当たり判定だけ外へ広げる。手は2つ:
+
+       a) 擬似要素を負の inset で置く  … button など普通の要素
+       b) padding と同量の負の margin  … 擬似要素を持てない input
+
+     b は「箱が padding ぶん膨らみ、負の margin が同じだけ引き戻す」ので、
+     中身の位置も外側の場所取りも変わらない。ただし box-sizing: border-box で
+     高さを固定してある相手には効かない (padding が中身を圧迫するだけで箱は
+     太らない)。#vmSelect / #camSelect がこれで、広げようとすると逆に縮む。
+
+     ★ 広げてよいのは隣に何も無い方向だけ。隣接した的を広げると、重なった
+       ぶん相手のタップを奪う — 小さいより悪い。だから隙間の半分までに留め、
+       届かないものは届かないままにする。実測した頭打ちは次のとおり:
+
+         操作パネル (スライダー・− ＋・再生)  行間隔 28.6px → 28px まで
+         右端の ▲▼                          親が 36px 幅  → 42px まで
+         天体リストの行とトグル              行間 4px      → 広げられない
+         宇宙/地上/月面・カメラ (select)     高さ固定      → 広げられない
+         観測地チップ                        後述          → 広げられない
+         « »                                 画面端 (#app が overflow:hidden)
+
+     #obsSiteChip は overflow:hidden (長い地名を「…」で省略する) なので擬似
+     要素が切り取られ、a が効かない。b で padding を足すと丸い枠そのものが
+     太るので、これも使えない。108x30 のまま置く。
+
+     ポインタが粗いときだけ掛ける。幅で分けると、狭くしたデスクトップの窓まで
+     太らせることになる — 的の大きさは窓の幅ではなく指の話なので。 */
+  @media (pointer: coarse) {
+    /* スライダー: トラックは細いまま中央に残るので、高さを増やしても線は
+       変わらない。増えたぶんは負の margin で引き戻す (行の間隔を保つ)。
+       28px は行間隔 28.6px いっぱい — これ以上は隣の行から奪う */
+    #speed, #mag, #zoom, #gFov, #gAz, #gAlt {
+      height: 28px; margin-block: -6px;
+    }
+    /* 縦のスライダーは横へ。#angleCell #angle の指定に勝てる詳細度で書く。
+       ★ margin-inline を使わないこと。この2つは writing-mode: vertical-lr
+         なので inline 軸が縦になり、上下へ食い込んで ▲▼ を覆ってしまう */
+    #angleCell #angle, #gAltCell #gAlt {
+      width: 44px; margin-left: -18px; margin-right: -18px;
+    }
+
+    /* 擬似要素で広げる組。位置指定を持たない相手には position も足す */
+    #menuBtn, #nowBtn, #ctrlCollapse, #navExpand, #navCollapse, #closeInfo,
+    #angleUp, #angleDown, #gAltUp, #gAltDown, #play,
+    #infoTabs button {
+      position: relative;
+    }
+    #menuBtn::after, #nowBtn::after, #ctrlCollapse::after, #navExpand::after,
+    #navCollapse::after, #closeInfo::after, #angleUp::after, #angleDown::after,
+    #gAltUp::after, #gAltDown::after,
+    #play::after, #infoTabs button::after {
+      content: ""; position: absolute;   /* 背景を持たないので見えない */
+    }
+    /* 上下左右とも空いているもの */
+    #menuBtn::after   { inset: -10px -8px; }
+    #closeInfo::after { inset: -11px -9px; }
+    /* 縦だけ空いているもの (左右は隣か画面端) */
+    #navExpand::after   { inset: 0 -7px; }
+    #nowBtn::after      { inset: -12px 0; }
+    #ctrlCollapse::after { inset: -10px 0; }
+    #navCollapse::after { inset: -6px 0; }
+    #play::after        { inset: -10px 0; }
+    #infoTabs button::after { inset: -8px 0; }   /* -16 だと見出しまで覆う */
+    /* 縦スライダーの ▲▼: 横は親をはみ出して取る。縦はスライダーが近い。
+       宇宙ビュー (#angle) と地上ビュー (#gAlt) で別の要素なので両方に掛ける */
+    #angleUp::after, #angleDown::after,
+    #gAltUp::after, #gAltDown::after { inset: -8px -10px; }
+    /* 既に ::before で広げてあるが 34x32 止まりなので 44 まで伸ばす */
+    #tzText::before { inset: -15px -11px; }
+
+    /* 日付・時刻は入力欄なので padding + 負の margin (上の b) */
+    #dateInput { padding-block: 13px; margin-block: -13px; }
+    #timeInput { padding-block: 12px; margin-block: -12px; }
+  }
