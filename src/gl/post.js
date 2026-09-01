@@ -93,15 +93,13 @@
   let msFB = null, msCol = null, msDep = null, hdrFB = null, hdrTex = null;
   let hbW = 0, hbH = 0;
   const hbTex = [null, null], hbFB = [null, null];
-  // リニアでのしきい値。1.0 = 正面から照らされた白い面。
+  // 滲ませる画素は「トーンマップ後の明るさ」で選ぶ (post-hdr-thresh)。
+  // リニア値で切ると、地平の太陽のように「リニアでは 0.6 だが画面では眩しい」
+  // ものを取りこぼす。しきい値の式は WebGL 1 経路とまったく同じ。
   //
-  // 固定にしてはいけない。夕方は大気減光で太陽の円盤が 1.3 程度まで落ち、
-  // 1.0 をかろうじて超えるだけになって滲みがほとんど出なかった。一方で空の
-  // 側は skyAdaptGain (目の順応) で持ち上げているので、暗い場面ほど「何を
-  // 明るいと見なすか」の基準が下がる。WebGL 1 経路が skyDayF でしきい値を
-  // 動かしているのと同じ考え方で、昼は高く・薄明から夜は低くする
-  const hdrThresh = () => 0.25 + skyDayF * 0.90;
-  const HDR_AMOUNT = 0.55;
+  // 違うのは運ぶ中身で、あちらは表示色、こちらはリニアのエネルギー。だから
+  // 同じ画素を選んでも、桁違いに明るいものはそのぶん強く滲む
+  const HDR_AMOUNT = 0.30;
 
   // HDR のぼかし先。8bit だと 1.0 で頭打ちになり、太陽のような
   // 桁違いに明るいものの情報がここで消える
@@ -205,7 +203,7 @@
       gl.useProgram(hdrThreshP.pr);
       gl.uniform1i(hdrThreshP.u.uTex, 0);
       gl.uniform2f(hdrThreshP.u.uTexel, 1 / hdrW, 1 / hdrH);
-      gl.uniform1f(hdrThreshP.u.uThresh, hdrThresh());
+      gl.uniform1f(hdrThreshP.u.uThresh, Math.min(0.96, BLOOM_THRESH + skyDayF * 0.24));
       postDraw(hdrThreshP);
       gl.useProgram(blurP.pr);
       gl.uniform1i(blurP.u.uTex, 0);

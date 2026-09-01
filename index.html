@@ -5783,18 +5783,19 @@
     }
 `;
   const hdrThreshFS = PRE + `
-    // HDR 経路のしきい値。リニアの放射輝度から「1.0 を超えたぶん」だけを
-    // 取り出しながら 1/4 に縮小する。
+    // HDR 経路のしきい値。1/4 に縮小しながら、滲ませる画素を選ぶ。
     //
-    // WebGL 1 経路 (post-thresh) は表示色に対して 0.72 で切っていた。そちらは
-    // トーンマップ後の画面を見ているので、太陽も明るい雲も 1.0 に潰れていて
-    // 区別できず、昼は空そのものがしきい値を超えるため skyDayF で持ち上げる
-    // 細工が要った。リニアなら「1.0 = 正面から照らされた白い面」が基準なので、
-    // 昼の空 (0.2 前後) は自然に外れ、太陽 (8 前後) だけが残る。
+    // 選ぶ基準は「トーンマップ後の明るさ」= 画面でどう見えるか。リニア値で
+    // 切ってはいけない — トーンマップは強い圧縮なので、地平の太陽 (リニア
+    // 0.56) は画面では 0.75 の明るい画素になる。リニアの 1.0 で切ると、
+    // 見た目には眩しい夕日が滲みに拾われない。
+    //
+    // 渡すのはリニアの色そのもの。選ぶのは表示、運ぶのはエネルギー。これで
+    // 「拾う画素は WebGL 1 と同じ、滲みの強さは本来の明るさに比例」になる。
     varying vec2 vUv;
     uniform sampler2D uTex;
     uniform vec2 uTexel;     // 元画像の 1テクセル
-    uniform float uThresh;   // これを超えたぶんだけ滲ませる [リニア]
+    uniform float uThresh;   // これ以下の明るさは光らせない [表示]
 
     void main() {
       vec3 c = texture2D(uTex, vUv + uTexel * vec2(-1.0, -1.0)).rgb
@@ -5802,8 +5803,11 @@
              + texture2D(uTex, vUv + uTexel * vec2(-1.0,  1.0)).rgb
              + texture2D(uTex, vUv + uTexel * vec2( 1.0,  1.0)).rgb;
       c *= 0.25;
-      // 硬く切らず、超えたぶんをそのまま渡す。リニアなので階段は出ない
-      gl_FragColor = vec4(max(c - uThresh, 0.0), 1.0);
+      // 明るさは最大成分で見る。輝度で見ると、青い大気の縁のように
+      // 「特定の色だけが強い」ところを取りこぼす
+      vec3 d = tonemap(c);
+      float l = max(max(d.r, d.g), d.b);
+      gl_FragColor = vec4(c * smoothstep(uThresh, min(uThresh + 0.25, 1.0), l), 1.0);
     }
 `;
 
@@ -6369,15 +6373,13 @@
   let msFB = null, msCol = null, msDep = null, hdrFB = null, hdrTex = null;
   let hbW = 0, hbH = 0;
   const hbTex = [null, null], hbFB = [null, null];
-  // リニアでのしきい値。1.0 = 正面から照らされた白い面。
+  // 滲ませる画素は「トーンマップ後の明るさ」で選ぶ (post-hdr-thresh)。
+  // リニア値で切ると、地平の太陽のように「リニアでは 0.6 だが画面では眩しい」
+  // ものを取りこぼす。しきい値の式は WebGL 1 経路とまったく同じ。
   //
-  // 固定にしてはいけない。夕方は大気減光で太陽の円盤が 1.3 程度まで落ち、
-  // 1.0 をかろうじて超えるだけになって滲みがほとんど出なかった。一方で空の
-  // 側は skyAdaptGain (目の順応) で持ち上げているので、暗い場面ほど「何を
-  // 明るいと見なすか」の基準が下がる。WebGL 1 経路が skyDayF でしきい値を
-  // 動かしているのと同じ考え方で、昼は高く・薄明から夜は低くする
-  const hdrThresh = () => 0.25 + skyDayF * 0.90;
-  const HDR_AMOUNT = 0.55;
+  // 違うのは運ぶ中身で、あちらは表示色、こちらはリニアのエネルギー。だから
+  // 同じ画素を選んでも、桁違いに明るいものはそのぶん強く滲む
+  const HDR_AMOUNT = 0.30;
 
   // HDR のぼかし先。8bit だと 1.0 で頭打ちになり、太陽のような
   // 桁違いに明るいものの情報がここで消える
@@ -6481,7 +6483,7 @@
       gl.useProgram(hdrThreshP.pr);
       gl.uniform1i(hdrThreshP.u.uTex, 0);
       gl.uniform2f(hdrThreshP.u.uTexel, 1 / hdrW, 1 / hdrH);
-      gl.uniform1f(hdrThreshP.u.uThresh, hdrThresh());
+      gl.uniform1f(hdrThreshP.u.uThresh, Math.min(0.96, BLOOM_THRESH + skyDayF * 0.24));
       postDraw(hdrThreshP);
       gl.useProgram(blurP.pr);
       gl.uniform1i(blurP.u.uTex, 0);
