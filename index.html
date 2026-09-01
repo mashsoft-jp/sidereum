@@ -977,6 +977,9 @@
     font-weight: 600;
     letter-spacing: 0.06em;
   }
+  /* 「詳しく見る」。狭い画面で情報カードを 160px から広げるためのもので、
+     PC では丸ごと出ない (高さの制限が無いので広げる先が無い) */
+  #infoMore { display: none; }
   /* 基本情報 / 地球から見る タブ */
   #infoTabs { display: flex; gap: 6px; margin: 0 0 12px; }
   #infoTabs button {
@@ -1143,6 +1146,36 @@
       transform: translateY(8px);
     }
     #info.open { transform: none; }
+    /* 「詳しく見る」で 50vh まで広げる。天体リストの上へかぶさるが、
+       詳細を読みに来ているのだから隠してよい (✕ か「折りたたむ」で戻る)。
+       dvh はアドレスバーの出入りで高さが変わる端末向け (対応が無ければ
+       直前の vh が残る) */
+    #info.tall { max-height: 50vh; max-height: 50dvh; }
+    /* カードの底に貼り付ける。スクロールしても隠れないよう sticky。
+       背景は --panel と同じ色を不透明で敷く — 0.86 のままだと下を流れる
+       文字が透けて読みにくい。左右と下は padding (20px / 16px) を負の
+       margin で食い破り、カードの端まで届かせる */
+    #infoMore {
+      display: block;
+      position: sticky;
+      bottom: -16px;
+      width: calc(100% + 40px);
+      margin: 10px -20px -16px;
+      padding: 8px 0;
+      background: #090e1c;
+      border: none;
+      border-top: 1px solid var(--line);
+      border-radius: 0;
+      color: var(--accent);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+    }
+    /* 畳んだときの 160px のうち帯が取るぶんは、見える中身がそのまま減る。
+       見た目は 32px に抑え、当たり判定だけ上へ伸ばして 44px を確保する。
+       下へ伸ばさないのは、カードの下端で overflow に切られるため */
+    #infoMore::after {
+      content: ""; position: absolute; inset: -12px 0 0;
+    }
     #hint { display: none; }
     #menu { top: calc(60px + var(--sat)); }
     /* top は指定しない。上端は観測地バーぶんを空けた 108px で全画面サイズ共通 */
@@ -1286,6 +1319,16 @@
       scrollbar-width: thin;
     }
     #info.open { transform: none; }
+    /* 「詳しく見る」は縦持ちで 160px に抑えているぶんを広げるためのもの。
+       横持ちは上のとおり高さの決め方が別で、160px の制限も無い。ここで
+       50vh に広げると 230px → 188px と、むしろ縮んでしまうので出さない。
+       畳んだ状態のまま向きを変えても効かないよう .tall も打ち消す
+       (#info.tall は #info より詳細度が高いので、明示的に上書きする) */
+    #infoMore { display: none; }
+    #info.tall {
+      max-height: calc(100vh - 63px);
+      max-height: calc(100dvh - 63px - var(--sat) - env(safe-area-inset-bottom, 0px));
+    }
   }
 
   /* ---- モバイル共通 (縦持ち・横持ち) ---- */
@@ -1541,6 +1584,7 @@
     <table><tbody id="infoRows"></tbody></table>
     <p class="fact" id="infoFact"></p>
     <p class="credit" id="infoCredit"></p>
+    <button id="infoMore" aria-expanded="false"></button>
   </aside>
 
   <div id="hint">ドラッグで回転 ・ ホイール / ピンチでズーム (Shift+で距離) ・ 天体クリックで接近</div>
@@ -2441,6 +2485,7 @@
       menuNavShow: "天体リストを表示",
       obs: {
         tabFacts: "基本情報", tabObs: "地球から見る",
+        more: "詳しく見る", less: "折りたたむ",
         loc: "観測地", geo: "現在地", custom: "カスタム",
         N: "北", S: "南", E: "東", W: "西",
         az: "方位", alt: "高度", rise: "出", transit: "南中", set: "入",
@@ -2528,6 +2573,7 @@
       menuNavShow: "Show body list",
       obs: {
         tabFacts: "Facts", tabObs: "From Earth",
+        more: "Show more", less: "Show less",
         loc: "Site", geo: "My location", custom: "Custom",
         N: "N", S: "S", E: "E", W: "W",
         az: "Azimuth", alt: "Altitude", rise: "Rise", transit: "Transit", set: "Set",
@@ -11670,6 +11716,22 @@
   }
 
   let infoTab = "facts", currentInfoBody = null, lastObsStr = "";
+  // 「詳しく見る」: 狭い画面で情報カードを 160px から 50vh へ広げる。
+  // 開いた状態は天体を選び直しても持ち越す (詳細を読み比べたいはずなので)
+  const infoMoreBtn = document.getElementById("infoMore");
+  let infoTall = false;
+  function syncInfoMore() {
+    const t = T();
+    infoPanel.classList.toggle("tall", infoTall);
+    infoMoreBtn.textContent = infoTall ? t.obs.less : t.obs.more;
+    infoMoreBtn.setAttribute("aria-expanded", infoTall ? "true" : "false");
+    // 畳んだ状態で中身が収まっているなら、押しても何も起きないので出さない。
+    // 広げているときは「折りたたむ」が要るので必ず出す
+    infoMoreBtn.style.visibility =
+      (infoTall || infoPanel.scrollHeight > infoPanel.clientHeight + 2) ? "" : "hidden";
+  }
+  infoMoreBtn.addEventListener("click", () => { infoTall = !infoTall; syncInfoMore(); });
+
   const tabFactsBtn = document.getElementById("tabFacts");
   const tabObsBtn = document.getElementById("tabObs");
   const obsCity = document.getElementById("obsCity");
@@ -11724,6 +11786,7 @@
         ? t.imgPrefix + cr + (MONO_TEX.has(body.key) ? t.monoTex : "")
         : t.procTex;
     }
+    syncInfoMore();   // 中身を入れ終えてから測る (溢れているかで出し分けるため)
   }
   function openInfo(body) { currentInfoBody = body; renderInfoBody(); infoPanel.classList.add("open"); }
   // 観測モード表示中は時間経過に合わせて数値を更新

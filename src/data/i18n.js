@@ -81,6 +81,7 @@
       menuNavShow: "天体リストを表示",
       obs: {
         tabFacts: "基本情報", tabObs: "地球から見る",
+        more: "詳しく見る", less: "折りたたむ",
         loc: "観測地", geo: "現在地", custom: "カスタム",
         N: "北", S: "南", E: "東", W: "西",
         az: "方位", alt: "高度", rise: "出", transit: "南中", set: "入",
@@ -168,6 +169,7 @@
       menuNavShow: "Show body list",
       obs: {
         tabFacts: "Facts", tabObs: "From Earth",
+        more: "Show more", less: "Show less",
         loc: "Site", geo: "My location", custom: "Custom",
         N: "N", S: "S", E: "E", W: "W",
         az: "Azimuth", alt: "Altitude", rise: "Rise", transit: "Transit", set: "Set",
