@@ -41,12 +41,13 @@
   }
   // 狭い画面のビュー切替は select なので、選択中の項目を合わせ直す
   function updateVmSelect() {
-    vmSelect.value = !groundView ? "space" : surfaceBody === "moon" ? "moon" : "ground";
+    vmSelect.value = !groundView ? "space" : surfaceBody === "moon" ? "moon" : arActive ? "ar" : "ground";
   }
   function syncViewModeUI() {
     vmSpaceBtn.classList.toggle("on", !groundView);
-    vmGroundBtn.classList.toggle("on", groundView && surfaceBody === "earth");
+    vmGroundBtn.classList.toggle("on", groundView && surfaceBody === "earth" && !arActive);
     vmMoonBtn.classList.toggle("on", groundView && surfaceBody === "moon");
+    vmARBtn.classList.toggle("on", arActive);
     updateVmSelect();
     updateHint();          // ビューに応じてヒントを差し替え・再表示
     refreshObsSiteUI();    // 観測地チップを地球/月で切り替え
@@ -54,6 +55,7 @@
   // 地球/月の地表ビューへ。body = "earth" | "moon"
   function enterSurface(body) {
     const changed = !groundView || surfaceBody !== body;
+    if (body === "moon") exitAR();   // 月面では端末の向きに意味が無い (AR は地球の地上だけ)
     surfaceBody = body;
     groundView = true;
     const app = document.getElementById("app");
@@ -71,18 +73,20 @@
   function enterGround() { enterSurface("earth"); }
   function enterMoon() { enterSurface("moon"); }
   function exitGround() {
+    exitAR();
     groundView = false;
     const app = document.getElementById("app");
     app.classList.remove("groundMode", "moonMode");
     syncViewModeUI();
   }
-  vmGroundBtn.addEventListener("click", enterGround);
+  vmGroundBtn.addEventListener("click", () => { exitAR(); enterGround(); });
   vmMoonBtn.addEventListener("click", enterMoon);
   vmSpaceBtn.addEventListener("click", exitGround);
   vmSelect.addEventListener("change", () => {
     const v = vmSelect.value;
-    if (v === "ground") enterGround();
+    if (v === "ground") { exitAR(); enterGround(); }
     else if (v === "moon") enterMoon();
+    else if (v === "ar") enterAR();
     else exitGround();
   });
 

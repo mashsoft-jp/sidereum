@@ -177,6 +177,13 @@
     color: var(--dim); border: 1px solid var(--line); border-radius: 13px; cursor: pointer;
   }
   #obsSiteChip:hover { color: var(--text); }
+  /* AR の方位補正チップ (観測地チップの下) */
+  #arCal {
+    margin-top: 6px; padding: 5px 12px; font-size: 11px; letter-spacing: 0.04em; white-space: nowrap;
+    color: var(--dim); border: 1px solid var(--line); border-radius: 13px; cursor: pointer;
+  }
+  #arCal[hidden] { display: none; }
+  #arCal:hover { color: var(--text); }
   #obsSitePop { position: absolute; top: calc(100% + 4px); left: 0; z-index: 20;
     padding: 10px 12px; width: 236px; border-radius: 10px; }
   #obsSitePop[hidden] { display: none; }
@@ -1483,10 +1490,13 @@
       <option value="space">宇宙</option>
       <option value="ground">地上</option>
       <option value="moon">月面</option>
+      <option value="ar">AR</option>
     </select>
     <button id="vmSpace" class="on">宇宙</button>
     <button id="vmGround">地上</button>
     <button id="vmMoon">月面</button>
+    <!-- AR (端末を空へ向ける)。センサーの無い環境では ui/ar.js が取り除く -->
+    <button id="vmAR">AR</button>
   </div>
 
   <!-- 項目が15個まで増え、同じ見た目で連なると目的のものを探せない。案内 / 表示 /
@@ -1526,6 +1536,8 @@
   <!-- 観測地 (地上=地球の観測地 / 月面=月面地点)。ハンバーガーと天体リストの間に配置 -->
   <div id="obsSiteBar">
     <button id="obsSiteChip" class="hud" aria-haspopup="true" aria-expanded="false"></button>
+    <!-- AR の方位補正 (0 でないときだけ。タップで戻す) -->
+    <button id="arCal" class="hud" hidden></button>
     <div id="obsSitePop" class="hud" hidden>
       <div id="obsLoc">
         <select id="obsCity" aria-label="都市"></select>
@@ -2419,9 +2431,14 @@
       ariaSats: (n) => n + "の衛星", ariaMembers: (n) => n + "の天体",
       nowBtn: "現在時刻に合わせる", rateSuffix: "/秒", rateReal: "実時間",
       viewTop: "真上", viewDef: "デフォルト", viewSide: "真横", camera: "カメラ",
-      viewSpace: "宇宙", viewGround: "地上", viewMoon: "月面", gFovLabel: "ズーム", gAzLabel: "方位", gAltLabel: "高度",
+      viewSpace: "宇宙", viewGround: "地上", viewMoon: "月面", viewAR: "AR", gFovLabel: "ズーム", gAzLabel: "方位", gAltLabel: "高度",
       hint: "ドラッグで回転 ・ 右ドラッグ / 2本指で移動 ・ ホイール / ピンチでズーム (Shift+で距離) ・ 天体クリックで接近",
       hintGround: "ドラッグで見回す ・ ホイール / ピンチでズーム ・ 天体タップで選択・追尾",
+      hintAR: "端末を空へ向ける ・ 星を実際の位置へドラッグして方位を補正 ・ ピンチでズーム",
+      hintARRel: "この端末は方位を取れません ・ 星を実際の位置へドラッグして合わせてください",
+      arDenied: "端末の向きを使う許可が得られなかったので、AR を始められませんでした",
+      arNoSensor: "この端末では向きのセンサーが使えないため、AR を始められませんでした",
+      arCal: (d) => "方位補正 " + d + "  ✕",
       noGL: "お使いの環境では WebGL が利用できないため、<br>3D 表示を開始できませんでした。",
       // GPU 側の都合で描画が止まったとき (ドライバのリセット・スリープ復帰・メモリ不足)
       glLost: "GPU の描画が中断されました。<br>読み込み直すと、いまの日時・視点のまま再開します。",
@@ -2508,9 +2525,14 @@
       ariaSats: (n) => "Moons of " + n, ariaMembers: (n) => "Bodies in " + n,
       nowBtn: "Set to current time", rateSuffix: "/s", rateReal: "Real time",
       viewTop: "Top", viewDef: "Default", viewSide: "Side", camera: "Camera",
-      viewSpace: "Space", viewGround: "Ground", viewMoon: "Moon", gFovLabel: "Zoom", gAzLabel: "Azimuth", gAltLabel: "Alt",
+      viewSpace: "Space", viewGround: "Ground", viewMoon: "Moon", viewAR: "AR", gFovLabel: "Zoom", gAzLabel: "Azimuth", gAltLabel: "Alt",
       hint: "Drag to rotate · Right-drag / two fingers to pan · Wheel / pinch to zoom (Shift for distance) · Click a body to approach",
       hintGround: "Drag to look around · Wheel / pinch to zoom · Tap a body to select & track",
+      hintAR: "Point the device at the sky · Drag a star onto its real position to correct the heading · Pinch to zoom",
+      hintARRel: "This device has no compass · Drag a star onto its real position to align",
+      arDenied: "Permission to use the device orientation was not granted, so AR could not start",
+      arNoSensor: "No orientation sensor is available on this device, so AR could not start",
+      arCal: (d) => "Heading " + d + "  ✕",
       noGL: "WebGL is not available in this environment,<br>so the 3D view could not be started.",
       glLost: "The GPU stopped rendering.<br>Reloading picks up at the same date and viewpoint.",
       glLostHiRes: "<br>High-res textures are heavy, so they are turned off on reload.",
@@ -8587,9 +8609,15 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, skyVB);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sky), gl.STATIC_DRAW);
     }
-    const ca = Math.cos(gAlt);
-    _fwd[0] = ca*Math.sin(gAz); _fwd[1] = Math.sin(gAlt); _fwd[2] = -ca*Math.cos(gAz);
-    mLookAt(ZERO3, _fwd, UP3, gV64);
+    if (arActive && arHave) {
+      // AR: 端末の姿勢そのもの (ロール込み)。gAz/gAlt は arStep がこれから写している
+      _fwd[0] = arFwd[0]; _fwd[1] = arFwd[1]; _fwd[2] = arFwd[2];
+      mLookAt(ZERO3, _fwd, arUp, gV64);
+    } else {
+      const ca = Math.cos(gAlt);
+      _fwd[0] = ca*Math.sin(gAz); _fwd[1] = Math.sin(gAlt); _fwd[2] = -ca*Math.cos(gAz);
+      mLookAt(ZERO3, _fwd, UP3, gV64);
+    }
     // ズーム時は near を引き上げて深度分解能を確保する (天体球と環の相互隠蔽に必要。
     // near 0.05 のままだと距離100での深度精度 ~0.012 が球の奥行きを超えてしまう)
     const gNear = Math.min(50, Math.max(0.05, 0.05 * (60 * DEG) / gFov));
@@ -9330,6 +9358,10 @@
     // 目印が無くなってしまうので、選択マークは名前とは別に出す
     const marked = showSelMark ? selected : null;
     const spotB = tourSpot ? BODY_BY_KEY.get(tourSpot) : null;
+    // 画面上での鉛直の向き。通常のカメラは傾かないので画面の縦だが、AR では端末の
+    // ロールぶん回る。ワールドの天頂 (0,1,0) をビュー空間へ送った (gV64[4], gV64[5])
+    // が画面上の「上」の向き (canvas は y が下向きなので符号が反る)
+    const rollPhi = arActive ? Math.atan2(-gV64[4], -gV64[5]) : Math.PI;
     for (const v of groundVis) {
       const s = projGround([v.px, v.py, v.pz]);
       if (!s || s.x < -30 || s.x > W + 30) continue;
@@ -9342,7 +9374,7 @@
         const kv = flatK(v.py / (Math.hypot(v.px, v.py, v.pz) || 1));
         const rr = Math.max(v.rpx, 3);
         octx.beginPath();
-        octx.ellipse(s.x, s.y, rr + 6, rr * kv + 6, 0, 0, 2 * Math.PI);
+        octx.ellipse(s.x, s.y, rr + 6, rr * kv + 6, rollPhi, 0, 2 * Math.PI);
         octx.strokeStyle = "rgba(242,178,62,0.9)";
         octx.lineWidth = 1.2;
         octx.stroke();
@@ -9351,6 +9383,34 @@
       if (!v.b.showLabel) continue;
       lblPut(bName(v.b), s.x, s.y - Math.max(v.rpx, 3) - 8, hit ? LBL_SEL : lblPri(v.b),
              hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.82)", LF11);
+    }
+    // AR: 選択天体が画面の外なら、その方向へ矢印を出す。追尾でカメラを向けられない
+    // ので、端末をどちらへ振ればよいかを示す (裏側にあっても最短で回る向きになる)
+    if (arActive && marked && marked.key !== surfaceBody) {
+      const c = surfaceAltAz(marked);
+      azAltDir(c.az, c.alt, _gp);
+      const s = projGround([_gp[0]*SKYR, _gp[1]*SKYR, _gp[2]*SKYR]);
+      if (!(s && s.x >= 0 && s.x <= W && s.y >= 0 && s.y <= H)) {
+        // ビュー空間 (x 右, y 上, −z 前) での向き
+        const vx = gV64[0]*_gp[0] + gV64[4]*_gp[1] + gV64[8]*_gp[2];
+        const vy = gV64[1]*_gp[0] + gV64[5]*_gp[1] + gV64[9]*_gp[2];
+        const vz = gV64[2]*_gp[0] + gV64[6]*_gp[1] + gV64[10]*_gp[2];
+        const ang = Math.atan2(vx, vy);            // 画面の上から時計回り
+        const sep = Math.acos(Math.max(-1, Math.min(1, -vz))) / DEG;
+        const cx = W * 0.5, cy = H * 0.5, R = Math.min(W, H) * 0.32;
+        const dx = Math.sin(ang), dy = -Math.cos(ang);
+        const ex = cx + dx * R, ey = cy + dy * R;
+        octx.save();
+        octx.translate(ex, ey);
+        octx.rotate(ang);
+        octx.beginPath();
+        octx.moveTo(0, -14); octx.lineTo(9, 4); octx.lineTo(0, 0); octx.lineTo(-9, 4); octx.closePath();
+        octx.fillStyle = "rgba(242,178,62,0.9)";
+        octx.fill();
+        octx.restore();
+        lblPut(bName(marked) + "  " + Math.round(sep) + "°", ex - dx * 26, ey - dy * 26 + 4,
+               LBL_SEL, "rgba(242,178,62,0.95)", LF12);
+      }
     }
     lblEnd();
   }
@@ -9399,12 +9459,13 @@
   }
   // 狭い画面のビュー切替は select なので、選択中の項目を合わせ直す
   function updateVmSelect() {
-    vmSelect.value = !groundView ? "space" : surfaceBody === "moon" ? "moon" : "ground";
+    vmSelect.value = !groundView ? "space" : surfaceBody === "moon" ? "moon" : arActive ? "ar" : "ground";
   }
   function syncViewModeUI() {
     vmSpaceBtn.classList.toggle("on", !groundView);
-    vmGroundBtn.classList.toggle("on", groundView && surfaceBody === "earth");
+    vmGroundBtn.classList.toggle("on", groundView && surfaceBody === "earth" && !arActive);
     vmMoonBtn.classList.toggle("on", groundView && surfaceBody === "moon");
+    vmARBtn.classList.toggle("on", arActive);
     updateVmSelect();
     updateHint();          // ビューに応じてヒントを差し替え・再表示
     refreshObsSiteUI();    // 観測地チップを地球/月で切り替え
@@ -9412,6 +9473,7 @@
   // 地球/月の地表ビューへ。body = "earth" | "moon"
   function enterSurface(body) {
     const changed = !groundView || surfaceBody !== body;
+    if (body === "moon") exitAR();   // 月面では端末の向きに意味が無い (AR は地球の地上だけ)
     surfaceBody = body;
     groundView = true;
     const app = document.getElementById("app");
@@ -9429,18 +9491,20 @@
   function enterGround() { enterSurface("earth"); }
   function enterMoon() { enterSurface("moon"); }
   function exitGround() {
+    exitAR();
     groundView = false;
     const app = document.getElementById("app");
     app.classList.remove("groundMode", "moonMode");
     syncViewModeUI();
   }
-  vmGroundBtn.addEventListener("click", enterGround);
+  vmGroundBtn.addEventListener("click", () => { exitAR(); enterGround(); });
   vmMoonBtn.addEventListener("click", enterMoon);
   vmSpaceBtn.addEventListener("click", exitGround);
   vmSelect.addEventListener("change", () => {
     const v = vmSelect.value;
-    if (v === "ground") enterGround();
+    if (v === "ground") { exitAR(); enterGround(); }
     else if (v === "moon") enterMoon();
+    else if (v === "ar") enterAR();
     else exitGround();
   });
 
@@ -11420,6 +11484,7 @@
     gAz += (gAzTgt - gAz) * k;
     gAlt += (gAltTgt - gAlt) * k;
     gFov += (gFovTgt - gFov) * k;
+    arStep();          // AR: 端末の姿勢で上書き (AR でなければ素通り)
 
     tourRideCam();     // ガイドツアー: 探査機視点のステップはカメラを直接置く
     introStep(now / 1000);   // 初回の導入: カメラを寄せる (流していなければ素通り)
@@ -11831,20 +11896,26 @@
     const i = parseInt(obsCity.value, 10);
     if (i >= 0) setObsSite(CITIES[i].lat, CITIES[i].lon);
   });
-  obsGeoBtn.addEventListener("click", () => {
-    if (!navigator.geolocation) return;
-    obsGeoBtn.disabled = true;
+  // 観測地を端末の現在地へ。取れても取れなくても onEnd(取れたか) を呼ぶ。
+  // 観測地ポップアップのボタンと AR モードの入口が使う
+  function locateSite(onEnd) {
+    if (!navigator.geolocation) { if (onEnd) onEnd(false); return; }
     navigator.geolocation.getCurrentPosition(
       (p) => {
-        obsGeoBtn.disabled = false;
         // 端末が今いる場所なので、常用時は端末の時間帯でよい
         let z = null;
         try { z = Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch (e) { /* 未対応 */ }
         setObsSite(+p.coords.latitude.toFixed(3), +p.coords.longitude.toFixed(3), z);
+        if (onEnd) onEnd(true);
       },
-      () => { obsGeoBtn.disabled = false; },
+      () => { if (onEnd) onEnd(false); },
       { timeout: 8000, maximumAge: 600000 }
     );
+  }
+  obsGeoBtn.addEventListener("click", () => {
+    if (!navigator.geolocation) return;
+    obsGeoBtn.disabled = true;
+    locateSite(() => { obsGeoBtn.disabled = false; });
   });
 
   // ---------- 観測地 (ハンバーガーメニュー内。タップでエディタを展開) ----------
@@ -12170,7 +12241,11 @@
     dragMoved += Math.abs(dx) + Math.abs(dy);
 
     if (pointers.size === 1) {
-      if (groundView) {
+      if (groundView && arActive) {
+        // AR: 向きはセンサーが決めるので、ドラッグは方位の補正に充てる。星が指に
+        // 付いてくる向き (見えている星を実際の位置へ引いて合わせる)
+        arAdjustAz(-dx * 0.004 * (gFov / (60 * DEG)));
+      } else if (groundView) {
         const s = 0.004 * (gFov / (60 * DEG));   // 拡大時ほど細かく
         gTrack = false;                          // 手動で見回したら追尾解除
         gAz += dx * s;
@@ -12470,14 +12545,18 @@
     gFov = gFovTgt = MAX_FOV * Math.exp(Math.log(gMinFov() / MAX_FOV) * gFovInput.value / 100);
   });
   gFovInput.addEventListener("pointerdown", () => { gFovActive = true; });
-  gAltInput.addEventListener("input", () => { gTrack = false; gAlt = gAltTgt = Math.max(-1.4, Math.min(GALT_MAX, gAltInput.value * DEG)); });
+  gAltInput.addEventListener("input", () => {
+    if (arActive) return;   // AR では高度はセンサーが決める (表示だけ)
+    gTrack = false; gAlt = gAltTgt = Math.max(-1.4, Math.min(GALT_MAX, gAltInput.value * DEG));
+  });
   gAltInput.addEventListener("pointerdown", () => { gAltActive = true; });
   window.addEventListener("pointerup", () => { gFovActive = false; gAltActive = false; });
   const stepFov = (dir) => { gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, gFovTgt * (dir > 0 ? 1.3 : 1 / 1.3))); };
   bindHold(document.getElementById("gFovOut"), () => stepFov(1));    // − = 広げる
   bindHold(document.getElementById("gFovIn"), () => stepFov(-1));    // ＋ = 狭める (ズームイン)
-  bindHold(document.getElementById("gAzLeft"), () => { gTrack = false; gAzTgt -= gFov * 0.4; });
-  bindHold(document.getElementById("gAzRight"), () => { gTrack = false; gAzTgt += gFov * 0.4; });
+  // AR 中はテープと ◀▶ も方位の補正 (向きそのものはセンサーが決める)
+  bindHold(document.getElementById("gAzLeft"), () => { if (arActive) arAdjustAz(-gFov * 0.4); else { gTrack = false; gAzTgt -= gFov * 0.4; } });
+  bindHold(document.getElementById("gAzRight"), () => { if (arActive) arAdjustAz(gFov * 0.4); else { gTrack = false; gAzTgt += gFov * 0.4; } });
   // 目盛りテープのドラッグ/スワイプでも方位を回せる (テープが指に追従する向き)
   let tapeDragX = null;
   gAzTape.addEventListener("pointerdown", (e) => {
@@ -12488,14 +12567,17 @@
   gAzTape.addEventListener("pointermove", (e) => {
     if (tapeDragX === null) return;
     const w = gAzTape.getBoundingClientRect().width || 1;
-    gTrack = false;
-    gAz -= (e.clientX - tapeDragX) * (100 / w) * DEG;   // テープの表示範囲は ±50°
-    gAzTgt = gAz;
+    const d = (e.clientX - tapeDragX) * (100 / w) * DEG;   // テープの表示範囲は ±50°
     tapeDragX = e.clientX;
+    if (arActive) { arAdjustAz(-d); return; }
+    gTrack = false;
+    gAz -= d;
+    gAzTgt = gAz;
   });
   gAzTape.addEventListener("pointerup", () => { tapeDragX = null; });
   gAzTape.addEventListener("pointercancel", () => { tapeDragX = null; });
   const stepAlt = (dir) => {
+    if (arActive) return;
     gTrack = false;
     gAltTgt = Math.max(-1.4, Math.min(GALT_MAX, gAltTgt + dir * gFov * 0.4));
   };
@@ -12639,6 +12721,213 @@
     }
   });
 
+  //#endregion
+  //#region src/ui/ar.js
+  // ---------- AR モード (端末を空へ向けて、その向きの空を見る) ----------
+  // 地上ビュー (地球) の一形態。端末の姿勢センサー (deviceorientation) から視線と
+  // 画面の上の向きを取り、gAz/gAlt の代わりにこの2本のベクトルでビュー行列を作る
+  // (renderGround)。端末を傾けたロールもそのまま画に出る。
+  //
+  // 座標系は3つ通る:
+  //   端末:  x 右, y 上 (画面の上端), z 画面の手前  — センサーの回転はこれを回す
+  //   地球:  x 東, y 北, z 天頂                      — deviceorientation の基準系
+  //   地平:  x 東, y 天頂, z 南 (= −北)              — azAltDir と同じ。描画はこれ
+  // iOS の alpha は真北ではなく起動時の向きが基準なので、webkitCompassHeading
+  // (真北からの方位) との差を arHeadOff に持って地球系で回して合わせる。
+  // Android (deviceorientationabsolute) は最初から真北基準なので差は 0。
+  let arActive = false;
+  let arHave = false;                          // 姿勢イベントを1回以上受け取った
+  const arFwdT = [0, 0, -1], arUpT = [0, 1, 0]; // センサーの最新値 (目標)
+  const arFwd = [0, 0, -1], arUp = [0, 1, 0];   // 緩和後 (描画に使う)
+  let arAzOff = 0;        // 方位の手動補正 [rad]。コンパスのずれを、星を実際の位置へドラッグして直す
+  let arHeadOff = 0;      // iOS: alpha の基準 → 真北の補正 [rad]
+  let arHeadHave = false;
+  let arAbs = false;      // 絶対方位のイベント (deviceorientationabsolute) を聞いている
+  let arRel = false;      // 方位の基準が取れない端末 (相対の姿勢だけ。方位は手で合わせる)
+  let arSaved = null;     // 入る前の再生状態 (速度・再生)。出るときに戻す
+  let arWake = null;      // 画面を消灯させない (Screen Wake Lock)
+  let arWaitTimer = 0;
+  let arCalShown = "";
+  // 対応の目安: タッチ端末か、iOS の権限 API がある (iPad + ポインタも拾う)。
+  // デスクトップの Chrome にも DeviceOrientationEvent はあるがイベントは来ないので、
+  // それだけで出すと「押しても何も起きないボタン」になる
+  const arSupported = "DeviceOrientationEvent" in window &&
+    (matchMedia("(hover: none) and (pointer: coarse)").matches ||
+     typeof DeviceOrientationEvent.requestPermission === "function");
+  const vmARBtn = document.getElementById("vmAR");
+  const vmAROpt = vmSelect.querySelector('option[value="ar"]');
+  const arCalEl = document.getElementById("arCal");
+  if (!arSupported) { vmARBtn.remove(); vmAROpt.remove(); }
+  else document.getElementById("app").classList.add("arReady");
+
+  function screenAngle() {
+    if (screen.orientation && typeof screen.orientation.angle === "number") return screen.orientation.angle;
+    return typeof window.orientation === "number" ? window.orientation : 0;
+  }
+  // 角度の折り返し wrapPi は ui/tour.js のものを使う (実行時にしか呼ばないので連結順は問わない)
+  function arOnOrient(e) {
+    if (e.alpha == null || e.beta == null || e.gamma == null) {
+      // 絶対方位を出せない端末 (磁気センサー無し) は相対の姿勢へ落とす
+      if (arAbs) {
+        window.removeEventListener("deviceorientationabsolute", arOnOrient);
+        window.addEventListener("deviceorientation", arOnOrient);
+        arAbs = false;
+      }
+      return;
+    }
+    const a = e.alpha * DEG, b = e.beta * DEG, g = e.gamma * DEG;
+    const cA = Math.cos(a), sA = Math.sin(a), cB = Math.cos(b), sB = Math.sin(b);
+    const cG = Math.cos(g), sG = Math.sin(g);
+    // R = Rz(α)·Rx(β)·Ry(γ) (W3C の定義)。端末座標 → 地球座標。列が端末の各軸の向き
+    const xE = cA*cG - sA*sB*sG, xN = cG*sA + cA*sB*sG, xU = -cB*sG;   // 端末 x (右)
+    const yE = -cB*sA,           yN = cA*cB,            yU = sB;       // 端末 y (上端)
+    const zE = cG*sA*sB + cA*sG, zN = sA*sG - cA*cG*sB, zU = cB*cG;    // 端末 z (手前)
+    // 方位の基準: iOS はコンパスの向き (真北基準) と、行列が言う「端末の向いている方」
+    // の差を補正にする。向いている方は 上端 + 裏 の水平成分 — 寝かせていれば上端、
+    // 立てていれば裏 (カメラ) が水平に出て、そのあいだも途切れない
+    const absolute = arAbs || e.absolute === true;
+    if (!absolute && typeof e.webkitCompassHeading === "number" && e.webkitCompassHeading >= 0) {
+      const pE = yE - zE, pN = yN - zN;
+      if (pE * pE + pN * pN > 0.01) {
+        const d = wrapPi(e.webkitCompassHeading * DEG - Math.atan2(pE, pN));
+        if (!arHeadHave) { arHeadOff = d; arHeadHave = true; }
+        else arHeadOff += wrapPi(d - arHeadOff) * 0.05;   // コンパスは震えるので遅い緩和
+      }
+    } else if (!absolute && !arRel) {
+      arRel = true;   // 方位の基準が無い。案内を差し替える
+      updateHint();
+    }
+    // 画面の向き (横持ち): 画面の上 = 端末座標で (sin θ, cos θ, 0)。θ=90 は端末を
+    // 反時計回りに倒して上端が左へ行った姿勢で、そのとき画面の上は端末の右端 (+x)
+    const so = screenAngle() * DEG, cs = Math.cos(so), ss = Math.sin(so);
+    let uE = ss * xE + cs * yE, uN = ss * xN + cs * yN;
+    const uU = ss * xU + cs * yU;
+    let fE = -zE, fN = -zN;            // 視線 = 端末の裏
+    const fU = -zU;
+    // 方位の補正: 地球系で天頂まわりに時計回り (北 → 東) に回す
+    const rot = arHeadOff + arAzOff, cr = Math.cos(rot), sr = Math.sin(rot);
+    let t = fE * cr + fN * sr; fN = -fE * sr + fN * cr; fE = t;
+    t = uE * cr + uN * sr; uN = -uE * sr + uN * cr; uE = t;
+    // 地球系 (東, 北, 天頂) → 地平系 (東, 天頂, −北)
+    arFwdT[0] = fE; arFwdT[1] = fU; arFwdT[2] = -fN;
+    arUpT[0] = uE; arUpT[1] = uU; arUpT[2] = -uN;
+    if (!arHave) {   // 最初の1回は緩和せず即時に採る (既定の向きから回ってくる動きを見せない)
+      arFwd[0] = fE; arFwd[1] = fU; arFwd[2] = -fN;
+      arUp[0] = uE; arUp[1] = uU; arUp[2] = -uN;
+    }
+    arHave = true;
+  }
+  // 毎フレーム: センサー値へ緩和で寄せ、方位・高度へ写す (frame.js のカメラ緩和の直後)
+  function arStep() {
+    if (!arActive || !arHave) return;
+    const k = 0.45;   // 地上ビューの緩和より速く追従させる (手の動きに遅れると酔う)
+    for (let i = 0; i < 3; i++) {
+      arFwd[i] += (arFwdT[i] - arFwd[i]) * k;
+      arUp[i] += (arUpT[i] - arUp[i]) * k;
+    }
+    let l = Math.hypot(arFwd[0], arFwd[1], arFwd[2]);
+    if (l < 1e-3) { arFwd[0] = arFwdT[0]; arFwd[1] = arFwdT[1]; arFwd[2] = arFwdT[2]; l = 1; }
+    arFwd[0] /= l; arFwd[1] /= l; arFwd[2] /= l;
+    const dot = arUp[0]*arFwd[0] + arUp[1]*arFwd[1] + arUp[2]*arFwd[2];
+    arUp[0] -= dot * arFwd[0]; arUp[1] -= dot * arFwd[1]; arUp[2] -= dot * arFwd[2];
+    l = Math.hypot(arUp[0], arUp[1], arUp[2]);
+    if (l < 1e-3) { arUp[0] = arUpT[0]; arUp[1] = arUpT[1]; arUp[2] = arUpT[2]; l = 1; }
+    arUp[0] /= l; arUp[1] /= l; arUp[2] /= l;
+    // 方位・高度 (オーバーレイの目盛り・流星の視野・共有 URL が読む)。方位は連続に
+    gAz += wrapPi(Math.atan2(arFwd[0], -arFwd[2]) - gAz);
+    gAzTgt = gAz;
+    gAlt = gAltTgt = Math.asin(Math.max(-1, Math.min(1, arFwd[1])));
+    gTrack = false;   // 追尾は向きを変えられないので常に切る (矢印で場所を示す)
+    // 方位補正の表示 (0 のときは出さない)
+    const deg = Math.round(arAzOff / DEG);
+    const s = deg === 0 ? "" : T().arCal((deg > 0 ? "+" : "") + deg + "°");
+    if (s !== arCalShown) {
+      arCalShown = s;
+      arCalEl.hidden = !s;
+      if (s) arCalEl.textContent = s;
+    }
+  }
+  function arAdjustAz(dRad) { arAzOff = wrapPi(arAzOff + dRad); }
+  arCalEl.addEventListener("click", () => { arAzOff = 0; });
+
+  function arNotice(msg) {
+    hint.textContent = msg;
+    hint.classList.remove("fade");
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(hideHint, 9000);
+  }
+  function setRate(dps) {
+    daysPerSec = dps;
+    speedInput.value = Math.max(0, Math.min(100, Math.round(18 * Math.log(dps * 86400) / Math.log(60))));
+    speedVal.textContent = fmtRate(dps);
+  }
+  async function arWakeOn() {
+    try {
+      if (!navigator.wakeLock || arWake) return;
+      arWake = await navigator.wakeLock.request("screen");
+      arWake.addEventListener("release", () => { arWake = null; });
+    } catch (e) { /* 電池残量など。消灯するだけ */ }
+  }
+  function arWakeOff() {
+    if (arWake) { arWake.release().catch(() => {}); arWake = null; }
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (arActive && document.visibilityState === "visible") arWakeOn();
+  });
+
+  function enterAR() {
+    if (!arSupported || arActive) return;
+    // iOS 13+ は利用者の操作の中で権限を求める必要がある (await を挟むと通らない)
+    const req = typeof DeviceOrientationEvent.requestPermission === "function"
+      ? DeviceOrientationEvent.requestPermission() : Promise.resolve("granted");
+    req.then((r) => { if (r === "granted") arStart(); else arFail(T().arDenied); },
+             () => arFail(T().arDenied));
+  }
+  function arStart() {
+    arActive = true;
+    arHave = false; arHeadHave = false; arHeadOff = 0; arRel = false; arAzOff = 0;
+    if (!groundView || surfaceBody !== "earth") enterSurface("earth");
+    document.getElementById("app").classList.add("arMode");
+    // いまの空を見るのが目的なので実時間に合わせる。速度が実時間でないと星が流れる。
+    // 入る前の再生状態は控えて、出るときに戻す
+    arSaved = { daysPerSec, playing };
+    simDays = (Date.now() - J2000) / DAY_MS;
+    clockEdits++;
+    setRate(1 / 86400);
+    setPlaying(true);
+    // 深いズームのままでは手ぶれで見られない
+    if (gFov < 20 * DEG) gFov = gFovTgt = 60 * DEG;
+    gTrack = false;
+    arAbs = "ondeviceorientationabsolute" in window;
+    window.addEventListener(arAbs ? "deviceorientationabsolute" : "deviceorientation", arOnOrient);
+    clearTimeout(arWaitTimer);
+    arWaitTimer = setTimeout(() => { if (arActive && !arHave) arFail(T().arNoSensor); }, 2500);
+    locateSite();   // 観測地を端末の現在地へ (許可が無ければ今の観測地のまま)
+    arWakeOn();
+    syncViewModeUI();
+  }
+  function arFail(msg) {
+    exitAR();
+    arNotice(msg);
+  }
+  function exitAR() {
+    if (!arActive) return;
+    arActive = false;
+    clearTimeout(arWaitTimer);
+    window.removeEventListener("deviceorientationabsolute", arOnOrient);
+    window.removeEventListener("deviceorientation", arOnOrient);
+    document.getElementById("app").classList.remove("arMode");
+    arCalEl.hidden = true;
+    arCalShown = "";
+    if (arSaved) {
+      setRate(arSaved.daysPerSec);
+      setPlaying(arSaved.playing);
+      arSaved = null;
+    }
+    arWakeOff();
+    syncViewModeUI();
+  }
+  vmARBtn.addEventListener("click", enterAR);
   //#endregion
   //#region src/ui/menu.js
   // ---------- ハンバーガーメニュー & ライセンス表示 ----------
@@ -13118,6 +13407,7 @@
         ["方位・高度", "パネルのスライダー"],
         ["天体", "タップで選択・追尾"],
         ["観測地", "メニュー「観測地」(地上) / パネルの地点選択 (月面)"],
+        ["AR", "上部の「AR」(スマホ・タブレット)。端末を空へ向けると、その向きの空が出る。星を実際の位置へドラッグして方位を補正"],
       ],
       common_rows: [
         ["ビュー切替", "上部の 宇宙 / 地上 / 月面"],
@@ -13147,6 +13437,7 @@
         ["Azimuth / Alt.", "Sliders in the panel"],
         ["Bodies", "Tap to select & track"],
         ["Location", "Menu “Location” (ground) / site picker (Moon)"],
+        ["AR", "“AR” at the top (phones & tablets). Point the device at the sky to see that part of it. Drag a star onto its real position to correct the heading"],
       ],
       common_rows: [
         ["Switch view", "Space / Ground / Moon at the top"],
@@ -13254,10 +13545,12 @@
     vmSpaceBtn.textContent = t.viewSpace;
     vmGroundBtn.textContent = t.viewGround;
     vmMoonBtn.textContent = t.viewMoon;
+    vmARBtn.textContent = t.viewAR;
     const vmOpts = vmSelect.options;
     vmOpts[0].textContent = t.viewSpace;
     vmOpts[1].textContent = t.viewGround;
     vmOpts[2].textContent = t.viewMoon;
+    if (vmOpts[3]) vmOpts[3].textContent = t.viewAR;   // 非対応の端末では取り除かれている
     updateVmSelect();
     rebuildMoonSites();
     setCtlLabel("gFovLabel", t.gFovLabel);
@@ -13317,7 +13610,10 @@
     clearTimeout(hintTimer);
     hint.classList.add("fade");
   }
-  function hintText() { return groundView ? T().hintGround : T().hint; }
+  function hintText() {
+    if (arActive) return arRel ? T().hintARRel : T().hintAR;
+    return groundView ? T().hintGround : T().hint;
+  }
   function updateHint() {
     hint.textContent = hintText();
     hint.classList.remove("fade");
@@ -14067,6 +14363,7 @@
 
   function startTour(t, step) {
     if (!t) return;
+    exitAR();   // ツアーはカメラを自分で置くので、センサーに向きを取られては困る
     if (!tourSaved) tourSaved = captureTourState();   // 再入時は最初の状態を保つ
     // 自動送りはツアーごとに OFF から。前のツアーで入れたまま次を始めると、
     // 見るつもりで開いた場面が勝手に流れていってしまう。

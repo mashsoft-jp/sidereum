@@ -22,3 +22,5 @@ jobs:
       # 生成漏れの検出に加えて、build 内で連結後 JS の構文検査も行われる
       - name: index.html が src/ と一致しているか
         run: node tools/build.mjs --check
+      - name: AR の姿勢変換を確かめる
+        run: node tools/ar-test.mjs

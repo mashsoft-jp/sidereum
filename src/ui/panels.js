@@ -28,6 +28,7 @@
         ["方位・高度", "パネルのスライダー"],
         ["天体", "タップで選択・追尾"],
         ["観測地", "メニュー「観測地」(地上) / パネルの地点選択 (月面)"],
+        ["AR", "上部の「AR」(スマホ・タブレット)。端末を空へ向けると、その向きの空が出る。星を実際の位置へドラッグして方位を補正"],
       ],
       common_rows: [
         ["ビュー切替", "上部の 宇宙 / 地上 / 月面"],
@@ -57,6 +58,7 @@
         ["Azimuth / Alt.", "Sliders in the panel"],
         ["Bodies", "Tap to select & track"],
         ["Location", "Menu “Location” (ground) / site picker (Moon)"],
+        ["AR", "“AR” at the top (phones & tablets). Point the device at the sky to see that part of it. Drag a star onto its real position to correct the heading"],
       ],
       common_rows: [
         ["Switch view", "Space / Ground / Moon at the top"],
@@ -164,10 +166,12 @@
     vmSpaceBtn.textContent = t.viewSpace;
     vmGroundBtn.textContent = t.viewGround;
     vmMoonBtn.textContent = t.viewMoon;
+    vmARBtn.textContent = t.viewAR;
     const vmOpts = vmSelect.options;
     vmOpts[0].textContent = t.viewSpace;
     vmOpts[1].textContent = t.viewGround;
     vmOpts[2].textContent = t.viewMoon;
+    if (vmOpts[3]) vmOpts[3].textContent = t.viewAR;   // 非対応の端末では取り除かれている
     updateVmSelect();
     rebuildMoonSites();
     setCtlLabel("gFovLabel", t.gFovLabel);
@@ -227,7 +231,10 @@
     clearTimeout(hintTimer);
     hint.classList.add("fade");
   }
-  function hintText() { return groundView ? T().hintGround : T().hint; }
+  function hintText() {
+    if (arActive) return arRel ? T().hintARRel : T().hintAR;
+    return groundView ? T().hintGround : T().hint;
+  }
   function updateHint() {
     hint.textContent = hintText();
     hint.classList.remove("fade");

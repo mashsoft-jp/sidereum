@@ -63,6 +63,7 @@ const MANIFEST = [
   "runtime/frame.js",    // オーバーレイ・時刻表示・メインループ
   "ui/observe.js",       // 選択・観測モード・観測地・天体リスト
   "ui/controls.js",      // 入力・操作パネル・設定保存
+  "ui/ar.js",            // AR モード (端末の姿勢センサーで地上ビューのカメラを向ける)
   "ui/menu.js",          // メニュー・共有URL・About
   "ui/panels.js",        // 操作方法・初回ガイド・言語切替・ヒント
   "ui/tour.js",          // ガイドツアーの実行・ナレーションバー・一覧

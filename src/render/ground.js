@@ -275,9 +275,15 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, skyVB);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sky), gl.STATIC_DRAW);
     }
-    const ca = Math.cos(gAlt);
-    _fwd[0] = ca*Math.sin(gAz); _fwd[1] = Math.sin(gAlt); _fwd[2] = -ca*Math.cos(gAz);
-    mLookAt(ZERO3, _fwd, UP3, gV64);
+    if (arActive && arHave) {
+      // AR: 端末の姿勢そのもの (ロール込み)。gAz/gAlt は arStep がこれから写している
+      _fwd[0] = arFwd[0]; _fwd[1] = arFwd[1]; _fwd[2] = arFwd[2];
+      mLookAt(ZERO3, _fwd, arUp, gV64);
+    } else {
+      const ca = Math.cos(gAlt);
+      _fwd[0] = ca*Math.sin(gAz); _fwd[1] = Math.sin(gAlt); _fwd[2] = -ca*Math.cos(gAz);
+      mLookAt(ZERO3, _fwd, UP3, gV64);
+    }
     // ズーム時は near を引き上げて深度分解能を確保する (天体球と環の相互隠蔽に必要。
     // near 0.05 のままだと距離100での深度精度 ~0.012 が球の奥行きを超えてしまう)
     const gNear = Math.min(50, Math.max(0.05, 0.05 * (60 * DEG) / gFov));
@@ -1018,6 +1024,10 @@
     // 目印が無くなってしまうので、選択マークは名前とは別に出す
     const marked = showSelMark ? selected : null;
     const spotB = tourSpot ? BODY_BY_KEY.get(tourSpot) : null;
+    // 画面上での鉛直の向き。通常のカメラは傾かないので画面の縦だが、AR では端末の
+    // ロールぶん回る。ワールドの天頂 (0,1,0) をビュー空間へ送った (gV64[4], gV64[5])
+    // が画面上の「上」の向き (canvas は y が下向きなので符号が反る)
+    const rollPhi = arActive ? Math.atan2(-gV64[4], -gV64[5]) : Math.PI;
     for (const v of groundVis) {
       const s = projGround([v.px, v.py, v.pz]);
       if (!s || s.x < -30 || s.x > W + 30) continue;
@@ -1030,7 +1040,7 @@
         const kv = flatK(v.py / (Math.hypot(v.px, v.py, v.pz) || 1));
         const rr = Math.max(v.rpx, 3);
         octx.beginPath();
-        octx.ellipse(s.x, s.y, rr + 6, rr * kv + 6, 0, 0, 2 * Math.PI);
+        octx.ellipse(s.x, s.y, rr + 6, rr * kv + 6, rollPhi, 0, 2 * Math.PI);
         octx.strokeStyle = "rgba(242,178,62,0.9)";
         octx.lineWidth = 1.2;
         octx.stroke();
@@ -1039,6 +1049,34 @@
       if (!v.b.showLabel) continue;
       lblPut(bName(v.b), s.x, s.y - Math.max(v.rpx, 3) - 8, hit ? LBL_SEL : lblPri(v.b),
              hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.82)", LF11);
+    }
+    // AR: 選択天体が画面の外なら、その方向へ矢印を出す。追尾でカメラを向けられない
+    // ので、端末をどちらへ振ればよいかを示す (裏側にあっても最短で回る向きになる)
+    if (arActive && marked && marked.key !== surfaceBody) {
+      const c = surfaceAltAz(marked);
+      azAltDir(c.az, c.alt, _gp);
+      const s = projGround([_gp[0]*SKYR, _gp[1]*SKYR, _gp[2]*SKYR]);
+      if (!(s && s.x >= 0 && s.x <= W && s.y >= 0 && s.y <= H)) {
+        // ビュー空間 (x 右, y 上, −z 前) での向き
+        const vx = gV64[0]*_gp[0] + gV64[4]*_gp[1] + gV64[8]*_gp[2];
+        const vy = gV64[1]*_gp[0] + gV64[5]*_gp[1] + gV64[9]*_gp[2];
+        const vz = gV64[2]*_gp[0] + gV64[6]*_gp[1] + gV64[10]*_gp[2];
+        const ang = Math.atan2(vx, vy);            // 画面の上から時計回り
+        const sep = Math.acos(Math.max(-1, Math.min(1, -vz))) / DEG;
+        const cx = W * 0.5, cy = H * 0.5, R = Math.min(W, H) * 0.32;
+        const dx = Math.sin(ang), dy = -Math.cos(ang);
+        const ex = cx + dx * R, ey = cy + dy * R;
+        octx.save();
+        octx.translate(ex, ey);
+        octx.rotate(ang);
+        octx.beginPath();
+        octx.moveTo(0, -14); octx.lineTo(9, 4); octx.lineTo(0, 0); octx.lineTo(-9, 4); octx.closePath();
+        octx.fillStyle = "rgba(242,178,62,0.9)";
+        octx.fill();
+        octx.restore();
+        lblPut(bName(marked) + "  " + Math.round(sep) + "°", ex - dx * 26, ey - dy * 26 + 4,
+               LBL_SEL, "rgba(242,178,62,0.95)", LF12);
+      }
     }
     lblEnd();
   }

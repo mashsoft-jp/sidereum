@@ -32,10 +32,13 @@
       <option value="space">宇宙</option>
       <option value="ground">地上</option>
       <option value="moon">月面</option>
+      <option value="ar">AR</option>
     </select>
     <button id="vmSpace" class="on">宇宙</button>
     <button id="vmGround">地上</button>
     <button id="vmMoon">月面</button>
+    <!-- AR (端末を空へ向ける)。センサーの無い環境では ui/ar.js が取り除く -->
+    <button id="vmAR">AR</button>
   </div>
 
   <!-- 項目が15個まで増え、同じ見た目で連なると目的のものを探せない。案内 / 表示 /
@@ -75,6 +78,8 @@
   <!-- 観測地 (地上=地球の観測地 / 月面=月面地点)。ハンバーガーと天体リストの間に配置 -->
   <div id="obsSiteBar">
     <button id="obsSiteChip" class="hud" aria-haspopup="true" aria-expanded="false"></button>
+    <!-- AR の方位補正 (0 でないときだけ。タップで戻す) -->
+    <button id="arCal" class="hud" hidden></button>
     <div id="obsSitePop" class="hud" hidden>
       <div id="obsLoc">
         <select id="obsCity" aria-label="都市"></select>

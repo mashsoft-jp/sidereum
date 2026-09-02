@@ -479,6 +479,7 @@
     gAz += (gAzTgt - gAz) * k;
     gAlt += (gAltTgt - gAlt) * k;
     gFov += (gFovTgt - gFov) * k;
+    arStep();          // AR: 端末の姿勢で上書き (AR でなければ素通り)
 
     tourRideCam();     // ガイドツアー: 探査機視点のステップはカメラを直接置く
     introStep(now / 1000);   // 初回の導入: カメラを寄せる (流していなければ素通り)

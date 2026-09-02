@@ -60,7 +60,11 @@
     dragMoved += Math.abs(dx) + Math.abs(dy);
 
     if (pointers.size === 1) {
-      if (groundView) {
+      if (groundView && arActive) {
+        // AR: 向きはセンサーが決めるので、ドラッグは方位の補正に充てる。星が指に
+        // 付いてくる向き (見えている星を実際の位置へ引いて合わせる)
+        arAdjustAz(-dx * 0.004 * (gFov / (60 * DEG)));
+      } else if (groundView) {
         const s = 0.004 * (gFov / (60 * DEG));   // 拡大時ほど細かく
         gTrack = false;                          // 手動で見回したら追尾解除
         gAz += dx * s;
@@ -360,14 +364,18 @@
     gFov = gFovTgt = MAX_FOV * Math.exp(Math.log(gMinFov() / MAX_FOV) * gFovInput.value / 100);
   });
   gFovInput.addEventListener("pointerdown", () => { gFovActive = true; });
-  gAltInput.addEventListener("input", () => { gTrack = false; gAlt = gAltTgt = Math.max(-1.4, Math.min(GALT_MAX, gAltInput.value * DEG)); });
+  gAltInput.addEventListener("input", () => {
+    if (arActive) return;   // AR では高度はセンサーが決める (表示だけ)
+    gTrack = false; gAlt = gAltTgt = Math.max(-1.4, Math.min(GALT_MAX, gAltInput.value * DEG));
+  });
   gAltInput.addEventListener("pointerdown", () => { gAltActive = true; });
   window.addEventListener("pointerup", () => { gFovActive = false; gAltActive = false; });
   const stepFov = (dir) => { gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, gFovTgt * (dir > 0 ? 1.3 : 1 / 1.3))); };
   bindHold(document.getElementById("gFovOut"), () => stepFov(1));    // − = 広げる
   bindHold(document.getElementById("gFovIn"), () => stepFov(-1));    // ＋ = 狭める (ズームイン)
-  bindHold(document.getElementById("gAzLeft"), () => { gTrack = false; gAzTgt -= gFov * 0.4; });
-  bindHold(document.getElementById("gAzRight"), () => { gTrack = false; gAzTgt += gFov * 0.4; });
+  // AR 中はテープと ◀▶ も方位の補正 (向きそのものはセンサーが決める)
+  bindHold(document.getElementById("gAzLeft"), () => { if (arActive) arAdjustAz(-gFov * 0.4); else { gTrack = false; gAzTgt -= gFov * 0.4; } });
+  bindHold(document.getElementById("gAzRight"), () => { if (arActive) arAdjustAz(gFov * 0.4); else { gTrack = false; gAzTgt += gFov * 0.4; } });
   // 目盛りテープのドラッグ/スワイプでも方位を回せる (テープが指に追従する向き)
   let tapeDragX = null;
   gAzTape.addEventListener("pointerdown", (e) => {
@@ -378,14 +386,17 @@
   gAzTape.addEventListener("pointermove", (e) => {
     if (tapeDragX === null) return;
     const w = gAzTape.getBoundingClientRect().width || 1;
-    gTrack = false;
-    gAz -= (e.clientX - tapeDragX) * (100 / w) * DEG;   // テープの表示範囲は ±50°
-    gAzTgt = gAz;
+    const d = (e.clientX - tapeDragX) * (100 / w) * DEG;   // テープの表示範囲は ±50°
     tapeDragX = e.clientX;
+    if (arActive) { arAdjustAz(-d); return; }
+    gTrack = false;
+    gAz -= d;
+    gAzTgt = gAz;
   });
   gAzTape.addEventListener("pointerup", () => { tapeDragX = null; });
   gAzTape.addEventListener("pointercancel", () => { tapeDragX = null; });
   const stepAlt = (dir) => {
+    if (arActive) return;
     gTrack = false;
     gAltTgt = Math.max(-1.4, Math.min(GALT_MAX, gAltTgt + dir * gFov * 0.4));
   };

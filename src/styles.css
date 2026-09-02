@@ -161,6 +161,13 @@
     color: var(--dim); border: 1px solid var(--line); border-radius: 13px; cursor: pointer;
   }
   #obsSiteChip:hover { color: var(--text); }
+  /* AR の方位補正チップ (観測地チップの下) */
+  #arCal {
+    margin-top: 6px; padding: 5px 12px; font-size: 11px; letter-spacing: 0.04em; white-space: nowrap;
+    color: var(--dim); border: 1px solid var(--line); border-radius: 13px; cursor: pointer;
+  }
+  #arCal[hidden] { display: none; }
+  #arCal:hover { color: var(--text); }
   #obsSitePop { position: absolute; top: calc(100% + 4px); left: 0; z-index: 20;
     padding: 10px 12px; width: 236px; border-radius: 10px; }
   #obsSitePop[hidden] { display: none; }

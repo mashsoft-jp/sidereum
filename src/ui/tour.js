@@ -738,6 +738,7 @@
 
   function startTour(t, step) {
     if (!t) return;
+    exitAR();   // ツアーはカメラを自分で置くので、センサーに向きを取られては困る
     if (!tourSaved) tourSaved = captureTourState();   // 再入時は最初の状態を保つ
     // 自動送りはツアーごとに OFF から。前のツアーで入れたまま次を始めると、
     // 見るつもりで開いた場面が勝手に流れていってしまう。

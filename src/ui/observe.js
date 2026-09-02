@@ -383,20 +383,26 @@
     const i = parseInt(obsCity.value, 10);
     if (i >= 0) setObsSite(CITIES[i].lat, CITIES[i].lon);
   });
-  obsGeoBtn.addEventListener("click", () => {
-    if (!navigator.geolocation) return;
-    obsGeoBtn.disabled = true;
+  // 観測地を端末の現在地へ。取れても取れなくても onEnd(取れたか) を呼ぶ。
+  // 観測地ポップアップのボタンと AR モードの入口が使う
+  function locateSite(onEnd) {
+    if (!navigator.geolocation) { if (onEnd) onEnd(false); return; }
     navigator.geolocation.getCurrentPosition(
       (p) => {
-        obsGeoBtn.disabled = false;
         // 端末が今いる場所なので、常用時は端末の時間帯でよい
         let z = null;
         try { z = Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch (e) { /* 未対応 */ }
         setObsSite(+p.coords.latitude.toFixed(3), +p.coords.longitude.toFixed(3), z);
+        if (onEnd) onEnd(true);
       },
-      () => { obsGeoBtn.disabled = false; },
+      () => { if (onEnd) onEnd(false); },
       { timeout: 8000, maximumAge: 600000 }
     );
+  }
+  obsGeoBtn.addEventListener("click", () => {
+    if (!navigator.geolocation) return;
+    obsGeoBtn.disabled = true;
+    locateSite(() => { obsGeoBtn.disabled = false; });
   });
 
   // ---------- 観測地 (ハンバーガーメニュー内。タップでエディタを展開) ----------
