@@ -12872,11 +12872,23 @@
     p.set("y", cam.yawTgt.toFixed(4));
     p.set("spd", daysPerSec.toPrecision(6));
     p.set("play", playing ? "1" : "0");
+    // ビューと、地上・月面のカメラ。これが無いと共有も再読み込みも必ず宇宙
+    // ビューに戻り、「この空を見て」という共有が成り立たない。
+    // 観測地も載せる — 日時と同じで「どこから見た空か」はシーンの一部
+    // (地球は緯度経度、月面はプリセットの番号)
+    if (groundView) {
+      p.set("view", surfaceBody === "moon" ? "moon" : "ground");
+      p.set("gaz", (((gAzTgt / DEG) % 360 + 360) % 360).toFixed(2));
+      p.set("galt", (gAltTgt / DEG).toFixed(2));
+      p.set("gfov", (gFovTgt / DEG).toFixed(2));
+      if (surfaceBody === "moon") p.set("msite", moonSiteEl.value);
+      else { p.set("lat", obsLat.toFixed(3)); p.set("lon", obsLon.toFixed(3)); }
+    }
     return location.origin + location.pathname + "?" + p.toString();
   }
   function applyShareURL() {
     const q = new URLSearchParams(location.search);
-    if (!q.has("d") && !q.has("sel") && !q.has("z")) return false;
+    if (!q.has("d") && !q.has("sel") && !q.has("z") && !q.has("view")) return false;
     const d = q.get("d");
     if (d) {
       let iso = d;
@@ -12909,6 +12921,36 @@
     if (isFinite(mg) && mg >= 1) { camZoomTgt = Math.min(MAG_MAX, mg); camZoom = camZoomTgt; }
     if (isFinite(a)) { cam.pitchTgt = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, a)); cam.pitch = cam.pitchTgt; }
     if (isFinite(y)) { cam.yawTgt = y; cam.yaw = y; }
+
+    // 地上・月面ビューの復元。観測地は enterSurface が buildObsFrame で
+    // 基底を固めるより先に入れる。
+    // ★ localStorage へは書かない。受け取った人の「自分の観測地」を共有
+    //   リンクで書き換えないため — このセッションだけ差し替える
+    const view = q.get("view");
+    if (view === "ground" || view === "moon") {
+      if (view === "moon") {
+        const mi = parseInt(q.get("msite"), 10);
+        if (mi >= 0 && mi < MOON_SITES.length) {
+          moonLat = MOON_SITES[mi].lat;
+          moonLon = MOON_SITES[mi].lon;
+          moonSiteEl.value = String(mi);
+        }
+      } else {
+        const la = parseFloat(q.get("lat")), lo = parseFloat(q.get("lon"));
+        if (isFinite(la) && isFinite(lo) && Math.abs(la) <= 90 && Math.abs(lo) <= 180) {
+          obsLat = la;
+          obsLon = lo;
+          geoZone = null;   // 受け取った人が現在地から取った時間帯を引きずらせない
+        }
+      }
+      enterSurface(view === "moon" ? "moon" : "earth");
+      // enterSurface は選択天体の方へ向けて gTrack を立てるので、URL の向きで
+      // 上書きしてから追尾を切る (切らないと次のフレームで向き直してしまう)
+      const gz = parseFloat(q.get("gaz")), gl = parseFloat(q.get("galt")), gf = parseFloat(q.get("gfov"));
+      if (isFinite(gz)) { gAz = gAzTgt = gz * DEG; gTrack = false; gRadTrack = ""; }
+      if (isFinite(gl)) { gAlt = gAltTgt = Math.max(-1.3, Math.min(GALT_MAX, gl * DEG)); }
+      if (isFinite(gf)) { gFov = gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, gf * DEG)); }
+    }
     return true;
   }
   let shareResetTimer = 0;
