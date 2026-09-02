@@ -41,13 +41,13 @@
   }
   // 狭い画面のビュー切替は select なので、選択中の項目を合わせ直す
   function updateVmSelect() {
-    vmSelect.value = !groundView ? "space" : surfaceBody === "moon" ? "moon" : arActive ? "ar" : "ground";
+    vmSelect.value = !groundView ? "space" : surfaceBody === "moon" ? "moon" : (arActive || arPending) ? "ar" : "ground";
   }
   function syncViewModeUI() {
     vmSpaceBtn.classList.toggle("on", !groundView);
     vmGroundBtn.classList.toggle("on", groundView && surfaceBody === "earth" && !arActive);
     vmMoonBtn.classList.toggle("on", groundView && surfaceBody === "moon");
-    vmARBtn.classList.toggle("on", arActive);
+    vmARBtn.classList.toggle("on", arActive || arPending);
     updateVmSelect();
     updateHint();          // ビューに応じてヒントを差し替え・再表示
     refreshObsSiteUI();    // 観測地チップを地球/月で切り替え

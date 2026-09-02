@@ -143,7 +143,10 @@ WebGL のコンテキストは GPU 側の都合で失われる — ドライバ�
 空を見るのが目的で、速度が等倍でないと星が流れる。入る前の速度・再生状態は
 `arSaved` に控えて出るときに戻す。観測地は `locateSite()` で端末の現在地へ
 (許可が無ければ今の観測地のまま)。iOS 13+ の `requestPermission()` は利用者の操作の
-中で同期的に呼ぶ必要がある — `await` を挟むと通らない。
+中で同期的に呼ぶ必要がある — `await` を挟むと通らない。**狭い画面のビュー切替は
+`<select>` で、その `change` を Safari は操作とみなさない** (NotAllowedError。iPhone
+では AR に入れず、iPad の横幅ではボタンなので通った)。`navigator.userActivation.isActive`
+が立っていなければ「タップして AR を開始」(`#arStart`) を出し、その click で求める。
 
 センサーが無い環境 (デスクトップ) では `vmAR` のボタンと `<option>` を取り除く。
 `DeviceOrientationEvent` はデスクトップの Chrome にもあるがイベントは来ないので、

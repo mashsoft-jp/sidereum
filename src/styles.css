@@ -167,6 +167,14 @@
     color: var(--dim); border: 1px solid var(--line); border-radius: 13px; cursor: pointer;
   }
   #arCal[hidden] { display: none; }
+  #arStart {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 16;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 16px 24px; font-size: 14px; letter-spacing: 0.06em;
+    color: var(--text); border: 1px solid var(--accent); border-radius: 14px; cursor: pointer;
+  }
+  #arStart small { font-size: 11px; color: var(--dim); letter-spacing: 0.04em; }
+  #arStart[hidden] { display: none; }
   #arCal:hover { color: var(--text); }
   #obsSitePop { position: absolute; top: calc(100% + 4px); left: 0; z-index: 20;
     padding: 10px 12px; width: 236px; border-radius: 10px; }

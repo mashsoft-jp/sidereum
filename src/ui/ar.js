@@ -11,6 +11,7 @@
   // (真北からの方位) との差を arHeadOff に持って地球系で回して合わせる。
   // Android (deviceorientationabsolute) は最初から真北基準なので差は 0。
   let arActive = false;
+  let arPending = false;                       // 「タップして開始」を出して権限の要求を待っている
   let arHave = false;                          // 姿勢イベントを1回以上受け取った
   const arFwdT = [0, 0, -1], arUpT = [0, 1, 0]; // センサーの最新値 (目標)
   const arFwd = [0, 0, -1], arUp = [0, 1, 0];   // 緩和後 (描画に使う)
@@ -32,6 +33,7 @@
   const vmARBtn = document.getElementById("vmAR");
   const vmAROpt = vmSelect.querySelector('option[value="ar"]');
   const arCalEl = document.getElementById("arCal");
+  const arStartEl = document.getElementById("arStart");
   if (!arSupported) { vmARBtn.remove(); vmAROpt.remove(); }
   else document.getElementById("app").classList.add("arReady");
 
@@ -152,14 +154,33 @@
 
   function enterAR() {
     if (!arSupported || arActive) return;
-    // iOS 13+ は利用者の操作の中で権限を求める必要がある (await を挟むと通らない)
-    const req = typeof DeviceOrientationEvent.requestPermission === "function"
-      ? DeviceOrientationEvent.requestPermission() : Promise.resolve("granted");
-    req.then((r) => { if (r === "granted") arStart(); else arFail(T().arDenied); },
-             () => arFail(T().arDenied));
+    if (typeof DeviceOrientationEvent.requestPermission !== "function") { arStart(); return; }
+    // iOS 13+ は利用者の操作 (click / touchend) の中で同期的に権限を求める必要がある。
+    // 狭い画面のビュー切替は <select> で、その change は Safari が操作とみなさない
+    // (NotAllowedError で弾かれ、iPhone では AR に入れなかった)。操作が生きていなければ
+    // 「タップして開始」のボタンを出し、その click で求める
+    if (navigator.userActivation && !navigator.userActivation.isActive) { arAskStart(); return; }
+    arRequest();
   }
+  function arRequest() {
+    let p;
+    try { p = DeviceOrientationEvent.requestPermission(); } catch (e) { arAskStart(); return; }
+    p.then((r) => { if (r === "granted") arStart(); else arFail(T().arDenied); },
+           () => arAskStart());   // 操作の外で呼んだ NotAllowedError → ボタンで取り直す
+  }
+  function arAskStart() {
+    if (arActive) return;
+    arPending = true;
+    if (!groundView || surfaceBody !== "earth") enterSurface("earth");
+    arStartEl.innerHTML = T().arStartBtn + "<small>" + T().arStartNote + "</small>";
+    arStartEl.hidden = false;
+    syncViewModeUI();   // 切替の表示は AR のまま (待っているあいだに地上へ戻さない)
+  }
+  arStartEl.addEventListener("click", arRequest);
   function arStart() {
     arActive = true;
+    arPending = false;
+    arStartEl.hidden = true;
     arHave = false; arHeadHave = false; arHeadOff = 0; arRel = false; arAzOff = 0;
     if (!groundView || surfaceBody !== "earth") enterSurface("earth");
     document.getElementById("app").classList.add("arMode");
@@ -186,7 +207,8 @@
     arNotice(msg);
   }
   function exitAR() {
-    if (!arActive) return;
+    if (arPending) { arPending = false; arStartEl.hidden = true; }
+    if (!arActive) { syncViewModeUI(); return; }
     arActive = false;
     clearTimeout(arWaitTimer);
     window.removeEventListener("deviceorientationabsolute", arOnOrient);

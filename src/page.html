@@ -41,6 +41,10 @@
     <button id="vmAR">AR</button>
   </div>
 
+  <!-- iOS: 権限の要求は利用者のタップの中でしか通らないので、select から AR に入った
+       ときはこのボタンを押してもらう (ui/ar.js。それまで hidden) -->
+  <button id="arStart" class="hud" hidden></button>
+
   <!-- 項目が15個まで増え、同じ見た目で連なると目的のものを探せない。案内 / 表示 /
        画質 / 設定・情報 の4つの group に分ける (見出しの文言は applyLang が入れる)。
        観測地は別枠 -->
