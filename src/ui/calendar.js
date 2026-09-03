@@ -40,10 +40,8 @@
         return ev.data.retro
           ? { h: c.retroStart(nm(ev.key)), s: c.retroStartSub }
           : { h: c.retroEnd(nm(ev.key)), s: c.retroEndSub };
-      case "moonConj":
-        return ev.data.occult
-          ? { h: c.occult(nm(ev.key)), s: c.occultSub }
-          : { h: c.moonConj(nm(ev.key), ev.data.deg.toFixed(1)), s: "" };
+      case "occult":
+        return { h: c.occult(nm(ev.key)), s: c.occultSub };
       case "transit":
         return { h: c.transit(nm(ev.key)), s: c.transitSub };
       case "solarEclipse":
@@ -59,8 +57,6 @@
         return ev.data.east
           ? { h: c.elongEast(nm(ev.key), ev.data.deg.toFixed(0)), s: c.elongEastSub }
           : { h: c.elongWest(nm(ev.key), ev.data.deg.toFixed(0)), s: c.elongWestSub };
-      case "conjunction":
-        return { h: c.conjunction(nm(ev.key), nm(ev.data.with), ev.data.deg.toFixed(1)), s: "" };
       case "shower": {
         const sh = SHOWERS.find((x) => x.key === ev.key);
         return { h: c.shower(sh ? (lang === "ja" ? sh.ja : sh.en) : ev.key), s: "" };
@@ -138,9 +134,9 @@
       // 走査の端は1日単位なので、年の外へはみ出したぶんを落とす
       if (calYearOf(J2000 + ev.t * DAY_MS) !== calYear) return false;
       // 食・太陽面通過・掩蔽は「この観測地で見えるもの」だけ。地平線の下で起きていても
-      // 案内しようがない (月と惑星の接近は、月がゆっくり離れるので沈んでいても翌日に見える)
-      if (ev.kind === "solarEclipse" || ev.kind === "lunarEclipse" || ev.kind === "transit") return ev.data.up;
-      if (ev.kind === "moonConj" && ev.data.occult) return ev.data.up;
+      // 案内しようがない
+      if (ev.kind === "solarEclipse" || ev.kind === "lunarEclipse" || ev.kind === "transit" ||
+          ev.kind === "occult") return ev.data.up;
       return true;
     });
     // その年いちばん大きい / 小さい満月に印を付ける (暦年で閉じているのでここで決まる)
@@ -175,8 +171,8 @@
   // イベントを選んだときの飛び先。種別ごとに「それが見える画角」を決め打ちする
   const CAL_FOV = {
     solarEclipse: 1.6, lunarEclipse: 3, fullmoon: 4,
-    opposition: 20, elongation: 34, conjunction: 8, shower: 62,
-    season: 70, apsis: 3, station: 20, moonConj: 3, transit: 1.2,
+    opposition: 20, elongation: 34, shower: 62,
+    season: 70, apsis: 3, station: 20, occult: 1.5, transit: 1.2,
     perihelion: 30, closest: 45,   // 尾が何十度も伸びるので広めに
   };
   function goToEvent(ev) {
@@ -197,15 +193,13 @@
       select(null, false);
       aimGroundAtRadiant(ev.key, true);
     } else {
-      // 月と惑星の接近・太陽面通過は、主役 (惑星) より月・太陽を中心に据えたほうが収まる
-      const b = BODY_BY_KEY.get(ev.kind === "moonConj" ? "moon" : ev.kind === "transit" ? "sun" : ev.key);
+      // 掩蔽・太陽面通過は、主役 (惑星) より月・太陽を中心に据えたほうが収まる
+      const b = BODY_BY_KEY.get(ev.kind === "occult" ? "moon" : ev.kind === "transit" ? "sun" : ev.key);
       select(b, false);
       infoPanel.classList.remove("open");
       aimGroundAt(b, true);
     }
-    let fov = CAL_FOV[ev.kind];
-    if (ev.kind === "moonConj" && ev.data.occult) fov = 1.5;
-    gFov = gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, fov * DEG));
+    gFov = gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, CAL_FOV[ev.kind] * DEG));
     updateGroundUI();
   }
 
