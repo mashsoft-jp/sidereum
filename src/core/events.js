@@ -64,6 +64,23 @@
     return (a + b) / 2;
   }
 
+  // g(t) の極大・極小を step 日刻みで探し、詰めてから cb(t, isMax) へ渡す
+  function evScanExtrema(g, t0, t1, step, cb) {
+    let ga = g(t0 - step), gb = g(t0);
+    for (let t = t0; t < t1; t += step) {
+      const tc = Math.min(t + step, t1), gc = g(tc);
+      if (gb > ga && gb >= gc) cb(evPeak(g, t - step, tc), true);
+      else if (gb < ga && gb <= gc) cb(evPeak((x) => -g(x), t - step, tc), false);
+      ga = gb; gb = gc;
+    }
+  }
+  const evLen = (v) => Math.hypot(v[0], v[1], v[2]);
+  // 一般歳差 (黄経方向) [rad/世紀] と、太陽の光行差 [rad]。二至二分は「その日の分点」の
+  // 黄経で決まるので、J2000 の黄経にこの2つを足してから比べる (足さないと 2026年で
+  // 9時間ずれる。光行差ぶんは 8分)
+  const EV_PREC = 1.396971 * DEG, EV_ABERR = -20.5 / 3600 * DEG;
+  const EV_MOON_F = 1 / 82.3;   // 月の質量 / (地球 + 月)。重心 → 地球中心のずれ
+
   // ---------- 観測地からの見え方 ----------
   // 観測地の日心黄道位置 [AU] (地心ではなく地表の点。日食は 1° 近く変わる)
   function evObsHelio(t, out) {
@@ -88,6 +105,24 @@
     const tx = _evB[0]-ux, ty = _evB[1]-uy, tz = _evB[2]-uz;
     const tl = Math.hypot(tx, ty, tz) || 1;
     return Math.asin(Math.max(-1, Math.min(1, (tx*ux + ty*uy + tz*uz) / (tl * ul))));
+  }
+
+  // 観測地から見た月と天体 b (惑星) の離角 [rad] と、月の視半径 [rad]。
+  // 月は近いので、地心と観測地で見え方が最大 1° 違う — 掩蔽の判定は観測地で
+  function evMoonSep(b, t) {
+    evObsHelio(t, _evA);                         // 観測地 (日心)
+    keplerAU(EARTH_B, t, _evC);
+    moonGeoEclKm(t, _evB);
+    const mx = _evC[0] + _evB[0]/AU_KM - _evA[0],   // 観測地 → 月
+          my = _evC[1] + _evB[1]/AU_KM - _evA[1],
+          mz = _evC[2] + _evB[2]/AU_KM - _evA[2];
+    keplerAU(b, t, _evE);
+    const px = _evE[0] - _evA[0], py = _evE[1] - _evA[1], pz = _evE[2] - _evA[2];
+    const dm = Math.hypot(mx, my, mz), dp = Math.hypot(px, py, pz);
+    return {
+      sep: Math.acos(Math.max(-1, Math.min(1, (mx*px + my*py + mz*pz) / (dm * dp)))),
+      rMoon: Math.asin(Math.min(1, MOON.rkm / (dm * AU_KM))),
+    };
   }
 
   // 観測地から見て太陽面が月に隠されている割合 (0〜1) と食分
@@ -159,7 +194,8 @@
         if (pa > 0 && pb < 0 && pa - pb > Math.PI) {
           const g = (t2) => evWrap(evLon(MOON, t2, tmp) - lonSun(t2) - Math.PI);
           const tf = evRoot(g, t, tb);
-          push({ t: tf, kind: "fullmoon", key: "moon", view: "ground" });
+          moonGeoEclKm(tf, _evB);   // 距離を控えて、その年いちばん大きい/小さい満月の印に使う
+          push({ t: tf, kind: "fullmoon", key: "moon", view: "ground", data: { km: evLen(_evB) } });
           const ec = evLunarSearch(tf);
           if (ec) push(ec);
         }
@@ -171,6 +207,8 @@
     // 太陽の見かけの動きのほうが速いので、離角は減る向きに 180° を通る。
     // 向きを決め打ちせず、|変化| が π 未満の符号反転だけを拾う (π 未満に
     // 限るのは、evWrap の折り返しを 0 の通過と取り違えないため)
+    // 小惑星は入れない: 軌道上の位相 (L0) が概略で、衝の日付が実際と月単位でずれる
+    // (2026-09-03 にケレス・ベスタで確かめた)
     for (const k of ["mars", "jupiter", "saturn", "uranus", "neptune"]) {
       const b = PLANETS.find((p) => p.key === k);
       const f = (t) => evWrap(evLon(b, t, tmp) - lonSun(t) - Math.PI);
@@ -197,6 +235,15 @@
           const east = evWrap(Math.atan2(_evE[1], _evE[0]) - lonSun(tp)) > 0;
           push({ t: tp, kind: "elongation", key: k, view: "ground",
                  data: { deg: el(tp) / DEG, east } });
+        } else if (e1 < e0 && e1 <= e2) {
+          // 離角の極小 = 合。内合 (太陽より手前) で太陽面の中に入れば太陽面通過
+          const tp = evPeak((t2) => -el(t2), t - 2, tb);
+          const dp = evLen(evGeo(b, tp, _evE)), ds = evLen(evGeo(SUN, tp, tmp));
+          const rs = Math.asin(SUN.rkm / (ds * AU_KM)), rp = Math.asin(b.rkm / (dp * AU_KM));
+          if (dp < ds && el(tp) < rs + rp) {
+            push({ t: tp, kind: "transit", key: k, view: "ground",
+                   data: { up: evAlt(SUN, tp) > 0 } });
+          }
         }
         e0 = e1; e1 = e2;
       }
@@ -225,6 +272,97 @@
             s0 = s1; s1 = s2;
           }
         }
+      }
+    }
+
+    // ---- 二至二分 (その日の分点で測った太陽黄経が 0 / 90 / 180 / 270° になる瞬間) ----
+    {
+      const pLon = (t) => lonSun(t) + EV_PREC * (t / 36525) + EV_ABERR;
+      for (let q = 0; q < 4; q++) {
+        const f = (t) => evWrap(pLon(t) - q * Math.PI / 2);
+        let pa = f(t0);
+        for (let t = t0; t < t1; t += 2) {
+          const tb = Math.min(t + 2, t1), pb = f(tb);
+          if (pa < 0 && pb >= 0 && pb - pa < Math.PI) {
+            push({ t: evRoot(f, t, tb), kind: "season", key: "sun", view: "ground", data: { q } });
+          }
+          pa = pb;
+        }
+      }
+    }
+
+    // ---- 地球の近日点・遠日点 ----
+    // 軌道要素は地球・月の重心のもの。地球そのものは月に引かれて重心のまわりを
+    // 回っているので、そのぶんを戻さないと日付が1日ずれる
+    {
+      const r = (t) => {
+        keplerAU(EARTH_B, t, tmp); moonGeoEclKm(t, _evE);
+        return Math.hypot(tmp[0] - EV_MOON_F * _evE[0] / AU_KM, tmp[1] - EV_MOON_F * _evE[1] / AU_KM,
+                          tmp[2] - EV_MOON_F * _evE[2] / AU_KM);
+      };
+      evScanExtrema(r, t0, t1, 5, (tp, isMax) => {
+        push({ t: tp, kind: "apsis", key: "sun", view: "ground", data: { far: isMax, au: r(tp) } });
+      });
+    }
+
+    // ---- 彗星の近日点通過と、地球への最接近 ----
+    // 地心距離の極小は、地球の公転のせいで遠くにいても毎年できる。近いときだけ拾う。
+    // 他と同じく地上ビューで見せる (コマと尾は地上ビューでも描く。近日点は太陽に
+    // 近くて暗い空に出ないことが多いが、その場合はその瞬間へ飛ぶ)
+    for (const b of PLANETS) {
+      if (!b.comet) continue;
+      const rs = (t) => { keplerAU(b, t, tmp); return evLen(tmp); };
+      evScanExtrema(rs, t0, t1, 5, (tp, isMax) => {
+        if (!isMax) push({ t: tp, kind: "perihelion", key: b.key, view: "ground", data: { au: rs(tp) } });
+      });
+      const rg = (t) => evLen(evGeo(b, t, tmp));
+      evScanExtrema(rg, t0, t1, 2, (tp, isMax) => {
+        const d = rg(tp);
+        if (!isMax && d < 1.5) push({ t: tp, kind: "closest", key: b.key, view: "ground", data: { au: d } });
+      });
+    }
+
+    // ---- 留 (逆行の始まり・終わり)。地心黄経の進みが 0 になる瞬間 ----
+    // 外惑星だけ。水星・金星の留は太陽に近すぎて見せるものが無い
+    for (const k of ["mars", "jupiter", "saturn"]) {
+      const b = PLANETS.find((p) => p.key === k);
+      const rate = (t) => evWrap(evLon(b, t + 0.5, tmp) - evLon(b, t - 0.5, tmp));
+      let ra = rate(t0);
+      for (let t = t0; t < t1; t += 2) {
+        const tb = Math.min(t + 2, t1), rb = rate(tb);
+        if ((ra < 0) !== (rb < 0)) {
+          push({ t: evRoot(rate, t, tb), kind: "station", key: k, view: "ground", data: { retro: rb < 0 } });
+        }
+        ra = rb;
+      }
+    }
+
+    // ---- 月と惑星の接近・掩蔽 ----
+    // まず地心の離角で通過を見つけ (1日刻みで十分)、その前後を観測地の離角で
+    // 詰め直す。観測地の離角は日周視差で1日周期の波が乗るので、最初から
+    // それで極小を探すと、同じ通過が何度も拾われる
+    {
+      const keys = ["mercury", "venus", "mars", "jupiter", "saturn"];
+      for (const k of keys) {
+        const b = PLANETS.find((p) => p.key === k);
+        const sepG = (t) => { evGeo(MOON, t, _evE); evGeo(b, t, tmp); return evAng(_evE, tmp); };
+        evScanExtrema(sepG, t0, t1, 1, (tg, isMax) => {
+          if (isMax || sepG(tg) > 6 * DEG) return;
+          // 観測地での極小: 5分刻みで最も近い時刻を探し、その前後を詰める
+          let best = null;
+          for (let t = tg - 0.5; t <= tg + 0.5; t += 1 / 288) {
+            const c = evMoonSep(b, t);
+            if (!best || c.sep < best.sep) best = { t, sep: c.sep };
+          }
+          const tp = evPeak((t) => -evMoonSep(b, t).sep, best.t - 1 / 288, best.t + 1 / 288);
+          const c = evMoonSep(b, tp);
+          if (c.sep > 1.5 * DEG) return;
+          // 太陽に近すぎるものは落とす (惑星どうしの接近と同じ)
+          evGeo(b, tp, _evE); evGeo(SUN, tp, tmp);
+          if (evAng(_evE, tmp) / DEG < 15) return;
+          push({ t: tp, kind: "moonConj", key: k, view: "ground",
+                 data: { deg: c.sep / DEG, occult: c.sep < c.rMoon, up: evAlt(b, tp) > 0 } });
+        });
       }
     }
 
@@ -263,10 +401,31 @@
   // 多く、その時刻へ飛ぶと地平線の下を向いてしまう。前後半日から「空が暗くて
   // いちばん高い」時刻を選ぶ (食だけは瞬間そのものが見せ場なのでずらさない)
   function evViewTime(ev) {
-    if (ev.kind === "solarEclipse" || ev.kind === "lunarEclipse") return ev.t;
-    const alt = ev.kind === "shower"
+    const k = ev.kind;
+    if (k === "solarEclipse" || k === "lunarEclipse" || k === "transit") return ev.t;
+    const alt = k === "shower"
       ? (t) => evRadiantAlt(ev.key, t)
       : (t) => evAlt(BODY_BY_KEY.get(ev.key), t);
+    // 太陽そのもの (二至二分・近日点) は南中で見せる
+    if (ev.key === "sun") {
+      let best = null;
+      for (let t = ev.t - 0.5; t <= ev.t + 0.5; t += 1 / 288) {
+        const a = alt(t);
+        if (!best || a > best.a) best = { t, a };
+      }
+      return best.t;
+    }
+    // 月と惑星の接近は、月が1時間に 0.5° 動くので「いちばん高い時刻」へ寄せると
+    // 離れてしまう。暗くて出ている時刻のうち、いちばん近いものを採る
+    if (k === "moonConj") {
+      for (let dt = 0; dt <= 0.5; dt += 1 / 288) {
+        for (const sg of [1, -1]) {
+          const t = ev.t + sg * dt;
+          if (evAlt(SUN, t) <= -8 * DEG && alt(t) > 0) return t;
+        }
+      }
+      return ev.t;
+    }
     let best = null;
     for (let t = ev.t - 0.75; t <= ev.t + 0.75; t += 1 / 288) {   // 5分刻み
       if (evAlt(SUN, t) > -8 * DEG) continue;      // 薄明が残るうちは見えない

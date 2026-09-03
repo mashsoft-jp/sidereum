@@ -151,7 +151,9 @@ WebGL のコンテキストは GPU 側の都合で失われる — ドライバ�
 センサーが無い環境 (デスクトップ) では `vmAR` のボタンと `<option>` を取り除く。
 `DeviceOrientationEvent` はデスクトップの Chrome にもあるがイベントは来ないので、
 存在だけで出すと「押しても何も起きないボタン」になる。タッチ端末か、iOS の権限
-API があるかで判定する (`arSupported`)。ブラウザペインではセンサーが無いので、
+API があるかで判定する (`arSupported`)。**macOS の Safari も `requestPermission` を
+持っている** ("denied" が返るだけ) ので、`navigator.maxTouchPoints > 0` も併せて要る
+(Mac で AR が出ていた。2026-09-03)。ブラウザペインではセンサーが無いので、
 動きを見るには `window.dispatchEvent(new DeviceOrientationEvent(
 "deviceorientationabsolute", { alpha, beta, gamma, absolute: true }))` を流す
 (α=0, β=90 で北の地平線。α=270, β=135 で東の高度 45°)。**ペインが隠れていると

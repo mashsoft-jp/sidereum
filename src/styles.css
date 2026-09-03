@@ -278,10 +278,36 @@
     color: var(--accent); background: rgba(150, 178, 224, 0.08); border-color: var(--line);
   }
   #skyCal .calGo:hover { background: rgba(150, 178, 224, 0.18); }
-  #skyCal .calNav {
-    display: flex; justify-content: space-between; gap: 10px; margin-top: 14px;
+  /* 年の切替。一覧をたどっても手が届くよう、上に貼り付ける。
+     貼り付く位置はモーダルの内側余白 (20px) のぶん上へ寄せる — 0 だと余白の下で止まり、
+     余白の透けたところに行が見える */
+  #skyCal .calYear {
+    position: sticky; top: -20px; z-index: 1;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    margin: 0 -24px 6px; padding: 6px 24px 8px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
   }
-  #skyCal .calNav button { padding: 4px 12px; font-size: 10px; letter-spacing: 0.1em; }
+  #skyCal .calYear button { padding: 3px 10px; font-size: 11px; }
+  #skyCal .calYear button:disabled { opacity: 0.3; cursor: default; }
+  #skyCal #calYearSel {
+    appearance: none; -webkit-appearance: none;
+    background: none; border: none; color: var(--text);
+    font-family: var(--font-num); font-variant-numeric: tabular-nums;
+    font-size: 18px; letter-spacing: 0.06em; padding: 2px 6px;
+    cursor: pointer;
+  }
+  #skyCal #calYearSel:hover { color: var(--accent); }
+  /* 「今年」は中央寄せの邪魔をしないよう右端へ浮かせる */
+  #skyCal #calThisYear {
+    position: absolute; right: 24px; top: 50%; transform: translateY(-50%);
+    font-size: 10px; letter-spacing: 0.1em; color: var(--dim);
+  }
+  #skyCal #calThisYear:hover { color: var(--text); }
+  /* 済んだものは暗く。「見る」は押せるまま */
+  #skyCal .calRow.past .calWhen, #skyCal .calRow.past .calWhat { opacity: 0.45; }
+  #skyCal .calRow.past .calGo { opacity: 0.6; }
+  #skyCal .calRow.past .calGo:hover { opacity: 1; }
   #skyCal .calNote { margin: 12px 0 0; font-size: 10px; color: var(--dim); }
   /* ---- ガイドツアーの一覧 (モーダル) ---- */
   #tourList .tourCard {

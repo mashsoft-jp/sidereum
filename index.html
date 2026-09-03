@@ -294,10 +294,36 @@
     color: var(--accent); background: rgba(150, 178, 224, 0.08); border-color: var(--line);
   }
   #skyCal .calGo:hover { background: rgba(150, 178, 224, 0.18); }
-  #skyCal .calNav {
-    display: flex; justify-content: space-between; gap: 10px; margin-top: 14px;
+  /* 年の切替。一覧をたどっても手が届くよう、上に貼り付ける。
+     貼り付く位置はモーダルの内側余白 (20px) のぶん上へ寄せる — 0 だと余白の下で止まり、
+     余白の透けたところに行が見える */
+  #skyCal .calYear {
+    position: sticky; top: -20px; z-index: 1;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    margin: 0 -24px 6px; padding: 6px 24px 8px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
   }
-  #skyCal .calNav button { padding: 4px 12px; font-size: 10px; letter-spacing: 0.1em; }
+  #skyCal .calYear button { padding: 3px 10px; font-size: 11px; }
+  #skyCal .calYear button:disabled { opacity: 0.3; cursor: default; }
+  #skyCal #calYearSel {
+    appearance: none; -webkit-appearance: none;
+    background: none; border: none; color: var(--text);
+    font-family: var(--font-num); font-variant-numeric: tabular-nums;
+    font-size: 18px; letter-spacing: 0.06em; padding: 2px 6px;
+    cursor: pointer;
+  }
+  #skyCal #calYearSel:hover { color: var(--accent); }
+  /* 「今年」は中央寄せの邪魔をしないよう右端へ浮かせる */
+  #skyCal #calThisYear {
+    position: absolute; right: 24px; top: 50%; transform: translateY(-50%);
+    font-size: 10px; letter-spacing: 0.1em; color: var(--dim);
+  }
+  #skyCal #calThisYear:hover { color: var(--text); }
+  /* 済んだものは暗く。「見る」は押せるまま */
+  #skyCal .calRow.past .calWhen, #skyCal .calRow.past .calWhat { opacity: 0.45; }
+  #skyCal .calRow.past .calGo { opacity: 0.6; }
+  #skyCal .calRow.past .calGo:hover { opacity: 1; }
   #skyCal .calNote { margin: 12px 0 0; font-size: 10px; color: var(--dim); }
   /* ---- ガイドツアーの一覧 (モーダル) ---- */
   #tourList .tourCard {
@@ -2468,12 +2494,12 @@
       menuCal: "天文カレンダー",
       cal: {
         title: "天文カレンダー",
-        lead: (site) => "観測地「" + site + "」から、これから1年のあいだに起きること。" +
-                        "日食・月食は、この観測地で見えるものだけを載せています。",
+        lead: (site) => "観測地「" + site + "」から見える、この年のできごと。" +
+                        "日食・月食は、この観測地で見えるものだけを載せています。済んだものは暗くしてあります。",
         note: "※「見る」は、そのできごとの前後でいちばん見やすい時刻へ移動します。位置計算が近似なので、日時は実際より数分〜20分ほどずれます (予報には使えません)",
         go: "見る",
-        none: "この1年に該当するできごとはありません",
-        next: "次の1年 ▶", prev: "◀ 前の1年",
+        none: "この年に該当するできごとはありません",
+        next: "次の年", prev: "前の年", yearSel: "年を選ぶ", thisYear: "今年",
         fullmoon: "満月",
         solarTotal: "皆既日食", solarAnnular: "金環日食", solarPartial: "部分日食",
         lunarTotal: "皆既月食", lunarPartial: "部分月食", lunarPenumbral: "半影月食",
@@ -2486,6 +2512,29 @@
         conjunction: (a, b, d) => a + "と" + b + "が接近 (" + d + "°)",
         shower: (n) => n + "が極大",
         magSuffix: (m) => "最大食分 " + m,
+        bigMoon: (km) => "今年いちばん大きな満月 (" + km + "万km)",
+        smallMoon: (km) => "今年いちばん小さな満月 (" + km + "万km)",
+        season: ["春分", "夏至", "秋分", "冬至"],
+        seasonSub: ["太陽が天の赤道を南から北へ横切る日。昼と夜がほぼ同じ長さ",
+                    "太陽がいちばん北に寄る日。北半球では昼がいちばん長い",
+                    "太陽が天の赤道を北から南へ横切る日。昼と夜がほぼ同じ長さ",
+                    "太陽がいちばん南に寄る日。北半球では昼がいちばん短い"],
+        perihelionE: (km) => "地球が近日点 (太陽まで " + km + "万km)",
+        aphelionE: (km) => "地球が遠日点 (太陽まで " + km + "万km)",
+        apsisSub: "太陽の見かけの大きさが一年でいちばん変わるところ。差は 3% ほど",
+        perihelion: (n, au) => n + "が近日点を通過 (太陽まで " + au + " au)",
+        perihelionSub: "太陽にいちばん近づき、コマと尾がもっとも発達する頃",
+        closest: (n, au) => n + "が地球に最接近 (" + au + " au)",
+        closestSub: "地球からいちばん大きく明るく見える頃",
+        retroStart: (n) => n + "が逆行をはじめる (留)",
+        retroEnd: (n) => n + "が逆行を終える (留)",
+        retroStartSub: "星々のあいだを西向きに動きはじめます。衝が近い印",
+        retroEndSub: "東向きの動きに戻ります",
+        moonConj: (n, d) => "月と" + n + "が接近 (" + d + "°)",
+        occult: (n) => "月が" + n + "を隠す (掩蔽)",
+        occultSub: "この観測地から見て、月の縁に隠れてまた現れます",
+        transit: (n) => n + "の太陽面通過",
+        transitSub: "太陽の面を小さな黒い点が横切ります。時刻は1時間ほどずれることがあります",
       },
       tourStart: "はじめる", tourSteps: " シーン",
       tourNext: "次へ ▶", tourDone: "終了", tourAuto: "自動送り",
@@ -2563,12 +2612,12 @@
       menuCal: "Sky calendar",
       cal: {
         title: "Sky calendar",
-        lead: (site) => "What happens over the next year as seen from " + site + ". " +
-                        "Eclipses are listed only when they are visible from this site.",
+        lead: (site) => "What happens this year as seen from " + site + ". " +
+                        "Eclipses are listed only when they are visible from this site. Past events are dimmed.",
         note: "* \u201cShow\u201d jumps to the best viewing time around the event. Positions are approximate, so times can be off by up to ~20 minutes (not for prediction).",
         go: "Show",
         none: "Nothing found in this year",
-        next: "Next year ▶", prev: "◀ Previous year",
+        next: "Next year", prev: "Previous year", yearSel: "Choose a year", thisYear: "This year",
         fullmoon: "Full moon",
         solarTotal: "Total solar eclipse", solarAnnular: "Annular solar eclipse", solarPartial: "Partial solar eclipse",
         lunarTotal: "Total lunar eclipse", lunarPartial: "Partial lunar eclipse", lunarPenumbral: "Penumbral lunar eclipse",
@@ -2581,6 +2630,29 @@
         conjunction: (a, b, d) => a + " and " + b + " in conjunction (" + d + "°)",
         shower: (n) => n + " peaks",
         magSuffix: (m) => "max magnitude " + m,
+        bigMoon: (km) => "Largest full moon of the year (" + km + " km)",
+        smallMoon: (km) => "Smallest full moon of the year (" + km + " km)",
+        season: ["March equinox", "June solstice", "September equinox", "December solstice"],
+        seasonSub: ["The Sun crosses the celestial equator heading north. Day and night are about equal",
+                    "The Sun reaches its northernmost point. Longest day in the northern hemisphere",
+                    "The Sun crosses the celestial equator heading south. Day and night are about equal",
+                    "The Sun reaches its southernmost point. Shortest day in the northern hemisphere"],
+        perihelionE: (km) => "Earth at perihelion (" + km + " million km from the Sun)",
+        aphelionE: (km) => "Earth at aphelion (" + km + " million km from the Sun)",
+        apsisSub: "The Sun's apparent size is at its yearly extreme. The difference is about 3%",
+        perihelion: (n, au) => n + " at perihelion (" + au + " au from the Sun)",
+        perihelionSub: "Closest to the Sun, when the coma and tail are at their fullest",
+        closest: (n, au) => n + " closest to Earth (" + au + " au)",
+        closestSub: "Biggest and brightest as seen from Earth",
+        retroStart: (n) => n + " begins retrograde motion",
+        retroEnd: (n) => n + " ends retrograde motion",
+        retroStartSub: "Starts drifting westward against the stars. Opposition is near",
+        retroEndSub: "Resumes its eastward motion",
+        moonConj: (n, d) => "Moon and " + n + " in conjunction (" + d + "°)",
+        occult: (n) => "Moon occults " + n,
+        occultSub: "Seen from this site, it slips behind the Moon's limb and reappears",
+        transit: (n) => n + " transits the Sun",
+        transitSub: "A tiny black dot crosses the solar disk. Times can be off by up to an hour",
       },
       tourStart: "Start", tourSteps: " scenes",
       tourNext: "Next ▶", tourDone: "Finish", tourAuto: "Auto",
@@ -7110,6 +7182,23 @@
     return (a + b) / 2;
   }
 
+  // g(t) の極大・極小を step 日刻みで探し、詰めてから cb(t, isMax) へ渡す
+  function evScanExtrema(g, t0, t1, step, cb) {
+    let ga = g(t0 - step), gb = g(t0);
+    for (let t = t0; t < t1; t += step) {
+      const tc = Math.min(t + step, t1), gc = g(tc);
+      if (gb > ga && gb >= gc) cb(evPeak(g, t - step, tc), true);
+      else if (gb < ga && gb <= gc) cb(evPeak((x) => -g(x), t - step, tc), false);
+      ga = gb; gb = gc;
+    }
+  }
+  const evLen = (v) => Math.hypot(v[0], v[1], v[2]);
+  // 一般歳差 (黄経方向) [rad/世紀] と、太陽の光行差 [rad]。二至二分は「その日の分点」の
+  // 黄経で決まるので、J2000 の黄経にこの2つを足してから比べる (足さないと 2026年で
+  // 9時間ずれる。光行差ぶんは 8分)
+  const EV_PREC = 1.396971 * DEG, EV_ABERR = -20.5 / 3600 * DEG;
+  const EV_MOON_F = 1 / 82.3;   // 月の質量 / (地球 + 月)。重心 → 地球中心のずれ
+
   // ---------- 観測地からの見え方 ----------
   // 観測地の日心黄道位置 [AU] (地心ではなく地表の点。日食は 1° 近く変わる)
   function evObsHelio(t, out) {
@@ -7134,6 +7223,24 @@
     const tx = _evB[0]-ux, ty = _evB[1]-uy, tz = _evB[2]-uz;
     const tl = Math.hypot(tx, ty, tz) || 1;
     return Math.asin(Math.max(-1, Math.min(1, (tx*ux + ty*uy + tz*uz) / (tl * ul))));
+  }
+
+  // 観測地から見た月と天体 b (惑星) の離角 [rad] と、月の視半径 [rad]。
+  // 月は近いので、地心と観測地で見え方が最大 1° 違う — 掩蔽の判定は観測地で
+  function evMoonSep(b, t) {
+    evObsHelio(t, _evA);                         // 観測地 (日心)
+    keplerAU(EARTH_B, t, _evC);
+    moonGeoEclKm(t, _evB);
+    const mx = _evC[0] + _evB[0]/AU_KM - _evA[0],   // 観測地 → 月
+          my = _evC[1] + _evB[1]/AU_KM - _evA[1],
+          mz = _evC[2] + _evB[2]/AU_KM - _evA[2];
+    keplerAU(b, t, _evE);
+    const px = _evE[0] - _evA[0], py = _evE[1] - _evA[1], pz = _evE[2] - _evA[2];
+    const dm = Math.hypot(mx, my, mz), dp = Math.hypot(px, py, pz);
+    return {
+      sep: Math.acos(Math.max(-1, Math.min(1, (mx*px + my*py + mz*pz) / (dm * dp)))),
+      rMoon: Math.asin(Math.min(1, MOON.rkm / (dm * AU_KM))),
+    };
   }
 
   // 観測地から見て太陽面が月に隠されている割合 (0〜1) と食分
@@ -7205,7 +7312,8 @@
         if (pa > 0 && pb < 0 && pa - pb > Math.PI) {
           const g = (t2) => evWrap(evLon(MOON, t2, tmp) - lonSun(t2) - Math.PI);
           const tf = evRoot(g, t, tb);
-          push({ t: tf, kind: "fullmoon", key: "moon", view: "ground" });
+          moonGeoEclKm(tf, _evB);   // 距離を控えて、その年いちばん大きい/小さい満月の印に使う
+          push({ t: tf, kind: "fullmoon", key: "moon", view: "ground", data: { km: evLen(_evB) } });
           const ec = evLunarSearch(tf);
           if (ec) push(ec);
         }
@@ -7217,6 +7325,8 @@
     // 太陽の見かけの動きのほうが速いので、離角は減る向きに 180° を通る。
     // 向きを決め打ちせず、|変化| が π 未満の符号反転だけを拾う (π 未満に
     // 限るのは、evWrap の折り返しを 0 の通過と取り違えないため)
+    // 小惑星は入れない: 軌道上の位相 (L0) が概略で、衝の日付が実際と月単位でずれる
+    // (2026-09-03 にケレス・ベスタで確かめた)
     for (const k of ["mars", "jupiter", "saturn", "uranus", "neptune"]) {
       const b = PLANETS.find((p) => p.key === k);
       const f = (t) => evWrap(evLon(b, t, tmp) - lonSun(t) - Math.PI);
@@ -7243,6 +7353,15 @@
           const east = evWrap(Math.atan2(_evE[1], _evE[0]) - lonSun(tp)) > 0;
           push({ t: tp, kind: "elongation", key: k, view: "ground",
                  data: { deg: el(tp) / DEG, east } });
+        } else if (e1 < e0 && e1 <= e2) {
+          // 離角の極小 = 合。内合 (太陽より手前) で太陽面の中に入れば太陽面通過
+          const tp = evPeak((t2) => -el(t2), t - 2, tb);
+          const dp = evLen(evGeo(b, tp, _evE)), ds = evLen(evGeo(SUN, tp, tmp));
+          const rs = Math.asin(SUN.rkm / (ds * AU_KM)), rp = Math.asin(b.rkm / (dp * AU_KM));
+          if (dp < ds && el(tp) < rs + rp) {
+            push({ t: tp, kind: "transit", key: k, view: "ground",
+                   data: { up: evAlt(SUN, tp) > 0 } });
+          }
         }
         e0 = e1; e1 = e2;
       }
@@ -7271,6 +7390,97 @@
             s0 = s1; s1 = s2;
           }
         }
+      }
+    }
+
+    // ---- 二至二分 (その日の分点で測った太陽黄経が 0 / 90 / 180 / 270° になる瞬間) ----
+    {
+      const pLon = (t) => lonSun(t) + EV_PREC * (t / 36525) + EV_ABERR;
+      for (let q = 0; q < 4; q++) {
+        const f = (t) => evWrap(pLon(t) - q * Math.PI / 2);
+        let pa = f(t0);
+        for (let t = t0; t < t1; t += 2) {
+          const tb = Math.min(t + 2, t1), pb = f(tb);
+          if (pa < 0 && pb >= 0 && pb - pa < Math.PI) {
+            push({ t: evRoot(f, t, tb), kind: "season", key: "sun", view: "ground", data: { q } });
+          }
+          pa = pb;
+        }
+      }
+    }
+
+    // ---- 地球の近日点・遠日点 ----
+    // 軌道要素は地球・月の重心のもの。地球そのものは月に引かれて重心のまわりを
+    // 回っているので、そのぶんを戻さないと日付が1日ずれる
+    {
+      const r = (t) => {
+        keplerAU(EARTH_B, t, tmp); moonGeoEclKm(t, _evE);
+        return Math.hypot(tmp[0] - EV_MOON_F * _evE[0] / AU_KM, tmp[1] - EV_MOON_F * _evE[1] / AU_KM,
+                          tmp[2] - EV_MOON_F * _evE[2] / AU_KM);
+      };
+      evScanExtrema(r, t0, t1, 5, (tp, isMax) => {
+        push({ t: tp, kind: "apsis", key: "sun", view: "ground", data: { far: isMax, au: r(tp) } });
+      });
+    }
+
+    // ---- 彗星の近日点通過と、地球への最接近 ----
+    // 地心距離の極小は、地球の公転のせいで遠くにいても毎年できる。近いときだけ拾う。
+    // 他と同じく地上ビューで見せる (コマと尾は地上ビューでも描く。近日点は太陽に
+    // 近くて暗い空に出ないことが多いが、その場合はその瞬間へ飛ぶ)
+    for (const b of PLANETS) {
+      if (!b.comet) continue;
+      const rs = (t) => { keplerAU(b, t, tmp); return evLen(tmp); };
+      evScanExtrema(rs, t0, t1, 5, (tp, isMax) => {
+        if (!isMax) push({ t: tp, kind: "perihelion", key: b.key, view: "ground", data: { au: rs(tp) } });
+      });
+      const rg = (t) => evLen(evGeo(b, t, tmp));
+      evScanExtrema(rg, t0, t1, 2, (tp, isMax) => {
+        const d = rg(tp);
+        if (!isMax && d < 1.5) push({ t: tp, kind: "closest", key: b.key, view: "ground", data: { au: d } });
+      });
+    }
+
+    // ---- 留 (逆行の始まり・終わり)。地心黄経の進みが 0 になる瞬間 ----
+    // 外惑星だけ。水星・金星の留は太陽に近すぎて見せるものが無い
+    for (const k of ["mars", "jupiter", "saturn"]) {
+      const b = PLANETS.find((p) => p.key === k);
+      const rate = (t) => evWrap(evLon(b, t + 0.5, tmp) - evLon(b, t - 0.5, tmp));
+      let ra = rate(t0);
+      for (let t = t0; t < t1; t += 2) {
+        const tb = Math.min(t + 2, t1), rb = rate(tb);
+        if ((ra < 0) !== (rb < 0)) {
+          push({ t: evRoot(rate, t, tb), kind: "station", key: k, view: "ground", data: { retro: rb < 0 } });
+        }
+        ra = rb;
+      }
+    }
+
+    // ---- 月と惑星の接近・掩蔽 ----
+    // まず地心の離角で通過を見つけ (1日刻みで十分)、その前後を観測地の離角で
+    // 詰め直す。観測地の離角は日周視差で1日周期の波が乗るので、最初から
+    // それで極小を探すと、同じ通過が何度も拾われる
+    {
+      const keys = ["mercury", "venus", "mars", "jupiter", "saturn"];
+      for (const k of keys) {
+        const b = PLANETS.find((p) => p.key === k);
+        const sepG = (t) => { evGeo(MOON, t, _evE); evGeo(b, t, tmp); return evAng(_evE, tmp); };
+        evScanExtrema(sepG, t0, t1, 1, (tg, isMax) => {
+          if (isMax || sepG(tg) > 6 * DEG) return;
+          // 観測地での極小: 5分刻みで最も近い時刻を探し、その前後を詰める
+          let best = null;
+          for (let t = tg - 0.5; t <= tg + 0.5; t += 1 / 288) {
+            const c = evMoonSep(b, t);
+            if (!best || c.sep < best.sep) best = { t, sep: c.sep };
+          }
+          const tp = evPeak((t) => -evMoonSep(b, t).sep, best.t - 1 / 288, best.t + 1 / 288);
+          const c = evMoonSep(b, tp);
+          if (c.sep > 1.5 * DEG) return;
+          // 太陽に近すぎるものは落とす (惑星どうしの接近と同じ)
+          evGeo(b, tp, _evE); evGeo(SUN, tp, tmp);
+          if (evAng(_evE, tmp) / DEG < 15) return;
+          push({ t: tp, kind: "moonConj", key: k, view: "ground",
+                 data: { deg: c.sep / DEG, occult: c.sep < c.rMoon, up: evAlt(b, tp) > 0 } });
+        });
       }
     }
 
@@ -7309,10 +7519,31 @@
   // 多く、その時刻へ飛ぶと地平線の下を向いてしまう。前後半日から「空が暗くて
   // いちばん高い」時刻を選ぶ (食だけは瞬間そのものが見せ場なのでずらさない)
   function evViewTime(ev) {
-    if (ev.kind === "solarEclipse" || ev.kind === "lunarEclipse") return ev.t;
-    const alt = ev.kind === "shower"
+    const k = ev.kind;
+    if (k === "solarEclipse" || k === "lunarEclipse" || k === "transit") return ev.t;
+    const alt = k === "shower"
       ? (t) => evRadiantAlt(ev.key, t)
       : (t) => evAlt(BODY_BY_KEY.get(ev.key), t);
+    // 太陽そのもの (二至二分・近日点) は南中で見せる
+    if (ev.key === "sun") {
+      let best = null;
+      for (let t = ev.t - 0.5; t <= ev.t + 0.5; t += 1 / 288) {
+        const a = alt(t);
+        if (!best || a > best.a) best = { t, a };
+      }
+      return best.t;
+    }
+    // 月と惑星の接近は、月が1時間に 0.5° 動くので「いちばん高い時刻」へ寄せると
+    // 離れてしまう。暗くて出ている時刻のうち、いちばん近いものを採る
+    if (k === "moonConj") {
+      for (let dt = 0; dt <= 0.5; dt += 1 / 288) {
+        for (const sg of [1, -1]) {
+          const t = ev.t + sg * dt;
+          if (evAlt(SUN, t) <= -8 * DEG && alt(t) > 0) return t;
+        }
+      }
+      return ev.t;
+    }
     let best = null;
     for (let t = ev.t - 0.75; t <= ev.t + 0.75; t += 1 / 288) {   // 5分刻み
       if (evAlt(SUN, t) > -8 * DEG) continue;      // 薄明が残るうちは見えない
@@ -12768,7 +12999,10 @@
   // 対応の目安: タッチ端末か、iOS の権限 API がある (iPad + ポインタも拾う)。
   // デスクトップの Chrome にも DeviceOrientationEvent はあるがイベントは来ないので、
   // それだけで出すと「押しても何も起きないボタン」になる
-  const arSupported = "DeviceOrientationEvent" in window &&
+  // macOS の Safari も DeviceOrientationEvent.requestPermission を持っている (呼ぶと
+  // "denied" が返るだけ) ので、権限 API の有無だけではデスクトップを弾けない。
+  // タッチ点を持つ端末に限る (iPhone / iPad / Android は 5、Mac は 0)
+  const arSupported = "DeviceOrientationEvent" in window && navigator.maxTouchPoints > 0 &&
     (matchMedia("(hover: none) and (pointer: coarse)").matches ||
      typeof DeviceOrientationEvent.requestPermission === "function");
   const vmARBtn = document.getElementById("vmAR");
@@ -13299,7 +13533,7 @@
   // 中身が増えた・変わった項目に印を付ける。項目ごとに「今の版」を持ち、
   // 利用者がその項目を開いた時点の版を localStorage に控えて比べる。
   // 中身を直したら、その項目の版を +1 する
-  const MENU_VER = { menuHelp: 1, menuCal: 1, menuAbout: 2 };
+  const MENU_VER = { menuHelp: 1, menuCal: 2, menuAbout: 2 };
   const MENU_SEEN_KEY = "ssMenuSeen";
   function loadMenuSeen() {
     try { return JSON.parse(localStorage.getItem(MENU_SEEN_KEY)) || {}; }
@@ -14589,13 +14823,22 @@
   //#endregion
   //#region src/ui/calendar.js
   // ---------- 天文カレンダー (モーダル) ----------
-  // core/events.js が見つけたできごとを日時順に並べ、選ぶとその日時・その天体・
-  // 地上ビューへ飛ばす。ここは表示と飛び先だけを持ち、計算は一切しない。
+  // core/events.js が見つけたできごとを暦年ごとに日時順に並べ、選ぶとその日時・
+  // その天体・地上ビューへ飛ばす。ここは表示と飛び先だけを持ち、計算は一切しない。
+  // 年は上部の ◀ ▶ と年の選択で切り替える。開いたときは、いま見ている日時の年。
   const menuCalBtn = document.getElementById("menuCal");
   const skyCalEl = document.getElementById("skyCal");
-  const CAL_SPAN = 366;          // 1画面ぶんの期間 [日]
-  let calT0 = null;              // 表示している期間の先頭 (null = 未計算)
+  const CAL_Y_MIN = 1900, CAL_Y_MAX = 2199;   // 日付欄と同じ範囲
+  let calYear = null;            // 表示している年 (時計の基準で数えた暦年。null = 未計算)
   let calRows = [];
+
+  // 暦年 y の元日 0:00 (時計の基準) を UTC [ms] で。基準のずれは日時で変わる (夏時間)
+  // ので、いったん近い時刻で引いてからもう一度引き直す
+  function calYearStart(y) {
+    const g = Date.UTC(y, 0, 1);
+    return g - clockOffset(g - clockOffset(g));
+  }
+  const calYearOf = (ms) => clockDate(ms).getUTCFullYear();
 
   // イベント1件の見出しと補足。天体名・群名は言語に合わせる
   function calText(ev) {
@@ -14603,7 +14846,30 @@
     const nm = (k) => { const b = BODY_BY_KEY.get(k); return b ? bName(b) : k; };
     switch (ev.kind) {
       case "fullmoon":
-        return { h: c.fullmoon, s: "" };
+        return { h: c.fullmoon,
+                 s: ev.data.big ? c.bigMoon(fmtMoonKm(ev.data.km))
+                  : ev.data.small ? c.smallMoon(fmtMoonKm(ev.data.km)) : "" };
+      case "season":
+        return { h: c.season[ev.data.q], s: c.seasonSub[ev.data.q] };
+      case "apsis": {
+        const km = ev.data.au * AU_KM;
+        const v = lang === "ja" ? Math.round(km / 1e4).toLocaleString() : (km / 1e6).toFixed(1);
+        return { h: ev.data.far ? c.aphelionE(v) : c.perihelionE(v), s: c.apsisSub };
+      }
+      case "perihelion":
+        return { h: c.perihelion(nm(ev.key), ev.data.au.toFixed(2)), s: c.perihelionSub };
+      case "closest":
+        return { h: c.closest(nm(ev.key), ev.data.au.toFixed(2)), s: c.closestSub };
+      case "station":
+        return ev.data.retro
+          ? { h: c.retroStart(nm(ev.key)), s: c.retroStartSub }
+          : { h: c.retroEnd(nm(ev.key)), s: c.retroEndSub };
+      case "moonConj":
+        return ev.data.occult
+          ? { h: c.occult(nm(ev.key)), s: c.occultSub }
+          : { h: c.moonConj(nm(ev.key), ev.data.deg.toFixed(1)), s: "" };
+      case "transit":
+        return { h: c.transit(nm(ev.key)), s: c.transitSub };
       case "solarEclipse":
         return { h: ev.data.type === "total" ? c.solarTotal
                : ev.data.type === "annular" ? c.solarAnnular : c.solarPartial,
@@ -14627,34 +14893,53 @@
     return { h: ev.kind, s: "" };
   }
 
+  // 月の距離: 日本語は「35.7万km」、英語は「357,000 km」
+  const fmtMoonKm = (km) => lang === "ja" ? (km / 1e4).toFixed(1)
+                                          : (Math.round(km / 1000) * 1000).toLocaleString("en-US");
   const CAL_WD_JA = ["日", "月", "火", "水", "木", "金", "土"];
   const CAL_WD_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const CAL_MON_EN = ["January", "February", "March", "April", "May", "June",
                       "July", "August", "September", "October", "November", "December"];
 
+  function calYearLabel(y) { return lang === "ja" ? y + "\u5e74" : String(y); }
+
   function buildSkyCal() {
     const t = T(), c = t.cal;
-    const head = '<button id="skyCalClose" aria-label="close">✕</button>' +
-                 "<h2>" + c.title + "</h2>" +
+    const now = Date.now();
+    const thisYear = calYearOf(now);
+    // 年の切替: ◀ ▶ と、押すと一覧が開く <select> (スマホでは OS の選択 UI になる)
+    let sel = '<select id="calYearSel" aria-label="' + c.yearSel + '">';
+    for (let y = CAL_Y_MIN; y <= CAL_Y_MAX; y++) {
+      sel += '<option value="' + y + '"' + (y === calYear ? " selected" : "") + ">" +
+             calYearLabel(y) + "</option>";
+    }
+    sel += "</select>";
+    const yearBar = '<div class="calYear">' +
+      '<button id="calPrev" aria-label="' + c.prev + '"' + (calYear <= CAL_Y_MIN ? " disabled" : "") + ">\u25c0</button>" +
+      sel +
+      '<button id="calNext" aria-label="' + c.next + '"' + (calYear >= CAL_Y_MAX ? " disabled" : "") + ">\u25b6</button>" +
+      (calYear !== thisYear ? '<button id="calThisYear">' + c.thisYear + "</button>" : "") +
+      "</div>";
+    const head = '<button id="skyCalClose" aria-label="close">\u2715</button>' +
+                 "<h2>" + c.title + "</h2>" + yearBar +
                  "<p>" + c.lead(siteLabel()) + "</p>";
     let body = "";
     if (!calRows.length) {
       body = "<p>" + c.none + "</p>";
     } else {
-      let curMonth = "";
+      let curMonth = -1;
       for (let i = 0; i < calRows.length; i++) {
         // 日付も時計と同じ基準で出す (時計だけ地方時にすると日をまたぐ回で食い違う)
-        const ev = calRows[i], d = clockDate(J2000 + ev.t * DAY_MS);
-        const mk = d.getUTCFullYear() + "/" + (d.getUTCMonth() + 1);
-        if (mk !== curMonth) {
-          curMonth = mk;
+        const ev = calRows[i], ms = J2000 + ev.t * DAY_MS, d = clockDate(ms);
+        if (d.getUTCMonth() !== curMonth) {
+          curMonth = d.getUTCMonth();
           body += '<h3 class="calMonth">' +
-            (lang === "ja" ? d.getUTCFullYear() + "年 " + (d.getUTCMonth() + 1) + "月"
-                           : CAL_MON_EN[d.getUTCMonth()] + " " + d.getUTCFullYear()) + "</h3>";
+            (lang === "ja" ? (curMonth + 1) + "\u6708" : CAL_MON_EN[curMonth]) + "</h3>";
         }
         const wd = (lang === "ja" ? CAL_WD_JA : CAL_WD_EN)[d.getUTCDay()];
         const tx = calText(ev);
-        body += '<div class="calRow">' +
+        // 実際の今より前のものは済んだ印に暗くする (「見る」は押せる)
+        body += '<div class="calRow' + (ms < now ? " past" : "") + '">' +
           '<div class="calWhen"><span class="calDay">' + d.getUTCDate() + "</span>" +
           '<span class="calWd">' + wd + "</span>" +
           '<span class="calTime">' + pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes()) + "</span></div>" +
@@ -14664,32 +14949,59 @@
         "</div>";
       }
     }
-    const nav = '<div class="calNav">' +
-      '<button id="calPrev">' + c.prev + "</button>" +
-      '<button id="calNext">' + c.next + "</button></div>";
-    skyCalEl.innerHTML = head + body + nav + '<p class="calNote">' + c.note + "</p>";
+    skyCalEl.innerHTML = head + body + '<p class="calNote">' + c.note + "</p>";
     skyCalEl.scrollTop = 0;
   }
 
-  function calCompute(t0) {
-    calT0 = t0;
-    calRows = findEvents(t0, CAL_SPAN).filter((ev) => {
-      // 食は「この観測地で見えるもの」だけ。地平線の下で起きていても案内しようがない
-      if (ev.kind === "solarEclipse" || ev.kind === "lunarEclipse") return ev.data.up;
+  // 暦年 y のできごとを集める。年の境は時計の基準で切る (元日 0:00 が UTC の何時かは基準で変わる)
+  function calCompute(y) {
+    calYear = Math.max(CAL_Y_MIN, Math.min(CAL_Y_MAX, y));
+    const ms0 = calYearStart(calYear), ms1 = calYearStart(calYear + 1);
+    const t0 = (ms0 - J2000) / DAY_MS;
+    calRows = findEvents(t0, (ms1 - ms0) / DAY_MS).filter((ev) => {
+      // 走査の端は1日単位なので、年の外へはみ出したぶんを落とす
+      if (calYearOf(J2000 + ev.t * DAY_MS) !== calYear) return false;
+      // 食・太陽面通過・掩蔽は「この観測地で見えるもの」だけ。地平線の下で起きていても
+      // 案内しようがない (月と惑星の接近は、月がゆっくり離れるので沈んでいても翌日に見える)
+      if (ev.kind === "solarEclipse" || ev.kind === "lunarEclipse" || ev.kind === "transit") return ev.data.up;
+      if (ev.kind === "moonConj" && ev.data.occult) return ev.data.up;
       return true;
     });
+    // その年いちばん大きい / 小さい満月に印を付ける (暦年で閉じているのでここで決まる)
+    const fulls = calRows.filter((ev) => ev.kind === "fullmoon");
+    if (fulls.length >= 2) {
+      let big = fulls[0], small = fulls[0];
+      for (const ev of fulls) {
+        if (ev.data.km < big.data.km) big = ev;
+        if (ev.data.km > small.data.km) small = ev;
+      }
+      big.data.big = true; small.data.small = true;
+    }
   }
   function openSkyCal() {
-    calCompute(simDays);
+    calCompute(calYearOf(J2000 + simDays * DAY_MS));   // いま見ている日時の年から
     buildSkyCal();
     skyCalEl.classList.add("open");
     modalScrim.classList.add("on");
+    calScrollToNext();
+  }
+  // 済んだものを飛ばして、直近のできごとが年バーのすぐ下に来るところまで送る。
+  // その行が月の先頭なら月見出しごと見せる。全部済んでいれば先頭のまま
+  function calScrollToNext() {
+    let row = skyCalEl.querySelector(".calRow:not(.past)");
+    if (!row) return;
+    const prev = row.previousElementSibling;
+    if (prev && prev.classList.contains("calMonth")) row = prev;
+    // 貼り付いた年バーは表示域の上端に来るので、その高さぶん手前で止める
+    skyCalEl.scrollTop = row.offsetTop - skyCalEl.querySelector(".calYear").offsetHeight;
   }
 
   // イベントを選んだときの飛び先。種別ごとに「それが見える画角」を決め打ちする
   const CAL_FOV = {
     solarEclipse: 1.6, lunarEclipse: 3, fullmoon: 4,
     opposition: 20, elongation: 34, conjunction: 8, shower: 62,
+    season: 70, apsis: 3, station: 20, moonConj: 3, transit: 1.2,
+    perihelion: 30, closest: 45,   // 尾が何十度も伸びるので広めに
   };
   function goToEvent(ev) {
     hideModals();
@@ -14698,8 +15010,10 @@
     updateClock();
     updatePositions();
     updateEclipses();
-    // 日食は空が暗くなるところが見せ場なので、風景が切ってあれば入れる
-    if (ev.kind === "solarEclipse") setTerrain(true);
+    // 太陽が主役のもの (日食・二至二分・近日点) は昼の空が要る。風景が切ってあると
+    // 昼の空を描かないので入れる。太陽面通過だけは入れない — 画角 1° ではグレアが
+    // 画面全体を白く飛ばして、水星の点が見えなくなる
+    if (ev.key === "sun") setTerrain(true);
     if (ev.kind === "shower") setMeteor(true);
     enterSurface("earth");
     buildObsFrame();               // 飛んだ先の日時で観測者基底を作り直す
@@ -14707,28 +15021,35 @@
       select(null, false);
       aimGroundAtRadiant(ev.key, true);
     } else {
-      const b = BODY_BY_KEY.get(ev.key);
+      // 月と惑星の接近・太陽面通過は、主役 (惑星) より月・太陽を中心に据えたほうが収まる
+      const b = BODY_BY_KEY.get(ev.kind === "moonConj" ? "moon" : ev.kind === "transit" ? "sun" : ev.key);
       select(b, false);
       infoPanel.classList.remove("open");
       aimGroundAt(b, true);
     }
-    gFov = gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, CAL_FOV[ev.kind] * DEG));
+    let fov = CAL_FOV[ev.kind];
+    if (ev.kind === "moonConj" && ev.data.occult) fov = 1.5;
+    gFov = gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, fov * DEG));
     updateGroundUI();
   }
 
   skyCalEl.addEventListener("click", (e) => {
     if (e.target.id === "skyCalClose") { hideModals(); return; }
-    if (e.target.id === "calNext") { calCompute(calT0 + CAL_SPAN); buildSkyCal(); return; }
-    if (e.target.id === "calPrev") { calCompute(calT0 - CAL_SPAN); buildSkyCal(); return; }
+    if (e.target.id === "calNext") { calCompute(calYear + 1); buildSkyCal(); return; }
+    if (e.target.id === "calPrev") { calCompute(calYear - 1); buildSkyCal(); return; }
+    if (e.target.id === "calThisYear") { calCompute(calYearOf(Date.now())); buildSkyCal(); return; }
     const go = e.target.closest(".calGo");
     if (go) goToEvent(calRows[+go.dataset.i]);
+  });
+  skyCalEl.addEventListener("change", (e) => {
+    if (e.target.id === "calYearSel") { calCompute(+e.target.value); buildSkyCal(); }
   });
   menuCalBtn.addEventListener("click", () => { setMenu(false); openSkyCal(); });
 
   // 言語切替・観測地の変更で開いているものを作り直す (観測地は食の可視判定を変える)
   function refreshSkyCal(recompute) {
     if (!skyCalEl.classList.contains("open")) return;
-    if (recompute && calT0 !== null) calCompute(calT0);
+    if (recompute && calYear !== null) calCompute(calYear);
     buildSkyCal();
   }
   //#endregion

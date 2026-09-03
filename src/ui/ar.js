@@ -27,7 +27,10 @@
   // 対応の目安: タッチ端末か、iOS の権限 API がある (iPad + ポインタも拾う)。
   // デスクトップの Chrome にも DeviceOrientationEvent はあるがイベントは来ないので、
   // それだけで出すと「押しても何も起きないボタン」になる
-  const arSupported = "DeviceOrientationEvent" in window &&
+  // macOS の Safari も DeviceOrientationEvent.requestPermission を持っている (呼ぶと
+  // "denied" が返るだけ) ので、権限 API の有無だけではデスクトップを弾けない。
+  // タッチ点を持つ端末に限る (iPhone / iPad / Android は 5、Mac は 0)
+  const arSupported = "DeviceOrientationEvent" in window && navigator.maxTouchPoints > 0 &&
     (matchMedia("(hover: none) and (pointer: coarse)").matches ||
      typeof DeviceOrientationEvent.requestPermission === "function");
   const vmARBtn = document.getElementById("vmAR");
