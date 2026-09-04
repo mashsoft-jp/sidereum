@@ -771,13 +771,27 @@
   }
   #app:not(.groundMode) #angleCell { display: flex; }
   #app.groundMode #gAltCell { display: flex; }
+  /* スライダーは 0° の印を重ねるため .vslWrap で包む。伸び縮みは包みが受け持つ */
+  .vslWrap {
+    position: relative; flex: 1; min-height: 60px; margin: 2px 0;
+    display: flex; flex-direction: column; align-items: center;
+  }
   #gAltCell #gAlt, #angleCell #angle {
     writing-mode: vertical-lr; direction: rtl;
     -webkit-appearance: slider-vertical; appearance: slider-vertical;
     width: 8px; accent-color: var(--accent);
-    flex: 1; min-height: 60px;
-    margin: 2px 0;
+    flex: 1; min-height: 0;
+    margin: 0;
   }
+  /* 0° (水平) の位置に短い横棒。つまみの中心が動く範囲は端からつまみ半分ぶん内側
+     なので、範囲が対称でない #gAlt (−80〜90) は 0 が中央から少しずれる —
+     (90−0)/(90−(−80)) = 52.9%。つまみ半分 (約8px) の非対称分は 1px 未満 */
+  .zeroTick {
+    position: absolute; left: 50%; width: 16px; height: 1px; margin-left: -8px;
+    background: var(--accent); opacity: 0.85; pointer-events: none;
+  }
+  #angleCell .zeroTick { top: 50%; }
+  #gAltCell .zeroTick { top: 52.9%; }
   #gAltLabelTop, #gAltVal, #angleCell #angleLabel, #angleVal {
     font-size: 10.5px; color: var(--dim); font-family: var(--font-num); white-space: nowrap;
   }
@@ -1422,7 +1436,7 @@
        つまみの可動域と ▲▼ は残す (指で細かく動かすには押して1目盛りが要る) */
     #app.groundMode #controls #gAltCell,
     #app:not(.groundMode) #controls #angleCell { gap: 2px; }
-    #gAltCell #gAlt, #angleCell #angle { min-height: 38px; }
+    .vslWrap { min-height: 38px; }
     #gAltLabelTop, #gAltVal, #angleCell #angleLabel, #angleVal { font-size: 9.5px; }
     #gAltCell .step, #angleCell .step { padding: 0 8px; font-size: 9px; }
 
@@ -1757,7 +1771,8 @@
     <div id="angleCell" class="hud spaceOnly">
       <span id="angleLabel" title="角度"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><path d="M1.2 9.6h9.6M1.2 9.6L9.4 2.8"/><path d="M6.6 9.6a5.4 5.4 0 0 0-1.1-3.1"/></svg><span class="vh">角度</span></span>
       <button id="angleUp" class="step" aria-label="上から見下ろす">▲</button>
-      <input type="range" id="angle" min="-90" max="90" value="20" aria-label="カメラ俯角">
+      <!-- 0° の位置に小さな横棒 (.zeroTick)。目盛りは無いので、水平がどこかを示す -->
+      <span class="vslWrap"><input type="range" id="angle" min="-90" max="90" value="20" aria-label="カメラ俯角"><span class="zeroTick" aria-hidden="true"></span></span>
       <button id="angleDown" class="step" aria-label="横から見る">▼</button>
       <span id="angleVal"></span>
     </div>
@@ -1765,7 +1780,7 @@
     <div id="gAltCell" class="hud groundOnly">
       <span id="gAltLabelTop" title="高度"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><path d="M1.2 9.6h9.6M1.2 9.6L9.4 2.8"/><path d="M6.6 9.6a5.4 5.4 0 0 0-1.1-3.1"/></svg><span class="vh">高度</span></span>
       <button id="gAltUp" class="step" aria-label="上を向く">▲</button>
-      <input type="range" id="gAlt" min="-80" max="90" value="30" aria-label="高度">
+      <span class="vslWrap"><input type="range" id="gAlt" min="-80" max="90" value="30" aria-label="高度"><span class="zeroTick" aria-hidden="true"></span></span>
       <button id="gAltDown" class="step" aria-label="下を向く">▼</button>
       <span id="gAltVal"></span>
     </div>

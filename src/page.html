@@ -224,7 +224,8 @@
     <div id="angleCell" class="hud spaceOnly">
       <span id="angleLabel" title="角度"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><path d="M1.2 9.6h9.6M1.2 9.6L9.4 2.8"/><path d="M6.6 9.6a5.4 5.4 0 0 0-1.1-3.1"/></svg><span class="vh">角度</span></span>
       <button id="angleUp" class="step" aria-label="上から見下ろす">▲</button>
-      <input type="range" id="angle" min="-90" max="90" value="20" aria-label="カメラ俯角">
+      <!-- 0° の位置に小さな横棒 (.zeroTick)。目盛りは無いので、水平がどこかを示す -->
+      <span class="vslWrap"><input type="range" id="angle" min="-90" max="90" value="20" aria-label="カメラ俯角"><span class="zeroTick" aria-hidden="true"></span></span>
       <button id="angleDown" class="step" aria-label="横から見る">▼</button>
       <span id="angleVal"></span>
     </div>
@@ -232,7 +233,7 @@
     <div id="gAltCell" class="hud groundOnly">
       <span id="gAltLabelTop" title="高度"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><path d="M1.2 9.6h9.6M1.2 9.6L9.4 2.8"/><path d="M6.6 9.6a5.4 5.4 0 0 0-1.1-3.1"/></svg><span class="vh">高度</span></span>
       <button id="gAltUp" class="step" aria-label="上を向く">▲</button>
-      <input type="range" id="gAlt" min="-80" max="90" value="30" aria-label="高度">
+      <span class="vslWrap"><input type="range" id="gAlt" min="-80" max="90" value="30" aria-label="高度"><span class="zeroTick" aria-hidden="true"></span></span>
       <button id="gAltDown" class="step" aria-label="下を向く">▼</button>
       <span id="gAltVal"></span>
     </div>
