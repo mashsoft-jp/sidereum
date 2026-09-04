@@ -844,7 +844,10 @@
         // すでに作っている。ここで足すのは目やカメラの中で起きるグレアだけに
         // 絞る — 両方を大きく出すと二重になって白い塊になる。
         // 月面には大気が無く暈も出ないので、宇宙ビューと同じ広さで足す
-        const wide = surfaceBody === "moon" ? 1.0 : 0.34;
+        // 画角が狭いときは板を縮める。角度で決めた板 (裾 3°・芯 0.7°) は、画角 1〜2° まで
+        // 寄ると画面ぜんぶを覆って白く飛び、太陽面通過の水星が見えなくなる。
+        // 6° より狭い画角では画角に比例させる (6° で継ぎ目なく従来どおり)
+        const wide = (surfaceBody === "moon" ? 1.0 : 0.34) * Math.min(1, gFov / (6 * DEG));
         gl.uniform1f(billP.u.uFall, 1.6);
         gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide);
         gl.uniform3f(billP.u.uCol1, 0.55 * fade, 0.32 * fade * gm, 0.12 * fade * bm);

@@ -173,7 +173,7 @@
   const CAL_FOV = {
     solarEclipse: 1.6, lunarEclipse: 3, fullmoon: 4,
     opposition: 20, elongation: 34, shower: 62,
-    season: 70, apsis: 3, station: 20, occult: 1.5, transit: 1.2,
+    season: 70, apsis: 3, station: 20, occult: 1.5, transit: 0.8,
     perihelion: 30, closest: 45,   // 尾が何十度も伸びるので広めに
   };
   function goToEvent(ev) {
@@ -183,10 +183,9 @@
     updateClock();
     updatePositions();
     updateEclipses();
-    // 太陽が主役のもの (日食・二至二分・近日点) は昼の空が要る。風景が切ってあると
-    // 昼の空を描かないので入れる。太陽面通過だけは入れない — 画角 1° ではグレアが
-    // 画面全体を白く飛ばして、水星の点が見えなくなる
-    if (ev.key === "sun") setTerrain(true);
+    // 太陽が主役のもの (日食・二至二分・近日点・太陽面通過) は昼の空が要る。風景が
+    // 切ってあると昼の空を描かないので入れる (グレアは狭い画角で縮むようにした)
+    if (ev.key === "sun" || ev.kind === "transit") setTerrain(true);
     if (ev.kind === "shower") setMeteor(true);
     enterSurface("earth");
     buildObsFrame();               // 飛んだ先の日時で観測者基底を作り直す
