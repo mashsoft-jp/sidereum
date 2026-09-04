@@ -23,7 +23,14 @@
   <header id="title" class="hud">
     <button id="menuBtn" aria-label="メニュー" aria-haspopup="true">☰</button>
     <h1 class="logo">SIDEREUM<span class="beta">(β版)</span></h1>
+    <!-- 天体名検索 (ui/search.js)。"/" キーでも開く -->
+    <button id="searchBtn" aria-label="検索"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><circle cx="5.1" cy="5.1" r="3.4"/><path d="M7.7 7.7l2.9 2.9"/></svg></button>
   </header>
+  <div id="searchBox" class="hud" hidden>
+    <input id="searchInput" type="search" autocomplete="off" autocapitalize="off" spellcheck="false"
+           role="combobox" aria-expanded="false" aria-controls="searchList" aria-label="検索">
+    <ul id="searchList" role="listbox"></ul>
+  </div>
 
   <!-- 狭い画面は 3 つ並べる幅が無いので、選択中のビューを出す select にする
        (どちらを出すかは CSS。中身は同じなので状態は片方に持たせない) -->
@@ -72,6 +79,7 @@
       <div class="menuHead" id="menuGrpSet"></div>
       <button id="menuFullscreen" role="menuitem"></button>
       <button id="menuShare" role="menuitem"></button>
+      <button id="menuSave" role="menuitem"></button>
       <button id="menuUnit" role="menuitem"></button>
       <button id="menuLang" role="menuitem"></button>
       <button id="menuAbout" role="menuitem"></button>
@@ -109,6 +117,8 @@
   <aside id="howto" class="hud" aria-modal="true"></aside>
   <aside id="tourList" class="hud" aria-modal="true"></aside>
   <aside id="skyCal" class="hud" aria-modal="true"></aside>
+  <!-- 今日のできごと: カレンダーに載る日に、その日初めて開いたときだけ (ui/calendar.js) -->
+  <aside id="todayEv" class="hud" aria-modal="true"></aside>
   <div id="welcome"></div>
 
   <div id="navPanel" class="hud">

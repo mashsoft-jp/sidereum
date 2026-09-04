@@ -75,6 +75,38 @@
     color: var(--dim);
   }
   #menuBtn:hover { color: var(--text); background: rgba(150, 178, 224, 0.12); }
+  /* ---- 天体名検索 ---- */
+  #searchBtn {
+    pointer-events: auto; background: none; border: none;
+    padding: 5px 6px; line-height: 1; color: var(--dim);
+  }
+  #searchBtn:hover { color: var(--text); background: rgba(150, 178, 224, 0.12); }
+  #searchBtn svg { width: 15px; height: 15px; display: block; }
+  #app.tourMode #searchBtn, #app.introMode #searchBtn, #app.introOut #searchBtn { display: none; }
+  #searchBox {
+    top: calc(64px + var(--sat)); left: calc(16px + var(--sal));
+    width: min(360px, calc(100vw - 32px)); box-sizing: border-box;
+    padding: 8px; z-index: 21;
+  }
+  #searchBox[hidden] { display: none; }
+  #searchInput {
+    width: 100%; box-sizing: border-box;
+    font-size: 14px; padding: 7px 10px;
+    background: rgba(150, 178, 224, 0.08); border: 1px solid var(--line); border-radius: 4px;
+    color: var(--text); outline: none; -webkit-appearance: none; appearance: none;
+  }
+  #searchInput:focus { border-color: var(--accent-dim); }
+  #searchList { list-style: none; margin: 6px 0 0; padding: 0; max-height: 50vh; overflow-y: auto; }
+  #searchList:empty { margin: 0; }
+  #searchList li {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 6px 10px; font-size: 12.5px; color: var(--text);
+    cursor: pointer; border-radius: 4px;
+  }
+  #searchList li.on, #searchList li:hover { background: rgba(150, 178, 224, 0.14); }
+  #searchList .sKind { font-size: 10px; color: var(--dim); letter-spacing: 0.08em; margin-left: auto; white-space: nowrap; }
+  #searchList li.sNone { color: var(--dim); cursor: default; }
+  #searchList li.sNone:hover { background: none; }
 
   /* ---- menu ---- */
   #menu {
@@ -198,7 +230,7 @@
     display: none;
   }
   #modalScrim.on { display: block; }
-  #about, #howto, #tourList, #skyCal {
+  #about, #howto, #tourList, #skyCal, #todayEv {
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     width: min(540px, calc(100vw - 32px));
@@ -210,8 +242,8 @@
     display: none;
     z-index: 20;
   }
-  #about.open, #howto.open, #tourList.open, #skyCal.open { display: block; }
-  #about h2, #howto h2, #tourList h2, #skyCal h2 {
+  #about.open, #howto.open, #tourList.open, #skyCal.open, #todayEv.open { display: block; }
+  #about h2, #howto h2, #tourList h2, #skyCal h2, #todayEv h2 {
     margin: 0 0 10px;
     font-size: 15px;
     font-weight: 600;
@@ -238,7 +270,7 @@
   }
   #about td:first-child, #howto td:first-child { color: var(--dim); white-space: nowrap; padding-right: 14px; }
   #howto td:first-child { width: 7.5em; white-space: normal; }
-  #aboutClose, #howtoClose, #tourListClose, #skyCalClose {
+  #aboutClose, #howtoClose, #tourListClose, #skyCalClose, #todayEvClose {
     position: absolute;
     top: 10px; right: 10px;
     padding: 2px 8px;
@@ -247,37 +279,37 @@
     border: none;
     color: var(--dim);
   }
-  #aboutClose:hover, #howtoClose:hover, #tourListClose:hover, #skyCalClose:hover { color: var(--text); background: none; }
+  #aboutClose:hover, #howtoClose:hover, #tourListClose:hover, #skyCalClose:hover, #todayEvClose:hover { color: var(--text); background: none; }
   /* ---- 天文カレンダー (モーダル) ---- */
-  #skyCal > p { margin: 6px 0 12px; font-size: 11.5px; line-height: 1.8; color: var(--dim); }
+  #skyCal > p, #todayEv > p { margin: 6px 0 12px; font-size: 11.5px; line-height: 1.8; color: var(--dim); }
   #skyCal .calMonth {
     margin: 16px 0 4px;
     font-size: 10px; letter-spacing: 0.22em; color: var(--dim);
     border-bottom: 1px solid var(--line); padding-bottom: 4px;
   }
-  #skyCal .calRow {
+  #skyCal .calRow, #todayEv .calRow {
     display: flex; align-items: center; gap: 12px;
     padding: 7px 0;
     border-bottom: 1px solid var(--line);
   }
   /* 日付列は数字を等幅にして、行が変わっても桁が揃うようにする */
-  #skyCal .calWhen {
+  #skyCal .calWhen, #todayEv .calWhen {
     flex: none; width: 5.6em;
     font-family: var(--font-num); font-variant-numeric: tabular-nums;
     display: flex; align-items: baseline; gap: 3px;
   }
-  #skyCal .calDay { font-size: 15px; color: var(--text); min-width: 1.4em; text-align: right; }
-  #skyCal .calWd { font-size: 9px; color: var(--dim); }
-  #skyCal .calTime { font-size: 10px; color: var(--dim); margin-left: auto; }
-  #skyCal .calWhat { flex: 1 1 auto; min-width: 0; }
-  #skyCal .calTitle { display: block; font-size: 12px; color: var(--text); line-height: 1.5; }
-  #skyCal .calSub { display: block; font-size: 10px; color: var(--dim); line-height: 1.6; }
-  #skyCal .calGo {
+  #skyCal .calDay, #todayEv .calDay { font-size: 15px; color: var(--text); min-width: 1.4em; text-align: right; }
+  #skyCal .calWd, #todayEv .calWd { font-size: 9px; color: var(--dim); }
+  #skyCal .calTime, #todayEv .calTime { font-size: 10px; color: var(--dim); margin-left: auto; }
+  #skyCal .calWhat, #todayEv .calWhat { flex: 1 1 auto; min-width: 0; }
+  #skyCal .calTitle, #todayEv .calTitle { display: block; font-size: 12px; color: var(--text); line-height: 1.5; }
+  #skyCal .calSub, #todayEv .calSub { display: block; font-size: 10px; color: var(--dim); line-height: 1.6; }
+  #skyCal .calGo, #todayEv .calGo {
     flex: none;
     padding: 3px 10px; font-size: 10px; letter-spacing: 0.1em;
     color: var(--accent); background: rgba(150, 178, 224, 0.08); border-color: var(--line);
   }
-  #skyCal .calGo:hover { background: rgba(150, 178, 224, 0.18); }
+  #skyCal .calGo:hover, #todayEv .calGo:hover { background: rgba(150, 178, 224, 0.18); }
   /* 年の切替。一覧をたどっても手が届くよう、上に貼り付ける。
      貼り付く位置はモーダルの内側余白 (20px) のぶん上へ寄せる — 0 だと余白の下で止まり、
      余白の透けたところに行が見える */
@@ -309,6 +341,9 @@
   #skyCal .calRow.past .calGo { opacity: 0.6; }
   #skyCal .calRow.past .calGo:hover { opacity: 1; }
   #skyCal .calNote { margin: 12px 0 0; font-size: 10px; color: var(--dim); }
+  #todayEv { max-height: min(60vh, 480px); }
+  #todayEv .todayFoot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+  #todayEv .todayFoot button { padding: 4px 14px; font-size: 10.5px; letter-spacing: 0.1em; }
   /* ---- ガイドツアーの一覧 (モーダル) ---- */
   #tourList .tourCard {
     border: 1px solid var(--line);

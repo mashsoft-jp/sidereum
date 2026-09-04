@@ -207,9 +207,9 @@
     // 太陽の見かけの動きのほうが速いので、離角は減る向きに 180° を通る。
     // 向きを決め打ちせず、|変化| が π 未満の符号反転だけを拾う (π 未満に
     // 限るのは、evWrap の折り返しを 0 の通過と取り違えないため)
-    // 小惑星は入れない: 軌道上の位相 (L0) が概略で、衝の日付が実際と月単位でずれる
-    // (2026-09-03 にケレス・ベスタで確かめた)
-    for (const k of ["mars", "jupiter", "saturn", "uranus", "neptune"]) {
+    // 小惑星はケレスとベスタだけ (双眼鏡で届く2つ)。位相は JPL の要素から取り直してある
+    // (以前は概略で、衝が月単位でずれていた)
+    for (const k of ["mars", "jupiter", "saturn", "uranus", "neptune", "ceres", "vesta"]) {
       const b = PLANETS.find((p) => p.key === k);
       const f = (t) => evWrap(evLon(b, t, tmp) - lonSun(t) - Math.PI);
       let pa = f(t0);

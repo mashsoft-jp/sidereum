@@ -91,6 +91,38 @@
     color: var(--dim);
   }
   #menuBtn:hover { color: var(--text); background: rgba(150, 178, 224, 0.12); }
+  /* ---- 天体名検索 ---- */
+  #searchBtn {
+    pointer-events: auto; background: none; border: none;
+    padding: 5px 6px; line-height: 1; color: var(--dim);
+  }
+  #searchBtn:hover { color: var(--text); background: rgba(150, 178, 224, 0.12); }
+  #searchBtn svg { width: 15px; height: 15px; display: block; }
+  #app.tourMode #searchBtn, #app.introMode #searchBtn, #app.introOut #searchBtn { display: none; }
+  #searchBox {
+    top: calc(64px + var(--sat)); left: calc(16px + var(--sal));
+    width: min(360px, calc(100vw - 32px)); box-sizing: border-box;
+    padding: 8px; z-index: 21;
+  }
+  #searchBox[hidden] { display: none; }
+  #searchInput {
+    width: 100%; box-sizing: border-box;
+    font-size: 14px; padding: 7px 10px;
+    background: rgba(150, 178, 224, 0.08); border: 1px solid var(--line); border-radius: 4px;
+    color: var(--text); outline: none; -webkit-appearance: none; appearance: none;
+  }
+  #searchInput:focus { border-color: var(--accent-dim); }
+  #searchList { list-style: none; margin: 6px 0 0; padding: 0; max-height: 50vh; overflow-y: auto; }
+  #searchList:empty { margin: 0; }
+  #searchList li {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 6px 10px; font-size: 12.5px; color: var(--text);
+    cursor: pointer; border-radius: 4px;
+  }
+  #searchList li.on, #searchList li:hover { background: rgba(150, 178, 224, 0.14); }
+  #searchList .sKind { font-size: 10px; color: var(--dim); letter-spacing: 0.08em; margin-left: auto; white-space: nowrap; }
+  #searchList li.sNone { color: var(--dim); cursor: default; }
+  #searchList li.sNone:hover { background: none; }
 
   /* ---- menu ---- */
   #menu {
@@ -214,7 +246,7 @@
     display: none;
   }
   #modalScrim.on { display: block; }
-  #about, #howto, #tourList, #skyCal {
+  #about, #howto, #tourList, #skyCal, #todayEv {
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     width: min(540px, calc(100vw - 32px));
@@ -226,8 +258,8 @@
     display: none;
     z-index: 20;
   }
-  #about.open, #howto.open, #tourList.open, #skyCal.open { display: block; }
-  #about h2, #howto h2, #tourList h2, #skyCal h2 {
+  #about.open, #howto.open, #tourList.open, #skyCal.open, #todayEv.open { display: block; }
+  #about h2, #howto h2, #tourList h2, #skyCal h2, #todayEv h2 {
     margin: 0 0 10px;
     font-size: 15px;
     font-weight: 600;
@@ -254,7 +286,7 @@
   }
   #about td:first-child, #howto td:first-child { color: var(--dim); white-space: nowrap; padding-right: 14px; }
   #howto td:first-child { width: 7.5em; white-space: normal; }
-  #aboutClose, #howtoClose, #tourListClose, #skyCalClose {
+  #aboutClose, #howtoClose, #tourListClose, #skyCalClose, #todayEvClose {
     position: absolute;
     top: 10px; right: 10px;
     padding: 2px 8px;
@@ -263,37 +295,37 @@
     border: none;
     color: var(--dim);
   }
-  #aboutClose:hover, #howtoClose:hover, #tourListClose:hover, #skyCalClose:hover { color: var(--text); background: none; }
+  #aboutClose:hover, #howtoClose:hover, #tourListClose:hover, #skyCalClose:hover, #todayEvClose:hover { color: var(--text); background: none; }
   /* ---- 天文カレンダー (モーダル) ---- */
-  #skyCal > p { margin: 6px 0 12px; font-size: 11.5px; line-height: 1.8; color: var(--dim); }
+  #skyCal > p, #todayEv > p { margin: 6px 0 12px; font-size: 11.5px; line-height: 1.8; color: var(--dim); }
   #skyCal .calMonth {
     margin: 16px 0 4px;
     font-size: 10px; letter-spacing: 0.22em; color: var(--dim);
     border-bottom: 1px solid var(--line); padding-bottom: 4px;
   }
-  #skyCal .calRow {
+  #skyCal .calRow, #todayEv .calRow {
     display: flex; align-items: center; gap: 12px;
     padding: 7px 0;
     border-bottom: 1px solid var(--line);
   }
   /* 日付列は数字を等幅にして、行が変わっても桁が揃うようにする */
-  #skyCal .calWhen {
+  #skyCal .calWhen, #todayEv .calWhen {
     flex: none; width: 5.6em;
     font-family: var(--font-num); font-variant-numeric: tabular-nums;
     display: flex; align-items: baseline; gap: 3px;
   }
-  #skyCal .calDay { font-size: 15px; color: var(--text); min-width: 1.4em; text-align: right; }
-  #skyCal .calWd { font-size: 9px; color: var(--dim); }
-  #skyCal .calTime { font-size: 10px; color: var(--dim); margin-left: auto; }
-  #skyCal .calWhat { flex: 1 1 auto; min-width: 0; }
-  #skyCal .calTitle { display: block; font-size: 12px; color: var(--text); line-height: 1.5; }
-  #skyCal .calSub { display: block; font-size: 10px; color: var(--dim); line-height: 1.6; }
-  #skyCal .calGo {
+  #skyCal .calDay, #todayEv .calDay { font-size: 15px; color: var(--text); min-width: 1.4em; text-align: right; }
+  #skyCal .calWd, #todayEv .calWd { font-size: 9px; color: var(--dim); }
+  #skyCal .calTime, #todayEv .calTime { font-size: 10px; color: var(--dim); margin-left: auto; }
+  #skyCal .calWhat, #todayEv .calWhat { flex: 1 1 auto; min-width: 0; }
+  #skyCal .calTitle, #todayEv .calTitle { display: block; font-size: 12px; color: var(--text); line-height: 1.5; }
+  #skyCal .calSub, #todayEv .calSub { display: block; font-size: 10px; color: var(--dim); line-height: 1.6; }
+  #skyCal .calGo, #todayEv .calGo {
     flex: none;
     padding: 3px 10px; font-size: 10px; letter-spacing: 0.1em;
     color: var(--accent); background: rgba(150, 178, 224, 0.08); border-color: var(--line);
   }
-  #skyCal .calGo:hover { background: rgba(150, 178, 224, 0.18); }
+  #skyCal .calGo:hover, #todayEv .calGo:hover { background: rgba(150, 178, 224, 0.18); }
   /* 年の切替。一覧をたどっても手が届くよう、上に貼り付ける。
      貼り付く位置はモーダルの内側余白 (20px) のぶん上へ寄せる — 0 だと余白の下で止まり、
      余白の透けたところに行が見える */
@@ -325,6 +357,9 @@
   #skyCal .calRow.past .calGo { opacity: 0.6; }
   #skyCal .calRow.past .calGo:hover { opacity: 1; }
   #skyCal .calNote { margin: 12px 0 0; font-size: 10px; color: var(--dim); }
+  #todayEv { max-height: min(60vh, 480px); }
+  #todayEv .todayFoot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+  #todayEv .todayFoot button { padding: 4px 14px; font-size: 10.5px; letter-spacing: 0.1em; }
   /* ---- ガイドツアーの一覧 (モーダル) ---- */
   #tourList .tourCard {
     border: 1px solid var(--line);
@@ -1515,7 +1550,14 @@
   <header id="title" class="hud">
     <button id="menuBtn" aria-label="メニュー" aria-haspopup="true">☰</button>
     <h1 class="logo">SIDEREUM<span class="beta">(β版)</span></h1>
+    <!-- 天体名検索 (ui/search.js)。"/" キーでも開く -->
+    <button id="searchBtn" aria-label="検索"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><circle cx="5.1" cy="5.1" r="3.4"/><path d="M7.7 7.7l2.9 2.9"/></svg></button>
   </header>
+  <div id="searchBox" class="hud" hidden>
+    <input id="searchInput" type="search" autocomplete="off" autocapitalize="off" spellcheck="false"
+           role="combobox" aria-expanded="false" aria-controls="searchList" aria-label="検索">
+    <ul id="searchList" role="listbox"></ul>
+  </div>
 
   <!-- 狭い画面は 3 つ並べる幅が無いので、選択中のビューを出す select にする
        (どちらを出すかは CSS。中身は同じなので状態は片方に持たせない) -->
@@ -1564,6 +1606,7 @@
       <div class="menuHead" id="menuGrpSet"></div>
       <button id="menuFullscreen" role="menuitem"></button>
       <button id="menuShare" role="menuitem"></button>
+      <button id="menuSave" role="menuitem"></button>
       <button id="menuUnit" role="menuitem"></button>
       <button id="menuLang" role="menuitem"></button>
       <button id="menuAbout" role="menuitem"></button>
@@ -1601,6 +1644,8 @@
   <aside id="howto" class="hud" aria-modal="true"></aside>
   <aside id="tourList" class="hud" aria-modal="true"></aside>
   <aside id="skyCal" class="hud" aria-modal="true"></aside>
+  <!-- 今日のできごと: カレンダーに載る日に、その日初めて開いたときだけ (ui/calendar.js) -->
+  <aside id="todayEv" class="hud" aria-modal="true"></aside>
   <div id="welcome"></div>
 
   <div id="navPanel" class="hud">
@@ -1799,37 +1844,92 @@
       rows:[["直径","49,244 km"],["質量","1.02×10²⁶ kg"],["平均距離","30.1 au"],["公転周期","164.8 年"],["自転周期","16.1 時間"],["平均温度","−201 ℃"],["衛星","16"]],
       fact:"太陽系で最も外側の惑星。観測ではなく計算によって位置が予言され発見されました。風速は秒速500 mを超えます。" },
     { key:"pluto", name:"冥王星", en:"PLUTO", a:39.4817, e:0.2488, T:90560, i:17.142, node:110.303, peri:224.067, L0:238.929,
-      tilt:122.53, rot:6.387, rkm:1188, type:1,    // 逆行自転は tilt>90° で表現 (rot は正)
+      tilt:122.53, rot:6.387, rkm:1188, type:1, H:-0.45,    // 逆行自転は tilt>90° で表現 (rot は正)
       colA:[0.80,0.68,0.54], colB:[0.48,0.38,0.30], colC:[0,0,0], rim:[0.6,0.5,0.42], params:[0,0,0,0],
       rows:[["区分","準惑星"],["直径","2,377 km"],["質量","1.31×10²² kg"],["平均距離","39.5 au"],["公転周期","248.0 年"],["自転周期","6.4 日 (逆行)"],["平均温度","−229 ℃"],["衛星","5 (カロンなど)"]],
       fact:"2006年に惑星から準惑星へ再分類。軌道が楕円のため1979〜1999年は海王星より内側を公転していました。表面にはハート形の窒素氷の平原「スプートニク平原」があります。" },
-    // ---- 小惑星帯の代表的天体 (位相は概略) ----
-    { key:"ceres", name:"ケレス", en:"CERES", a:2.7675, e:0.0760, T:1681.6, i:10.59, node:80.31, peri:153.91, L0:249.90,
-      tilt:4.0, rot:0.378, rkm:470, type:1, ast:true,
+    // H  = 絶対等級 (小惑星・外縁天体。視等級 = H + 5 log10(rΔ) + 位相項)
+    // H0 = 彗星の絶対全光度 (視等級 = H0 + 5 log10(Δ) + 10 log10(r)。活動の指数 n=4)
+    // 地上ビューは 8等より暗いものを (選択中を除いて) 描かない — 冥王星 (14等) や
+    // 外縁天体 (17等) を星より目立つ点で出さないため
+    // ---- 小惑星帯の代表的天体 ----
+    // 要素は JPL SBDB (元期 2461200.5 = 2026-05-05) から。平均近点角は J2000 の平均黄経
+    // L0 へ換算してある。以前は位相が概略で、衝の日付が実際と月単位でずれていた
+    { key:"ceres", name:"ケレス", en:"CERES", a:2.76555, e:0.07969, T:1679.85, i:10.588, node:80.249, peri:153.543, L0:158.746,
+      tilt:4.0, rot:0.378, rkm:470, type:1, ast:true, H:3.34,
       colA:[0.56,0.54,0.51], colB:[0.38,0.36,0.34], colC:[0,0,0], rim:[0,0,0], params:[0,0,0,0],
       rows:[["区分","準惑星 (小惑星帯)"],["直径","939 km"],["質量","9.4×10²⁰ kg"],["平均距離","2.77 au"],["公転周期","4.60 年"],["自転周期","9.1 時間"],["平均温度","−105 ℃"]],
       fact:"小惑星帯で最大の天体。帯の全質量の約3分の1を占め、2006年に準惑星へ分類されました。探査機ドーンの観測で、白く輝く塩の堆積が見つかっています。" },
-    { key:"vesta", name:"ベスタ", en:"VESTA", a:2.3615, e:0.0887, T:1325.8, i:7.14, node:103.85, peri:254.58, L0:100.2,
-      tilt:29.0, rot:0.2226, rkm:263, type:1, ast:true,
+    { key:"vesta", name:"ベスタ", en:"VESTA", a:2.36137, e:0.09020, T:1325.39, i:7.144, node:103.701, peri:255.170, L0:233.749,
+      tilt:29.0, rot:0.2226, rkm:263, type:1, ast:true, H:3.2,
       colA:[0.63,0.59,0.53], colB:[0.42,0.39,0.35], colC:[0,0,0], rim:[0,0,0], params:[0,0,0,0],
       rows:[["区分","小惑星 (4番)"],["直径","約 525 km"],["質量","2.6×10²⁰ kg"],["平均距離","2.36 au"],["公転周期","3.63 年"],["自転周期","5.3 時間"]],
       fact:"小惑星帯で2番目に重い天体。地球に落ちてくる隕石の約5%はベスタ起源 (HED隕石) と考えられています。2011〜12年に探査機ドーンが周回しました。" },
-    { key:"pallas", name:"パラス", en:"PALLAS", a:2.7730, e:0.2299, T:1686.0, i:34.84, node:173.09, peri:123.14, L0:201.3,
-      tilt:84.0, rot:0.3256, rkm:256, type:1, ast:true,
+    { key:"pallas", name:"パラス", en:"PALLAS", a:2.76956, e:0.23070, T:1683.50, i:34.933, node:172.887, peri:123.857, L0:113.378,
+      tilt:84.0, rot:0.3256, rkm:256, type:1, ast:true, H:4.13,
       colA:[0.50,0.50,0.52], colB:[0.34,0.34,0.36], colC:[0,0,0], rim:[0,0,0], params:[0,0,0,0],
       rows:[["区分","小惑星 (2番)"],["直径","約 512 km"],["平均距離","2.77 au"],["公転周期","4.62 年"],["軌道傾斜角","34.8°"]],
       fact:"1802年発見の2番小惑星。軌道が黄道から約35°も傾いており、小惑星帯の主要天体の中で際立って傾いた軌道を持ちます。" },
-    { key:"juno", name:"ジュノー", en:"JUNO", a:2.6700, e:0.2579, T:1594.0, i:12.99, node:169.85, peri:57.99, L0:91.1,
-      tilt:50.0, rot:0.3004, rkm:123, type:1, ast:true,
+    { key:"juno", name:"ジュノー", en:"JUNO", a:2.67099, e:0.25570, T:1594.43, i:12.987, node:169.812, peri:57.707, L0:300.368,
+      tilt:50.0, rot:0.3004, rkm:123, type:1, ast:true, H:5.33,
       colA:[0.58,0.55,0.50], colB:[0.40,0.37,0.33], colC:[0,0,0], rim:[0,0,0], params:[0,0,0,0],
       rows:[["区分","小惑星 (3番)"],["直径","約 247 km"],["平均距離","2.67 au"],["公転周期","4.36 年"],["離心率","0.26"]],
       fact:"1804年発見の3番小惑星。歴史的な「四大小惑星」の一つで、小惑星帯の中でも離心率の大きい楕円軌道を回っています。" },
     // ---- 周期彗星 (位相は 1986-02-09 の近日点通過で校正) ----
     { key:"halley", name:"ハレー彗星", en:"HALLEY", a:17.834, e:0.96714, T:27509, i:162.26, node:58.42, peri:169.75, L0:236.15,
-      tilt:0, rot:2.2, rkm:5.5, type:1, comet:true,
+      tilt:0, rot:2.2, rkm:5.5, type:1, comet:true, H0:5.5,
       colA:[0.45,0.50,0.60], colB:[0.20,0.22,0.26], colC:[0,0,0], rim:[0.4,0.5,0.7], params:[0,0,0,0],
       rows:[["区分","周期彗星 (1P)"],["核の大きさ","約 15×8 km"],["近日点距離","0.59 au"],["遠日点距離","35.1 au"],["公転周期","約 75.3 年"],["軌道傾斜角","162.3° (逆行)"],["前回の近日点","1986年2月"],["次回の近日点","2061年ごろ"]],
       fact:"約76年ごとに回帰する最も有名な周期彗星。黄道に対してほぼ逆向き (逆行) の細長い楕円軌道を持ち、遠日点は海王星の外側に達します。※ 木星・土星の摂動で回帰間隔が毎回変わるため、実際の近日点通過日 (1835・1910・1986・2061・2134年) に合わせています。2134年以降は外挿です。" },
+    // 以下の彗星の要素は JPL SBDB から (平均近点角は J2000 の平均黄経へ換算)。
+    // 軌道線は既定で出さない (orbitOff) — 内側の太陽系を横切る細長い楕円が6本重なると
+    // 惑星の軌道が読めなくなる。天体リストの ◌ で個別に出せる
+    { key:"swifttuttle", name:"スイフト・タットル彗星", en:"SWIFT-TUTTLE", a:26.0921, e:0.963226, T:48681.2, i:113.454, node:139.381, peri:292.363, L0:311.417,
+      tilt:0, rot:2.8, rkm:13, type:1, comet:true, orbitOff:true, H0:4.5,
+      colA:[0.45,0.50,0.60], colB:[0.20,0.22,0.26], colC:[0,0,0], rim:[0.4,0.5,0.7], params:[0,0,0,0],
+      rows:[["区分","周期彗星 (109P)"],["核の大きさ","約 26 km"],["近日点距離","0.96 au"],["遠日点距離","51.2 au"],["公転周期","約 133 年"],["前回の近日点","1992年12月"],["次回の近日点","2126年7月"]],
+      fact:"ペルセウス座流星群の母天体。核は直径約26kmと大きく、地球の軌道と交差する天体としては最大です。回帰の時期は予報の近日点通過日 (1862・1992・2126年) に合わせています。" },
+    { key:"templetuttle", name:"テンペル・タットル彗星", en:"TEMPEL-TUTTLE", a:10.3383, e:0.905553, T:12141.6, i:162.487, node:235.271, peri:47.771, L0:67.708,
+      tilt:0, rot:0.63, rkm:1.8, type:1, comet:true, orbitOff:true, H0:9.5,
+      colA:[0.45,0.50,0.60], colB:[0.20,0.22,0.26], colC:[0,0,0], rim:[0.4,0.5,0.7], params:[0,0,0,0],
+      rows:[["区分","周期彗星 (55P)"],["核の大きさ","約 3.6 km"],["近日点距離","0.98 au"],["遠日点距離","19.7 au"],["公転周期","約 33 年"],["前回の近日点","1998年2月"],["次回の近日点","2031年5月"]],
+      fact:"しし座流星群の母天体。回帰の直後の数年は流星群が大出現し、1833年・1966年・2001年には1時間に数千個の流星が流れました。回帰の時期は近日点通過日 (1965・1998・2031年) に合わせています。" },
+    { key:"halebopp", name:"ヘール・ボップ彗星", en:"HALE-BOPP", a:177.433, e:0.994981, T:863280, i:89.288, node:282.733, peri:53.148, L0:53.568,
+      tilt:0, rot:0.48, rkm:30, type:1, comet:true, orbitOff:true, H0:-0.8,
+      colA:[0.45,0.50,0.60], colB:[0.20,0.22,0.26], colC:[0,0,0], rim:[0.4,0.5,0.7], params:[0,0,0,0],
+      rows:[["区分","非周期彗星 (C/1995 O1)"],["核の大きさ","約 60 km"],["近日点距離","0.89 au"],["近日点通過","1997年4月1日"],["公転周期","約 2,400 年"],["軌道傾斜角","89.3°"]],
+      fact:"1997年春の大彗星。18か月にわたって肉眼で見え続けた記録を持ちます。核が直径約60kmと非常に大きく、地球から1.3 auと遠かったにもかかわらず明るく輝きました。" },
+    { key:"hyakutake", name:"百武彗星", en:"HYAKUTAKE", a:2124.76, e:0.999892, T:35773500, i:124.922, node:188.045, peri:318.220, L0:318.234,
+      tilt:0, rot:0.26, rkm:2, type:1, comet:true, orbitOff:true, H0:5.5,
+      colA:[0.45,0.50,0.60], colB:[0.20,0.22,0.26], colC:[0,0,0], rim:[0.4,0.5,0.7], params:[0,0,0,0],
+      rows:[["区分","非周期彗星 (C/1996 B2)"],["核の大きさ","約 4 km"],["近日点距離","0.23 au"],["近日点通過","1996年5月1日"],["地球最接近","1996年3月25日 (0.10 au)"],["公転周期","約 7万年"]],
+      fact:"1996年1月に鹿児島の百武裕司さんが発見。3月に地球へ 0.10 au まで近づき、尾が空の半分 (100°以上) に伸びました。地球のすぐそばを通ったため、数日のあいだに空を大きく動いて見えました。" },
+    { key:"neowise", name:"ネオワイズ彗星", en:"NEOWISE", a:358.468, e:0.999178, T:2478990, i:128.938, node:61.010, peri:98.289, L0:97.202,
+      tilt:0, rot:0.31, rkm:2.5, type:1, comet:true, orbitOff:true, H0:7.0,
+      colA:[0.45,0.50,0.60], colB:[0.20,0.22,0.26], colC:[0,0,0], rim:[0.4,0.5,0.7], params:[0,0,0,0],
+      rows:[["区分","非周期彗星 (C/2020 F3)"],["核の大きさ","約 5 km"],["近日点距離","0.29 au"],["近日点通過","2020年7月3日"],["地球最接近","2020年7月23日 (0.69 au)"],["公転周期","約 6,800 年"]],
+      fact:"2020年7月、北半球の明け方と夕方の空で肉眼で見えた彗星。ヘール・ボップ彗星以来23年ぶりの明るい彗星で、二又に分かれたダストの尾とイオンの尾が写真に収められました。" },
+    { key:"tsuchinshan", name:"紫金山・アトラス彗星", en:"TSUCHINSHAN-ATLAS", a:3914.3, e:0.9999, T:89448200, i:139.112, node:21.559, peri:330.051, L0:330.015,
+      tilt:0, rot:0.3, rkm:1.5, type:1, comet:true, orbitOff:true, H0:5.5,
+      colA:[0.45,0.50,0.60], colB:[0.20,0.22,0.26], colC:[0,0,0], rim:[0.4,0.5,0.7], params:[0,0,0,0],
+      rows:[["区分","非周期彗星 (C/2023 A3)"],["近日点距離","0.39 au"],["近日点通過","2024年9月27日"],["地球最接近","2024年10月12日 (0.47 au)"],["軌道","双曲線 (二度と戻らない)"]],
+      fact:"2024年10月、夕方の西の空で肉眼で見えた彗星。実際の軌道は双曲線 (e≈1.0001) で太陽系を離れていきますが、ここでは近日点距離を保った極端に細長い楕円で近似しています。" },
+    // ---- 太陽系外縁天体 (準惑星)。要素は JPL SBDB (元期 2461200.5) ----
+    { key:"eris", name:"エリス", en:"ERIS", a:67.9339, e:0.438239, T:204517, i:43.926, node:36.005, peri:186.800, L0:21.578,
+      tilt:0, rot:1.08, rkm:1163, type:1, tno:true, H:-1.1,
+      colA:[0.86,0.86,0.84], colB:[0.58,0.58,0.56], colC:[0,0,0], rim:[0.5,0.5,0.5], params:[0,0,0,0],
+      rows:[["区分","準惑星 (太陽系外縁天体)"],["直径","2,326 km"],["質量","1.6×10²² kg"],["平均距離","67.9 au"],["公転周期","560 年"],["自転周期","25.9 時間"],["衛星","1 (ディスノミア)"]],
+      fact:"冥王星より重い準惑星。2005年の発見が「惑星とは何か」の議論を呼び、翌年に準惑星という区分が生まれました。いまは遠日点 (約 97 au) の近くにいて、太陽系でもっとも遠い既知の準惑星です。" },
+    { key:"makemake", name:"マケマケ", en:"MAKEMAKE", a:45.5709, e:0.158889, T:112365, i:29.028, node:79.295, peri:16.387, L0:155.390,
+      tilt:0, rot:0.95, rkm:715, type:1, tno:true, H:-0.2,
+      colA:[0.74,0.62,0.52], colB:[0.48,0.40,0.34], colC:[0,0,0], rim:[0.5,0.45,0.4], params:[0,0,0,0],
+      rows:[["区分","準惑星 (太陽系外縁天体)"],["直径","約 1,430 km"],["平均距離","45.6 au"],["公転周期","308 年"],["自転周期","22.8 時間"],["衛星","1"]],
+      fact:"2005年発見。表面はメタンの氷に覆われ、赤みを帯びています。名前はイースター島の創造神に由来します。" },
+    { key:"haumea", name:"ハウメア", en:"HAUMEA", a:43.0603, e:0.194443, T:103208, i:28.208, node:121.786, peri:2.477, L0:192.008,
+      tilt:0, rot:0.163, rkm:780, type:1, tno:true, H:0.4,
+      colA:[0.88,0.88,0.88], colB:[0.60,0.60,0.60], colC:[0,0,0], rim:[0.5,0.5,0.5], params:[0,0,0,0],
+      rows:[["区分","準惑星 (太陽系外縁天体)"],["大きさ","約 2,100×1,100 km"],["平均距離","43.1 au"],["公転周期","283 年"],["自転周期","3.9 時間"],["衛星","2"],["環","あり"]],
+      fact:"わずか4時間で自転する速さのため、細長い楕円体に引き伸ばされています。2017年に環が見つかりました。名前はハワイの出産の女神から。" },
   ];
 
   const SUN = {
@@ -2531,6 +2631,9 @@
         retroEndSub: "東向きの動きに戻ります",
         occult: (n) => "月が" + n + "を隠す (掩蔽)",
         occultSub: "この観測地から見て、月の縁に隠れてまた現れます",
+        todayTitle: "今日のできごと",
+        todayLead: (d) => d + " は、観測地から見える天文カレンダーのできごとがある日です。",
+        todayClose: "閉じる",
         transit: (n) => n + "の太陽面通過",
         transitSub: "太陽の面を小さな黒い点が横切ります。時刻は1時間ほどずれることがあります",
       },
@@ -2557,6 +2660,9 @@
       menuUnitToKm: "距離を km 表示",
       menuShare: "共有リンクをコピー",
       menuShareDone: "コピーしました",
+      menuSave: "画像を保存",
+      search: "検索", searchPh: "天体・星座・星雲・流星群を検索", searchNone: "見つかりません",
+      sBody: "天体", sSat: "衛星", sProbe: "探査機", sDso: "星雲・星団", sConst: "星座", sShower: "流星群",
       menuFs: "全画面表示",
       menuFsExit: "全画面を終了",
       menuNavHide: "天体リストを隠す",
@@ -2647,6 +2753,9 @@
         retroEndSub: "Resumes its eastward motion",
         occult: (n) => "Moon occults " + n,
         occultSub: "Seen from this site, it slips behind the Moon's limb and reappears",
+        todayTitle: "Today in the sky",
+        todayLead: (d) => d + " has a sky-calendar event visible from your site.",
+        todayClose: "Close",
         transit: (n) => n + " transits the Sun",
         transitSub: "A tiny black dot crosses the solar disk. Times can be off by up to an hour",
       },
@@ -2673,6 +2782,9 @@
       menuUnitToKm: "Distances in km",
       menuShare: "Copy shareable link",
       menuShareDone: "Copied!",
+      menuSave: "Save image",
+      search: "Search", searchPh: "Search bodies, constellations, deep-sky, showers", searchNone: "No matches",
+      sBody: "Body", sSat: "Moon", sProbe: "Probe", sDso: "Deep-sky", sConst: "Constellation", sShower: "Shower",
       menuFs: "Fullscreen",
       menuFsExit: "Exit fullscreen",
       menuNavHide: "Hide body list",
@@ -2694,7 +2806,9 @@
     },
   };
   const T = () => UI[lang];
-  for (const b of [SUN, ...PLANETS, ...SATELLITES, ...PROBES]) b.nameEn = b.en.charAt(0) + b.en.slice(1).toLowerCase();
+  for (const b of [SUN, ...PLANETS, ...SATELLITES, ...PROBES]) {
+    b.nameEn = b.en.toLowerCase().replace(/(^|[\s-])(\S)/g, (m, a, c) => a + c.toUpperCase());   // HALE-BOPP → Hale-Bopp
+  }
   const bName = (b) => (lang === "ja" ? b.name : b.nameEn);
 
   // 情報パネルの英語データ
@@ -2747,6 +2861,33 @@
     halley: {
       rows:[["Class","Periodic comet (1P)"],["Nucleus","~15×8 km"],["Perihelion","0.59 au"],["Aphelion","35.1 au"],["Orbital period","~75.3 yr"],["Inclination","162.3° (retrograde)"],["Last perihelion","Feb 1986"],["Next perihelion","c. 2061"]],
       fact:"The most famous periodic comet, returning roughly every 76 years on a retrograde, highly elongated orbit that reaches beyond Neptune. Note: because Jupiter and Saturn shift each return, the timing is matched to the actual perihelion passages (1835, 1910, 1986, 2061, 2134); dates past 2134 are extrapolated." },
+    swifttuttle: {
+      rows:[["Class","Periodic comet (109P)"],["Nucleus","~26 km"],["Perihelion","0.96 au"],["Aphelion","51.2 au"],["Orbital period","~133 yr"],["Last perihelion","Dec 1992"],["Next perihelion","Jul 2126"]],
+      fact:"Parent of the Perseid meteor shower. With a nucleus about 26 km across it is the largest object known to cross Earth's orbit. Its returns are pinned to the predicted perihelion dates (1862, 1992, 2126)." },
+    templetuttle: {
+      rows:[["Class","Periodic comet (55P)"],["Nucleus","~3.6 km"],["Perihelion","0.98 au"],["Aphelion","19.7 au"],["Orbital period","~33 yr"],["Last perihelion","Feb 1998"],["Next perihelion","May 2031"]],
+      fact:"Parent of the Leonid meteor shower. In the years right after each return the Leonids can storm — thousands of meteors an hour in 1833, 1966 and 2001. Returns are pinned to the perihelion dates (1965, 1998, 2031)." },
+    halebopp: {
+      rows:[["Class","Long-period comet (C/1995 O1)"],["Nucleus","~60 km"],["Perihelion","0.89 au"],["Perihelion passage","1 Apr 1997"],["Orbital period","~2,400 yr"],["Inclination","89.3°"]],
+      fact:"The great comet of spring 1997, visible to the naked eye for a record 18 months. Its unusually large nucleus (about 60 km) kept it bright even though it never came closer than 1.3 au to Earth." },
+    hyakutake: {
+      rows:[["Class","Long-period comet (C/1996 B2)"],["Nucleus","~4 km"],["Perihelion","0.23 au"],["Perihelion passage","1 May 1996"],["Closest to Earth","25 Mar 1996 (0.10 au)"],["Orbital period","~70,000 yr"]],
+      fact:"Discovered in January 1996 by Yuji Hyakutake. In March it passed just 0.10 au from Earth and its tail stretched across more than half the sky (100°+). Being so close, it swept across the sky noticeably from night to night." },
+    neowise: {
+      rows:[["Class","Long-period comet (C/2020 F3)"],["Nucleus","~5 km"],["Perihelion","0.29 au"],["Perihelion passage","3 Jul 2020"],["Closest to Earth","23 Jul 2020 (0.69 au)"],["Orbital period","~6,800 yr"]],
+      fact:"Visible to the naked eye in the northern dawn and dusk sky in July 2020 — the brightest comet since Hale-Bopp 23 years earlier, photographed with a forked dust tail and a separate ion tail." },
+    tsuchinshan: {
+      rows:[["Class","Long-period comet (C/2023 A3)"],["Perihelion","0.39 au"],["Perihelion passage","27 Sep 2024"],["Closest to Earth","12 Oct 2024 (0.47 au)"],["Orbit","Hyperbolic (never returns)"]],
+      fact:"A naked-eye comet in the western evening sky in October 2024. Its true orbit is hyperbolic (e≈1.0001), leaving the Solar System for good; here it is approximated by an extremely elongated ellipse with the same perihelion distance." },
+    eris: {
+      rows:[["Class","Dwarf planet (trans-Neptunian)"],["Diameter","2,326 km"],["Mass","1.6×10²² kg"],["Mean distance","67.9 au"],["Orbital period","560 yr"],["Rotation period","25.9 hours"],["Moons","1 (Dysnomia)"]],
+      fact:"More massive than Pluto. Its discovery in 2005 forced the question of what a planet is, and the 'dwarf planet' class was created the next year. Currently near aphelion (~97 au), the most distant known dwarf planet." },
+    makemake: {
+      rows:[["Class","Dwarf planet (trans-Neptunian)"],["Diameter","~1,430 km"],["Mean distance","45.6 au"],["Orbital period","308 yr"],["Rotation period","22.8 hours"],["Moons","1"]],
+      fact:"Discovered in 2005. Its surface is covered in methane ice with a reddish tint. Named after the creator god of the Rapa Nui people of Easter Island." },
+    haumea: {
+      rows:[["Class","Dwarf planet (trans-Neptunian)"],["Size","~2,100×1,100 km"],["Mean distance","43.1 au"],["Orbital period","283 yr"],["Rotation period","3.9 hours"],["Moons","2"],["Rings","yes"]],
+      fact:"Spinning once every four hours, it has been stretched into an elongated ellipsoid. A ring was discovered in 2017. Named after the Hawaiian goddess of childbirth." },
     phobos: {
       rows:[["Diameter","~22 km"],["Orbital radius","9,376 km"],["Orbital period","7.66 hours"],["Rotation","synchronous"]],
       fact:"Orbits faster than Mars rotates, so it rises in the west and sets in the east. It is slowly spiraling inward and will eventually crash into Mars." },
@@ -4395,8 +4536,26 @@
     halley: [
       Date.UTC(1835, 10, 16), Date.UTC(1910, 3, 20), Date.UTC(1986, 1, 9),
       Date.UTC(2061, 6, 28), Date.UTC(2134, 2, 27),
-    ].map((ms) => (ms - J2000) / DAY_MS),
+    ],
+    // スイフト・タットル彗星 (109P)。1992年の要素の周期 (133.3年) で送ると 2126年が
+    // 3か月ずれるので、予報の近日点で区切る
+    swifttuttle: [Date.UTC(1862, 7, 23), Date.UTC(1992, 11, 11), Date.UTC(2126, 6, 12)],
+    // テンペル・タットル彗星 (55P)
+    templetuttle: [Date.UTC(1965, 3, 30), Date.UTC(1998, 1, 28), Date.UTC(2031, 4, 20)],
   };
+  for (const k in PERI_EPOCHS) PERI_EPOCHS[k] = PERI_EPOCHS[k].map((ms) => (ms - J2000) / DAY_MS);
+  // 一度きりの彗星 (周期が数千年以上)。J2000 の平均黄経 L0 では桁が足りない —
+  // 平均運動が 1e-5 °/日 なので、L0 を 0.001° 丸めただけで近日点が 2か月ずれる
+  // (百武で実際にずれた)。近日点通過日 [J2000 からの日] と周期 [日] で区切る
+  const ONE_PASS = {
+    // ヘール・ボップの JPL の近日点通過日は 2022年の接触軌道のもので 3月29日になる。
+    // 実際の通過は 4月1日なので、ハレー彗星と同じく実際の日付で置く
+    halebopp:    [-1005.5, 863280],       // 1997-04-01
+    hyakutake:   [-1340.106, 35773500],   // 1996-05-01
+    neowise:     [7489.179, 2478990],     // 2020-07-03
+    tsuchinshan: [9036.241, 89448200],    // 2024-09-27
+  };
+  for (const k in ONE_PASS) PERI_EPOCHS[k] = [ONE_PASS[k][0], ONE_PASS[k][0] + ONE_PASS[k][1]];
   for (const p of PLANETS) {
     if (PERI_EPOCHS[p.key]) p.periT = PERI_EPOCHS[p.key];
   }
@@ -4410,11 +4569,19 @@
     return 2 * Math.PI * (days - tp[i]) / (tp[i + 1] - tp[i]);
   }
 
+  // ケプラー方程式 E − e sin E = M をニュートン法で解く。
+  // 初期値を M にすると e が大きいとき近日点付近で発散する (e=0.995 のヘール・ボップで
+  // 実際に起きる)。e > 0.8 は E = π から始めれば単調に収束する (Charles & Tatum 1998)
+  // ので、そちらは回数も多めに取る。惑星は従来どおり 12回
+  function solveKepler(e, M) {
+    M = ((M % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    const hi = e > 0.8;
+    let E = hi ? Math.PI : M;
+    for (let k = 0, n = hi ? 40 : 12; k < n; k++) E -= (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+    return E;
+  }
   function keplerAU(p, days, out) {
-    const M = meanAnom(p, days) % (2 * Math.PI);
-    let E = M;
-    // 反復回数はハレー彗星 (e≈0.97) でも収束する回数に設定
-    for (let k = 0; k < 12; k++) E -= (E - p.e * Math.sin(E) - M) / (1 - p.e * Math.cos(E));
+    const E = solveKepler(p.e, meanAnom(p, days));
     const xo = p.a * (Math.cos(E) - p.e);
     const yo = p.a * Math.sqrt(1 - p.e * p.e) * Math.sin(E);
     out[0] = p.m[0] * xo + p.m[1] * yo;   // 黄道 X
@@ -4425,9 +4592,7 @@
 
   // 現在の離心近点角 E ∈ [0, 2π) を返す (軌道の高精細パッチ用)
   function keplerE(p, days) {
-    const M = meanAnom(p, days) % (2 * Math.PI);
-    let E = M;
-    for (let k = 0; k < 12; k++) E -= (E - p.e * Math.sin(E) - M) / (1 - p.e * Math.cos(E));
+    const E = solveKepler(p.e, meanAnom(p, days));
     return ((E % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
   }
 
@@ -7321,9 +7486,9 @@
     // 太陽の見かけの動きのほうが速いので、離角は減る向きに 180° を通る。
     // 向きを決め打ちせず、|変化| が π 未満の符号反転だけを拾う (π 未満に
     // 限るのは、evWrap の折り返しを 0 の通過と取り違えないため)
-    // 小惑星は入れない: 軌道上の位相 (L0) が概略で、衝の日付が実際と月単位でずれる
-    // (2026-09-03 にケレス・ベスタで確かめた)
-    for (const k of ["mars", "jupiter", "saturn", "uranus", "neptune"]) {
+    // 小惑星はケレスとベスタだけ (双眼鏡で届く2つ)。位相は JPL の要素から取り直してある
+    // (以前は概略で、衝が月単位でずれていた)
+    for (const k of ["mars", "jupiter", "saturn", "uranus", "neptune", "ceres", "vesta"]) {
       const b = PLANETS.find((p) => p.key === k);
       const f = (t) => evWrap(evLon(b, t, tmp) - lonSun(t) - Math.PI);
       let pa = f(t0);
@@ -8109,7 +8274,7 @@
         // 黄道上の星座名が黄道から外れてしまうので、必ず dirW と揃える
         const ye = yq * ce + zq * se, ze = -yq * se + zq * ce;
         CONST_LABELS.push({
-          ja: nm[0], en: nm[1],
+          ab, ja: nm[0], en: nm[1],
           wx: xq * R, wy: ze * R, wz: -ye * R,
           verts,   // 地上ビューは「画面内に見えている頂点の平均位置」に名前を出す
         });
@@ -9065,6 +9230,10 @@
         altDeg = c.alt; azDeg = c.az; distAU = c.distAU; magV = c.mag;
       }
       if (altDeg < -1 && b !== selected) continue;   // 選択天体は地平線下でも描画
+      // 8等より暗いもの (冥王星・外縁天体・遠くの彗星) は出さない。点の大きさには
+      // 下限があるので、出すと 17等の天体が星より目立ってしまう。選択中と
+      // ツアーの注目天体だけは、見つけられるよう描く
+      if (magV != null && magV > 8 && b !== selected && b !== tourSpot) continue;
       const angR = Math.asin(Math.min(0.9, b.rkm / (distAU * AU_KM)));
       const spherePx = angR / halfFov * halfH;
       // 地球以外の衛星は、画面上で母惑星の点に埋もれている間は省略 (地上ビューのみ)
@@ -11701,6 +11870,7 @@
     perfLap("描画(他)");
     bloomPass();          // 明るいところの滲み (シーンを描き終えてから)
     perfLap("Bloom");
+    snapshotIfPending();  // 画像を保存 (描き終えた直後でないとバッファが消える)
     updateClock();
     tourWatch();          // ガイドツアー: 促した操作をされたら次のステップへ
     updateZoomUI();
@@ -11757,7 +11927,9 @@
         neptune: 500000, triton: 30000,
         pluto: 30000, charon: 20000,
         ceres: 10000, vesta: 10000, pallas: 10000, juno: 10000,
-        halley: 300,
+        halley: 300, swifttuttle: 300, templetuttle: 300, halebopp: 300,
+        hyakutake: 300, neowise: 300, tsuchinshan: 300,
+        eris: 30000, makemake: 30000, haumea: 30000,
       };
       cam.distTgt = body === SUN
         ? bodyR(SUN) * 4.2
@@ -11937,7 +12109,13 @@
     let phaseAng = 0;
     if (r > 1e-6 && D > 1e-6) phaseAng = Math.acos(Math.max(-1, Math.min(1, (r*r + D*D - R*R)/(2*r*D))));
     const illum = (1 + Math.cos(phaseAng)) / 2;
-    let mag = body === SUN ? -26.7 : (MAG[body.key] ? MAG[body.key](r, D, phaseAng/DEG) : null);
+    // 主要天体は個別の式、小惑星・外縁天体は絶対等級 H (位相係数 0.04 等/度は概略)、
+    // 彗星は全光度 H0 + 5 log Δ + 10 log r (bodies.js)。衛星は null (= 描画は 3.5等扱い)
+    let mag = body === SUN ? -26.7
+            : MAG[body.key] ? MAG[body.key](r, D, phaseAng/DEG)
+            : body.H !== undefined ? body.H + 5*Math.log10(r*D) + 0.04*(phaseAng/DEG)
+            : body.comet ? (body.H0 !== undefined ? body.H0 : 6) + 5*Math.log10(D) + 10*Math.log10(r)
+            : null;
     const sizeAS = 2 * body.rkm / (D * AU_KM) / DEG * 3600;
     let elong = 0;
     if (body !== SUN) {
@@ -12229,7 +12407,7 @@
 
   const TOGGLE_BTNS = [];          // [body, 軌道トグル, 名前トグル]
   function makeNavRow(b, sub) {
-    b.showOrbit = hasOrbit(b);
+    b.showOrbit = hasOrbit(b) && !b.orbitOff;   // 長周期彗星は既定で出さない (bodies.js)
     b.showLabel = true;
     const row = document.createElement("div");
     row.className = sub ? "row sub" : "row";
@@ -12268,6 +12446,7 @@
   // カテゴリ (小惑星帯・彗星) — 衛星と同様の展開式グループにまとめる
   const NAV_CATS = [
     { ja: "小惑星帯", en: "Asteroid belt", after: "mars", match: (b) => b.ast },
+    { ja: "太陽系外縁天体", en: "Trans-Neptunian", after: "pluto", match: (b) => b.tno },
     { ja: "彗星", en: "Comets", after: "pluto", match: (b) => b.comet },
   ];
   const CAT_BTNS = [];             // { btn, cat } — 言語切替用
@@ -12321,7 +12500,7 @@
     CAT_TGLS.push([children, ob, lb]);
   }
   for (const b of NAV_BODIES) {
-    if (b.ast || b.comet) continue;              // カテゴリ側にまとめる
+    if (b.ast || b.comet || b.tno) continue;     // カテゴリ側にまとめる
     const row = makeNavRow(b, false);
     const sats = SAT_BY_PARENT.get(b.key);
     if (sats) {
@@ -12350,8 +12529,9 @@
     } else {
       navEl.appendChild(row);
     }
-    const cat = NAV_CATS.find((c) => c.after === b.key);
-    if (cat) makeCatGroup(cat, NAV_BODIES.filter(cat.match));
+    for (const cat of NAV_CATS) {
+      if (cat.after === b.key) makeCatGroup(cat, NAV_BODIES.filter(cat.match));
+    }
   }
   // 絵だけのボタンの読み上げ名とツールチップ。天体名が言語で変わるので、
   // applyLang から呼び直す (作った時点では言語が確定していない行もある)
@@ -13380,6 +13560,55 @@
   navCollapseBtn.addEventListener("click", () => { navVisible = false; applyNavVisible(); });
   navExpandBtn.addEventListener("click", () => { navVisible = true; applyNavVisible(); });
 
+  // ---------- 画像を保存 ----------
+  // WebGL の描画バッファは次のフレームで消える (preserveDrawingBuffer: false) ので、
+  // 押した瞬間ではなく次のフレームの描き終わりに写す (runtime/frame.js が呼ぶ)。
+  // HUD は写さないので、いつ・どこの空かを隅に書き込む。タッチ端末は共有シート
+  // (写真に保存できる。iOS の Safari は download 属性を無視する)、それ以外はダウンロード
+  const menuSaveBtn = document.getElementById("menuSave");
+  let snapPending = false;
+  menuSaveBtn.addEventListener("click", () => { setMenu(false); snapPending = true; });
+  function snapshotIfPending() {
+    if (!snapPending) return;
+    snapPending = false;
+    const c = document.createElement("canvas");
+    c.width = glc.width; c.height = glc.height;
+    const x = c.getContext("2d");
+    x.drawImage(glc, 0, 0);
+    x.drawImage(ovl, 0, 0);
+    const fs = Math.round(12 * DPR), pad = Math.round(14 * DPR);
+    x.textBaseline = "bottom";
+    x.shadowColor = "rgba(0,0,0,0.85)"; x.shadowBlur = 4 * DPR;
+    x.font = fs + "px system-ui, -apple-system, sans-serif";
+    x.fillStyle = "rgba(201,213,234,0.92)";
+    let cap = dateInput.value.replace(/-/g, "/") + " " + timeInput.value + " " + tzText.textContent;
+    if (groundView && surfaceBody === "earth") cap += "   " + siteLabel();
+    x.fillText(cap, pad, c.height - pad);
+    x.font = "300 " + fs + "px Jura, system-ui, sans-serif";
+    x.fillStyle = "rgba(242,178,62,0.9)";
+    x.textAlign = "right";
+    x.fillText("S I D E R E U M", c.width - pad, c.height - pad);
+    const name = "sidereum-" + dateInput.value.replace(/-/g, "") + "-" + timeInput.value.replace(":", "") + ".png";
+    c.toBlob((blob) => {
+      if (!blob) return;
+      const touch = matchMedia("(hover: none) and (pointer: coarse)").matches;
+      if (touch && navigator.canShare) {
+        const file = new File([blob], name, { type: "image/png" });
+        if (navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file] }).catch(() => {});   // 取り消しは無視
+          return;
+        }
+      }
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    }, "image/png");
+  }
+
   // ---------- シーン共有URL ----------
   // 日時・選択天体・カメラ (ズーム/角度/方位)・速度・再生状態を URL に載せる。
   // バックエンド不要。起動時に applyShareURL() で復元する。
@@ -13494,7 +13723,7 @@
   // 中身が増えた・変わった項目に印を付ける。項目ごとに「今の版」を持ち、
   // 利用者がその項目を開いた時点の版を localStorage に控えて比べる。
   // 中身を直したら、その項目の版を +1 する
-  const MENU_VER = { menuHelp: 1, menuCal: 2, menuAbout: 2 };
+  const MENU_VER = { menuHelp: 1, menuCal: 2, menuSave: 1, menuAbout: 2 };
   const MENU_SEEN_KEY = "ssMenuSeen";
   function loadMenuSeen() {
     try { return JSON.parse(localStorage.getItem(MENU_SEEN_KEY)) || {}; }
@@ -13620,6 +13849,7 @@
     howtoEl.classList.remove("open");
     tourListEl.classList.remove("open");
     skyCalEl.classList.remove("open");
+    todayEvEl.classList.remove("open");
     modalScrim.classList.remove("on");
   }
   modalScrim.addEventListener("click", hideModals);
@@ -13797,6 +14027,8 @@
     document.querySelector("#title h1 .beta").textContent = t.betaTag;
     menuLangBtn.textContent = t.menuLang;
     menuShareBtn.textContent = t.menuShare;
+    menuSaveBtn.textContent = t.menuSave;
+    refreshSearchLang();
     updateFsLabel();
     updateMenuHeads();
     menuHelpBtn.textContent = t.menuHelp;
@@ -14910,20 +15142,21 @@
     skyCalEl.scrollTop = 0;
   }
 
+  // 食・太陽面通過・掩蔽は「この観測地で見えるもの」だけ。地平線の下で起きていても
+  // 案内しようがない
+  function calKeep(ev) {
+    if (ev.kind === "solarEclipse" || ev.kind === "lunarEclipse" || ev.kind === "transit" ||
+        ev.kind === "occult") return ev.data.up;
+    return true;
+  }
   // 暦年 y のできごとを集める。年の境は時計の基準で切る (元日 0:00 が UTC の何時かは基準で変わる)
   function calCompute(y) {
     calYear = Math.max(CAL_Y_MIN, Math.min(CAL_Y_MAX, y));
     const ms0 = calYearStart(calYear), ms1 = calYearStart(calYear + 1);
     const t0 = (ms0 - J2000) / DAY_MS;
-    calRows = findEvents(t0, (ms1 - ms0) / DAY_MS).filter((ev) => {
+    calRows = findEvents(t0, (ms1 - ms0) / DAY_MS).filter((ev) =>
       // 走査の端は1日単位なので、年の外へはみ出したぶんを落とす
-      if (calYearOf(J2000 + ev.t * DAY_MS) !== calYear) return false;
-      // 食・太陽面通過・掩蔽は「この観測地で見えるもの」だけ。地平線の下で起きていても
-      // 案内しようがない
-      if (ev.kind === "solarEclipse" || ev.kind === "lunarEclipse" || ev.kind === "transit" ||
-          ev.kind === "occult") return ev.data.up;
-      return true;
-    });
+      calYearOf(J2000 + ev.t * DAY_MS) === calYear && calKeep(ev));
     // その年いちばん大きい / 小さい満月に印を付ける (暦年で閉じているのでここで決まる)
     const fulls = calRows.filter((ev) => ev.kind === "fullmoon");
     if (fulls.length >= 2) {
@@ -15001,11 +15234,270 @@
   });
   menuCalBtn.addEventListener("click", () => { setMenu(false); openSkyCal(); });
 
+  // ---------- 今日のできごと (その日に初めて開いたときのダイアログ) ----------
+  // カレンダーに載る日 (実際の今日。時計の基準で数える) に、その日初めて開いたとき
+  // だけ出す。時計の下に常に置く案は「急に『9/23 秋分』と言われても戸惑う」と却下。
+  // 見た記録は localStorage の ssTodaySeen に日付で持つ (日が変われば消えたも同然)
+  const todayEvEl = document.getElementById("todayEv");
+  let todayRows = [];
+  function todayEvents() {
+    const now = Date.now(), n = clockDate(now);
+    const day = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate());
+    const t0 = (now - J2000) / DAY_MS;
+    return findEvents(t0 - 1.5, 3).filter((ev) => {
+      if (!calKeep(ev)) return false;
+      const d = clockDate(J2000 + ev.t * DAY_MS);
+      return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) === day;
+    });
+  }
+  function maybeShowTodayEv() {
+    const n = clockDate(Date.now());
+    const key = n.getUTCFullYear() + "-" + pad2(n.getUTCMonth() + 1) + "-" + pad2(n.getUTCDate());
+    try { if (localStorage.getItem("ssTodaySeen") === key) return; } catch (e) { return; }
+    todayRows = todayEvents();
+    if (!todayRows.length) return;
+    try { localStorage.setItem("ssTodaySeen", key); } catch (e) { /* プライベートモード等 */ }
+    buildTodayEv();
+    todayEvEl.classList.add("open");
+    modalScrim.classList.add("on");
+  }
+  function buildTodayEv() {
+    const c = T().cal;
+    const n = clockDate(Date.now());
+    const wd = (lang === "ja" ? CAL_WD_JA : CAL_WD_EN)[n.getUTCDay()];
+    const dateStr = lang === "ja"
+      ? n.getUTCFullYear() + "年" + (n.getUTCMonth() + 1) + "月" + n.getUTCDate() + "日 (" + wd + ")"
+      : wd + ", " + CAL_MON_EN[n.getUTCMonth()] + " " + n.getUTCDate() + ", " + n.getUTCFullYear();
+    let body = "";
+    for (let i = 0; i < todayRows.length; i++) {
+      const ev = todayRows[i], d = clockDate(J2000 + ev.t * DAY_MS), tx = calText(ev);
+      body += '<div class="calRow">' +
+        '<div class="calWhen"><span class="calTime">' + pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes()) + "</span></div>" +
+        '<div class="calWhat"><span class="calTitle">' + tx.h + "</span>" +
+        (tx.s ? '<span class="calSub">' + tx.s + "</span>" : "") + "</div>" +
+        '<button class="calGo" data-i="' + i + '">' + c.go + "</button>" +
+      "</div>";
+    }
+    todayEvEl.innerHTML = '<button id="todayEvClose" aria-label="close">\u2715</button>' +
+      "<h2>" + c.todayTitle + "</h2><p>" + c.todayLead(dateStr) + "</p>" + body +
+      '<div class="todayFoot"><button id="todayEvCal">' + c.title + "</button>" +
+      '<button id="todayEvOk">' + c.todayClose + "</button></div>";
+  }
+  todayEvEl.addEventListener("click", (e) => {
+    if (e.target.id === "todayEvClose" || e.target.id === "todayEvOk") { hideModals(); return; }
+    if (e.target.id === "todayEvCal") { openSkyCal(); return; }
+    const go = e.target.closest(".calGo");
+    if (go) goToEvent(todayRows[+go.dataset.i]);
+  });
+
   // 言語切替・観測地の変更で開いているものを作り直す (観測地は食の可視判定を変える)
   function refreshSkyCal(recompute) {
+    if (todayEvEl.classList.contains("open")) buildTodayEv();
     if (!skyCalEl.classList.contains("open")) return;
     if (recompute && calYear !== null) calCompute(calYear);
     buildSkyCal();
+  }
+  //#endregion
+  //#region src/ui/search.js
+  // ---------- 天体名検索 ----------
+  // 天体・衛星・探査機・星雲星団・星座・流星群を名前で探して飛ぶ。日本語名と英語名の
+  // どちらでも引ける (表示は今の言語)。タイトル横の 🔍 か "/" キーで開く。
+  // 天体は select() に任せる (宇宙ビューでは寄り、地上ビューではそちらを向く)。
+  // 空に貼り付いたもの (星雲星団・星座・流星群) は地上ビューでその方向を向く
+  const searchBtn = document.getElementById("searchBtn");
+  const searchBox = document.getElementById("searchBox");
+  const searchInput = document.getElementById("searchInput");
+  const searchList = document.getElementById("searchList");
+  const SEARCH_KIND = { body: "sBody", sat: "sSat", probe: "sProbe", dso: "sDso", const: "sConst", shower: "sShower" };
+  // 照合用に正規化: 全角→半角、小文字、ひらがな→カタカナ、空白と区切り (・ - ' .) を落とす
+  const sKey = (v) => String(v).normalize("NFKC").toLowerCase()
+    .replace(/[\u3041-\u3096]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 0x60))
+    .replace(/[\s・･\-–—'’.]/g, "");
+  let searchIndex = null, sRes = [], sSel = 0;
+
+  function buildSearchIndex() {
+    const ix = [];
+    for (const b of ALL_BODIES) {
+      ix.push({ kind: b.parent ? "sat" : "body", keys: [b.name, b.nameEn, b.en],
+                label: () => bName(b), go: () => goSearchBody(b) });
+    }
+    for (const pr of PROBES) {
+      ix.push({ kind: "probe", keys: [pr.name, pr.nameEn, pr.en], label: () => bName(pr), go: () => goSearchBody(pr) });
+    }
+    for (const d of DSO) {
+      const m = d[0] ? "M" + d[0] : "";
+      ix.push({ kind: "dso", keys: [m, m && "M " + d[0], m && "メシエ" + d[0], d[8], d[9]],
+                label: () => (m ? m + " " : "") + (lang === "ja" ? (d[8] || d[9]) : (d[9] || d[8])),
+                go: () => aimSkyRaDec(d[1], d[2], 12, "dso") });
+    }
+    for (const c of CONST_LABELS) {
+      ix.push({ kind: "const", keys: [c.ja, c.en, c.ab], label: () => (lang === "ja" ? c.ja : c.en),
+                go: () => aimSkyDir([c.wx, c.wy, c.wz], 65, "const") });
+    }
+    for (const sh of SHOWERS) {
+      if (sh.key === "sporadic") continue;
+      ix.push({ kind: "shower", keys: [sh.ja, sh.en], label: () => (lang === "ja" ? sh.ja : sh.en),
+                go: () => goSearchShower(sh.key) });
+    }
+    for (const e of ix) e.nk = e.keys.filter(Boolean).map(sKey);
+    return ix;
+  }
+  // 部分一致。先頭に近く一致したものを先に (同点は索引の順 = 天体 → 星雲 → 星座 → 流星群)
+  function searchQuery(q) {
+    const k = sKey(q);
+    if (!k) return [];
+    const hits = [];
+    for (const e of searchIndex) {
+      let best = -1;
+      for (const nk of e.nk) {
+        const i = nk.indexOf(k);
+        if (i >= 0 && (best < 0 || i < best)) best = i;
+      }
+      if (best >= 0) hits.push({ e, best });
+    }
+    hits.sort((a, b) => a.best - b.best);
+    return hits.slice(0, 8).map((h) => h.e);
+  }
+  function renderSearch() {
+    const t = T();
+    searchList.innerHTML = "";
+    searchInput.removeAttribute("aria-activedescendant");
+    if (!sRes.length) {
+      if (searchInput.value.trim()) {
+        const li = document.createElement("li");
+        li.className = "sNone";
+        li.textContent = t.searchNone;
+        searchList.appendChild(li);
+      }
+      searchInput.setAttribute("aria-expanded", "false");
+      return;
+    }
+    sRes.forEach((e, i) => {
+      const li = document.createElement("li");
+      li.setAttribute("role", "option");
+      li.id = "sOpt" + i;
+      if (i === sSel) { li.className = "on"; li.setAttribute("aria-selected", "true"); }
+      const nm = document.createElement("span"), kd = document.createElement("span");
+      nm.textContent = e.label();
+      kd.className = "sKind"; kd.textContent = t[SEARCH_KIND[e.kind]];
+      li.appendChild(nm); li.appendChild(kd);
+      // pointerdown で決める (click だと先に入力欄の blur が走って一覧が畳まれる)
+      li.addEventListener("pointerdown", (ev) => { ev.preventDefault(); goSearch(e); });
+      searchList.appendChild(li);
+    });
+    searchInput.setAttribute("aria-expanded", "true");
+    searchInput.setAttribute("aria-activedescendant", "sOpt" + sSel);
+  }
+  function openSearch() {
+    if (!searchIndex) searchIndex = buildSearchIndex();
+    setMenu(false);
+    hideModals();
+    searchBox.hidden = false;
+    searchInput.value = "";
+    sRes = []; sSel = 0;
+    renderSearch();
+    searchInput.focus();
+  }
+  function closeSearch() {
+    if (searchBox.hidden) return;
+    searchBox.hidden = true;
+    searchInput.blur();
+  }
+  function goSearch(e) {
+    closeSearch();
+    e.go();
+    hideHint();
+  }
+
+  // ---- 飛び先 ----
+  function goSearchBody(b) {
+    if (groundView && b.key === surfaceBody) exitGround();   // 立っている天体は宇宙から見る
+    select(b, true);
+  }
+  // 赤経赤緯 (J2000, 度) → ワールドの単位方向 (showers.js の dirW と同じ変換)
+  const _sd = [0, 0, 0];
+  function aimSkyRaDec(raDeg, decDeg, fovDeg, what) {
+    const eps = 23.4393 * DEG, ce = Math.cos(eps), se = Math.sin(eps);
+    const ra = raDeg * DEG, dec = decDeg * DEG, cd = Math.cos(dec);
+    const xq = cd * Math.cos(ra), yq = cd * Math.sin(ra), zq = Math.sin(dec);
+    _sd[0] = xq; _sd[1] = -yq * se + zq * ce; _sd[2] = -(yq * ce + zq * se);
+    aimSkyDir(_sd, fovDeg, what);
+  }
+  // ワールドの方向 (天球上の点) へ地上ビューを向ける。層が消えていれば入れる
+  const _sg = [0, 0, 0];
+  function aimSkyDir(d, fovDeg, what) {
+    if (!groundView) enterSurface("earth");
+    buildObsFrame();
+    if (what === "dso" && !dsoOn) menuDsoBtn.click();
+    if (what === "const" && !showConst) menuConstBtn.click();
+    select(null, false);
+    gTrack = false; gRadTrack = "";
+    const l = Math.hypot(d[0], d[1], d[2]) || 1;
+    worldDirToGround([d[0] / l, d[1] / l, d[2] / l], _sg);
+    const rf = refractUp(_sg[1]);
+    _sg[0] *= rf[0]; _sg[2] *= rf[0]; _sg[1] = rf[1];
+    const az = Math.atan2(_sg[0], -_sg[2]), alt = Math.asin(Math.max(-1, Math.min(1, _sg[1])));
+    let dz = (az - gAz) % (2 * Math.PI);
+    if (dz > Math.PI) dz -= 2 * Math.PI;
+    if (dz < -Math.PI) dz += 2 * Math.PI;
+    gAzTgt = gAz + dz;
+    gAltTgt = Math.max(-1.3, Math.min(GALT_MAX, alt));
+    gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, fovDeg * DEG));
+    updateGroundUI();
+  }
+  function goSearchShower(key) {
+    if (!groundView) enterSurface("earth");
+    buildObsFrame();
+    setMeteor(true);
+    select(null, false);
+    aimGroundAtRadiant(key, false);
+    gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, 62 * DEG));
+    updateGroundUI();
+  }
+
+  // ---- 操作 ----
+  searchBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (searchBox.hidden) openSearch(); else closeSearch();
+  });
+  searchInput.addEventListener("input", () => {
+    sRes = searchQuery(searchInput.value);
+    sSel = 0;
+    renderSearch();
+  });
+  searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      if (sRes.length) {
+        sSel = (sSel + (e.key === "ArrowDown" ? 1 : sRes.length - 1)) % sRes.length;
+        renderSearch();
+      }
+      e.preventDefault();
+    } else if (e.key === "Enter") {
+      if (sRes[sSel]) goSearch(sRes[sSel]);
+      e.preventDefault();
+    } else if (e.key === "Escape") {
+      closeSearch();
+      e.stopPropagation();
+    }
+  });
+  document.addEventListener("pointerdown", (e) => {
+    if (!searchBox.hidden && !searchBox.contains(e.target) && !searchBtn.contains(e.target)) closeSearch();
+  });
+  // "/" で開く (入力欄にフォーカスが無いときだけ)
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "/" && e.target === document.body && !tourActive && !introOn) {
+      e.preventDefault();
+      openSearch();
+    }
+  });
+  // 言語切替 (applyLang から)
+  function refreshSearchLang() {
+    const t = T();
+    searchBtn.setAttribute("aria-label", t.search);
+    searchBtn.title = t.search;
+    searchInput.setAttribute("aria-label", t.search);
+    searchInput.placeholder = t.searchPh;
+    if (!searchBox.hidden) renderSearch();
   }
   //#endregion
   //#region src/main.js
@@ -15052,6 +15544,10 @@
     buildWelcome();
     const showWelcome = () => welcomeEl.classList.add("open");
     if (!startIntro(showWelcome)) showWelcome();
+  } else if (!fromShare && !fromTour) {
+    // 2回目以降: 今日がカレンダーに載る日なら、その日初めて開いたときだけ紹介する
+    // (共有リンク・ツアーで開いたときは、その場面を見せるのが先)
+    maybeShowTodayEv();
   }
   requestAnimationFrame(frame);
   //#endregion

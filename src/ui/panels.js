@@ -8,6 +8,7 @@
     howtoEl.classList.remove("open");
     tourListEl.classList.remove("open");
     skyCalEl.classList.remove("open");
+    todayEvEl.classList.remove("open");
     modalScrim.classList.remove("on");
   }
   modalScrim.addEventListener("click", hideModals);
@@ -185,6 +186,8 @@
     document.querySelector("#title h1 .beta").textContent = t.betaTag;
     menuLangBtn.textContent = t.menuLang;
     menuShareBtn.textContent = t.menuShare;
+    menuSaveBtn.textContent = t.menuSave;
+    refreshSearchLang();
     updateFsLabel();
     updateMenuHeads();
     menuHelpBtn.textContent = t.menuHelp;

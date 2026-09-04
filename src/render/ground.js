@@ -523,6 +523,10 @@
         altDeg = c.alt; azDeg = c.az; distAU = c.distAU; magV = c.mag;
       }
       if (altDeg < -1 && b !== selected) continue;   // 選択天体は地平線下でも描画
+      // 8等より暗いもの (冥王星・外縁天体・遠くの彗星) は出さない。点の大きさには
+      // 下限があるので、出すと 17等の天体が星より目立ってしまう。選択中と
+      // ツアーの注目天体だけは、見つけられるよう描く
+      if (magV != null && magV > 8 && b !== selected && b !== tourSpot) continue;
       const angR = Math.asin(Math.min(0.9, b.rkm / (distAU * AU_KM)));
       const spherePx = angR / halfFov * halfH;
       // 地球以外の衛星は、画面上で母惑星の点に埋もれている間は省略 (地上ビューのみ)

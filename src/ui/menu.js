@@ -215,6 +215,55 @@
   navCollapseBtn.addEventListener("click", () => { navVisible = false; applyNavVisible(); });
   navExpandBtn.addEventListener("click", () => { navVisible = true; applyNavVisible(); });
 
+  // ---------- 画像を保存 ----------
+  // WebGL の描画バッファは次のフレームで消える (preserveDrawingBuffer: false) ので、
+  // 押した瞬間ではなく次のフレームの描き終わりに写す (runtime/frame.js が呼ぶ)。
+  // HUD は写さないので、いつ・どこの空かを隅に書き込む。タッチ端末は共有シート
+  // (写真に保存できる。iOS の Safari は download 属性を無視する)、それ以外はダウンロード
+  const menuSaveBtn = document.getElementById("menuSave");
+  let snapPending = false;
+  menuSaveBtn.addEventListener("click", () => { setMenu(false); snapPending = true; });
+  function snapshotIfPending() {
+    if (!snapPending) return;
+    snapPending = false;
+    const c = document.createElement("canvas");
+    c.width = glc.width; c.height = glc.height;
+    const x = c.getContext("2d");
+    x.drawImage(glc, 0, 0);
+    x.drawImage(ovl, 0, 0);
+    const fs = Math.round(12 * DPR), pad = Math.round(14 * DPR);
+    x.textBaseline = "bottom";
+    x.shadowColor = "rgba(0,0,0,0.85)"; x.shadowBlur = 4 * DPR;
+    x.font = fs + "px system-ui, -apple-system, sans-serif";
+    x.fillStyle = "rgba(201,213,234,0.92)";
+    let cap = dateInput.value.replace(/-/g, "/") + " " + timeInput.value + " " + tzText.textContent;
+    if (groundView && surfaceBody === "earth") cap += "   " + siteLabel();
+    x.fillText(cap, pad, c.height - pad);
+    x.font = "300 " + fs + "px Jura, system-ui, sans-serif";
+    x.fillStyle = "rgba(242,178,62,0.9)";
+    x.textAlign = "right";
+    x.fillText("S I D E R E U M", c.width - pad, c.height - pad);
+    const name = "sidereum-" + dateInput.value.replace(/-/g, "") + "-" + timeInput.value.replace(":", "") + ".png";
+    c.toBlob((blob) => {
+      if (!blob) return;
+      const touch = matchMedia("(hover: none) and (pointer: coarse)").matches;
+      if (touch && navigator.canShare) {
+        const file = new File([blob], name, { type: "image/png" });
+        if (navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file] }).catch(() => {});   // 取り消しは無視
+          return;
+        }
+      }
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    }, "image/png");
+  }
+
   // ---------- シーン共有URL ----------
   // 日時・選択天体・カメラ (ズーム/角度/方位)・速度・再生状態を URL に載せる。
   // バックエンド不要。起動時に applyShareURL() で復元する。
@@ -329,7 +378,7 @@
   // 中身が増えた・変わった項目に印を付ける。項目ごとに「今の版」を持ち、
   // 利用者がその項目を開いた時点の版を localStorage に控えて比べる。
   // 中身を直したら、その項目の版を +1 する
-  const MENU_VER = { menuHelp: 1, menuCal: 2, menuAbout: 2 };
+  const MENU_VER = { menuHelp: 1, menuCal: 2, menuSave: 1, menuAbout: 2 };
   const MENU_SEEN_KEY = "ssMenuSeen";
   function loadMenuSeen() {
     try { return JSON.parse(localStorage.getItem(MENU_SEEN_KEY)) || {}; }

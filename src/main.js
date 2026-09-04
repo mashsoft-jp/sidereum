@@ -41,5 +41,9 @@
     buildWelcome();
     const showWelcome = () => welcomeEl.classList.add("open");
     if (!startIntro(showWelcome)) showWelcome();
+  } else if (!fromShare && !fromTour) {
+    // 2回目以降: 今日がカレンダーに載る日なら、その日初めて開いたときだけ紹介する
+    // (共有リンク・ツアーで開いたときは、その場面を見せるのが先)
+    maybeShowTodayEv();
   }
   requestAnimationFrame(frame);

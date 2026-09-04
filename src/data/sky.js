@@ -123,7 +123,7 @@
         // 黄道上の星座名が黄道から外れてしまうので、必ず dirW と揃える
         const ye = yq * ce + zq * se, ze = -yq * se + zq * ce;
         CONST_LABELS.push({
-          ja: nm[0], en: nm[1],
+          ab, ja: nm[0], en: nm[1],
           wx: xq * R, wy: ze * R, wz: -ye * R,
           verts,   // 地上ビューは「画面内に見えている頂点の平均位置」に名前を出す
         });

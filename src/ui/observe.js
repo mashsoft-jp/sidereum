@@ -36,7 +36,9 @@
         neptune: 500000, triton: 30000,
         pluto: 30000, charon: 20000,
         ceres: 10000, vesta: 10000, pallas: 10000, juno: 10000,
-        halley: 300,
+        halley: 300, swifttuttle: 300, templetuttle: 300, halebopp: 300,
+        hyakutake: 300, neowise: 300, tsuchinshan: 300,
+        eris: 30000, makemake: 30000, haumea: 30000,
       };
       cam.distTgt = body === SUN
         ? bodyR(SUN) * 4.2
@@ -216,7 +218,13 @@
     let phaseAng = 0;
     if (r > 1e-6 && D > 1e-6) phaseAng = Math.acos(Math.max(-1, Math.min(1, (r*r + D*D - R*R)/(2*r*D))));
     const illum = (1 + Math.cos(phaseAng)) / 2;
-    let mag = body === SUN ? -26.7 : (MAG[body.key] ? MAG[body.key](r, D, phaseAng/DEG) : null);
+    // 主要天体は個別の式、小惑星・外縁天体は絶対等級 H (位相係数 0.04 等/度は概略)、
+    // 彗星は全光度 H0 + 5 log Δ + 10 log r (bodies.js)。衛星は null (= 描画は 3.5等扱い)
+    let mag = body === SUN ? -26.7
+            : MAG[body.key] ? MAG[body.key](r, D, phaseAng/DEG)
+            : body.H !== undefined ? body.H + 5*Math.log10(r*D) + 0.04*(phaseAng/DEG)
+            : body.comet ? (body.H0 !== undefined ? body.H0 : 6) + 5*Math.log10(D) + 10*Math.log10(r)
+            : null;
     const sizeAS = 2 * body.rkm / (D * AU_KM) / DEG * 3600;
     let elong = 0;
     if (body !== SUN) {
@@ -508,7 +516,7 @@
 
   const TOGGLE_BTNS = [];          // [body, 軌道トグル, 名前トグル]
   function makeNavRow(b, sub) {
-    b.showOrbit = hasOrbit(b);
+    b.showOrbit = hasOrbit(b) && !b.orbitOff;   // 長周期彗星は既定で出さない (bodies.js)
     b.showLabel = true;
     const row = document.createElement("div");
     row.className = sub ? "row sub" : "row";
@@ -547,6 +555,7 @@
   // カテゴリ (小惑星帯・彗星) — 衛星と同様の展開式グループにまとめる
   const NAV_CATS = [
     { ja: "小惑星帯", en: "Asteroid belt", after: "mars", match: (b) => b.ast },
+    { ja: "太陽系外縁天体", en: "Trans-Neptunian", after: "pluto", match: (b) => b.tno },
     { ja: "彗星", en: "Comets", after: "pluto", match: (b) => b.comet },
   ];
   const CAT_BTNS = [];             // { btn, cat } — 言語切替用
@@ -600,7 +609,7 @@
     CAT_TGLS.push([children, ob, lb]);
   }
   for (const b of NAV_BODIES) {
-    if (b.ast || b.comet) continue;              // カテゴリ側にまとめる
+    if (b.ast || b.comet || b.tno) continue;     // カテゴリ側にまとめる
     const row = makeNavRow(b, false);
     const sats = SAT_BY_PARENT.get(b.key);
     if (sats) {
@@ -629,8 +638,9 @@
     } else {
       navEl.appendChild(row);
     }
-    const cat = NAV_CATS.find((c) => c.after === b.key);
-    if (cat) makeCatGroup(cat, NAV_BODIES.filter(cat.match));
+    for (const cat of NAV_CATS) {
+      if (cat.after === b.key) makeCatGroup(cat, NAV_BODIES.filter(cat.match));
+    }
   }
   // 絵だけのボタンの読み上げ名とツールチップ。天体名が言語で変わるので、
   // applyLang から呼び直す (作った時点では言語が確定していない行もある)

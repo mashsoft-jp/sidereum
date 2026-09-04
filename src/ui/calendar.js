@@ -125,20 +125,21 @@
     skyCalEl.scrollTop = 0;
   }
 
+  // 食・太陽面通過・掩蔽は「この観測地で見えるもの」だけ。地平線の下で起きていても
+  // 案内しようがない
+  function calKeep(ev) {
+    if (ev.kind === "solarEclipse" || ev.kind === "lunarEclipse" || ev.kind === "transit" ||
+        ev.kind === "occult") return ev.data.up;
+    return true;
+  }
   // 暦年 y のできごとを集める。年の境は時計の基準で切る (元日 0:00 が UTC の何時かは基準で変わる)
   function calCompute(y) {
     calYear = Math.max(CAL_Y_MIN, Math.min(CAL_Y_MAX, y));
     const ms0 = calYearStart(calYear), ms1 = calYearStart(calYear + 1);
     const t0 = (ms0 - J2000) / DAY_MS;
-    calRows = findEvents(t0, (ms1 - ms0) / DAY_MS).filter((ev) => {
+    calRows = findEvents(t0, (ms1 - ms0) / DAY_MS).filter((ev) =>
       // 走査の端は1日単位なので、年の外へはみ出したぶんを落とす
-      if (calYearOf(J2000 + ev.t * DAY_MS) !== calYear) return false;
-      // 食・太陽面通過・掩蔽は「この観測地で見えるもの」だけ。地平線の下で起きていても
-      // 案内しようがない
-      if (ev.kind === "solarEclipse" || ev.kind === "lunarEclipse" || ev.kind === "transit" ||
-          ev.kind === "occult") return ev.data.up;
-      return true;
-    });
+      calYearOf(J2000 + ev.t * DAY_MS) === calYear && calKeep(ev));
     // その年いちばん大きい / 小さい満月に印を付ける (暦年で閉じているのでここで決まる)
     const fulls = calRows.filter((ev) => ev.kind === "fullmoon");
     if (fulls.length >= 2) {
@@ -216,8 +217,65 @@
   });
   menuCalBtn.addEventListener("click", () => { setMenu(false); openSkyCal(); });
 
+  // ---------- 今日のできごと (その日に初めて開いたときのダイアログ) ----------
+  // カレンダーに載る日 (実際の今日。時計の基準で数える) に、その日初めて開いたとき
+  // だけ出す。時計の下に常に置く案は「急に『9/23 秋分』と言われても戸惑う」と却下。
+  // 見た記録は localStorage の ssTodaySeen に日付で持つ (日が変われば消えたも同然)
+  const todayEvEl = document.getElementById("todayEv");
+  let todayRows = [];
+  function todayEvents() {
+    const now = Date.now(), n = clockDate(now);
+    const day = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate());
+    const t0 = (now - J2000) / DAY_MS;
+    return findEvents(t0 - 1.5, 3).filter((ev) => {
+      if (!calKeep(ev)) return false;
+      const d = clockDate(J2000 + ev.t * DAY_MS);
+      return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) === day;
+    });
+  }
+  function maybeShowTodayEv() {
+    const n = clockDate(Date.now());
+    const key = n.getUTCFullYear() + "-" + pad2(n.getUTCMonth() + 1) + "-" + pad2(n.getUTCDate());
+    try { if (localStorage.getItem("ssTodaySeen") === key) return; } catch (e) { return; }
+    todayRows = todayEvents();
+    if (!todayRows.length) return;
+    try { localStorage.setItem("ssTodaySeen", key); } catch (e) { /* プライベートモード等 */ }
+    buildTodayEv();
+    todayEvEl.classList.add("open");
+    modalScrim.classList.add("on");
+  }
+  function buildTodayEv() {
+    const c = T().cal;
+    const n = clockDate(Date.now());
+    const wd = (lang === "ja" ? CAL_WD_JA : CAL_WD_EN)[n.getUTCDay()];
+    const dateStr = lang === "ja"
+      ? n.getUTCFullYear() + "年" + (n.getUTCMonth() + 1) + "月" + n.getUTCDate() + "日 (" + wd + ")"
+      : wd + ", " + CAL_MON_EN[n.getUTCMonth()] + " " + n.getUTCDate() + ", " + n.getUTCFullYear();
+    let body = "";
+    for (let i = 0; i < todayRows.length; i++) {
+      const ev = todayRows[i], d = clockDate(J2000 + ev.t * DAY_MS), tx = calText(ev);
+      body += '<div class="calRow">' +
+        '<div class="calWhen"><span class="calTime">' + pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes()) + "</span></div>" +
+        '<div class="calWhat"><span class="calTitle">' + tx.h + "</span>" +
+        (tx.s ? '<span class="calSub">' + tx.s + "</span>" : "") + "</div>" +
+        '<button class="calGo" data-i="' + i + '">' + c.go + "</button>" +
+      "</div>";
+    }
+    todayEvEl.innerHTML = '<button id="todayEvClose" aria-label="close">\u2715</button>' +
+      "<h2>" + c.todayTitle + "</h2><p>" + c.todayLead(dateStr) + "</p>" + body +
+      '<div class="todayFoot"><button id="todayEvCal">' + c.title + "</button>" +
+      '<button id="todayEvOk">' + c.todayClose + "</button></div>";
+  }
+  todayEvEl.addEventListener("click", (e) => {
+    if (e.target.id === "todayEvClose" || e.target.id === "todayEvOk") { hideModals(); return; }
+    if (e.target.id === "todayEvCal") { openSkyCal(); return; }
+    const go = e.target.closest(".calGo");
+    if (go) goToEvent(todayRows[+go.dataset.i]);
+  });
+
   // 言語切替・観測地の変更で開いているものを作り直す (観測地は食の可視判定を変える)
   function refreshSkyCal(recompute) {
+    if (todayEvEl.classList.contains("open")) buildTodayEv();
     if (!skyCalEl.classList.contains("open")) return;
     if (recompute && calYear !== null) calCompute(calYear);
     buildSkyCal();

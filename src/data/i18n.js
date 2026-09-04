@@ -77,6 +77,9 @@
         retroEndSub: "東向きの動きに戻ります",
         occult: (n) => "月が" + n + "を隠す (掩蔽)",
         occultSub: "この観測地から見て、月の縁に隠れてまた現れます",
+        todayTitle: "今日のできごと",
+        todayLead: (d) => d + " は、観測地から見える天文カレンダーのできごとがある日です。",
+        todayClose: "閉じる",
         transit: (n) => n + "の太陽面通過",
         transitSub: "太陽の面を小さな黒い点が横切ります。時刻は1時間ほどずれることがあります",
       },
@@ -103,6 +106,9 @@
       menuUnitToKm: "距離を km 表示",
       menuShare: "共有リンクをコピー",
       menuShareDone: "コピーしました",
+      menuSave: "画像を保存",
+      search: "検索", searchPh: "天体・星座・星雲・流星群を検索", searchNone: "見つかりません",
+      sBody: "天体", sSat: "衛星", sProbe: "探査機", sDso: "星雲・星団", sConst: "星座", sShower: "流星群",
       menuFs: "全画面表示",
       menuFsExit: "全画面を終了",
       menuNavHide: "天体リストを隠す",
@@ -193,6 +199,9 @@
         retroEndSub: "Resumes its eastward motion",
         occult: (n) => "Moon occults " + n,
         occultSub: "Seen from this site, it slips behind the Moon's limb and reappears",
+        todayTitle: "Today in the sky",
+        todayLead: (d) => d + " has a sky-calendar event visible from your site.",
+        todayClose: "Close",
         transit: (n) => n + " transits the Sun",
         transitSub: "A tiny black dot crosses the solar disk. Times can be off by up to an hour",
       },
@@ -219,6 +228,9 @@
       menuUnitToKm: "Distances in km",
       menuShare: "Copy shareable link",
       menuShareDone: "Copied!",
+      menuSave: "Save image",
+      search: "Search", searchPh: "Search bodies, constellations, deep-sky, showers", searchNone: "No matches",
+      sBody: "Body", sSat: "Moon", sProbe: "Probe", sDso: "Deep-sky", sConst: "Constellation", sShower: "Shower",
       menuFs: "Fullscreen",
       menuFsExit: "Exit fullscreen",
       menuNavHide: "Hide body list",
@@ -240,7 +252,9 @@
     },
   };
   const T = () => UI[lang];
-  for (const b of [SUN, ...PLANETS, ...SATELLITES, ...PROBES]) b.nameEn = b.en.charAt(0) + b.en.slice(1).toLowerCase();
+  for (const b of [SUN, ...PLANETS, ...SATELLITES, ...PROBES]) {
+    b.nameEn = b.en.toLowerCase().replace(/(^|[\s-])(\S)/g, (m, a, c) => a + c.toUpperCase());   // HALE-BOPP → Hale-Bopp
+  }
   const bName = (b) => (lang === "ja" ? b.name : b.nameEn);
 
   // 情報パネルの英語データ
@@ -293,6 +307,33 @@
     halley: {
       rows:[["Class","Periodic comet (1P)"],["Nucleus","~15×8 km"],["Perihelion","0.59 au"],["Aphelion","35.1 au"],["Orbital period","~75.3 yr"],["Inclination","162.3° (retrograde)"],["Last perihelion","Feb 1986"],["Next perihelion","c. 2061"]],
       fact:"The most famous periodic comet, returning roughly every 76 years on a retrograde, highly elongated orbit that reaches beyond Neptune. Note: because Jupiter and Saturn shift each return, the timing is matched to the actual perihelion passages (1835, 1910, 1986, 2061, 2134); dates past 2134 are extrapolated." },
+    swifttuttle: {
+      rows:[["Class","Periodic comet (109P)"],["Nucleus","~26 km"],["Perihelion","0.96 au"],["Aphelion","51.2 au"],["Orbital period","~133 yr"],["Last perihelion","Dec 1992"],["Next perihelion","Jul 2126"]],
+      fact:"Parent of the Perseid meteor shower. With a nucleus about 26 km across it is the largest object known to cross Earth's orbit. Its returns are pinned to the predicted perihelion dates (1862, 1992, 2126)." },
+    templetuttle: {
+      rows:[["Class","Periodic comet (55P)"],["Nucleus","~3.6 km"],["Perihelion","0.98 au"],["Aphelion","19.7 au"],["Orbital period","~33 yr"],["Last perihelion","Feb 1998"],["Next perihelion","May 2031"]],
+      fact:"Parent of the Leonid meteor shower. In the years right after each return the Leonids can storm — thousands of meteors an hour in 1833, 1966 and 2001. Returns are pinned to the perihelion dates (1965, 1998, 2031)." },
+    halebopp: {
+      rows:[["Class","Long-period comet (C/1995 O1)"],["Nucleus","~60 km"],["Perihelion","0.89 au"],["Perihelion passage","1 Apr 1997"],["Orbital period","~2,400 yr"],["Inclination","89.3°"]],
+      fact:"The great comet of spring 1997, visible to the naked eye for a record 18 months. Its unusually large nucleus (about 60 km) kept it bright even though it never came closer than 1.3 au to Earth." },
+    hyakutake: {
+      rows:[["Class","Long-period comet (C/1996 B2)"],["Nucleus","~4 km"],["Perihelion","0.23 au"],["Perihelion passage","1 May 1996"],["Closest to Earth","25 Mar 1996 (0.10 au)"],["Orbital period","~70,000 yr"]],
+      fact:"Discovered in January 1996 by Yuji Hyakutake. In March it passed just 0.10 au from Earth and its tail stretched across more than half the sky (100°+). Being so close, it swept across the sky noticeably from night to night." },
+    neowise: {
+      rows:[["Class","Long-period comet (C/2020 F3)"],["Nucleus","~5 km"],["Perihelion","0.29 au"],["Perihelion passage","3 Jul 2020"],["Closest to Earth","23 Jul 2020 (0.69 au)"],["Orbital period","~6,800 yr"]],
+      fact:"Visible to the naked eye in the northern dawn and dusk sky in July 2020 — the brightest comet since Hale-Bopp 23 years earlier, photographed with a forked dust tail and a separate ion tail." },
+    tsuchinshan: {
+      rows:[["Class","Long-period comet (C/2023 A3)"],["Perihelion","0.39 au"],["Perihelion passage","27 Sep 2024"],["Closest to Earth","12 Oct 2024 (0.47 au)"],["Orbit","Hyperbolic (never returns)"]],
+      fact:"A naked-eye comet in the western evening sky in October 2024. Its true orbit is hyperbolic (e≈1.0001), leaving the Solar System for good; here it is approximated by an extremely elongated ellipse with the same perihelion distance." },
+    eris: {
+      rows:[["Class","Dwarf planet (trans-Neptunian)"],["Diameter","2,326 km"],["Mass","1.6×10²² kg"],["Mean distance","67.9 au"],["Orbital period","560 yr"],["Rotation period","25.9 hours"],["Moons","1 (Dysnomia)"]],
+      fact:"More massive than Pluto. Its discovery in 2005 forced the question of what a planet is, and the 'dwarf planet' class was created the next year. Currently near aphelion (~97 au), the most distant known dwarf planet." },
+    makemake: {
+      rows:[["Class","Dwarf planet (trans-Neptunian)"],["Diameter","~1,430 km"],["Mean distance","45.6 au"],["Orbital period","308 yr"],["Rotation period","22.8 hours"],["Moons","1"]],
+      fact:"Discovered in 2005. Its surface is covered in methane ice with a reddish tint. Named after the creator god of the Rapa Nui people of Easter Island." },
+    haumea: {
+      rows:[["Class","Dwarf planet (trans-Neptunian)"],["Size","~2,100×1,100 km"],["Mean distance","43.1 au"],["Orbital period","283 yr"],["Rotation period","3.9 hours"],["Moons","2"],["Rings","yes"]],
+      fact:"Spinning once every four hours, it has been stretched into an elongated ellipsoid. A ring was discovered in 2017. Named after the Hawaiian goddess of childbirth." },
     phobos: {
       rows:[["Diameter","~22 km"],["Orbital radius","9,376 km"],["Orbital period","7.66 hours"],["Rotation","synchronous"]],
       fact:"Orbits faster than Mars rotates, so it rises in the west and sets in the east. It is slowly spiraling inward and will eventually crash into Mars." },

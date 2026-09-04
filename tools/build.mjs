@@ -67,7 +67,8 @@ const MANIFEST = [
   "ui/menu.js",          // メニュー・共有URL・About
   "ui/panels.js",        // 操作方法・初回ガイド・言語切替・ヒント
   "ui/tour.js",          // ガイドツアーの実行・ナレーションバー・一覧
-  "ui/calendar.js",      // 天文カレンダー (イベント一覧とその日時への移動)
+  "ui/calendar.js",      // 天文カレンダー (イベント一覧とその日時への移動)・今夜の空
+  "ui/search.js",        // 天体名検索
   "main.js",             // 起動処理 (必ず最後)
 ];
 

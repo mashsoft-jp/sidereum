@@ -126,8 +126,26 @@
     halley: [
       Date.UTC(1835, 10, 16), Date.UTC(1910, 3, 20), Date.UTC(1986, 1, 9),
       Date.UTC(2061, 6, 28), Date.UTC(2134, 2, 27),
-    ].map((ms) => (ms - J2000) / DAY_MS),
+    ],
+    // スイフト・タットル彗星 (109P)。1992年の要素の周期 (133.3年) で送ると 2126年が
+    // 3か月ずれるので、予報の近日点で区切る
+    swifttuttle: [Date.UTC(1862, 7, 23), Date.UTC(1992, 11, 11), Date.UTC(2126, 6, 12)],
+    // テンペル・タットル彗星 (55P)
+    templetuttle: [Date.UTC(1965, 3, 30), Date.UTC(1998, 1, 28), Date.UTC(2031, 4, 20)],
   };
+  for (const k in PERI_EPOCHS) PERI_EPOCHS[k] = PERI_EPOCHS[k].map((ms) => (ms - J2000) / DAY_MS);
+  // 一度きりの彗星 (周期が数千年以上)。J2000 の平均黄経 L0 では桁が足りない —
+  // 平均運動が 1e-5 °/日 なので、L0 を 0.001° 丸めただけで近日点が 2か月ずれる
+  // (百武で実際にずれた)。近日点通過日 [J2000 からの日] と周期 [日] で区切る
+  const ONE_PASS = {
+    // ヘール・ボップの JPL の近日点通過日は 2022年の接触軌道のもので 3月29日になる。
+    // 実際の通過は 4月1日なので、ハレー彗星と同じく実際の日付で置く
+    halebopp:    [-1005.5, 863280],       // 1997-04-01
+    hyakutake:   [-1340.106, 35773500],   // 1996-05-01
+    neowise:     [7489.179, 2478990],     // 2020-07-03
+    tsuchinshan: [9036.241, 89448200],    // 2024-09-27
+  };
+  for (const k in ONE_PASS) PERI_EPOCHS[k] = [ONE_PASS[k][0], ONE_PASS[k][0] + ONE_PASS[k][1]];
   for (const p of PLANETS) {
     if (PERI_EPOCHS[p.key]) p.periT = PERI_EPOCHS[p.key];
   }
@@ -141,11 +159,19 @@
     return 2 * Math.PI * (days - tp[i]) / (tp[i + 1] - tp[i]);
   }
 
+  // ケプラー方程式 E − e sin E = M をニュートン法で解く。
+  // 初期値を M にすると e が大きいとき近日点付近で発散する (e=0.995 のヘール・ボップで
+  // 実際に起きる)。e > 0.8 は E = π から始めれば単調に収束する (Charles & Tatum 1998)
+  // ので、そちらは回数も多めに取る。惑星は従来どおり 12回
+  function solveKepler(e, M) {
+    M = ((M % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    const hi = e > 0.8;
+    let E = hi ? Math.PI : M;
+    for (let k = 0, n = hi ? 40 : 12; k < n; k++) E -= (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+    return E;
+  }
   function keplerAU(p, days, out) {
-    const M = meanAnom(p, days) % (2 * Math.PI);
-    let E = M;
-    // 反復回数はハレー彗星 (e≈0.97) でも収束する回数に設定
-    for (let k = 0; k < 12; k++) E -= (E - p.e * Math.sin(E) - M) / (1 - p.e * Math.cos(E));
+    const E = solveKepler(p.e, meanAnom(p, days));
     const xo = p.a * (Math.cos(E) - p.e);
     const yo = p.a * Math.sqrt(1 - p.e * p.e) * Math.sin(E);
     out[0] = p.m[0] * xo + p.m[1] * yo;   // 黄道 X
@@ -156,9 +182,7 @@
 
   // 現在の離心近点角 E ∈ [0, 2π) を返す (軌道の高精細パッチ用)
   function keplerE(p, days) {
-    const M = meanAnom(p, days) % (2 * Math.PI);
-    let E = M;
-    for (let k = 0; k < 12; k++) E -= (E - p.e * Math.sin(E) - M) / (1 - p.e * Math.cos(E));
+    const E = solveKepler(p.e, meanAnom(p, days));
     return ((E % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
   }
 

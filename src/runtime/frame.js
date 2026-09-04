@@ -488,6 +488,7 @@
     perfLap("描画(他)");
     bloomPass();          // 明るいところの滲み (シーンを描き終えてから)
     perfLap("Bloom");
+    snapshotIfPending();  // 画像を保存 (描き終えた直後でないとバッファが消える)
     updateClock();
     tourWatch();          // ガイドツアー: 促した操作をされたら次のステップへ
     updateZoomUI();
