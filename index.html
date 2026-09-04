@@ -734,21 +734,20 @@
       padding: 9px 10px; cursor: pointer; color-scheme: dark;
     }
   }
-  /* 縦持ち: 上端の行はタイトルと時計で埋まっているので、中央に入る幅があるときだけ
-     同じ行に並べ、足りない端末では時計の下に一段取る (そのぶん天体リストを下げる)。
-     効くのはタイトル側の隙間で、幅 W のとき W/2 −(タイトル右端)−(切替幅/2)。
-     4px 残す条件が、日本語 (タイトル 157・切替 66) で 388px、
-     英語 (161・87) で 417px になる */
+  /* 縦持ち: 上端の行は ☰・🔍・ビュー切替・時計で埋まるので、ワードマークは出さない。
+     以前は幅が足りる端末だけ同じ行に並べていたが (日本語で 388px、英語で 417px が境)、
+     🔍 を足したら 390px の端末で切替と重なった。字を消せば ☰+🔍 は 90px ほどで、
+     どの端末でも同じ行に収まる (ユーザー指定 2026-09-04) */
   @media (max-width: 720px) {
-    #viewMode { top: calc(var(--vmTop, 96px) + var(--sat)); }
+    #title h1 { display: none; }
+    #title { padding: 6px 6px 6px 4px; gap: 2px; }
+    /* 画面の中央ではなく、タイトルと時計の隙間の中央へ (時計が英語で広いときに触れる) */
+    #viewMode {
+      top: calc(16px + var(--sat));
+      left: var(--titleR, 0px); right: calc(100% - var(--clockL, 100%));
+    }
     /* #app #navPanel (ID 2つ) の既定に勝たせるため、こちらも同じ形で書く */
-    #app #navPanel, #app #navExpand { top: calc(var(--vmNavTop, 140px) + var(--sat)); }
-  }
-  @media (min-width: 388px) {
-    :root { --vmTop: 16px; --vmNavTop: 108px; }
-  }
-  @media (max-width: 416px) {
-    :root[lang="en"] { --vmTop: 96px; --vmNavTop: 140px; }
+    #app #navPanel, #app #navExpand { top: calc(108px + var(--sat)); }
   }
   /* 横持ちは上端が横に空いているので、幅を問わず同じ行に置ける */
   @media (max-height: 480px) {
@@ -1205,8 +1204,6 @@
   #noGL button { margin-top: 12px; }
 
   @media (max-width: 720px) {
-    #title { padding: 6px 10px 6px 6px; gap: 6px; }
-    #title h1 { font-size: 13px; letter-spacing: 0.2em; }
     #menuBtn { padding: 4px 6px; font-size: 15px; }
     #clock { padding: 6px 10px; }
     #dateInput, #timeInput { font-size: 13px; }
@@ -11674,6 +11671,7 @@
       tzText.textContent = tz;
       tzText.title = T().clockTzHint;
       lastTzStr = tz;
+      placeObsSite();   // 時計の幅が変わる (縦持ちのビュー切替はこの左端との隙間に置く)
     }
   }
   // 基準の切替。切り替えたら次のフレームで必ず書き直させる
@@ -12341,9 +12339,12 @@
   // 置く位置はタイトルの右端で決まるが、その幅はアプリ名と言語で変わるので、
   // 決め打ちにせず実測して CSS へ渡す
   const titleEl = document.getElementById("title");
+  // タイトルの右端と時計の左端。観測地チップの位置と、縦持ちでビュー切替を
+  // 2つの隙間の中央へ置くのに使う (時計の幅は言語と時刻の基準で変わる)
   function placeObsSite() {
-    document.documentElement.style.setProperty(
-      "--titleR", Math.round(titleEl.getBoundingClientRect().right) + "px");
+    const st = document.documentElement.style;
+    st.setProperty("--titleR", Math.round(titleEl.getBoundingClientRect().right) + "px");
+    st.setProperty("--clockL", Math.round(document.getElementById("clock").getBoundingClientRect().left) + "px");
   }
   window.addEventListener("resize", placeObsSite);
   placeObsSite();

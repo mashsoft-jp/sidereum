@@ -262,6 +262,7 @@
       tzText.textContent = tz;
       tzText.title = T().clockTzHint;
       lastTzStr = tz;
+      placeObsSite();   // 時計の幅が変わる (縦持ちのビュー切替はこの左端との隙間に置く)
     }
   }
   // 基準の切替。切り替えたら次のフレームで必ず書き直させる

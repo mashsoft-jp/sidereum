@@ -420,9 +420,12 @@
   // 置く位置はタイトルの右端で決まるが、その幅はアプリ名と言語で変わるので、
   // 決め打ちにせず実測して CSS へ渡す
   const titleEl = document.getElementById("title");
+  // タイトルの右端と時計の左端。観測地チップの位置と、縦持ちでビュー切替を
+  // 2つの隙間の中央へ置くのに使う (時計の幅は言語と時刻の基準で変わる)
   function placeObsSite() {
-    document.documentElement.style.setProperty(
-      "--titleR", Math.round(titleEl.getBoundingClientRect().right) + "px");
+    const st = document.documentElement.style;
+    st.setProperty("--titleR", Math.round(titleEl.getBoundingClientRect().right) + "px");
+    st.setProperty("--clockL", Math.round(document.getElementById("clock").getBoundingClientRect().left) + "px");
   }
   window.addEventListener("resize", placeObsSite);
   placeObsSite();
