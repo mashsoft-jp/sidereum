@@ -230,7 +230,7 @@
     display: none;
   }
   #modalScrim.on { display: block; }
-  #about, #howto, #tourList, #skyCal, #todayEv {
+  #about, #howto, #tourList, #skyCal, #todayEv, #snapDlg {
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     width: min(540px, calc(100vw - 32px));
@@ -242,8 +242,8 @@
     display: none;
     z-index: 20;
   }
-  #about.open, #howto.open, #tourList.open, #skyCal.open, #todayEv.open { display: block; }
-  #about h2, #howto h2, #tourList h2, #skyCal h2, #todayEv h2 {
+  #about.open, #howto.open, #tourList.open, #skyCal.open, #todayEv.open, #snapDlg.open { display: block; }
+  #about h2, #howto h2, #tourList h2, #skyCal h2, #todayEv h2, #snapDlg h2 {
     margin: 0 0 10px;
     font-size: 15px;
     font-weight: 600;
@@ -270,7 +270,7 @@
   }
   #about td:first-child, #howto td:first-child { color: var(--dim); white-space: nowrap; padding-right: 14px; }
   #howto td:first-child { width: 7.5em; white-space: normal; }
-  #aboutClose, #howtoClose, #tourListClose, #skyCalClose, #todayEvClose {
+  #aboutClose, #howtoClose, #tourListClose, #skyCalClose, #todayEvClose, #snapDlgClose {
     position: absolute;
     top: 10px; right: 10px;
     padding: 2px 8px;
@@ -279,7 +279,7 @@
     border: none;
     color: var(--dim);
   }
-  #aboutClose:hover, #howtoClose:hover, #tourListClose:hover, #skyCalClose:hover, #todayEvClose:hover { color: var(--text); background: none; }
+  #aboutClose:hover, #howtoClose:hover, #tourListClose:hover, #skyCalClose:hover, #todayEvClose:hover, #snapDlgClose:hover { color: var(--text); background: none; }
   /* ---- 天文カレンダー (モーダル) ---- */
   #skyCal > p, #todayEv > p { margin: 6px 0 12px; font-size: 11.5px; line-height: 1.8; color: var(--dim); }
   #skyCal .calMonth {
@@ -342,6 +342,12 @@
   #skyCal .calRow.past .calGo:hover { opacity: 1; }
   #skyCal .calNote { margin: 12px 0 0; font-size: 10px; color: var(--dim); }
   #todayEv { max-height: min(60vh, 480px); }
+  /* ---- 画像を保存 (プレビュー) ---- */
+  #snapDlg { width: min(720px, calc(100vw - 32px)); max-height: min(86vh, 900px); max-height: min(86dvh, 900px); }
+  #snapDlg img { display: block; width: 100%; max-height: 56vh; object-fit: contain; border: 1px solid var(--line); border-radius: 4px; background: #000; }
+  #snapDlg .snapBtns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  #snapDlg .snapBtns button { padding: 5px 14px; font-size: 11px; letter-spacing: 0.1em; white-space: nowrap; }
+  #snapDlg .snapBtns .primary { margin-right: auto; }
   #todayEv .todayFoot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
   #todayEv .todayFoot button { padding: 4px 14px; font-size: 10.5px; letter-spacing: 0.1em; }
   /* ---- ガイドツアーの一覧 (モーダル) ---- */

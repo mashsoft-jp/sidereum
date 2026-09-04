@@ -215,14 +215,27 @@
   navCollapseBtn.addEventListener("click", () => { navVisible = false; applyNavVisible(); });
   navExpandBtn.addEventListener("click", () => { navVisible = true; applyNavVisible(); });
 
-  // ---------- 画像を保存 ----------
+  // ---------- 共有 (画像とリンク) ----------
+  // メニューの「共有…」は、いま見えている画を写してプレビューを出し、そこで
+  // 画像を保存 / 共有 (OS の共有シート) / リンクをコピー を選んでもらう。
+  // 以前は「共有リンクをコピー」と「画像を保存」の2項目だったが、1つにまとめた。
   // WebGL の描画バッファは次のフレームで消える (preserveDrawingBuffer: false) ので、
   // 押した瞬間ではなく次のフレームの描き終わりに写す (runtime/frame.js が呼ぶ)。
-  // HUD は写さないので、いつ・どこの空かを隅に書き込む。タッチ端末は共有シート
-  // (写真に保存できる。iOS の Safari は download 属性を無視する)、それ以外はダウンロード
-  const menuSaveBtn = document.getElementById("menuSave");
+  // HUD は写さないので、いつ・どこの空かと、ロゴ・著作権表示を隅に書き込む。
+  // SNS ごとのボタンは置かない (2026-09-04): X の intent には画像を渡せず、Instagram は
+  // Web から投稿する入口が無く、Bluesky は利用者数が見合わない。共有シートなら画像ごと
+  // どのアプリにも渡せる。共有シートが無い環境 (一部の PC) は 保存 と リンクだけ
+  const menuShareBtn = document.getElementById("menuShare");
+  const snapDlgEl = document.getElementById("snapDlg");
   let snapPending = false;
-  menuSaveBtn.addEventListener("click", () => { setMenu(false); snapPending = true; });
+  let snapBlob = null, snapURL = null, snapName = "";
+  menuShareBtn.addEventListener("click", () => { setMenu(false); snapPending = true; });
+  function snapWhen() {
+    return dateInput.value.replace(/-/g, "/") + " " + timeInput.value + " " + tzText.textContent;
+  }
+  function snapSite() {
+    return groundView && surfaceBody === "earth" ? siteLabel() : "";
+  }
   function snapshotIfPending() {
     if (!snapPending) return;
     snapPending = false;
@@ -231,43 +244,92 @@
     const x = c.getContext("2d");
     x.drawImage(glc, 0, 0);
     x.drawImage(ovl, 0, 0);
-    const fs = Math.round(12 * DPR), pad = Math.round(14 * DPR);
+    const fs = Math.round(12 * DPR), pad = Math.round(14 * DPR), lh = Math.round(16 * DPR);
     x.textBaseline = "bottom";
     x.shadowColor = "rgba(0,0,0,0.85)"; x.shadowBlur = 4 * DPR;
     x.font = fs + "px system-ui, -apple-system, sans-serif";
     x.fillStyle = "rgba(201,213,234,0.92)";
-    let cap = dateInput.value.replace(/-/g, "/") + " " + timeInput.value + " " + tzText.textContent;
-    if (groundView && surfaceBody === "earth") cap += "   " + siteLabel();
-    x.fillText(cap, pad, c.height - pad);
+    const site = snapSite();
+    x.fillText(snapWhen() + (site ? "   " + site : ""), pad, c.height - pad);
+    // 右下: ロゴと著作権表示 (About と同じ表記)
+    x.textAlign = "right";
     x.font = "300 " + fs + "px Jura, system-ui, sans-serif";
     x.fillStyle = "rgba(242,178,62,0.9)";
-    x.textAlign = "right";
-    x.fillText("S I D E R E U M", c.width - pad, c.height - pad);
-    const name = "sidereum-" + dateInput.value.replace(/-/g, "") + "-" + timeInput.value.replace(":", "") + ".png";
+    x.fillText("S I D E R E U M", c.width - pad, c.height - pad - lh);
+    x.font = Math.round(10 * DPR) + "px system-ui, -apple-system, sans-serif";
+    x.fillStyle = "rgba(201,213,234,0.8)";
+    x.fillText("\u00a9 2026 Mashsoft Inc.", c.width - pad, c.height - pad);
+    snapName = "sidereum-" + dateInput.value.replace(/-/g, "") + "-" + timeInput.value.replace(":", "") + ".png";
     c.toBlob((blob) => {
       if (!blob) return;
-      const touch = matchMedia("(hover: none) and (pointer: coarse)").matches;
-      if (touch && navigator.canShare) {
-        const file = new File([blob], name, { type: "image/png" });
-        if (navigator.canShare({ files: [file] })) {
-          navigator.share({ files: [file] }).catch(() => {});   // 取り消しは無視
-          return;
-        }
-      }
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+      hideModals();   // 他のモーダルと、前回のプレビュー (closeSnapDlg) を先に片付ける
+      snapBlob = blob;
+      snapURL = URL.createObjectURL(blob);
+      buildSnapDlg();
+      snapDlgEl.classList.add("open");
+      modalScrim.classList.add("on");
     }, "image/png");
   }
+  // SNS へ渡す文とリンク。リンクは今の場面の共有URL (開けば同じ空になる)
+  function snapShareText() {
+    const t = T().snap;
+    return t.text(snapWhen(), snapSite()) + " " + t.tag;
+  }
+  function buildSnapDlg() {
+    const t = T().snap;
+    const canShare = !!(navigator.canShare && snapBlob &&
+      navigator.canShare({ files: [new File([snapBlob], snapName, { type: "image/png" })] }));
+    snapDlgEl.innerHTML =
+      '<button id="snapDlgClose" aria-label="close">\u2715</button>' +
+      "<h2>" + t.title + "</h2>" +
+      '<img id="snapImg" alt="">' +
+      '<div class="snapBtns">' +
+        '<button id="snapSave" class="primary">' + t.save + "</button>" +
+        (canShare ? '<button id="snapShare">' + t.share + "</button>" : "") +
+        '<button id="snapLink">' + t.link + "</button>" +
+      "</div>";
+    document.getElementById("snapImg").src = snapURL;
+  }
+  function closeSnapDlg() {
+    if (!snapDlgEl.classList.contains("open") && !snapURL) return;
+    snapDlgEl.classList.remove("open");
+    if (snapURL) { URL.revokeObjectURL(snapURL); snapURL = null; }
+    snapBlob = null;
+    snapDlgEl.innerHTML = "";
+  }
+  snapDlgEl.addEventListener("click", (e) => {
+    const id = e.target.id;
+    if (id === "snapDlgClose") { hideModals(); return; }
+    if (id === "snapSave") {
+      const a = document.createElement("a");
+      a.href = snapURL; a.download = snapName;
+      document.body.appendChild(a); a.click(); a.remove();
+      return;
+    }
+    if (id === "snapLink") {
+      const url = buildShareURL(), btn = e.target;
+      const done = () => {
+        btn.textContent = T().snap.linkDone;
+        clearTimeout(shareResetTimer);
+        shareResetTimer = setTimeout(() => { btn.textContent = T().snap.link; }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done, () => { prompt("URL", url); });
+      } else {
+        prompt("URL", url);
+      }
+      return;
+    }
+    if (id === "snapShare") {
+      const file = new File([snapBlob], snapName, { type: "image/png" });
+      navigator.share({ files: [file], text: snapShareText(), url: buildShareURL() }).catch(() => {});   // 取り消しは無視
+      return;
+    }
+  });
 
   // ---------- シーン共有URL ----------
   // 日時・選択天体・カメラ (ズーム/角度/方位)・速度・再生状態を URL に載せる。
   // バックエンド不要。起動時に applyShareURL() で復元する。
-  const menuShareBtn = document.getElementById("menuShare");
   function buildShareURL() {
     const p = new URLSearchParams();
     p.set("d", new Date(J2000 + simDays * DAY_MS).toISOString().slice(0, 16));  // UTC 分精度
@@ -359,26 +421,13 @@
     }
     return true;
   }
-  let shareResetTimer = 0;
-  menuShareBtn.addEventListener("click", () => {
-    const url = buildShareURL();
-    const done = () => {
-      menuShareBtn.textContent = T().menuShareDone;
-      clearTimeout(shareResetTimer);
-      shareResetTimer = setTimeout(() => { menuShareBtn.textContent = T().menuShare; }, 1600);
-    };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(done, () => { prompt("URL", url); });
-    } else {
-      prompt("URL", url);
-    }
-  });
+  let shareResetTimer = 0;   // 「リンクをコピー」の表示戻し
 
   // ---------- メニューの New / Update タグ ----------
   // 中身が増えた・変わった項目に印を付ける。項目ごとに「今の版」を持ち、
   // 利用者がその項目を開いた時点の版を localStorage に控えて比べる。
   // 中身を直したら、その項目の版を +1 する
-  const MENU_VER = { menuHelp: 1, menuCal: 2, menuSave: 1, menuAbout: 2 };
+  const MENU_VER = { menuHelp: 1, menuCal: 2, menuShare: 1, menuAbout: 2 };
   const MENU_SEEN_KEY = "ssMenuSeen";
   function loadMenuSeen() {
     try { return JSON.parse(localStorage.getItem(MENU_SEEN_KEY)) || {}; }

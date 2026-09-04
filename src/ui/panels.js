@@ -9,6 +9,7 @@
     tourListEl.classList.remove("open");
     skyCalEl.classList.remove("open");
     todayEvEl.classList.remove("open");
+    closeSnapDlg();
     modalScrim.classList.remove("on");
   }
   modalScrim.addEventListener("click", hideModals);
@@ -41,7 +42,7 @@
         ["星座", "メニュー「星座」(星座線・星座名。黄道も連動)"],
         ["経緯線", "メニュー「経緯線」(天球の赤経・赤緯)"],
         ["風景", "メニュー「風景を表示」(地面の質感・地平の稜線・空の色)"],
-        ["共有・設定", "メニュー (共有リンク・単位・言語)"],
+        ["共有・設定", "メニュー (共有・単位・言語)"],
       ],
     } : {
       title: "Controls", space: "Space view", ground: "Ground / Moon view", common: "General",
@@ -71,7 +72,7 @@
         ["Constellations", "Menu → “Constellations” (lines and names; the ecliptic follows)"],
         ["Coordinate grid", "Menu “Coordinate grid” (RA & Dec on the sky)"],
         ["Scenery", "Menu “Show scenery” (ground texture, ridgeline, sky color)"],
-        ["Share & settings", "Menu (share link · units · language)"],
+        ["Share & settings", "Menu (share · units · language)"],
       ],
     };
     // {dist} などは操作パネルの行見出しアイコンに展開する (ツアーと同じ仕組み)
@@ -186,7 +187,6 @@
     document.querySelector("#title h1 .beta").textContent = t.betaTag;
     menuLangBtn.textContent = t.menuLang;
     menuShareBtn.textContent = t.menuShare;
-    menuSaveBtn.textContent = t.menuSave;
     refreshSearchLang();
     updateFsLabel();
     updateMenuHeads();
