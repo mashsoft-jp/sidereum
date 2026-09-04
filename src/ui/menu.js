@@ -427,7 +427,7 @@
   // 中身が増えた・変わった項目に印を付ける。項目ごとに「今の版」を持ち、
   // 利用者がその項目を開いた時点の版を localStorage に控えて比べる。
   // 中身を直したら、その項目の版を +1 する
-  const MENU_VER = { menuHelp: 1, menuCal: 2, menuShare: 1, menuAbout: 2 };
+  const MENU_VER = { menuHelp: 2, menuCal: 2, menuShare: 1, menuAbout: 2 };
   const MENU_SEEN_KEY = "ssMenuSeen";
   function loadMenuSeen() {
     try { return JSON.parse(localStorage.getItem(MENU_SEEN_KEY)) || {}; }
