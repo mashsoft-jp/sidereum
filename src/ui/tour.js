@@ -318,7 +318,11 @@
     // 軌道線の一時的な出し分け。探査機視点のように「写真」として見せる場面では、
     // 画面を横切る線が邪魔になる。localStorage は書き換えない
     if (s.orbits !== undefined) {
-      for (const b of ORBIT_BODIES) b.showOrbit = !!s.orbits;
+      // true/false で全部、配列ならそのキーの軌道だけ (彗星の軌道を見せたい回に、
+      // 他の彗星・小惑星の楕円まで重ならないように)
+      for (const b of ORBIT_BODIES) {
+        b.showOrbit = Array.isArray(s.orbits) ? s.orbits.indexOf(b.key) >= 0 : !!s.orbits;
+      }
       syncToggleUI();   // 一覧の行のトグルもここで合わせる (まとめ切替だけでは食い違う)
     }
     // 風景 (地面の質感・空の色) は、書いた回だけ触る。経緯線のように既定 OFF を

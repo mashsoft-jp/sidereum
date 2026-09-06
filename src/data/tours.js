@@ -54,7 +54,8 @@
   //         次へ進むのは自動送りが ON のときだけ (OFF ならその場で待つ)
   //   constel 星座 (と黄道) を出すか。ツアー中だけの一時変更で設定は保存しない
   //   orbits  軌道線を出すか。同じく一時変更。探査機視点など「写真」として
-  //         見せる場面では、画面を横切る線が邪魔になるので落とす
+  //         見せる場面では、画面を横切る線が邪魔になるので落とす。
+  //         天体キーの配列を渡すと、その軌道だけを出す (彗星の軌道を見せる回など)
   //   grid    天球の経緯線を出すか。書いた回だけ出る (既定は消す)。同じく一時変更
   //   pick  await: "select" の回で、この天体だけを選ばせる。他は押しても
   //         反応しない (画面上の天体も、天体リストのボタンも)
@@ -1460,5 +1461,284 @@
         },
       ],
     },
+    // ---- 惑星の逆行 (火星 2027) ----
+    // 地上ビューは日をまたいで早回しすると日周運動で画が振り回されるので、同じ恒星時
+    // (しし座の南中) に揃えた5つの静止画で見せる。向きは放射点の追尾 (しし座流星群 =
+    // レグルスの北 10°) で固定し、火星だけが枠の中を動く。風景は切って昼夜を消す
+    {
+      id: "retrograde",
+      title: { ja: "惑星の逆行", en: "Why Planets Loop Backwards" },
+      lead: {
+        ja: "火星は星々のあいだを東へ進みますが、衝の前後の数か月だけ止まって西へ戻ります。" +
+            "同じ星空に揃えた5枚と、太陽系を上から見た画で、その理由を見ます。",
+        en: "Mars drifts eastward through the stars, but for a few months around opposition it stops " +
+            "and slides back west. Five views against the same star field, then the view from above " +
+            "the Solar System, and the reason falls out.",
+      },
+      steps: [
+        {
+          view: "ground", site: [35.68, 139.69], d: "2026-12-05T19:50", sel: "mars",
+          radiant: "leonids", gfov: 45, constel: true, sky: false, play: false,
+          text: {
+            ja: "2026年12月、東京。しし座が南中する向きに空を固定して、これから同じ星空を5回見ます。" +
+                "火星はしし座の1等星レグルスの東 (左) にいて、日ごとに東へ進んでいるところ。" +
+                "惑星はふつう、星々のあいだをこの向きに動きます。",
+            en: "Tokyo, December 2026. We lock the view on Leo at its highest and will look at this same " +
+                "star field five times. Mars sits east (left) of Regulus, Leo's brightest star, and is " +
+                "moving east day by day — the way planets normally travel through the constellations.",
+          },
+        },
+        {
+          d: "2027-01-10T17:29",
+          text: {
+            ja: "1月10日。火星はさらに東へ進んで、ここで止まります (留)。" +
+                "この日を境に、星々のあいだを西へ戻りはじめます。",
+            en: "10 January. Mars has pushed further east and here it halts — a stationary point. " +
+                "From this day it begins to back westward through the stars.",
+          },
+        },
+        {
+          d: "2027-02-19T14:51",
+          text: {
+            ja: "2月19日、衝。太陽の反対側に来て一晩じゅう見え、いちばん大きく明るい日です。" +
+                "12月からの動きを見比べると、火星は西 (右) へ戻ってきています。これが逆行。",
+            en: "19 February, opposition: opposite the Sun, up all night, biggest and brightest. " +
+                "Compare with December — Mars has slid back west (to the right). This is retrograde motion.",
+          },
+        },
+        {
+          d: "2027-04-01T12:10",
+          text: {
+            ja: "4月1日。西へ戻りきって、また止まりました (2度目の留)。" +
+                "ここから向きを変えて、ふたたび東へ進みはじめます。" +
+                "隣の木星も同じ理由で、この冬は少しだけ西へ戻っていました (衝は2月11日)。",
+            en: "1 April. Having backed as far west as it will, Mars stops again — the second stationary point — " +
+                "and turns to resume its eastward march. Jupiter, right beside it, has been backing west " +
+                "a little this winter for the same reason (its opposition was 11 February).",
+          },
+        },
+        {
+          d: "2027-05-15T09:17",
+          text: {
+            ja: "5月15日。火星はまた東へ進んでいます。5枚をつなぐと、火星は空にひとつの輪 (ループ) を描きました。" +
+                "古代の天文学者を最も悩ませた動きで、天動説はこれを説明するために、円の上をさらに小さな円が回る" +
+                "「周転円」を必要としました。",
+            en: "15 May. Mars is heading east once more. String the five views together and it has drawn a loop " +
+                "in the sky — the motion that troubled ancient astronomers most. Earth-centred astronomy needed " +
+                "circles riding on circles (epicycles) to explain it.",
+          },
+        },
+        {
+          view: "space", sel: null, fit: 1.9, a: 1.5, y: 0.9, spot: "mars", constel: false,
+          orbits: ["mercury", "venus", "earth", "mars", "jupiter"],
+          radiant: null, d: "2026-12-05", spd: 5, play: true, until: "2027-05-15",
+          text: {
+            ja: "同じ半年を、太陽系の上から。内側の地球は687日で一周する火星より速く回るので、" +
+                "2月に内側から火星を追い越します。追い越すあいだ、地球から見た火星の方向は後ろへ動く — " +
+                "高速道路で追い越される車が、窓の外で後ろへ流れて見えるのと同じです。",
+            en: "The same six months from above. Earth, on the inside track, laps Mars (which takes 687 days " +
+                "to go round) and overtakes it in February. While overtaking, the direction from Earth to Mars " +
+                "swings backward — just as a car you pass on the motorway seems to slide backward past your window.",
+          },
+        },
+        {
+          sel: "earth", fit: 1.4, sight: "mars", spot: null,
+          d: "2026-12-05", spd: 5, play: true, until: "2027-05-15",
+          text: {
+            ja: "地球を画面の中央に固定すると、破線 (地球から火星への視線) の振れ方がそのまま空での動きになります。" +
+                "普段は一方向へ回っていく破線が、追い越しの前後だけ逆へ振れる。" +
+                "コペルニクスが「地球も回っている」と考えた最大の根拠のひとつが、この逆行の説明でした。",
+            en: "Pin Earth to the centre and the dashed line (the line of sight to Mars) swings exactly the way " +
+                "Mars moves in the sky. It sweeps steadily one way, and only around the overtaking does it " +
+                "swing back. Explaining this loop was one of Copernicus's strongest arguments that Earth moves too.",
+          },
+        },
+      ],
+    },
+    // ---- 木星の衛星たち ----
+    // 衛星の位相はアプリのモデル (円軌道) のもので実際の暦とは合っていない。
+    // 影の通過の時刻はそのモデルで解いた (2027-02-09 22:03〜00:16 UTC にイオの影)
+    {
+      id: "jupiterMoons",
+      title: { ja: "木星の衛星たち", en: "The Moons of Jupiter" },
+      lead: {
+        ja: "1610年にガリレオが見つけた4つの衛星。それぞれの顔と、木星面を渡る影を宇宙から見て、" +
+            "最後に地上の双眼鏡で見える並びに戻ります。",
+        en: "The four moons Galileo found in 1610: each one's face, a shadow crossing Jupiter's disc, " +
+            "and finally the line of dots you can see from Earth with binoculars.",
+      },
+      steps: [
+        {
+          view: "space", sel: "jupiter", km: 2600000, lit: true, orbits: false, constel: false,
+          d: "2027-02-09T12:00", spd: 0.08, play: true, until: "2027-02-11T12:00",
+          text: {
+            ja: "木星から260万km。1秒に2時間ほどの早回しで2日ぶん。内側から イオ (1.8日で一周)・" +
+                "エウロパ (3.6日)・ガニメデ (7.2日)・カリスト (16.7日)。" +
+                "1610年1月、ガリレオは自作の望遠鏡でこの4つが木星のまわりを回るのを見て、" +
+                "「すべてが地球を回っているわけではない」ことを示しました。",
+            en: "2.6 million km from Jupiter, two days at about two hours per second. From the inside: " +
+                "Io (one orbit in 1.8 days), Europa (3.6), Ganymede (7.2) and Callisto (16.7). " +
+                "In January 1610 Galileo watched these four circle Jupiter through his own telescope — " +
+                "proof that not everything goes round the Earth.",
+          },
+        },
+        {
+          sel: "io", km: 9000, lit: true, play: false, d: "2027-02-10T00:00",
+          text: {
+            ja: "イオ。月とほぼ同じ大きさで、太陽系でもっとも火山活動が激しい天体です。" +
+                "木星の強い潮汐に揉まれて内部が溶け、硫黄と二酸化硫黄の噴出が表面を黄色や橙に塗り替え続けています。" +
+                "クレーターが無いのは、地表がそれだけ若いから。",
+            en: "Io, about the size of our Moon and the most volcanically active body in the Solar System. " +
+                "Kneaded by Jupiter's tides, its interior melts, and eruptions of sulphur keep repainting " +
+                "the surface yellow and orange. There are no craters because the ground is that young.",
+          },
+        },
+        {
+          sel: "europa", km: 7000,
+          text: {
+            ja: "エウロパ。氷の殻に覆われ、ひび割れの筋が縦横に走っています。" +
+                "殻の下には全地球の海より多い水があるとされ、生命を探す候補として木星の衛星の中でいちばん注目されています。",
+            en: "Europa, wrapped in an ice shell laced with cracks. Beneath it lies an ocean thought to hold " +
+                "more water than all of Earth's, which makes it the most watched of Jupiter's moons in the " +
+                "search for life.",
+          },
+        },
+        {
+          sel: "ganymede", km: 11000,
+          text: {
+            ja: "ガニメデ。太陽系最大の衛星で、直径 5,268 km は水星より大きい。" +
+                "衛星で唯一、自前の磁場を持っています。暗く古い地域と、明るく溝の刻まれた新しい地域が混ざった表面です。",
+            en: "Ganymede, the largest moon in the Solar System — 5,268 km across, bigger than Mercury — " +
+                "and the only moon with a magnetic field of its own. Dark ancient terrain is mixed with " +
+                "brighter, grooved, younger ground.",
+          },
+        },
+        {
+          sel: "callisto", km: 11000,
+          text: {
+            ja: "カリスト。4つのうち最も外側で、太陽系でいちばんクレーターの多い天体のひとつ。" +
+                "木星から遠いぶん潮汐で温められず、40億年前の傷がそのまま残っています。",
+            en: "Callisto, the outermost of the four and one of the most heavily cratered bodies known. " +
+                "Too far from Jupiter to be heated by tides, it keeps scars four billion years old.",
+          },
+        },
+        {
+          sel: "jupiter", km: 900000, lit: true, spot: "io",
+          d: "2027-02-09T21:50", spd: 0.006, play: true, until: "2027-02-10T00:30",
+          text: {
+            ja: "木星面を渡るイオの影。1秒に9分ほどの早回しです。衛星が木星と太陽のあいだを通るたびに、" +
+                "小さな黒い点が雲の上を横切ります — 木星で起きる日食で、地球からも望遠鏡で見えます。" +
+                "17世紀にはこの影の時刻表が「木星の時計」として経度の測定に使われました。",
+            en: "Io's shadow crossing Jupiter, at about nine minutes per second. Each time a moon passes between " +
+                "Jupiter and the Sun, a small black dot slides across the clouds — a solar eclipse on Jupiter, " +
+                "visible from Earth in a telescope. In the 1600s timetables of these shadows served as a " +
+                "‘Jupiter clock’ for measuring longitude.",
+          },
+        },
+        {
+          view: "ground", site: [35.68, 139.69], d: "2027-02-10T14:00", sel: "jupiter",
+          aim: true, gfov: 0.5, spot: null, sky: true, play: false,
+          text: {
+            ja: "地上へ戻って、東京の2月10日 23時。衝の前日で木星は南の空高く。" +
+                "この画角は双眼鏡くらいで、木星の両側に並ぶ小さな点がその4つです。" +
+                "一晩のうちに並びが変わるのが、肉眼に近い道具でも分かる — ガリレオが見たのはこの景色でした。",
+            en: "Back on the ground: Tokyo, 10 February, 11 pm, the night before opposition, Jupiter high in the south. " +
+                "This is roughly a binocular field, and the small dots lined up either side of Jupiter are the four. " +
+                "Their arrangement changes over a single night, visible with the humblest instrument — " +
+                "this is what Galileo saw.",
+          },
+        },
+      ],
+    },
+    // ---- 大彗星の時代 (百武・ヘール＝ボップ・ネオワイズ・紫金山＝アトラス) ----
+    {
+      id: "greatComets",
+      title: { ja: "大彗星の時代", en: "The Great Comets" },
+      lead: {
+        ja: "1996年と97年、続けて現れた2つの大彗星。地球のすぐそばを通った百武と、巨大な核で1年半見え続けたヘール＝ボップ。" +
+            "その後の2020年・2024年の彗星まで、見えた日の空へ。",
+        en: "Two great comets in consecutive years: Hyakutake, which skimmed past Earth in 1996, and Hale-Bopp, " +
+            "whose huge nucleus kept it visible for eighteen months. Then on to the comets of 2020 and 2024, " +
+            "each on a night it could be seen.",
+      },
+      steps: [
+        {
+          view: "ground", site: [35.68, 139.69], d: "1996-03-24T18:30", sel: "hyakutake",
+          aim: true, gfov: 90, constel: true, sky: true, play: false,
+          text: {
+            ja: "1996年3月25日の未明、東京。百武彗星が地球から 0.10 au (1,500万km) を通り過ぎる夜です。" +
+                "頭はうしかい座と北斗七星のあいだ、尾は空の半分 (100°以上) に伸びました。" +
+                "これほど近くを通る明るい彗星は数百年に一度。発見からわずか2か月後のことでした。",
+            en: "Tokyo, the small hours of 25 March 1996: the night Comet Hyakutake passed 0.10 au " +
+                "(15 million km) from Earth. Its head sat between Boötes and the Big Dipper and its tail stretched " +
+                "across half the sky, more than 100°. A bright comet this close comes once in centuries — " +
+                "and it had been discovered only two months before.",
+          },
+        },
+        {
+          view: "space", sel: "hyakutake", side: true, fit: 0.35, a: 0.6, constel: false,
+          orbits: ["hyakutake", "earth", "venus", "mars"],
+          d: "1996-03-15", spd: 0.8, play: true, until: "1996-04-02",
+          text: {
+            ja: "宇宙から。彗星は地球のほぼ真上 (黄道の北側) を、太陽へ向かって落ちていきます。" +
+                "地球のそばを通ったのは近日点の1か月前。近さのおかげで、核が直径 4 km ほどの小さな彗星が" +
+                "大彗星になりました。",
+            en: "From space: the comet is falling toward the Sun, passing almost straight over Earth " +
+                "(north of the ecliptic). It came closest a month before perihelion, and that closeness is " +
+                "what turned a comet with a nucleus only about 4 km across into a great one.",
+          },
+        },
+        {
+          view: "ground", site: [35.68, 139.69], d: "1997-03-30T10:30", sel: "halebopp",
+          aim: true, gfov: 60, constel: true, sky: true, play: false,
+          text: {
+            ja: "翌1997年3月30日の夕方、東京。北西の空にヘール＝ボップ彗星。" +
+                "地球からは 1.3 au と遠かったのに、直径 60 km の巨大な核が大量のガスと塵を出し、" +
+                "都会の空でも肉眼で見えました。肉眼で見え続けた期間は18か月 — 史上最長です。",
+            en: "The next year: Tokyo, the evening of 30 March 1997, Comet Hale-Bopp in the north-west. " +
+                "It never came closer than 1.3 au, but its enormous nucleus, some 60 km across, poured out " +
+                "so much gas and dust that it was a naked-eye object even from city skies — for a record " +
+                "eighteen months.",
+          },
+        },
+        {
+          // 軌道面 (昇交点 283°) を正面から: 面の法線は黄経 193° の向きで、ワールドの
+          // 方位角は −黄経 = 167° (2.92 rad)。俯角を小さくして惑星の軌道は線に潰す
+          view: "space", sel: null, spot: "halebopp", fit: 2.4, a: 0.1, y: 2.92, side: false, constel: false,
+          orbits: ["halebopp", "mercury", "venus", "earth", "mars", "jupiter"],
+          d: "1997-01-01", spd: 3, play: true, until: "1997-06-01",
+          text: {
+            ja: "軌道面は黄道からほぼ垂直 (89°)。上から降りてきて、近日点 (4月1日、0.9 au) を回って上へ戻っていきます。" +
+                "一周に約2,400年。前回は紀元前2200年ごろ、次は西暦4400年ごろです。",
+            en: "Its orbit is tilted almost 90° to the ecliptic: it drops in from above, rounds perihelion " +
+                "(1 April, 0.9 au) and climbs away again. One lap takes about 2,400 years — the last visit " +
+                "was around 2200 BC, the next will be around AD 4400.",
+          },
+        },
+        {
+          view: "ground", site: [35.68, 139.69], d: "2020-07-13T18:30", sel: "neowise",
+          aim: true, gfov: 50, constel: true, sky: true, play: false,
+          text: {
+            ja: "2020年7月14日の明け方、東京。北東の低い空にネオワイズ彗星。" +
+                "ヘール＝ボップ以来23年ぶりに肉眼で楽に見えた彗星で、" +
+                "この後は夕方の北西の空へ移って7月いっぱい楽しめました。次に戻るのは約6,800年後。",
+            en: "Tokyo, dawn on 14 July 2020: Comet NEOWISE low in the north-east — the first comet easily " +
+                "seen with the naked eye since Hale-Bopp, 23 years earlier. It moved to the north-western " +
+                "evening sky and stayed on show through July. It returns in about 6,800 years.",
+          },
+        },
+        {
+          d: "2024-10-13T09:05", sel: "tsuchinshan",
+          text: {
+            ja: "2024年10月13日の夕方 18時すぎ、東京。西の低い空に紫金山・アトラス彗星。" +
+                "この彗星の軌道は双曲線で、太陽系を離れたら二度と戻りません。" +
+                "大彗星は何十年かに一度しか来ませんが、いつ来るかは誰にも分からない — 次の1つは、もう太陽へ向かっているかもしれません。",
+            en: "Tokyo, just after 6 pm on 13 October 2024: Comet Tsuchinshan-ATLAS low in the west. " +
+                "Its orbit is a hyperbola — once it leaves the Solar System it will never return. " +
+                "Great comets come only every few decades, and nobody knows when: the next one may " +
+                "already be on its way in.",
+          },
+        },
+      ],
+    },
   ];
-
