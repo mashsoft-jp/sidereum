@@ -8,6 +8,13 @@
     uniform float uRefr;     // 1 = 地上ビュー (大気差を戻してから地図を引く)
     uniform vec3 uExtK;      // 大気減光 [等級/大気路長]。大気の無い経路では 0
     uniform sampler2D uTex;
+    // 黄道光と対日照。惑星間塵が太陽光を散らしたもので、黄道に沿って太陽の方向へ
+    // 向かう円錐 (離角が小さいほど明るい) と、反太陽点の淡い楕円 (対日照)。
+    // 形は Leinert らの表を粗く写した経験式で、明るさは天の川の地図と同じ尺度に
+    // 手で合わせてある (uZodi)。宇宙ビューは 0 (観測者が地球にいない)
+    uniform float uZodi;
+    uniform vec3 uSunDir;    // 描画フレームでの太陽の方向 (単位)
+    uniform vec3 uEclPole;   // 描画フレームでの黄道の北極 (単位)
 
     void main() {
       vec3 dir = normalize(vDir);
@@ -41,6 +48,19 @@
 #else
       vec3 c = texture2D(uTex, uv).rgb;
 #endif
+      if (uZodi > 0.0) {
+        float eps = degrees(acos(clamp(dot(dir, uSunDir), -1.0, 1.0)));   // 太陽からの離角
+        float bet = degrees(asin(clamp(dot(dir, uEclPole), -1.0, 1.0)));  // 黄緯
+        // 円錐: 離角 30° を 1 として、そこから ε^-2.3 で落ちる。幅は離角とともに広がる。
+        // 12° より内側は薄明に沈むので頭打ち (見えないところで発散させない)
+        float wid = 13.0 + 0.12 * eps;
+        float cone = pow(30.0 / max(eps, 12.0), 2.3) * exp(-(bet * bet) / (wid * wid));
+        // 対日照: 反太陽点を中心に 10°×6° ほどの淡い楕円
+        float de = eps - 180.0;
+        float gs = 0.28 * exp(-(de * de) / 100.0 - (bet * bet) / 36.0);
+        // 全天に薄く広がる成分 (黄道帯の外でも 0 にならない)
+        c += (0.06 + cone + gs) * uZodi * vec3(1.0, 0.94, 0.84);
+      }
       // 大気減光。地平ぎわの天の川は青から失われ、薄れて消える。
       // 恒星に掛けているのと同じ式 (core/math.js の EXT_K)
       if (uExtK.g > 0.0) {

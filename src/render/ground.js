@@ -20,6 +20,7 @@
     return Math.max(2e-9, Math.min(GMIN_DEFAULT, angDiam * 1.1));
   }
   const _fwd = [0, 0, 0], _gp = [0, 0, 0], _sunG = [0, 0, 0];
+  const _zodi = { sun: _sunG, pole: [0, 1, 0] };   // 黄道光 (drawMilkyWay へ渡す)
   const _shineG = { dir: [0, 0, 0], col: [0, 0, 0] };   // 地球照 (地平フレーム)
   const _eclW = [0, 0, 0], _eclG = [0, 0, 0];   // 食: 天体 → 遮蔽体 (ワールド / 地平フレーム)
   const _pf = [0, 0, 0];                       // 歳差を戻した観測地の基底 (赤道 J2000)
@@ -352,9 +353,13 @@
     perfLap("空");
     // 天の川。空ドームの上に加算で重ね、恒星より先に描く (地面ドームは後から
     // 不透明で描かれるので、地平線より下は隠れる)。昼は星と同じだけ薄れる
+    // 黄道光は観測者フレームでの太陽の方向と黄道の北極 (ワールドの +y) から描く。
+    // 月面にも大気は無いが塵は同じ場所にあるので出す
+    _zodi.sun = _sunG;
+    _zodi.pole[0] = obsE[1]; _zodi.pole[1] = obsU[1]; _zodi.pole[2] = -obsN[1];
     drawMilkyWay(gVP32, mwEqGround(), SKYR * 1.4,
                  (isMoonSurf ? MW_SPACE_BRIGHT : MW_GROUND_BRIGHT) * starVis,
-                 isMoonSurf ? 0 : 1, isMoonSurf ? null : EXT_K);
+                 isMoonSurf ? 0 : 1, isMoonSurf ? null : EXT_K, _zodi);
 
     perfLap("天の川");
     // 星雲・星団。恒星より先に描く (淡いしみの上に星の点が乗る)。

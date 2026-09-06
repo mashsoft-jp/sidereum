@@ -36,7 +36,13 @@
 
   // 深度もブレンドも呼び出し側の状態をそのまま使う (背景として最初に描く前提)。
   // 視点は必ず球の中心にあるので、視線は球面と1度しか交わらない = カリング不要
-  function drawMilkyWay(vp32, eq9, radius, bright, refr, extK) {
+  // 黄道光の強さ (天の川の地図の値に対する比)。離角 30°・黄緯 0 の円錐でこの値が
+  // 足される。実際の黄道光は離角 40° で 400 S10 ほどあり、天の川の明るい部分
+  // (いて座、地図で 0.4 前後) に並ぶので、そこへ合わせる。0.2 では天の川より
+  // 明らかに淡く、春の宵の西空で見分けられなかった
+  const MW_ZODI = 0.5;
+  // zodi: { sun: [x,y,z], pole: [x,y,z] } (描画フレームの単位ベクトル)。null なら描かない
+  function drawMilkyWay(vp32, eq9, radius, bright, refr, extK, zodi) {
     if (bright <= 0.003) return;
     gl.useProgram(skyP.pr);
     gl.uniformMatrix4fv(skyP.u.uVP, false, vp32);
@@ -45,6 +51,9 @@
     gl.uniform1f(skyP.u.uBright, bright);
     gl.uniform1f(skyP.u.uRefr, refr || 0);
     gl.uniform3f(skyP.u.uExtK, extK ? extK[0] : 0, extK ? extK[1] : 0, extK ? extK[2] : 0);
+    gl.uniform1f(skyP.u.uZodi, zodi ? MW_ZODI : 0);
+    gl.uniform3f(skyP.u.uSunDir, zodi ? zodi.sun[0] : 0, zodi ? zodi.sun[1] : 1, zodi ? zodi.sun[2] : 0);
+    gl.uniform3f(skyP.u.uEclPole, zodi ? zodi.pole[0] : 0, zodi ? zodi.pole[1] : 1, zodi ? zodi.pole[2] : 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, mwTex);
     gl.uniform1i(skyP.u.uTex, 0);

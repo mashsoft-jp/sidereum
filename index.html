@@ -5558,6 +5558,13 @@
     uniform float uRefr;     // 1 = 地上ビュー (大気差を戻してから地図を引く)
     uniform vec3 uExtK;      // 大気減光 [等級/大気路長]。大気の無い経路では 0
     uniform sampler2D uTex;
+    // 黄道光と対日照。惑星間塵が太陽光を散らしたもので、黄道に沿って太陽の方向へ
+    // 向かう円錐 (離角が小さいほど明るい) と、反太陽点の淡い楕円 (対日照)。
+    // 形は Leinert らの表を粗く写した経験式で、明るさは天の川の地図と同じ尺度に
+    // 手で合わせてある (uZodi)。宇宙ビューは 0 (観測者が地球にいない)
+    uniform float uZodi;
+    uniform vec3 uSunDir;    // 描画フレームでの太陽の方向 (単位)
+    uniform vec3 uEclPole;   // 描画フレームでの黄道の北極 (単位)
 
     void main() {
       vec3 dir = normalize(vDir);
@@ -5591,6 +5598,19 @@
 #else
       vec3 c = texture2D(uTex, uv).rgb;
 #endif
+      if (uZodi > 0.0) {
+        float eps = degrees(acos(clamp(dot(dir, uSunDir), -1.0, 1.0)));   // 太陽からの離角
+        float bet = degrees(asin(clamp(dot(dir, uEclPole), -1.0, 1.0)));  // 黄緯
+        // 円錐: 離角 30° を 1 として、そこから ε^-2.3 で落ちる。幅は離角とともに広がる。
+        // 12° より内側は薄明に沈むので頭打ち (見えないところで発散させない)
+        float wid = 13.0 + 0.12 * eps;
+        float cone = pow(30.0 / max(eps, 12.0), 2.3) * exp(-(bet * bet) / (wid * wid));
+        // 対日照: 反太陽点を中心に 10°×6° ほどの淡い楕円
+        float de = eps - 180.0;
+        float gs = 0.28 * exp(-(de * de) / 100.0 - (bet * bet) / 36.0);
+        // 全天に薄く広がる成分 (黄道帯の外でも 0 にならない)
+        c += (0.06 + cone + gs) * uZodi * vec3(1.0, 0.94, 0.84);
+      }
       // 大気減光。地平ぎわの天の川は青から失われ、薄れて消える。
       // 恒星に掛けているのと同じ式 (core/math.js の EXT_K)
       if (uExtK.g > 0.0) {
@@ -8156,7 +8176,13 @@
 
   // 深度もブレンドも呼び出し側の状態をそのまま使う (背景として最初に描く前提)。
   // 視点は必ず球の中心にあるので、視線は球面と1度しか交わらない = カリング不要
-  function drawMilkyWay(vp32, eq9, radius, bright, refr, extK) {
+  // 黄道光の強さ (天の川の地図の値に対する比)。離角 30°・黄緯 0 の円錐でこの値が
+  // 足される。実際の黄道光は離角 40° で 400 S10 ほどあり、天の川の明るい部分
+  // (いて座、地図で 0.4 前後) に並ぶので、そこへ合わせる。0.2 では天の川より
+  // 明らかに淡く、春の宵の西空で見分けられなかった
+  const MW_ZODI = 0.5;
+  // zodi: { sun: [x,y,z], pole: [x,y,z] } (描画フレームの単位ベクトル)。null なら描かない
+  function drawMilkyWay(vp32, eq9, radius, bright, refr, extK, zodi) {
     if (bright <= 0.003) return;
     gl.useProgram(skyP.pr);
     gl.uniformMatrix4fv(skyP.u.uVP, false, vp32);
@@ -8165,6 +8191,9 @@
     gl.uniform1f(skyP.u.uBright, bright);
     gl.uniform1f(skyP.u.uRefr, refr || 0);
     gl.uniform3f(skyP.u.uExtK, extK ? extK[0] : 0, extK ? extK[1] : 0, extK ? extK[2] : 0);
+    gl.uniform1f(skyP.u.uZodi, zodi ? MW_ZODI : 0);
+    gl.uniform3f(skyP.u.uSunDir, zodi ? zodi.sun[0] : 0, zodi ? zodi.sun[1] : 1, zodi ? zodi.sun[2] : 0);
+    gl.uniform3f(skyP.u.uEclPole, zodi ? zodi.pole[0] : 0, zodi ? zodi.pole[1] : 1, zodi ? zodi.pole[2] : 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, mwTex);
     gl.uniform1i(skyP.u.uTex, 0);
@@ -8852,6 +8881,7 @@
     return Math.max(2e-9, Math.min(GMIN_DEFAULT, angDiam * 1.1));
   }
   const _fwd = [0, 0, 0], _gp = [0, 0, 0], _sunG = [0, 0, 0];
+  const _zodi = { sun: _sunG, pole: [0, 1, 0] };   // 黄道光 (drawMilkyWay へ渡す)
   const _shineG = { dir: [0, 0, 0], col: [0, 0, 0] };   // 地球照 (地平フレーム)
   const _eclW = [0, 0, 0], _eclG = [0, 0, 0];   // 食: 天体 → 遮蔽体 (ワールド / 地平フレーム)
   const _pf = [0, 0, 0];                       // 歳差を戻した観測地の基底 (赤道 J2000)
@@ -9184,9 +9214,13 @@
     perfLap("空");
     // 天の川。空ドームの上に加算で重ね、恒星より先に描く (地面ドームは後から
     // 不透明で描かれるので、地平線より下は隠れる)。昼は星と同じだけ薄れる
+    // 黄道光は観測者フレームでの太陽の方向と黄道の北極 (ワールドの +y) から描く。
+    // 月面にも大気は無いが塵は同じ場所にあるので出す
+    _zodi.sun = _sunG;
+    _zodi.pole[0] = obsE[1]; _zodi.pole[1] = obsU[1]; _zodi.pole[2] = -obsN[1];
     drawMilkyWay(gVP32, mwEqGround(), SKYR * 1.4,
                  (isMoonSurf ? MW_SPACE_BRIGHT : MW_GROUND_BRIGHT) * starVis,
-                 isMoonSurf ? 0 : 1, isMoonSurf ? null : EXT_K);
+                 isMoonSurf ? 0 : 1, isMoonSurf ? null : EXT_K, _zodi);
 
     perfLap("天の川");
     // 星雲・星団。恒星より先に描く (淡いしみの上に星の点が乗る)。
