@@ -1576,7 +1576,8 @@
       },
       steps: [
         {
-          view: "space", sel: "jupiter", km: 2600000, lit: true, orbits: false, constel: false,
+          view: "space", sel: "jupiter", km: 2600000, lit: true, constel: false,
+          orbits: ["io", "europa", "ganymede", "callisto"],   // 衛星の軌道だけ (木星自身の軌道は出さない)
           d: "2027-02-09T12:00", spd: 0.08, play: true, until: "2027-02-11T12:00",
           text: {
             ja: "木星から260万kmの位置から、1秒に2時間ほどの早回しで2日ぶんを見ます。内側から イオ (1.8日で一周)・" +
@@ -1590,7 +1591,7 @@
           },
         },
         {
-          sel: "io", km: 9000, lit: true, play: false, d: "2027-02-10T00:00",
+          sel: "io", km: 9000, lit: true, orbits: false, play: false, d: "2027-02-10T00:00",
           text: {
             ja: "イオは月とほぼ同じ大きさで、太陽系でもっとも火山活動が激しい天体です。" +
                 "木星の強い潮汐に揉まれて内部が溶け、硫黄と二酸化硫黄の噴出が表面を黄色や橙に塗り替え続けています。" +
@@ -1648,7 +1649,7 @@
           text: {
             ja: "地上へ戻って、東京の2月10日 23時。衝の前日で、木星は南の空高くにあります。" +
                 "この画角は双眼鏡くらいで、木星の両側に並ぶ小さな点がその4つです。" +
-                "一晩のうちに並びが変わるのが、肉眼に近い道具でも分かります。ガリレオが見たのはこの景色でした。",
+                "一晩のうちに並びが変わるのが、肉眼に近い道具でも分かります。かつてガリレオが見たのは、この景色でした。",
             en: "Back on the ground: Tokyo, 10 February, 11 pm, the night before opposition, Jupiter high in the south. " +
                 "This is roughly a binocular field, and the small dots lined up either side of Jupiter are the four. " +
                 "Their arrangement changes over a single night, visible with the humblest instrument — " +
