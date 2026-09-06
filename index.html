@@ -10086,6 +10086,14 @@
         const fade = (ge ? ge[0] : 1) * (1 - sunCov);
         const gm = ge ? ge[1] / Math.max(ge[0], 1e-6) : 1;
         const bm = ge ? ge[2] / Math.max(ge[0], 1e-6) : 1;
+        // 芯 (円盤の眩しさ) は減光をそのままは受けない。太陽面の輝度は空の 10万倍
+        // あり、地平ぎわの 1/100 の減光でも画面では飽和したままなのが実際 — 白から
+        // 黄・橙へ色だけ変わり、赤い円盤として見えるのは最後の 1° だけ。透過率の
+        // 0.3 乗で色の比を残しつつ落ち方を緩める (5° で 0.7、地平で 0.26)。
+        // 裾は目の中の散乱で光量に比例するので、こちらは透過率のまま
+        const cfade = (ge ? Math.pow(ge[0], 0.3) : 1) * (1 - sunCov);
+        const cgm = ge ? Math.pow(ge[1] / Math.max(ge[0], 1e-6), 0.3) : 1;
+        const cbm = ge ? Math.pow(ge[2] / Math.max(ge[0], 1e-6), 0.3) : 1;
         // 残っている側の重心は、月の中心から太陽の中心へ向かう向きへ
         // 「食分ぶん × 太陽の半径」だけ進んだあたり
         let cx = sv.px, cy = sv.py, cz = sv.pz;
@@ -10119,10 +10127,17 @@
         // 寄ると画面ぜんぶを覆って白く飛び、太陽面通過の水星が見えなくなる。
         // 6° より狭い画角では画角に比例させる (6° で継ぎ目なく従来どおり)
         const wide = (surfaceBody === "moon" ? 1.0 : 0.34) * Math.min(1, gFov / (6 * DEG));
-        gl.uniform1f(billP.u.uFall, 1.6);
+        // 地上 (大気あり) の裾は弱く、落ち方を急にする。昼の空は太陽のまわりが
+        // ミー散乱ですでに 0.8 ほど明るいので、そこへ 0.9 を足すと直径 3° が白く
+        // 飽和して「大きな太陽」になり、沈むにつれて減光で縮んで見える
+        // (「太陽が小さくなっていく」2026-09-08)。裾は淡い暈にとどめ、円盤の
+        // 眩しさは芯に任せる
+        const atm = surfaceBody !== "moon";
+        const hb = atm ? 0.40 : 1.0;
+        gl.uniform1f(billP.u.uFall, atm ? 2.4 : 1.6);
         gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide);
-        gl.uniform3f(billP.u.uCol1, 0.55 * fade, 0.32 * fade * gm, 0.12 * fade * bm);
-        gl.uniform3f(billP.u.uCol2, 1.00 * fade, 0.86 * fade * gm, 0.66 * fade * bm);
+        gl.uniform3f(billP.u.uCol1, 0.55 * fade * hb, 0.32 * fade * gm * hb, 0.12 * fade * bm * hb);
+        gl.uniform3f(billP.u.uCol2, 1.00 * fade * hb, 0.86 * fade * gm * hb, 0.66 * fade * bm * hb);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         // 芯は月に食わせる。ドーム上の天体は実距離順に 0.55〜1.0 の半径へ
         // 並べてあり、太陽はいちばん遠い側 (1.0)・月はいちばん近い側 (0.55)
@@ -10134,10 +10149,16 @@
         // 芯の落ち方を平らにしない。加算で 1.0 に張り付いた領域が広がると、
         // その縁が輪郭として読めて「太陽が大きくなった」に見えてしまう。
         // 欠けるほど光っている面積も小さくなるので、そのぶん縮める
-        gl.uniform1f(billP.u.uFall, 1.5);
-        gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide * 0.22 * gz * (1 - sunCov * 0.7));
-        gl.uniform3f(billP.u.uCol1, 1.0 * fade, 0.80 * fade * gm, 0.45 * fade * bm);
-        gl.uniform3f(billP.u.uCol2, 1.0 * fade, 1.00 * fade * gm, 1.00 * fade * bm);
+        // 地上では芯を円盤の大きさへ寄せる (半径 0.40°。円盤は 0.27°)。平らな
+        // 頂 (uFall 0.6) で円盤の上を一様に飽和させ、そのすぐ外で落とす —
+        // 円盤の縁が見えたまま白→黄→橙と色が変わるので、沈む太陽が同じ
+        // 大きさに見える。月面は大気が無いので従来どおり
+        const cw = atm ? 0.13 : 0.22;
+        gl.uniform1f(billP.u.uFall, atm ? 0.6 : 1.5);
+        gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide * cw * gz * (1 - sunCov * 0.7));
+        const cf = atm ? cfade : fade, cg = atm ? cgm : gm, cb = atm ? cbm : bm;
+        gl.uniform3f(billP.u.uCol1, 1.0 * cf, 0.80 * cf * cg, 0.45 * cf * cb);
+        gl.uniform3f(billP.u.uCol2, 1.0 * cf, 1.00 * cf * cg, 1.00 * cf * cb);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         gl.disable(gl.BLEND);
         gl.disable(gl.DEPTH_TEST);
