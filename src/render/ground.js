@@ -196,6 +196,47 @@
   const magSize = (m) => Math.max(1.6, Math.min(9, 6 - m * 1.2));
   const SKYR = 100;
   const groundVis = [];
+  // ツアーの足あと (tourTrail)。各点を恒星と同じく固定した方向として投影し、順に
+  // 矢印で結ぶ。最後の点だけ塗りつぶす (いまの位置)。名前は日付
+  function drawTourTrail() {
+    if (!tourTrail || !tourTrail.pts.length) return;
+    const scr = [];
+    for (const p of tourTrail.pts) {
+      const up = p.wx*obsU[0]+p.wy*obsU[1]+p.wz*obsU[2];
+      const east = p.wx*obsE[0]+p.wy*obsE[1]+p.wz*obsE[2];
+      const north = p.wx*obsN[0]+p.wy*obsN[1]+p.wz*obsN[2];
+      const rf = refractUp(up), hz = rf[0] * SKYR;
+      scr.push(up > -0.2 ? projGround([east * hz, rf[1] * SKYR, -north * hz]) : null);
+    }
+    octx.save();
+    octx.strokeStyle = "rgba(242,178,62,0.85)";
+    octx.fillStyle = "rgba(242,178,62,0.9)";
+    octx.lineWidth = 1.5;
+    for (let i = 0; i + 1 < scr.length; i++) {
+      const a = scr[i], b = scr[i + 1];
+      if (!a || !b) continue;
+      const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
+      if (len < 14) continue;
+      const ux = dx / len, uy = dy / len;
+      // 印の輪 (半径 5) を避けて、少し内側で始めて終える
+      const x0 = a.x + ux * 8, y0 = a.y + uy * 8, x1 = b.x - ux * 9, y1 = b.y - uy * 9;
+      octx.beginPath(); octx.moveTo(x0, y0); octx.lineTo(x1, y1); octx.stroke();
+      octx.beginPath();                          // 矢じり
+      octx.moveTo(x1, y1);
+      octx.lineTo(x1 - ux * 8 - uy * 4, y1 - uy * 8 + ux * 4);
+      octx.lineTo(x1 - ux * 8 + uy * 4, y1 - uy * 8 - ux * 4);
+      octx.closePath(); octx.fill();
+    }
+    scr.forEach((sp, i) => {
+      if (!sp) return;
+      const last = i === scr.length - 1;
+      octx.beginPath(); octx.arc(sp.x, sp.y, 5, 0, 2 * Math.PI);
+      if (last) octx.fill(); else octx.stroke();
+      const lb = tourTrail.pts[i].label;
+      if (lb) lblPut(lb, sp.x, sp.y - 10, LBL_SEL, "rgba(242,178,62,0.95)", LF11);
+    });
+    octx.restore();
+  }
   function renderGround(nowSec) {
     buildObsFrame();   // 観測者フレーム (地球/月) を確定
     if (!groundVB) {
@@ -1049,6 +1090,7 @@
       }
     }
     drawRadiants();   // 放射点 (降っている流星群があるときだけ)
+    drawTourTrail();  // ツアーの足あと (指定の日時の位置を印で置いて矢印でつなぐ)
     // 名前は天体リストの「名前」に従う (宇宙ビューと同じ)。名前を消すと選択天体の
     // 目印が無くなってしまうので、選択マークは名前とは別に出す
     const marked = showSelMark ? selected : null;

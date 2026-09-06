@@ -167,6 +167,22 @@
   // 「この軌道半径 [au] が画面に収まる」カメラ距離。
   // 軌道面は俯角ぶん縦に潰れて見えるので、横 (半径そのもの) と縦 (半径×sin俯角)
   // の必要量を別々に出し、両方を満たす距離を採る。縦横比によらず同じ見え方になる
+  // trail: { key, dates: [UTC ISO], labels: [表示名] } → 各日時の地心方向 (ワールド単位)。
+  // 恒星と同じ扱いの固定した方向にするので、地上ビューの向きが同じ恒星時に揃って
+  // いれば、星々に対する位置がそのまま出る
+  function buildTourTrail(t) {
+    const b = BODY_BY_KEY.get(t.key);
+    if (!b) return null;
+    const v = [0, 0, 0], pts = [];
+    t.dates.forEach((iso, i) => {
+      const days = (Date.parse(iso.length <= 16 ? iso + ":00Z" : iso) - J2000) / DAY_MS;
+      evGeo(b, days, v);                             // 地心の黄道座標 [AU]
+      const l = Math.hypot(v[0], v[1], v[2]) || 1;
+      pts.push({ wx: v[0] / l, wy: v[2] / l, wz: -v[1] / l,   // 黄道 → ワールド (x, z, −y)
+                 label: t.labels ? t.labels[i] : "" });
+    });
+    return { pts };
+  }
   function tourFitDist(au, mag, pitch) {
     const half = Math.tan(FOV / Math.max(1, mag) / 2);
     const r = au * K_REAL * 1.10;                       // 10% の余白込み
@@ -341,6 +357,7 @@
     showSelMark = !!s.mark;
     tourSight = s.sight || null;
     tourSpot = s.spot || null;
+    tourTrail = s.trail ? buildTourTrail(s.trail) : null;
     // 引きの画から乗り移るときだけ、寄り切るまで時間を止める。探査機視点の
     // まま次の天体へ向き直る回 (タイタン → 土星) は止めずに飛び続けさせる
     tourProbeHold = !!s.probeIn;
@@ -770,6 +787,7 @@
     tourUntil = null;
     tourSight = null;
     tourSpot = null;
+    tourTrail = null;
     tourProbes = null;
     tourProbe = null;
     tourRideOn = null;

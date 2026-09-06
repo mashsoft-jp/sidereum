@@ -3076,6 +3076,9 @@
   //   aim   true なら地上ビューで sel の天体に照準を合わせ、追尾する
   //   radiant 地上ビューで、この流星群の放射点に照準を合わせて追尾する
   //         (aim と違い天体ではないので、選択とは無関係に効く)
+  //   trail { key, dates: [UTC ISO], labels: [表示名] }。地上ビューで、その天体が各日時に
+  //         いた空の位置を印で置き、順に矢印でつなぐ (逆行のループを見せる)。
+  //         方向は恒星と同じ固定扱いなので、向きを同じ恒星時に揃えた回で使う
   //   sky   風景 (地面の質感・空の色) を出すか。書いた回だけ触る一時変更で、
   //         書かなければ利用者の設定のまま。昼夜を見せたい回で使う
   //   sight 宇宙ビューで、注視天体からこの天体へ向かう視線ガイド (破線) を出す
@@ -4525,6 +4528,7 @@
         },
         {
           d: "2027-01-10T17:29",
+          trail: { key: "mars", dates: ["2026-12-05T19:50", "2027-01-10T17:29"], labels: ["12/6", "1/11"] },
           text: {
             ja: "1月10日。火星はさらに東へ進んで、ここで止まります (留)。" +
                 "この日を境に、星々のあいだを西へ戻りはじめます。",
@@ -4534,6 +4538,7 @@
         },
         {
           d: "2027-02-19T14:51",
+          trail: { key: "mars", dates: ["2026-12-05T19:50", "2027-01-10T17:29", "2027-02-19T14:51"], labels: ["12/6", "1/11", "2/19"] },
           text: {
             ja: "2月19日、衝。太陽の反対側に来て一晩じゅう見え、いちばん大きく明るい日です。" +
                 "12月からの動きを見比べると、火星は西 (右) へ戻ってきています。これが逆行。",
@@ -4543,6 +4548,7 @@
         },
         {
           d: "2027-04-01T12:10",
+          trail: { key: "mars", dates: ["2026-12-05T19:50", "2027-01-10T17:29", "2027-02-19T14:51", "2027-04-01T12:10"], labels: ["12/6", "1/11", "2/19", "4/1"] },
           text: {
             ja: "4月1日。西へ戻りきって、また止まりました (2度目の留)。" +
                 "ここから向きを変えて、ふたたび東へ進みはじめます。" +
@@ -4554,11 +4560,12 @@
         },
         {
           d: "2027-05-15T09:17",
+          trail: { key: "mars", dates: ["2026-12-05T19:50", "2027-01-10T17:29", "2027-02-19T14:51", "2027-04-01T12:10", "2027-05-15T09:17"], labels: ["12/6", "1/11", "2/19", "4/1", "5/15"] },
           text: {
-            ja: "5月15日。火星はまた東へ進んでいます。5枚をつなぐと、火星は空にひとつの輪 (ループ) を描きました。" +
+            ja: "5月15日。火星はまた東へ進んでいます。5回の位置を矢印でつなぐと、火星は空にひとつの輪 (ループ) を描きました。" +
                 "古代の天文学者を最も悩ませた動きで、天動説はこれを説明するために、円の上をさらに小さな円が回る" +
                 "「周転円」を必要としました。",
-            en: "15 May. Mars is heading east once more. String the five views together and it has drawn a loop " +
+            en: "15 May. Mars is heading east once more. Join the five positions with arrows and it has drawn a loop " +
                 "in the sky — the motion that troubled ancient astronomers most. Earth-centred astronomy needed " +
                 "circles riding on circles (epicycles) to explain it.",
           },
@@ -4566,7 +4573,7 @@
         {
           view: "space", sel: null, fit: 1.9, a: 1.5, y: 0.9, spot: "mars", constel: false,
           orbits: ["mercury", "venus", "earth", "mars", "jupiter"],
-          radiant: null, d: "2026-12-05", spd: 5, play: true, until: "2027-05-15",
+          radiant: null, trail: null, d: "2026-12-05", spd: 5, play: true, until: "2027-05-15",
           text: {
             ja: "同じ半年を、太陽系の上から。内側の地球は687日で一周する火星より速く回るので、" +
                 "2月に内側から火星を追い越します。追い越すあいだ、地球から見た火星の方向は後ろへ動く — " +
@@ -7129,6 +7136,9 @@
   let tourSight = null;
   // ツアーの注目天体。選択とは別に、名前と輪郭を強調して見つけやすくする
   let tourSpot = null;
+  // ツアーの足あと: ある天体が指定の日時にいた空の方向を印で置き、矢印でつなぐ
+  // (逆行のループを見せる)。{ pts: [{ wx, wy, wz, label }] } — ワールドの単位方向
+  let tourTrail = null;
   // 探査機ツアー中はここに挙げた機体だけを描く (他機が混ざると主役が分からない)。
   // tourProbe はその主役 = 既定で乗る機体、tourRideOn はその回に乗る機体
   let tourProbes = null;
@@ -9401,6 +9411,47 @@
   const magSize = (m) => Math.max(1.6, Math.min(9, 6 - m * 1.2));
   const SKYR = 100;
   const groundVis = [];
+  // ツアーの足あと (tourTrail)。各点を恒星と同じく固定した方向として投影し、順に
+  // 矢印で結ぶ。最後の点だけ塗りつぶす (いまの位置)。名前は日付
+  function drawTourTrail() {
+    if (!tourTrail || !tourTrail.pts.length) return;
+    const scr = [];
+    for (const p of tourTrail.pts) {
+      const up = p.wx*obsU[0]+p.wy*obsU[1]+p.wz*obsU[2];
+      const east = p.wx*obsE[0]+p.wy*obsE[1]+p.wz*obsE[2];
+      const north = p.wx*obsN[0]+p.wy*obsN[1]+p.wz*obsN[2];
+      const rf = refractUp(up), hz = rf[0] * SKYR;
+      scr.push(up > -0.2 ? projGround([east * hz, rf[1] * SKYR, -north * hz]) : null);
+    }
+    octx.save();
+    octx.strokeStyle = "rgba(242,178,62,0.85)";
+    octx.fillStyle = "rgba(242,178,62,0.9)";
+    octx.lineWidth = 1.5;
+    for (let i = 0; i + 1 < scr.length; i++) {
+      const a = scr[i], b = scr[i + 1];
+      if (!a || !b) continue;
+      const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
+      if (len < 14) continue;
+      const ux = dx / len, uy = dy / len;
+      // 印の輪 (半径 5) を避けて、少し内側で始めて終える
+      const x0 = a.x + ux * 8, y0 = a.y + uy * 8, x1 = b.x - ux * 9, y1 = b.y - uy * 9;
+      octx.beginPath(); octx.moveTo(x0, y0); octx.lineTo(x1, y1); octx.stroke();
+      octx.beginPath();                          // 矢じり
+      octx.moveTo(x1, y1);
+      octx.lineTo(x1 - ux * 8 - uy * 4, y1 - uy * 8 + ux * 4);
+      octx.lineTo(x1 - ux * 8 + uy * 4, y1 - uy * 8 - ux * 4);
+      octx.closePath(); octx.fill();
+    }
+    scr.forEach((sp, i) => {
+      if (!sp) return;
+      const last = i === scr.length - 1;
+      octx.beginPath(); octx.arc(sp.x, sp.y, 5, 0, 2 * Math.PI);
+      if (last) octx.fill(); else octx.stroke();
+      const lb = tourTrail.pts[i].label;
+      if (lb) lblPut(lb, sp.x, sp.y - 10, LBL_SEL, "rgba(242,178,62,0.95)", LF11);
+    });
+    octx.restore();
+  }
   function renderGround(nowSec) {
     buildObsFrame();   // 観測者フレーム (地球/月) を確定
     if (!groundVB) {
@@ -10254,6 +10305,7 @@
       }
     }
     drawRadiants();   // 放射点 (降っている流星群があるときだけ)
+    drawTourTrail();  // ツアーの足あと (指定の日時の位置を印で置いて矢印でつなぐ)
     // 名前は天体リストの「名前」に従う (宇宙ビューと同じ)。名前を消すと選択天体の
     // 目印が無くなってしまうので、選択マークは名前とは別に出す
     const marked = showSelMark ? selected : null;
@@ -14855,6 +14907,22 @@
   // 「この軌道半径 [au] が画面に収まる」カメラ距離。
   // 軌道面は俯角ぶん縦に潰れて見えるので、横 (半径そのもの) と縦 (半径×sin俯角)
   // の必要量を別々に出し、両方を満たす距離を採る。縦横比によらず同じ見え方になる
+  // trail: { key, dates: [UTC ISO], labels: [表示名] } → 各日時の地心方向 (ワールド単位)。
+  // 恒星と同じ扱いの固定した方向にするので、地上ビューの向きが同じ恒星時に揃って
+  // いれば、星々に対する位置がそのまま出る
+  function buildTourTrail(t) {
+    const b = BODY_BY_KEY.get(t.key);
+    if (!b) return null;
+    const v = [0, 0, 0], pts = [];
+    t.dates.forEach((iso, i) => {
+      const days = (Date.parse(iso.length <= 16 ? iso + ":00Z" : iso) - J2000) / DAY_MS;
+      evGeo(b, days, v);                             // 地心の黄道座標 [AU]
+      const l = Math.hypot(v[0], v[1], v[2]) || 1;
+      pts.push({ wx: v[0] / l, wy: v[2] / l, wz: -v[1] / l,   // 黄道 → ワールド (x, z, −y)
+                 label: t.labels ? t.labels[i] : "" });
+    });
+    return { pts };
+  }
   function tourFitDist(au, mag, pitch) {
     const half = Math.tan(FOV / Math.max(1, mag) / 2);
     const r = au * K_REAL * 1.10;                       // 10% の余白込み
@@ -15029,6 +15097,7 @@
     showSelMark = !!s.mark;
     tourSight = s.sight || null;
     tourSpot = s.spot || null;
+    tourTrail = s.trail ? buildTourTrail(s.trail) : null;
     // 引きの画から乗り移るときだけ、寄り切るまで時間を止める。探査機視点の
     // まま次の天体へ向き直る回 (タイタン → 土星) は止めずに飛び続けさせる
     tourProbeHold = !!s.probeIn;
@@ -15458,6 +15527,7 @@
     tourUntil = null;
     tourSight = null;
     tourSpot = null;
+    tourTrail = null;
     tourProbes = null;
     tourProbe = null;
     tourRideOn = null;
