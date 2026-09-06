@@ -2,7 +2,7 @@
   // 天体・衛星・探査機・星雲星団・星座・流星群を名前で探して飛ぶ。日本語名と英語名の
   // どちらでも引ける (表示は今の言語)。タイトル横の 🔍 か "/" キーで開く。
   // 天体は select() に任せる (宇宙ビューでは寄り、地上ビューではそちらを向く)。
-  // 空に貼り付いたもの (星雲星団・星座・流星群) は地上ビューでその方向を向く
+  // 空に貼り付いたもの (恒星・星雲星団・星座・流星群) は、いまのビューのままその方向を向く
   const searchBtn = document.getElementById("searchBtn");
   const searchBox = document.getElementById("searchBox");
   const searchInput = document.getElementById("searchInput");
@@ -126,16 +126,31 @@
     _sd[0] = xq; _sd[1] = -yq * se + zq * ce; _sd[2] = -(yq * ce + zq * se);
     aimSkyDir(_sd, fovDeg, what);
   }
-  // ワールドの方向 (天球上の点) へ地上ビューを向ける。層が消えていれば入れる
+  // ワールドの方向 (天球上の点) へ向ける。層が消えていれば入れる。
+  // 地上・月面ビューでは方位と高度を合わせる。宇宙ビューではビューを変えず、
+  // 注視点をはさんで反対側へカメラを回して、天球のその方向を向く (空は視点中心の
+  // 天球なので向きだけが効く)。地上へ飛ばしていた頃は「戸惑う」と言われた
   const _sg = [0, 0, 0];
   function aimSkyDir(d, fovDeg, what) {
-    if (!groundView) enterSurface("earth");
-    buildObsFrame();
     if (what === "dso" && !dsoOn) menuDsoBtn.click();
     if ((what === "const" || what === "star") && !showConst) menuConstBtn.click();   // 星の名前も星座の切替に従う
+    const l = Math.hypot(d[0], d[1], d[2]) || 1;
+    if (!groundView) {
+      // カメラの位置は注視点から (cos p cos y, sin p, cos p sin y) の向き。見る向きは
+      // その逆なので、目標の方向 u に対してカメラは −u 側に置く (select の lit と同じ約束)
+      const ox = -d[0] / l, oy = -d[1] / l, oz = -d[2] / l;
+      let dy = (Math.atan2(oz, ox) - cam.yawTgt) % (2 * Math.PI);
+      if (dy > Math.PI) dy -= 2 * Math.PI;
+      if (dy < -Math.PI) dy += 2 * Math.PI;
+      cam.yawTgt += dy;
+      cam.pitchTgt = Math.max(-1.52, Math.min(1.52, Math.asin(Math.max(-1, Math.min(1, oy)))));
+      camZoomTgt = Math.max(1, Math.min(MAG_MAX, FOV / (fovDeg * DEG)));
+      resetPan();
+      return;
+    }
+    buildObsFrame();
     select(null, false);
     gTrack = false; gRadTrack = "";
-    const l = Math.hypot(d[0], d[1], d[2]) || 1;
     worldDirToGround([d[0] / l, d[1] / l, d[2] / l], _sg);
     const rf = refractUp(_sg[1]);
     _sg[0] *= rf[0]; _sg[2] *= rf[0]; _sg[1] = rf[1];
@@ -149,7 +164,12 @@
     updateGroundUI();
   }
   function goSearchShower(key) {
-    if (!groundView) enterSurface("earth");
+    if (!groundView) {
+      // 宇宙ビューでは放射点の方向を向くだけ (流星は地上ビューでしか降らない)
+      const sh = SHOWERS.find((x) => x.key === key);
+      if (sh) aimSkyDir(sh.dirW, 62, "shower");
+      return;
+    }
     buildObsFrame();
     setMeteor(true);
     select(null, false);
