@@ -969,6 +969,23 @@
         lblPut(lab, s.x, s.y - 4, LBL_DIR, "rgba(150,178,224,0.55)", LF12);
       }
     }
+    // 明るい星の固有名 (星座と同じ切替。名前は星の下に)。星雲名より先に積む —
+    // 同じ優先度は先に積んだほうが勝つので、リゲルがオリオン大星雲の名前に消されない
+    if (showConst && starVis > 0.04) {
+      const sCol = "rgba(190,205,235," + (0.7 * starVis).toFixed(3) + ")";
+      const magLim = namedStarMagLim(gFov);
+      for (const st of NAMED_STARS) {
+        if (st.mag > magLim) continue;
+        const up = st.wx*obsU[0]+st.wy*obsU[1]+st.wz*obsU[2];
+        if (up < 0.02) continue;
+        const east = st.wx*obsE[0]+st.wy*obsE[1]+st.wz*obsE[2];
+        const north = st.wx*obsN[0]+st.wy*obsN[1]+st.wz*obsN[2];
+        const rf = refractUp(up), hz = rf[0] * SKYR;
+        const sp = projGround([east * hz, rf[1] * SKYR, -north * hz]);
+        if (!sp || sp.x < 0 || sp.x > W || sp.y < 0 || sp.y > H) continue;
+        lblPut(lang === "ja" ? st.ja : st.en, sp.x, sp.y + 13, LBL_DSO, sCol, LF11);
+      }
+    }
     // 星雲・星団の名前。淡くて小さいものまで全部出すと画面が名前で埋まるので、
     // 明るいか、画角に対してある程度の大きさがあるものだけに絞る
     if (dsoOn && dsoW && starVis > 0.04) {

@@ -123,6 +123,19 @@
         if (px < 0 || px > W || py < 0 || py > H) continue;
         lblPut(lang === "ja" ? c.ja : c.en, px, py, LBL_SKY, "rgba(150,178,224,0.5)");
       }
+      // 明るい星の固有名 (画角が広いうちは 1等星だけ)
+      const magLim = namedStarMagLim(FOV / Math.max(1, camZoom));
+      for (const st of NAMED_STARS) {
+        if (st.mag > magLim) continue;
+        const X = st.wx * 1900, Y = st.wy * 1900, Z = st.wz * 1900;
+        const w = VP[3] * X + VP[7] * Y + VP[11] * Z + VP[15];
+        if (w <= 0.001) continue;
+        const x = (VP[0] * X + VP[4] * Y + VP[8] * Z + VP[12]) / w;
+        const y = (VP[1] * X + VP[5] * Y + VP[9] * Z + VP[13]) / w;
+        const px = (x * 0.5 + 0.5) * W, py = (1 - (y * 0.5 + 0.5)) * H;
+        if (px < 0 || px > W || py < 0 || py > H) continue;
+        lblPut(lang === "ja" ? st.ja : st.en, px, py + 13, LBL_DSO, "rgba(190,205,235,0.6)", LF11);
+      }
       // 黄道ラベル: 画面中央に最も近い可視点に1つ
       let bx = 0, by = 0, bd = Infinity;
       for (let i = 0; i + 2 < ECL_WORLD.length; i += 3) {

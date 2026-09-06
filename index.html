@@ -2685,7 +2685,7 @@
         tag: "#Sidereum",
       },
       search: "検索", searchPh: "天体・星座・星雲・流星群を検索", searchNone: "見つかりません",
-      sBody: "天体", sSat: "衛星", sProbe: "探査機", sDso: "星雲・星団", sConst: "星座", sShower: "流星群",
+      sBody: "天体", sSat: "衛星", sProbe: "探査機", sStar: "恒星", sDso: "星雲・星団", sConst: "星座", sShower: "流星群",
       menuFs: "全画面表示",
       menuFsExit: "全画面を終了",
       menuNavHide: "天体リストを隠す",
@@ -2811,7 +2811,7 @@
         tag: "#Sidereum",
       },
       search: "Search", searchPh: "Search bodies, constellations, deep-sky, showers", searchNone: "No matches",
-      sBody: "Body", sSat: "Moon", sProbe: "Probe", sDso: "Deep-sky", sConst: "Constellation", sShower: "Shower",
+      sBody: "Body", sSat: "Moon", sProbe: "Probe", sStar: "Star", sDso: "Deep-sky", sConst: "Constellation", sShower: "Shower",
       menuFs: "Fullscreen",
       menuFsExit: "Exit fullscreen",
       menuNavHide: "Hide body list",
@@ -8602,6 +8602,104 @@
     [0, 35.6337, 57.1441, 3.8, 10.5, 0, -1, 2, "二重星団 χ", "NGC 884"],
   ];
   //#endregion
+  //#region src/data/starnames.js
+  // ---------- 明るい星の固有名 ----------
+  // 座標 (J2000, 度) は目安で、読み込み時に恒星カタログの最も近い明るい星へ寄せる
+  // (STAR_RA/STAR_SD/STAR_CD/STAR_MAG)。位置と等級はカタログのものを使うので、ここの
+  // 数値は「どの星か」を指すためだけにある (0.4° 以内で最も明るい星)。
+  //   [和名, 英名, 赤経°, 赤緯°]
+  const STAR_NAME_LIST = [
+    ["シリウス", "Sirius", 101.287, -16.716],
+    ["カノープス", "Canopus", 95.988, -52.696],
+    ["アルクトゥルス", "Arcturus", 213.915, 19.182],
+    ["リギル・ケンタウルス", "Rigil Kentaurus", 219.90, -60.83],
+    ["ベガ", "Vega", 279.235, 38.784],
+    ["カペラ", "Capella", 79.172, 45.998],
+    ["リゲル", "Rigel", 78.634, -8.202],
+    ["プロキオン", "Procyon", 114.826, 5.225],
+    ["アケルナル", "Achernar", 24.429, -57.237],
+    ["ベテルギウス", "Betelgeuse", 88.793, 7.407],
+    ["ハダル", "Hadar", 210.956, -60.373],
+    ["アルタイル", "Altair", 297.696, 8.868],
+    ["アクルックス", "Acrux", 186.650, -63.099],
+    ["アルデバラン", "Aldebaran", 68.980, 16.509],
+    ["アンタレス", "Antares", 247.352, -26.432],
+    ["スピカ", "Spica", 201.298, -11.161],
+    ["ポルックス", "Pollux", 116.329, 28.026],
+    ["フォーマルハウト", "Fomalhaut", 344.413, -29.622],
+    ["デネブ", "Deneb", 310.358, 45.280],
+    ["ミモザ", "Mimosa", 191.930, -59.689],
+    ["レグルス", "Regulus", 152.093, 11.967],
+    ["アダラ", "Adhara", 104.656, -28.972],
+    ["カストル", "Castor", 113.650, 31.888],
+    ["ガクルックス", "Gacrux", 187.791, -57.113],
+    ["シャウラ", "Shaula", 263.402, -37.104],
+    ["ベラトリックス", "Bellatrix", 81.283, 6.350],
+    ["エルナト", "Elnath", 81.573, 28.608],
+    ["ミアプラキドゥス", "Miaplacidus", 138.300, -69.717],
+    ["アルニラム", "Alnilam", 84.053, -1.202],
+    ["アルナイル", "Alnair", 332.058, -46.961],
+    ["アルニタク", "Alnitak", 85.190, -1.943],
+    ["アリオト", "Alioth", 193.507, 55.960],
+    ["ドゥーベ", "Dubhe", 165.932, 61.751],
+    ["ミルファク", "Mirfak", 51.081, 49.861],
+    ["ウェズン", "Wezen", 107.098, -26.393],
+    ["サルガス", "Sargas", 264.330, -42.998],
+    ["カウス・アウストラリス", "Kaus Australis", 276.043, -34.385],
+    ["アヴィオル", "Avior", 125.629, -59.509],
+    ["アルカイド", "Alkaid", 206.885, 49.313],
+    ["メンカリナン", "Menkalinan", 89.882, 44.948],
+    ["アトリア", "Atria", 252.166, -69.028],
+    ["アルヘナ", "Alhena", 99.428, 16.399],
+    ["ピーコック", "Peacock", 306.412, -56.735],
+    ["ポラリス (北極星)", "Polaris", 37.955, 89.264],
+    ["ミルザム", "Mirzam", 95.675, -17.956],
+    ["アルファルド", "Alphard", 141.897, -8.659],
+    ["ハマル", "Hamal", 31.793, 23.462],
+    ["デネボラ", "Denebola", 177.265, 14.572],
+    ["アルゴル", "Algol", 47.042, 40.956],
+    ["アルビレオ", "Albireo", 292.680, 27.960],
+    ["ミラ", "Mira", 34.837, -2.978],
+    ["コカブ", "Kochab", 222.676, 74.155],
+    ["ラサルハグエ", "Rasalhague", 263.734, 12.560],
+    ["アルフェッカ", "Alphecca", 233.672, 26.715],
+    ["ヌンキ", "Nunki", 283.816, -26.297],
+    ["アルデラミン", "Alderamin", 319.645, 62.586],
+    ["シェダル", "Schedar", 10.127, 56.537],
+    ["カフ", "Caph", 2.295, 59.150],
+    ["マルカブ", "Markab", 346.190, 15.205],
+    ["アルフェラッツ", "Alpheratz", 2.097, 29.091],
+    ["ディフダ", "Diphda", 10.897, -17.987],
+    ["エニフ", "Enif", 326.046, 9.875],
+    ["サイフ", "Saiph", 86.939, -9.670],
+    ["ミンタカ", "Mintaka", 83.002, -0.299],
+    ["ラス・アルゲティ", "Rasalgethi", 258.662, 14.390],
+    ["サビク", "Sabik", 257.595, -15.725],
+    ["メラク", "Merak", 165.460, 56.383],
+    ["フェクダ", "Phecda", 178.458, 53.695],
+    ["メグレズ", "Megrez", 183.857, 57.033],
+    ["ミザール", "Mizar", 200.981, 54.925],
+  ];
+  // { ja, en, i (カタログの番号), mag, ra, dec [rad], wx, wy, wz (ワールド単位方向) }
+  const NAMED_STARS = [];
+  {
+    const cosLim = Math.cos(0.4 * DEG);
+    for (const [ja, en, raD, decD] of STAR_NAME_LIST) {
+      const ra = raD * DEG, dec = decD * DEG;
+      const x = Math.cos(dec) * Math.cos(ra), y = Math.cos(dec) * Math.sin(ra), z = Math.sin(dec);
+      let best = -1, bestMag = 99;
+      for (let i = 0; i < N_CAT; i++) {
+        const c = STAR_CD[i] * Math.cos(STAR_RA[i]) * x + STAR_CD[i] * Math.sin(STAR_RA[i]) * y + STAR_SD[i] * z;
+        if (c > cosLim && STAR_MAG[i] < bestMag) { bestMag = STAR_MAG[i]; best = i; }
+      }
+      if (best < 0) continue;   // カタログに無い (座標の書き間違い)。出さないだけ
+      NAMED_STARS.push({ ja, en, i: best, mag: bestMag, ra: STAR_RA[best], dec: Math.asin(STAR_SD[best]),
+                         wx: STAR_W[best*3], wy: STAR_W[best*3+1], wz: STAR_W[best*3+2] });
+    }
+  }
+  // 画角に応じて、出す星を明るいものに絞る (広い画角で全部出すと名前だらけになる)
+  const namedStarMagLim = (fov) => (fov > 70 * DEG ? 1.0 : fov > 35 * DEG ? 2.0 : 9);
+  //#endregion
   //#region src/render/dso.js
   // ---------- 星雲・星団・銀河 ----------
   // メシエ天体を、面の明るさを持ったぼんやりした楕円として描く。恒星と同じく
@@ -9701,6 +9799,23 @@
       const s = projGround([_gp[0]*SKYR, _gp[1]*SKYR, _gp[2]*SKYR]);
       if (s && s.x >= 0 && s.x <= W && s.y >= 0 && s.y <= H) {
         lblPut(lab, s.x, s.y - 4, LBL_DIR, "rgba(150,178,224,0.55)", LF12);
+      }
+    }
+    // 明るい星の固有名 (星座と同じ切替。名前は星の下に)。星雲名より先に積む —
+    // 同じ優先度は先に積んだほうが勝つので、リゲルがオリオン大星雲の名前に消されない
+    if (showConst && starVis > 0.04) {
+      const sCol = "rgba(190,205,235," + (0.7 * starVis).toFixed(3) + ")";
+      const magLim = namedStarMagLim(gFov);
+      for (const st of NAMED_STARS) {
+        if (st.mag > magLim) continue;
+        const up = st.wx*obsU[0]+st.wy*obsU[1]+st.wz*obsU[2];
+        if (up < 0.02) continue;
+        const east = st.wx*obsE[0]+st.wy*obsE[1]+st.wz*obsE[2];
+        const north = st.wx*obsN[0]+st.wy*obsN[1]+st.wz*obsN[2];
+        const rf = refractUp(up), hz = rf[0] * SKYR;
+        const sp = projGround([east * hz, rf[1] * SKYR, -north * hz]);
+        if (!sp || sp.x < 0 || sp.x > W || sp.y < 0 || sp.y > H) continue;
+        lblPut(lang === "ja" ? st.ja : st.en, sp.x, sp.y + 13, LBL_DSO, sCol, LF11);
       }
     }
     // 星雲・星団の名前。淡くて小さいものまで全部出すと画面が名前で埋まるので、
@@ -11534,6 +11649,19 @@
         const px = (x * 0.5 + 0.5) * W, py = (1 - (y * 0.5 + 0.5)) * H;
         if (px < 0 || px > W || py < 0 || py > H) continue;
         lblPut(lang === "ja" ? c.ja : c.en, px, py, LBL_SKY, "rgba(150,178,224,0.5)");
+      }
+      // 明るい星の固有名 (画角が広いうちは 1等星だけ)
+      const magLim = namedStarMagLim(FOV / Math.max(1, camZoom));
+      for (const st of NAMED_STARS) {
+        if (st.mag > magLim) continue;
+        const X = st.wx * 1900, Y = st.wy * 1900, Z = st.wz * 1900;
+        const w = VP[3] * X + VP[7] * Y + VP[11] * Z + VP[15];
+        if (w <= 0.001) continue;
+        const x = (VP[0] * X + VP[4] * Y + VP[8] * Z + VP[12]) / w;
+        const y = (VP[1] * X + VP[5] * Y + VP[9] * Z + VP[13]) / w;
+        const px = (x * 0.5 + 0.5) * W, py = (1 - (y * 0.5 + 0.5)) * H;
+        if (px < 0 || px > W || py < 0 || py > H) continue;
+        lblPut(lang === "ja" ? st.ja : st.en, px, py + 13, LBL_DSO, "rgba(190,205,235,0.6)", LF11);
       }
       // 黄道ラベル: 画面中央に最も近い可視点に1つ
       let bx = 0, by = 0, bd = Infinity;
@@ -13965,7 +14093,7 @@
         ["時刻の基準", "時計の右端 (JST など) をタップ → 端末 / LMT (観測地の地方時) / UTC"],
         ["再生・速度", "下部パネル"],
         ["表示切替", "左上の 軌道 / 名前 (天体リストの上)"],
-        ["星座", "メニュー「星座」(星座線・星座名。黄道も連動)"],
+        ["星座", "メニュー「星座」(星座線・星座名・明るい星の名前。黄道も連動)"],
         ["経緯線", "メニュー「経緯線」(天球の赤経・赤緯)"],
         ["星雲・星団", "メニュー「星雲・星団」(メシエ天体)"],
         ["風景", "メニュー「風景を表示」(地面の質感・地平の稜線・空の色)"],
@@ -13999,7 +14127,7 @@
         ["Time base", "Tap the zone label on the clock → device / LMT (local mean time at the site) / UTC"],
         ["Play & speed", "Bottom panel"],
         ["Toggles", "Orbits / Labels (above the body list, top-left)"],
-        ["Constellations", "Menu → “Constellations” (lines and names; the ecliptic follows)"],
+        ["Constellations", "Menu → “Constellations” (lines, names and bright-star names; the ecliptic follows)"],
         ["Coordinate grid", "Menu “Coordinate grid” (RA & Dec on the sky)"],
         ["Deep-sky", "Menu “Deep-sky objects” (Messier catalog)"],
         ["Scenery", "Menu “Show scenery” (ground texture, ridgeline, sky color)"],
@@ -15398,7 +15526,7 @@
   const searchBox = document.getElementById("searchBox");
   const searchInput = document.getElementById("searchInput");
   const searchList = document.getElementById("searchList");
-  const SEARCH_KIND = { body: "sBody", sat: "sSat", probe: "sProbe", dso: "sDso", const: "sConst", shower: "sShower" };
+  const SEARCH_KIND = { body: "sBody", sat: "sSat", probe: "sProbe", star: "sStar", dso: "sDso", const: "sConst", shower: "sShower" };
   // 照合用に正規化: 全角→半角、小文字、ひらがな→カタカナ、空白と区切り (・ - ' .) を落とす
   const sKey = (v) => String(v).normalize("NFKC").toLowerCase()
     .replace(/[\u3041-\u3096]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 0x60))
@@ -15413,6 +15541,10 @@
     }
     for (const pr of PROBES) {
       ix.push({ kind: "probe", keys: [pr.name, pr.nameEn, pr.en], label: () => bName(pr), go: () => goSearchBody(pr) });
+    }
+    for (const st of NAMED_STARS) {
+      ix.push({ kind: "star", keys: [st.ja, st.en], label: () => (lang === "ja" ? st.ja : st.en),
+                go: () => aimSkyRaDec(st.ra / DEG, st.dec / DEG, 20, "star") });
     }
     for (const d of DSO) {
       const m = d[0] ? "M" + d[0] : "";
@@ -15432,7 +15564,7 @@
     for (const e of ix) e.nk = e.keys.filter(Boolean).map(sKey);
     return ix;
   }
-  // 部分一致。先頭に近く一致したものを先に (同点は索引の順 = 天体 → 星雲 → 星座 → 流星群)
+  // 部分一致。先頭に近く一致したものを先に (同点は索引の順 = 天体 → 恒星 → 星雲 → 星座 → 流星群)
   function searchQuery(q) {
     const k = sKey(q);
     if (!k) return [];
@@ -15519,7 +15651,7 @@
     if (!groundView) enterSurface("earth");
     buildObsFrame();
     if (what === "dso" && !dsoOn) menuDsoBtn.click();
-    if (what === "const" && !showConst) menuConstBtn.click();
+    if ((what === "const" || what === "star") && !showConst) menuConstBtn.click();   // 星の名前も星座の切替に従う
     select(null, false);
     gTrack = false; gRadTrack = "";
     const l = Math.hypot(d[0], d[1], d[2]) || 1;

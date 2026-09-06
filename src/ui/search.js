@@ -7,7 +7,7 @@
   const searchBox = document.getElementById("searchBox");
   const searchInput = document.getElementById("searchInput");
   const searchList = document.getElementById("searchList");
-  const SEARCH_KIND = { body: "sBody", sat: "sSat", probe: "sProbe", dso: "sDso", const: "sConst", shower: "sShower" };
+  const SEARCH_KIND = { body: "sBody", sat: "sSat", probe: "sProbe", star: "sStar", dso: "sDso", const: "sConst", shower: "sShower" };
   // 照合用に正規化: 全角→半角、小文字、ひらがな→カタカナ、空白と区切り (・ - ' .) を落とす
   const sKey = (v) => String(v).normalize("NFKC").toLowerCase()
     .replace(/[\u3041-\u3096]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 0x60))
@@ -22,6 +22,10 @@
     }
     for (const pr of PROBES) {
       ix.push({ kind: "probe", keys: [pr.name, pr.nameEn, pr.en], label: () => bName(pr), go: () => goSearchBody(pr) });
+    }
+    for (const st of NAMED_STARS) {
+      ix.push({ kind: "star", keys: [st.ja, st.en], label: () => (lang === "ja" ? st.ja : st.en),
+                go: () => aimSkyRaDec(st.ra / DEG, st.dec / DEG, 20, "star") });
     }
     for (const d of DSO) {
       const m = d[0] ? "M" + d[0] : "";
@@ -41,7 +45,7 @@
     for (const e of ix) e.nk = e.keys.filter(Boolean).map(sKey);
     return ix;
   }
-  // 部分一致。先頭に近く一致したものを先に (同点は索引の順 = 天体 → 星雲 → 星座 → 流星群)
+  // 部分一致。先頭に近く一致したものを先に (同点は索引の順 = 天体 → 恒星 → 星雲 → 星座 → 流星群)
   function searchQuery(q) {
     const k = sKey(q);
     if (!k) return [];
@@ -128,7 +132,7 @@
     if (!groundView) enterSurface("earth");
     buildObsFrame();
     if (what === "dso" && !dsoOn) menuDsoBtn.click();
-    if (what === "const" && !showConst) menuConstBtn.click();
+    if ((what === "const" || what === "star") && !showConst) menuConstBtn.click();   // 星の名前も星座の切替に従う
     select(null, false);
     gTrack = false; gRadTrack = "";
     const l = Math.hypot(d[0], d[1], d[2]) || 1;
