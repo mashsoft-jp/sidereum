@@ -360,6 +360,33 @@
     callisto: {
       rows:[["Diameter","4,821 km"],["Orbital radius","1,882,700 km"],["Orbital period","16.7 days"],["Rotation","synchronous"]],
       fact:"The outermost Galilean moon, and one of the most heavily cratered bodies in the Solar System." },
+    mimas: {
+      rows:[["Diameter","396 km"],["Orbital radius","185,539 km"],["Orbital period","22.6 hours"],["Rotation","synchronous"]],
+      fact:"Bears the giant Herschel crater, a third of its own diameter — hence the comparisons with a certain film's space station. Its gravity also clears the Cassini Division in Saturn's rings." },
+    enceladus: {
+      rows:[["Diameter","504 km"],["Orbital radius","238,042 km"],["Orbital period","1.37 days"],["Rotation","synchronous"]],
+      fact:"The whitest body in the Solar System (albedo close to 1). Jets of water vapour and ice erupt from cracks near its south pole, fed by a salty ocean underneath; the ice feeds Saturn's E ring." },
+    tethys: {
+      rows:[["Diameter","1,062 km"],["Orbital radius","294,672 km"],["Orbital period","1.89 days"],["Rotation","synchronous"]],
+      fact:"A bright moon made almost entirely of ice, with the Odysseus crater two-fifths of its diameter and Ithaca Chasma, a canyon 2,000 km long that nearly girdles it." },
+    dione: {
+      rows:[["Diameter","1,123 km"],["Orbital radius","377,415 km"],["Orbital period","2.74 days"],["Rotation","synchronous"]],
+      fact:"Bright streaks cross its trailing hemisphere; up close they turned out to be ice cliffs. Unusually for a Saturnian moon, it has a tenuous oxygen atmosphere." },
+    rhea: {
+      rows:[["Diameter","1,528 km"],["Orbital radius","527,068 km"],["Orbital period","4.52 days"],["Rotation","synchronous"]],
+      fact:"Saturn's second-largest moon: a heavily cratered ice world of low density, thought to be about three-quarters ice." },
+    iapetus: {
+      rows:[["Diameter","1,469 km"],["Orbital radius","3,560,854 km"],["Orbital period","79.3 days"],["Rotation","synchronous"]],
+      fact:"The two-faced moon: its leading hemisphere is as dark as coal, the trailing one as bright as snow. A ridge 13 km high runs around its equator, giving it a walnut shape. Its real orbit is tilted 15°; here it sits in Saturn's equatorial plane." },
+    ariel: {
+      rows:[["Diameter","1,158 km"],["Orbital radius","190,900 km"],["Orbital period","2.52 days"],["Rotation","synchronous"]],
+      fact:"The brightest of Uranus's moons and the youngest-looking, criss-crossed by valleys and faults that point to a warm, geologically active past." },
+    umbriel: {
+      rows:[["Diameter","1,169 km"],["Orbital radius","266,000 km"],["Orbital period","4.14 days"],["Rotation","synchronous"]],
+      fact:"The darkest of the five large Uranian moons, with an old, cratered surface — and one oddly bright ring-shaped feature, Wunda, near its pole." },
+    oberon: {
+      rows:[["Diameter","1,523 km"],["Orbital radius","583,500 km"],["Orbital period","13.5 days"],["Rotation","synchronous"]],
+      fact:"The outermost major moon of Uranus, found by Herschel in 1787 along with Titania. Dark material pools on crater floors and one mountain rises 6 km. Named after the king of the fairies in Shakespeare." },
     titan: {
       rows:[["Diameter","5,150 km"],["Orbital radius","1,221,870 km"],["Orbital period","15.9 days"],["Rotation","synchronous"]],
       fact:"The only moon with a dense nitrogen atmosphere, with lakes and rivers of methane. The Huygens probe landed here in 2005." },
