@@ -41,7 +41,8 @@
   // (いて座、地図で 0.4 前後) に並ぶので、そこへ合わせる。0.2 では天の川より
   // 明らかに淡く、春の宵の西空で見分けられなかった
   const MW_ZODI = 0.5;
-  // zodi: { sun: [x,y,z], pole: [x,y,z] } (描画フレームの単位ベクトル)。null なら描かない
+  // zodi: { sun: [x,y,z], pole: [x,y,z], gain } (描画フレームの単位ベクトルと 0〜1 の強さ)。
+  // null なら描かない。gain は呼び出し側が太陽の高度で決める (薄明のあいだは出さない)
   function drawMilkyWay(vp32, eq9, radius, bright, refr, extK, zodi) {
     if (bright <= 0.003) return;
     gl.useProgram(skyP.pr);
@@ -51,7 +52,7 @@
     gl.uniform1f(skyP.u.uBright, bright);
     gl.uniform1f(skyP.u.uRefr, refr || 0);
     gl.uniform3f(skyP.u.uExtK, extK ? extK[0] : 0, extK ? extK[1] : 0, extK ? extK[2] : 0);
-    gl.uniform1f(skyP.u.uZodi, zodi ? MW_ZODI : 0);
+    gl.uniform1f(skyP.u.uZodi, zodi ? MW_ZODI * (zodi.gain === undefined ? 1 : zodi.gain) : 0);
     gl.uniform3f(skyP.u.uSunDir, zodi ? zodi.sun[0] : 0, zodi ? zodi.sun[1] : 1, zodi ? zodi.sun[2] : 0);
     gl.uniform3f(skyP.u.uEclPole, zodi ? zodi.pole[0] : 0, zodi ? zodi.pole[1] : 1, zodi ? zodi.pole[2] : 0);
     gl.activeTexture(gl.TEXTURE0);

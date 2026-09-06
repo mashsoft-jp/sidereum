@@ -20,7 +20,7 @@
     return Math.max(2e-9, Math.min(GMIN_DEFAULT, angDiam * 1.1));
   }
   const _fwd = [0, 0, 0], _gp = [0, 0, 0], _sunG = [0, 0, 0];
-  const _zodi = { sun: _sunG, pole: [0, 1, 0] };   // 黄道光 (drawMilkyWay へ渡す)
+  const _zodi = { sun: _sunG, pole: [0, 1, 0], gain: 1 };   // 黄道光 (drawMilkyWay へ渡す)
   const _shineG = { dir: [0, 0, 0], col: [0, 0, 0] };   // 地球照 (地平フレーム)
   const _eclW = [0, 0, 0], _eclG = [0, 0, 0];   // 食: 天体 → 遮蔽体 (ワールド / 地平フレーム)
   const _pf = [0, 0, 0];                       // 歳差を戻した観測地の基底 (赤道 J2000)
@@ -396,6 +396,14 @@
     // 不透明で描かれるので、地平線より下は隠れる)。昼は星と同じだけ薄れる
     // 黄道光は観測者フレームでの太陽の方向と黄道の北極 (ワールドの +y) から描く。
     // 月面にも大気は無いが塵は同じ場所にあるので出す
+    // 太陽が沈みきるまでは出さない (−8° で 0、−16° で満)。円錐は太陽に近いほど
+    // 明るく、離角 12° で頭打ちにしてあるだけなので、太陽が地平線の上にあると
+    // 太陽を中心に直径 25° ほどの白い塊になる。風景 OFF の空は昼でも暗いままなので
+    // 薄明に沈んでくれず、昼の太陽がその塊に見えていた (沈むにつれて減光で塊が
+    // 縮み、「太陽が小さくなっていく」と見えた 2026-09-07)。月面にも同じく掛ける —
+    // 塵は同じ場所にあるが、太陽が出ていれば眩しさで見えないのは同じ
+    const zAlt = Math.asin(Math.max(-1, Math.min(1, _sunG[1]))) / DEG;
+    _zodi.gain = Math.max(0, Math.min(1, (-zAlt - 8) / 8));
     _zodi.sun = _sunG;
     _zodi.pole[0] = obsE[1]; _zodi.pole[1] = obsU[1]; _zodi.pole[2] = -obsN[1];
     drawMilkyWay(gVP32, mwEqGround(), SKYR * 1.4,

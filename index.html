@@ -8536,7 +8536,8 @@
   // (いて座、地図で 0.4 前後) に並ぶので、そこへ合わせる。0.2 では天の川より
   // 明らかに淡く、春の宵の西空で見分けられなかった
   const MW_ZODI = 0.5;
-  // zodi: { sun: [x,y,z], pole: [x,y,z] } (描画フレームの単位ベクトル)。null なら描かない
+  // zodi: { sun: [x,y,z], pole: [x,y,z], gain } (描画フレームの単位ベクトルと 0〜1 の強さ)。
+  // null なら描かない。gain は呼び出し側が太陽の高度で決める (薄明のあいだは出さない)
   function drawMilkyWay(vp32, eq9, radius, bright, refr, extK, zodi) {
     if (bright <= 0.003) return;
     gl.useProgram(skyP.pr);
@@ -8546,7 +8547,7 @@
     gl.uniform1f(skyP.u.uBright, bright);
     gl.uniform1f(skyP.u.uRefr, refr || 0);
     gl.uniform3f(skyP.u.uExtK, extK ? extK[0] : 0, extK ? extK[1] : 0, extK ? extK[2] : 0);
-    gl.uniform1f(skyP.u.uZodi, zodi ? MW_ZODI : 0);
+    gl.uniform1f(skyP.u.uZodi, zodi ? MW_ZODI * (zodi.gain === undefined ? 1 : zodi.gain) : 0);
     gl.uniform3f(skyP.u.uSunDir, zodi ? zodi.sun[0] : 0, zodi ? zodi.sun[1] : 1, zodi ? zodi.sun[2] : 0);
     gl.uniform3f(skyP.u.uEclPole, zodi ? zodi.pole[0] : 0, zodi ? zodi.pole[1] : 1, zodi ? zodi.pole[2] : 0);
     gl.activeTexture(gl.TEXTURE0);
@@ -9236,7 +9237,7 @@
     return Math.max(2e-9, Math.min(GMIN_DEFAULT, angDiam * 1.1));
   }
   const _fwd = [0, 0, 0], _gp = [0, 0, 0], _sunG = [0, 0, 0];
-  const _zodi = { sun: _sunG, pole: [0, 1, 0] };   // 黄道光 (drawMilkyWay へ渡す)
+  const _zodi = { sun: _sunG, pole: [0, 1, 0], gain: 1 };   // 黄道光 (drawMilkyWay へ渡す)
   const _shineG = { dir: [0, 0, 0], col: [0, 0, 0] };   // 地球照 (地平フレーム)
   const _eclW = [0, 0, 0], _eclG = [0, 0, 0];   // 食: 天体 → 遮蔽体 (ワールド / 地平フレーム)
   const _pf = [0, 0, 0];                       // 歳差を戻した観測地の基底 (赤道 J2000)
@@ -9612,6 +9613,14 @@
     // 不透明で描かれるので、地平線より下は隠れる)。昼は星と同じだけ薄れる
     // 黄道光は観測者フレームでの太陽の方向と黄道の北極 (ワールドの +y) から描く。
     // 月面にも大気は無いが塵は同じ場所にあるので出す
+    // 太陽が沈みきるまでは出さない (−8° で 0、−16° で満)。円錐は太陽に近いほど
+    // 明るく、離角 12° で頭打ちにしてあるだけなので、太陽が地平線の上にあると
+    // 太陽を中心に直径 25° ほどの白い塊になる。風景 OFF の空は昼でも暗いままなので
+    // 薄明に沈んでくれず、昼の太陽がその塊に見えていた (沈むにつれて減光で塊が
+    // 縮み、「太陽が小さくなっていく」と見えた 2026-09-07)。月面にも同じく掛ける —
+    // 塵は同じ場所にあるが、太陽が出ていれば眩しさで見えないのは同じ
+    const zAlt = Math.asin(Math.max(-1, Math.min(1, _sunG[1]))) / DEG;
+    _zodi.gain = Math.max(0, Math.min(1, (-zAlt - 8) / 8));
     _zodi.sun = _sunG;
     _zodi.pole[0] = obsE[1]; _zodi.pole[1] = obsU[1]; _zodi.pole[2] = -obsN[1];
     drawMilkyWay(gVP32, mwEqGround(), SKYR * 1.4,
