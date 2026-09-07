@@ -369,6 +369,7 @@
     tourRideOn = s.on || tourProbe;      // その回に乗る機体 (既定は主役)
     tourRideStay = isFinite(s.stay) ? s.stay * KM2W : 0;
     tourProbeDot = !!s.dot;
+    tourRideEye = !!s.rideEye;
     tourRideSlow = isFinite(s.slow) ? s.slow : 0.06;
     tourRideWarm = isFinite(s.warm) ? s.warm : 0;
     tourRideT0 = simDays;
@@ -605,7 +606,7 @@
     tourRideMag = (tourRideRef > 0
       ? Math.min(3.2, Math.max(1, Math.sqrt(tourRideRef / bd))) : 1) / tourRideZoom;
     let back = bd * 0.06;
-    if (portrait) {
+    if (portrait && !tourRideEye) {
       // 実際の機体の軌道は変えず、カメラだけ引く。環を含む天体の直径を
       // 横幅の76%以内に収め、前景の機体にも余白を残す。
       const radius = bodyR(tb) * (tb.ring ? RING_OUT : tb.obl ? Math.max(...tb.obl) : 1);
@@ -617,13 +618,14 @@
     const e = [p[0] + back * (bx - lx),
                p[1] + back * (by - ly),
                p[2] + back * (bz - lz)];
+    if (tourRideEye) { e[0] = p[0]; e[1] = p[1]; e[2] = p[2]; }
     // stay: 目標天体が画面を覆うところまで来たら、それ以上は寄らない。
     // そこから先も追走すると、画面が塗り潰されたまま何も動かない画になる。
     // 距離を頭打ちにするだけで、向きは機体を追い続ける。急に止めると不自然なので
     // stay の STAY_EASE 倍のあたりから緩めて漸近させる (g(1)=1, g'(1)=1 で
     // 手前と滑らかに繋がり、g'(0)=0 なので止まるところで速度が 0 になる)。
     // 置いていかれた機体は画素固定をやめて小さく描く — 落ちていくのが画に出る
-    if (tourRideStay > 0) {
+    if (tourRideStay > 0 && !tourRideEye) {
       const dc = Math.hypot(e[0] - f[0], e[1] - f[1], e[2] - f[2]) || 1;
       // 追走の距離 dc を stay で頭打ちにする。max(dc, stay) をそのまま使うと
       // 止まる瞬間に速度が跳ぶので、滑らかにした softplus を使う。これは常に
@@ -812,6 +814,7 @@
     tourRideMag = 1;
     tourRideStay = 0;
     tourProbeDot = false;
+    tourRideEye = false;
     tourRideSlow = 0.06;
     tourRideWarm = 0;
     tourProbeHold = false;
@@ -955,6 +958,5 @@
     startTour(t, isFinite(n) ? n - 1 : 0);
     return true;
   }
-
 
 

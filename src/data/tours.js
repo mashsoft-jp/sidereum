@@ -32,6 +32,7 @@
   //   warm  ride の出だしをゆっくり始める日数。距離だけで速度を決めると
   //         出発直後 (まだ遠い) が一番速くなり、分離の瞬間が一瞬で終わる
   //   ride  探査機ツアー専用。カメラを機体の少し後方に置き、この天体を見続ける。
+  //   rideEye true なら機体そのものの位置から見る。前景の自機は表示しない。
   //         sel・km・角度の指定より優先する (毎フレーム計算し直す)。mag は
   //         寄りの倍率として効く (探査機視点は既定でも 2倍に寄せて撮る)
   //   path  探査機の軌跡を描く。通ってきたところだけを引く (先は描かない)
@@ -795,6 +796,7 @@
         {
           // 実際に撮った構図: 40 au の彼方から振り返って地球を見る
           sel: "earth", ride: "earth", mag: 12, lit: false, apart: null, spot: "earth", orbits: false,
+          rideEye: true, path: false,
           d: "1990-02-14", play: false,
           text: {
             ja: "1990年2月14日、太陽から 40 au。カメラを切る前に振り返り、" +
@@ -807,6 +809,7 @@
         },
         {
           sel: "voyager1", ride: null, mag: 1, spot: null, orbits: TOUR_PLANET_ORBITS, fit: 150, a: 0.9, y: 0.9,
+          rideEye: false,
           path: true, spd: 400, play: true, until: "2012-08-25",
           text: {
             ja: "そのまま外へ。2012年8月25日、太陽風が星間物質に押し返される境界 " +

@@ -3128,6 +3128,7 @@
   //   warm  ride の出だしをゆっくり始める日数。距離だけで速度を決めると
   //         出発直後 (まだ遠い) が一番速くなり、分離の瞬間が一瞬で終わる
   //   ride  探査機ツアー専用。カメラを機体の少し後方に置き、この天体を見続ける。
+  //   rideEye true なら機体そのものの位置から見る。前景の自機は表示しない。
   //         sel・km・角度の指定より優先する (毎フレーム計算し直す)。mag は
   //         寄りの倍率として効く (探査機視点は既定でも 2倍に寄せて撮る)
   //   path  探査機の軌跡を描く。通ってきたところだけを引く (先は描かない)
@@ -3891,6 +3892,7 @@
         {
           // 実際に撮った構図: 40 au の彼方から振り返って地球を見る
           sel: "earth", ride: "earth", mag: 12, lit: false, apart: null, spot: "earth", orbits: false,
+          rideEye: true, path: false,
           d: "1990-02-14", play: false,
           text: {
             ja: "1990年2月14日、太陽から 40 au。カメラを切る前に振り返り、" +
@@ -3903,6 +3905,7 @@
         },
         {
           sel: "voyager1", ride: null, mag: 1, spot: null, orbits: TOUR_PLANET_ORBITS, fit: 150, a: 0.9, y: 0.9,
+          rideEye: false,
           path: true, spd: 400, play: true, until: "2012-08-25",
           text: {
             ja: "そのまま外へ。2012年8月25日、太陽風が星間物質に押し返される境界 " +
@@ -7298,6 +7301,7 @@
   // 探査機を点だけで描く。天体を大きく写す回では、記号として一定の画素数で描く
   // 機体が天体に対して大きすぎ、しかも立体なので天体に埋まって見える
   let tourProbeDot = false;
+  let tourRideEye = false;             // 機体そのものの位置から見る (自機は描かない)
   // 目標天体にこの距離 [world] まで寄ったら、それ以上は寄らない (0 = 制限なし)。
   // 天体が画面を覆ったあとも追走すると、画面が塗り潰されたまま動かない画になる
   let tourRideStay = 0;
@@ -7722,7 +7726,6 @@
     const b = selected || lastCenter;
     return b && b !== SUN ? bodyR(b) * 1.7 : bodyR(SUN) * 2.2;
   }
-
   //#endregion
   //#region src/core/eclipse.js
   // ============================================================
@@ -10764,7 +10767,8 @@
   // 探査機を描くか。カメラが寄っている最中だけ出さない (探査機視点でも、カメラは
   // 機体の後方にあるので機体は描く)
   const probeVisible = (pr) =>
-    pr.live && (!tourProbes || tourProbes.indexOf(pr.key) >= 0) && !tourProbeHold;
+    pr.live && (!tourProbes || tourProbes.indexOf(pr.key) >= 0) && !tourProbeHold
+    && !(tourRideEye && tourRide && pr.key === tourRideOn);
 
   // 宇宙のガイドは、注視天体が円盤として見えるほど背景へ退く。
   // 距離そのものではなく投影半径を使い、微小衛星・望遠・小画面でも同じ判断にする。
@@ -15393,6 +15397,7 @@
     tourRideOn = s.on || tourProbe;      // その回に乗る機体 (既定は主役)
     tourRideStay = isFinite(s.stay) ? s.stay * KM2W : 0;
     tourProbeDot = !!s.dot;
+    tourRideEye = !!s.rideEye;
     tourRideSlow = isFinite(s.slow) ? s.slow : 0.06;
     tourRideWarm = isFinite(s.warm) ? s.warm : 0;
     tourRideT0 = simDays;
@@ -15629,7 +15634,7 @@
     tourRideMag = (tourRideRef > 0
       ? Math.min(3.2, Math.max(1, Math.sqrt(tourRideRef / bd))) : 1) / tourRideZoom;
     let back = bd * 0.06;
-    if (portrait) {
+    if (portrait && !tourRideEye) {
       // 実際の機体の軌道は変えず、カメラだけ引く。環を含む天体の直径を
       // 横幅の76%以内に収め、前景の機体にも余白を残す。
       const radius = bodyR(tb) * (tb.ring ? RING_OUT : tb.obl ? Math.max(...tb.obl) : 1);
@@ -15641,13 +15646,14 @@
     const e = [p[0] + back * (bx - lx),
                p[1] + back * (by - ly),
                p[2] + back * (bz - lz)];
+    if (tourRideEye) { e[0] = p[0]; e[1] = p[1]; e[2] = p[2]; }
     // stay: 目標天体が画面を覆うところまで来たら、それ以上は寄らない。
     // そこから先も追走すると、画面が塗り潰されたまま何も動かない画になる。
     // 距離を頭打ちにするだけで、向きは機体を追い続ける。急に止めると不自然なので
     // stay の STAY_EASE 倍のあたりから緩めて漸近させる (g(1)=1, g'(1)=1 で
     // 手前と滑らかに繋がり、g'(0)=0 なので止まるところで速度が 0 になる)。
     // 置いていかれた機体は画素固定をやめて小さく描く — 落ちていくのが画に出る
-    if (tourRideStay > 0) {
+    if (tourRideStay > 0 && !tourRideEye) {
       const dc = Math.hypot(e[0] - f[0], e[1] - f[1], e[2] - f[2]) || 1;
       // 追走の距離 dc を stay で頭打ちにする。max(dc, stay) をそのまま使うと
       // 止まる瞬間に速度が跳ぶので、滑らかにした softplus を使う。これは常に
@@ -15836,6 +15842,7 @@
     tourRideMag = 1;
     tourRideStay = 0;
     tourProbeDot = false;
+    tourRideEye = false;
     tourRideSlow = 0.06;
     tourRideWarm = 0;
     tourProbeHold = false;
@@ -15979,7 +15986,6 @@
     startTour(t, isFinite(n) ? n - 1 : 0);
     return true;
   }
-
 
 
   //#endregion

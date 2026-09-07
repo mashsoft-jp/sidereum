@@ -15,7 +15,8 @@
   // 探査機を描くか。カメラが寄っている最中だけ出さない (探査機視点でも、カメラは
   // 機体の後方にあるので機体は描く)
   const probeVisible = (pr) =>
-    pr.live && (!tourProbes || tourProbes.indexOf(pr.key) >= 0) && !tourProbeHold;
+    pr.live && (!tourProbes || tourProbes.indexOf(pr.key) >= 0) && !tourProbeHold
+    && !(tourRideEye && tourRide && pr.key === tourRideOn);
 
   // 宇宙のガイドは、注視天体が円盤として見えるほど背景へ退く。
   // 距離そのものではなく投影半径を使い、微小衛星・望遠・小画面でも同じ判断にする。

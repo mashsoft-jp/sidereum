@@ -9,7 +9,7 @@ const target={key:'target',radius:1}, probe={key:'probe',live:true};
 const c=vm.createContext({Math, W:390,H:844, tourRide:'target',groundView:false,
   tourRideOn:'probe',BODY_BY_KEY:new Map([['target',target],['probe',probe]]),
   posW:new Map(),bodyR:b=>b.radius,RING_OUT:2.4,PROBE_PX:44,
-  tourRideRef:100,tourRideStay:0,tourRideSpd:1,tourRideSlow:.06,tourRideWarm:0,
+  tourRideRef:100,tourRideStay:0,tourRideSpd:1,tourRideSlow:.06,tourRideWarm:0,tourRideEye:false,
   PITCH_MAX:89.99*Math.PI/180,STAY_SOFT:.3,_rq:[0,0,0],
   cam:{focus:[0,0,0],focusTgt:[0,0,0],panOff:[0,0,0],panOffTgt:[0,0,0]}});
 c.eFov=()=>Math.PI/4/c.camZoom;
@@ -38,3 +38,13 @@ for(const velocity of [[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]) {
   count++;
 }
 console.log(`tour-ride-test: ${count} portrait framing cases passed`);
+// 機体位置からの撮影は画面比や接近制限でカメラをずらさない。
+c.tourRideEye=true; c.tourRideStay=1000;
+const position=[12,7,-9];c.posW.set('probe',position);
+for (const [w,h] of [[390,844],[1280,720]]) {
+  c.W=w;c.H=h;vm.runInContext('tourRideCam()',c);
+  const {dist:d,yaw,pitch}=c.cam;
+  const eye=[d*Math.cos(pitch)*Math.cos(yaw),d*Math.sin(pitch),d*Math.cos(pitch)*Math.sin(yaw)];
+  eye.forEach((v,i)=>assert.ok(Math.abs(v-position[i])<1e-9));
+}
+console.log('tour-ride-test: onboard camera position passed');

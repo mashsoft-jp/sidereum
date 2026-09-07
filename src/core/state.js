@@ -35,6 +35,7 @@
   // 探査機を点だけで描く。天体を大きく写す回では、記号として一定の画素数で描く
   // 機体が天体に対して大きすぎ、しかも立体なので天体に埋まって見える
   let tourProbeDot = false;
+  let tourRideEye = false;             // 機体そのものの位置から見る (自機は描かない)
   // 目標天体にこの距離 [world] まで寄ったら、それ以上は寄らない (0 = 制限なし)。
   // 天体が画面を覆ったあとも追走すると、画面が塗り潰されたまま動かない画になる
   let tourRideStay = 0;
@@ -459,4 +460,3 @@
     const b = selected || lastCenter;
     return b && b !== SUN ? bodyR(b) * 1.7 : bodyR(SUN) * 2.2;
   }
-
