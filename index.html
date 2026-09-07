@@ -3194,6 +3194,8 @@
   // 終了時は開始前の状態 (日時・ビュー・カメラ・速度・選択) へ戻す。
   // 終わった場面にそのまま留まらせたいツアーだけ、ツアー側に keep: true を書く。
   // 新しいツアーは、指示がないかぎりこの配列の末尾に足す (一覧の並び順になる)。
+  // 探査機の航路を見せる回は、比較に必要な惑星と冥王星の軌道だけに絞る。
+  const TOUR_PLANET_ORBITS = ["mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"];
   const TOURS = [
     {
       id: "basics-desktop",
@@ -3800,7 +3802,7 @@
           },
         },
         {
-          sel: null, fit: 6.6, a: 0.5, y: 0.9, spot: "voyager1", front: null, path: true,
+          sel: null, fit: 6.6, a: 0.5, y: 0.9, spot: "voyager1", front: null, path: true, orbits: TOUR_PLANET_ORBITS,
           spd: 45, play: true, until: "1979-03-03",
           text: {
             ja: "火星軌道を越え、小惑星帯を抜けて木星へ。18か月の巡航です。" +
@@ -3842,7 +3844,7 @@
         },
         {
           // 引きの画に戻して土星系まで運ぶ。着いたら自動で次 (探査機視点) へ
-          sel: null, ride: null, fit: 12, a: 0.5, y: 0.9, mag: 1, orbits: true, path: true,
+          sel: null, ride: null, fit: 12, a: 0.5, y: 0.9, mag: 1, orbits: TOUR_PLANET_ORBITS, path: true,
           spot: "voyager1", d: "1979-03-05T15:50",
           spd: 55, play: true, until: "1980-11-11T23:41",
           text: {
@@ -3900,7 +3902,7 @@
           },
         },
         {
-          sel: "voyager1", ride: null, mag: 1, spot: null, orbits: true, fit: 150, a: 0.9, y: 0.9,
+          sel: "voyager1", ride: null, mag: 1, spot: null, orbits: TOUR_PLANET_ORBITS, fit: 150, a: 0.9, y: 0.9,
           path: true, spd: 400, play: true, until: "2012-08-25",
           text: {
             ja: "そのまま外へ。2012年8月25日、太陽風が星間物質に押し返される境界 " +
@@ -3956,7 +3958,7 @@
           },
         },
         {
-          sel: null, fit: 6.6, a: 0.5, y: 0.9, spot: "voyager2", front: null, path: true,
+          sel: null, fit: 6.6, a: 0.5, y: 0.9, spot: "voyager2", front: null, path: true, orbits: TOUR_PLANET_ORBITS,
           spd: 62, play: true, until: "1979-07-07",
           text: {
             ja: "まずは木星へ、22か月の巡航です。惑星のそばを通るたびに進路を曲げてもらい、" +
@@ -3979,7 +3981,7 @@
           },
         },
         {
-          sel: null, ride: null, fit: 12, a: 0.5, y: 0.9, mag: 1, orbits: true, path: true,
+          sel: null, ride: null, fit: 12, a: 0.5, y: 0.9, mag: 1, orbits: TOUR_PLANET_ORBITS, path: true,
           spot: "voyager2", d: "1979-07-10T10:00",
           spd: 70, play: true, until: "1981-08-24T03:24",
           text: {
@@ -4002,7 +4004,7 @@
           },
         },
         {
-          sel: null, ride: null, fit: 24, a: 0.5, y: 0.9, mag: 1, orbits: true, path: true,
+          sel: null, ride: null, fit: 24, a: 0.5, y: 0.9, mag: 1, orbits: TOUR_PLANET_ORBITS, path: true,
           spot: "voyager2", d: "1981-08-26T09:24",
           spd: 145, play: true, until: "1986-01-23T18:00",
           text: {
@@ -4026,7 +4028,7 @@
           },
         },
         {
-          sel: null, ride: null, fit: 38, a: 0.5, y: 0.9, mag: 1, orbits: true, path: true,
+          sel: null, ride: null, fit: 38, a: 0.5, y: 0.9, mag: 1, orbits: TOUR_PLANET_ORBITS, path: true,
           spot: "voyager2", d: "1986-01-25",
           spd: 120, play: true, until: "1989-08-24T22:00",
           text: {
@@ -4051,7 +4053,7 @@
           },
         },
         {
-          sel: "voyager2", ride: null, mag: 1, spot: null, orbits: true,
+          sel: "voyager2", ride: null, mag: 1, spot: null, orbits: TOUR_PLANET_ORBITS,
           fit: 150, a: 0.9, y: 0.9, path: true, d: "1989-08-25T09:56",
           spd: 800, play: true, until: "2018-11-05",
           text: {
@@ -4100,7 +4102,7 @@
         },
         {
           sel: null, fit: 1.7, a: 0.6, y: 0.9, spot: "cassini", front: null, path: true,
-          orbits: true, spd: 25, play: true, until: "1998-04-26T12:30",
+          orbits: TOUR_PLANET_ORBITS, spd: 25, play: true, until: "1998-04-26T12:30",
           text: {
             ja: "金星を2回、そして地球を1回かすめます。すれ違うたびに惑星の公転運動を" +
                 "少しだけ借りて加速し、内側の太陽系で2年近くかけて外へ向かう勢いを溜めました。" +
@@ -4125,7 +4127,7 @@
         },
         {
           sel: null, ride: null, fit: 1.7, a: 0.6, y: 0.9, spot: "cassini", path: true,
-          orbits: true, d: "1998-04-26T13:20", spd: 25, play: true, until: "1999-08-18T02:00",
+          orbits: TOUR_PLANET_ORBITS, d: "1998-04-26T13:20", spd: 25, play: true, until: "1999-08-18T02:00",
           text: {
             ja: "1年2か月かけて金星へ戻り、もう一度かすめます。その2か月後、" +
                 "今度は地球へ。",
@@ -4146,7 +4148,7 @@
           },
         },
         {
-          sel: null, ride: null, fit: 6.6, a: 0.55, y: 0.9, mag: 1, orbits: true, path: true,
+          sel: null, ride: null, fit: 6.6, a: 0.55, y: 0.9, mag: 1, orbits: TOUR_PLANET_ORBITS, path: true,
           spot: "cassini", d: "1999-08-18T03:24",
           spd: 60, play: true, until: "2000-12-30T10:05",
           text: {
@@ -4169,7 +4171,7 @@
           },
         },
         {
-          sel: null, ride: null, fit: 12, a: 0.55, y: 0.9, mag: 1, orbits: true, path: true,
+          sel: null, ride: null, fit: 12, a: 0.55, y: 0.9, mag: 1, orbits: TOUR_PLANET_ORBITS, path: true,
           spot: "cassini", d: "2000-12-30T10:05",
           spd: 130, play: true, until: "2004-06-20",
           text: {
@@ -4252,7 +4254,7 @@
         },
         {
           sel: null, ride: null, fit: 12, a: 0.85, y: 1.2, play: false, spot: null, mag: 1,
-          d: "2017-09-15", path: true, orbits: true,
+          d: "2017-09-15", path: true, orbits: TOUR_PLANET_ORBITS,
           text: {
             ja: "たどってきた道のりです。太陽の方へ3回落ちてから外へ — " +
                 "遠回りに見えるこの形が、5.7トンを土星まで運ぶ唯一の道でした。" +
