@@ -6,6 +6,7 @@ const ctx = vm.createContext({ Math: Object.assign(Object.create(Math), {random:
 vm.runInContext(`
   const SHOWERS = [], SPORADIC = {zhr:0, acc:0};
   let simDays=100, playing=true, daysPerSec=1/86400, groundView=true, surfaceBody='earth';
+  let tourMeteorRealtime=false;
   const DEG=Math.PI/180, MAX_FOV=1.5, gFov=1, W=1000, H=700;
   const _sunG=[0,-1,0], MOON={};
   function computeObs(){ return {alt:-10}; }
@@ -60,3 +61,17 @@ assert.ok(run('emitted')>0,'0.6秒間隔の描画でも120個/時の群から光
 assert.ok(Math.abs(run('testShower.acc')-run('(120*MET_ZSCALE*(1-Math.cos(metConeHalf()))/6)%1'))<1e-4,
   '描画遅延で出現待ちの端数を失わない');
 console.log('meteor-test: speed / pause / lifetime / jump / reverse / resume / moon / slow frames passed');
+run(`
+  showMeteor=false; tourMeteorRealtime=true; daysPerSec=180/86400; updateMeteors(600.1);
+  var clockBefore=metClock;
+  meteors.push({t0:metClock,dur:1,tau:0.2});
+  simDays+=18/86400; updateMeteors(600.2);
+`);
+assert.ok(Math.abs(run('metClock-clockBefore')-0.1)<1e-6,'ツアーでは180倍速でも光跡は実時間');
+assert.ok(run('meteors.length')>0,'生成した光跡が高速再生で即座に消えない');
+assert.equal(run('showMeteor'),false,'ツアーで保存済み表示設定を変えない');
+run('tourMeteorRealtime=false; showMeteor=true; updateMeteors(600.3)');
+assert.equal(run('meteors.length'),0,'ツアー終了時に異なる時計の光跡を持ち越さない');
+run('clockBefore=metClock; simDays+=18/86400; updateMeteors(600.4)');
+assert.ok(Math.abs(run('metClock-clockBefore')-18)<1e-6,'通常表示はシミュレーション時間へ戻る');
+console.log('meteor-test: tour real-time animation / exit passed');

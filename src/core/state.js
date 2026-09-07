@@ -11,6 +11,7 @@
   let immersiveView = false;    // 鑑賞中だけ HUD とガイドを隠す。個別の設定は変更しない
   // ガイドツアー実行中。シーンを壊す操作 (天体の選択・再生の切替) を止めるのに使う
   let tourActive = false;
+  let tourMeteorRealtime = false;      // 流星群ツアーでは光跡の動きだけ実時間
   // ツアーの視線ガイド。注視天体からこの天体へ向かう破線をオーバーレイに描く
   let tourSight = null;
   // ツアーの注目天体。選択とは別に、名前と輪郭を強調して見つけやすくする

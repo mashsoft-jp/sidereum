@@ -786,6 +786,7 @@
     tourAuto = false;
     tour = t;
     tourActive = true;
+    tourMeteorRealtime = t.id === "meteors";
     tourProbes = t.probe ? (Array.isArray(t.probe) ? t.probe : [t.probe]) : null;
     tourProbe = tourProbes ? tourProbes[0] : null;
     tourRideOn = tourProbe;
@@ -821,6 +822,7 @@
     const keepScene = !!(tour && tour.keep);
     tour = null;
     tourActive = false;
+    tourMeteorRealtime = false;
     if (tourSaved) { restoreTourState(tourSaved, keepScene); tourSaved = null; }
     for (const k in TOUR_UI_EL) TOUR_UI_EL[k].classList.remove("tourShow");
     for (const el of tourHiEls) el.classList.remove("tourHi");
@@ -958,5 +960,4 @@
     startTour(t, isFinite(n) ? n - 1 : 0);
     return true;
   }
-
 

@@ -1206,11 +1206,11 @@
             ja: "その交点のひとつを、地球は毎年5月上旬に通ります。東京、日本時間5月7日の午前3時半。" +
                 "みずがめ座η流星群です。流星の道すじを逆にたどると、みずがめ座の一点 — 放射点 — に集まります。" +
                 "群の名前はこの点がある星座から付いています。" +
-                "出現数だけでなく、流れる速さも再生速度に連動します。ここは3分/秒なので流星も一瞬です。ゆっくり見るには実時間に戻してください。",
+                "このツアーでは、空の時間を早送りしながら、流星の動きは実時間の速さで見せています。",
             en: "Earth reaches one of those crossings every year in early May. Tokyo, 03:30 on 7 May. " +
                 "These are the Eta Aquariids: trace the trails backwards and they converge on one point in " +
                 "Aquarius — the radiant — which is what each shower is named after. " +
-                "Both meteor counts and motion follow playback speed. At 3 min/s, trails are fleeting; switch to real time to watch them more slowly.",
+                "In this tour, sky time runs faster while meteor trails move at real-time speed.",
           },
         },
         {

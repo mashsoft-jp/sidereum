@@ -2,6 +2,7 @@
   // 出現・移動・減衰はすべてシミュレーション時刻に揃える。
   // 早送りでは光跡の寿命も短くなり、停止中は発生も移動も止まる。
   // 描画フレームより短命になる高速再生では、見えない流星もある。
+  // 「流星群を眺める」ツアーだけは、光跡の移動・減衰を実時間で見せる。
   //
   // 見かけの速さ・長さは決め打ちではなく、対地速度から出している。高度 95km
   // を秒速 v [km/s] で飛ぶと、放射点から角距離 ψ の位置での角速度は
@@ -21,6 +22,7 @@
   // リボン1枚ぶんの頂点並び: 0=前の分割点 / 1=今の分割点、side は幅方向の符号
   const MET_TRI = [0, 0, 1, 0, 1, 1], MET_SIDE = [-1, 1, -1, 1, 1, -1];
   let metPrevSec = -1, metPrevSim = 0, metClock = 0;
+  let metPrevRealtime = false;
   const metActive = [];        // いま降っている群 [{ s, zhr, alt, dir }]
   const _rad = [0, 0, 0], _mf = [0, 0, 0], _me1 = [0, 0, 0], _me2 = [0, 0, 0];
   let showMeteor = localStorage.getItem("ssMeteor") !== "0";   // 既定 ON
@@ -153,18 +155,20 @@
   }
 
   function updateMeteors(nowSec) {
+    const realtime = tourMeteorRealtime;
     const first = metPrevSec < 0;
     const dtReal = first ? 0 : Math.max(0, nowSec - metPrevSec);
     const dtSim = first ? 0 : (simDays - metPrevSim) * 86400;
     const expected = playing ? Math.max(0, daysPerSec * 86400 * dtReal) : 0;
     // 日時の直接変更・逆行では古い光跡と発生の繰越を捨てる。
     // ツアー終端の減速は expected 以下なので、通常の時間経過として扱える。
-    const reset = first || dtSim < -0.0001
+    const reset = first || realtime !== metPrevRealtime || dtSim < -0.0001
       || dtSim > expected + Math.max(0.01, expected * 0.05);
     metPrevSec = nowSec;
     metPrevSim = simDays;
+    metPrevRealtime = realtime;
     metActive.length = 0;
-    const enabled = showMeteor && groundView && surfaceBody === "earth";
+    const enabled = (showMeteor || realtime) && groundView && surfaceBody === "earth";
     if (reset || !enabled) {
       meteors.length = 0;
       for (const s of MET_ALL) s.acc = 0;
@@ -174,7 +178,9 @@
     // 発生数と寿命は経過したシミュレーション時間で進める。
     if (dtReal > 5) meteors.length = 0;
     const dt = reset || !playing ? 0 : Math.max(0, dtSim);
-    metClock += dt;
+    // 発生数はシミュレーション時間、ツアーの光跡だけ実時間で見せる。
+    const motionDt = realtime ? (reset || dtReal > 5 ? 0 : dtReal) : dt;
+    metClock += motionDt;
     for (let i = meteors.length - 1; i >= 0; i--) {
       const m = meteors[i];
       if (metClock - m.t0 > m.dur + m.tau * 3) meteors.splice(i, 1);
@@ -202,8 +208,8 @@
       s.acc = Math.min(4, s.acc + hr * dtH);
       while (dt > 0 && s.acc >= 1 && meteors.length < MET_MAX) {
         s.acc -= 1;
-        // フレーム内のシミュレーション時刻へばらす。実時間で寿命を延ばさない。
-        const t0 = metClock - Math.random() * dt;
+        // 光跡と同じ時計で発生時刻をばらし、早送りでも生成直後に消えないようにする。
+        const t0 = metClock - Math.random() * motionDt;
         if (spor) metSpawn(null, 15 + Math.random() * 55, t0);
         else metSpawn(_rad, s.v, t0);
       }
