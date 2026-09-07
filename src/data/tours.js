@@ -965,9 +965,9 @@
           spd: 800, play: true, until: "2018-11-05",
           text: {
             ja: "海王星の重力で黄道面の下へ押し出され、そのまま南へ抜けていきます。" +
-                "2018年11月5日、約119 au でヘリオポーズを越えました。",
+                "2018年11月5日、太陽から約119 au でヘリオポーズを越えました。",
             en: "Neptune's gravity pushed it below the ecliptic, and south it went. On 5 November 2018, " +
-                "at about 119 au, it too crossed the heliopause.",
+                "at about 119 au from the Sun, it too crossed the heliopause.",
           },
         },
         {
