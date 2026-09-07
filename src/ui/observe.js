@@ -12,6 +12,7 @@
   }
   function select(body, fly) {
     selected = body;
+    syncFramingUI();
     updateNavSel();
     if (!body) {
       infoPanel.classList.remove("open");
@@ -26,24 +27,13 @@
       // 地上ビュー中はカメラ飛行の代わりに、その天体の方向へ視点を向ける
       aimGroundAt(body);
     } else if (fly) {
-      // 天体からの接近距離 (km)。サイズに応じて調整、未指定は10万km
-      const zoomKm = {
-        mercury: 50000, moon: 30000, mars: 50000,
-        phobos: 300, deimos: 300,
-        jupiter: 700000, io: 30000, europa: 30000, ganymede: 50000, callisto: 50000,
-        saturn: 700000, titan: 50000,
-        mimas: 5000, enceladus: 6000, tethys: 12000, dione: 12000, rhea: 16000, iapetus: 16000,
-        uranus: 500000, titania: 20000, ariel: 12000, umbriel: 12000, oberon: 16000,
-        neptune: 500000, triton: 30000,
-        pluto: 30000, charon: 20000,
-        ceres: 10000, vesta: 10000, pallas: 10000, juno: 10000,
-        halley: 300, swifttuttle: 300, templetuttle: 300, halebopp: 300,
-        hyakutake: 300, neowise: 300, tsuchinshan: 300,
-        eris: 30000, makemake: 30000, haumea: 30000,
-      };
-      cam.distTgt = body === SUN
-        ? bodyR(SUN) * 4.2
-        : Math.max(bodyR(body) * 2.2, (zoomKm[body.key] || 100000) * KM2W);
+      if (body.mesh) {
+        // 探査機は画面上の記号サイズで描くので、球のフィットではなく従来の接近距離。
+        frameLayout.fit = null;
+        cam.distTgt = Math.max(bodyR(body) * 2.2, 100000 * KM2W);
+      } else {
+        frameBody(body, "close");
+      }
       if (body !== SUN) {
         // 太陽光の当たる側 (太陽と天体の間) へ回り込む
         const w = posW.get(body.key);

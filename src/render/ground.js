@@ -420,7 +420,7 @@
     perfCount("星雲", dsoN);
     perfLap("星雲");
     // 星座線 (観測者フレームへ投影。地平線より上のセグメントのみ)。恒星より先に描く
-    if (showConst && CONST_SEG.length) {
+    if (!immersiveView && showConst && CONST_SEG.length) {
       let cn = 0;
       for (let i = 0; i + 5 < CONST_SEG.length; i += 6) {
         const e0 = CONST_SEG[i]*obsE[0]+CONST_SEG[i+1]*obsE[1]+CONST_SEG[i+2]*obsE[2];
@@ -479,7 +479,7 @@
     // 天球の経緯線 (赤道座標。星座線と同じ投影・地平線カリング)。
     // 星座線と違い昼でも消さない — 出しているのは目盛りなので、見えないと
     // 切替が効いていないように見える。昼は下限まで落として控えめにする
-    if (showGrid && GRID_SEG.length) {
+    if (!immersiveView && showGrid && GRID_SEG.length) {
       let gn = 0;
       for (let i = 0; i + 5 < GRID_SEG.length; i += 6) {
         const e0 = GRID_SEG[i]*obsE[0]+GRID_SEG[i+1]*obsE[1]+GRID_SEG[i+2]*obsE[2];
@@ -1022,6 +1022,7 @@
   function drawGroundOverlay() {
     octx.setTransform(DPR, 0, 0, DPR, 0, 0);
     octx.clearRect(0, 0, W, H);
+    if (immersiveView) return;
     octx.textAlign = "center";
     lblBegin();
     const o = T().obs;

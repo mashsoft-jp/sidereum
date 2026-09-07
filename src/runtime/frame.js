@@ -32,6 +32,7 @@
   function drawOverlay() {
     octx.setTransform(DPR, 0, 0, DPR, 0, 0);
     octx.clearRect(0, 0, W, H);
+    if (immersiveView) return;
     octx.textAlign = "center";
     lblBegin();
     // 注視しているだけの天体 (ツアー) には選択マークを付けない。
@@ -458,6 +459,7 @@
       followKey = null;
     }
     const k = 1 - Math.exp(-dtc * 5.5);
+    stepFraming(k);
     cam.focus[0] += (cam.focusTgt[0] - cam.focus[0]) * k;
     cam.focus[1] += (cam.focusTgt[1] - cam.focus[1]) * k;
     cam.focus[2] += (cam.focusTgt[2] - cam.focus[2]) * k;

@@ -1557,3 +1557,26 @@
     #dateInput { padding-block: 13px; margin-block: -13px; }
     #timeInput { padding-block: 12px; margin-block: -12px; }
   }
+
+  /* 天体の構図と鑑賞。個別の HUD 開閉・ガイド設定は保持したまま一時的に隠す。 */
+  #frameActions { display: flex; gap: 6px; margin: 0 0 12px; }
+  #frameActions button { flex: 1; min-height: 32px; padding: 4px 6px; font-size: 11px; white-space: nowrap; }
+  #frameEnjoy { color: var(--accent); border-color: var(--accent-dim); }
+  #app.groundMode #frameActions, #app.tourMode #frameActions { display: none; }
+  #immersiveBar {
+    position: absolute; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%); display: flex; gap: 8px; padding: 6px;
+    z-index: 18; white-space: nowrap;
+  }
+  #immersiveBar[hidden] { display: none; }
+  #immersiveBar button { min-height: 36px; padding: 6px 14px; font-size: 11px; }
+  #app.immersive > :is(#title, #menu, #searchBox, #viewMode, #navPanel, #navExpand,
+    #clock, #info, #controls, #ctrlExpand, #angleCell, #gAltCell, #hint, #obsSiteBar) {
+    visibility: hidden !important; pointer-events: none !important;
+  }
+
+  @media (max-width: 720px) and (min-height: 481px) {
+    #app:not(.groundMode) #info:not(.tall) { max-height: 248px; }
+    #frameActions { margin-bottom: 8px; }
+    #frameActions button { min-height: 28px; }
+  }

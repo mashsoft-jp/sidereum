@@ -146,6 +146,11 @@
     <button id="closeInfo" aria-label="閉じる">✕</button>
     <p class="eyebrow" id="infoEyebrow"></p>
     <h2 id="infoName"></h2>
+    <div id="frameActions" class="spaceOnly" role="group" aria-label="天体の見せ方">
+      <button id="frameClose">接近</button>
+      <button id="frameContext">周辺</button>
+      <button id="frameEnjoy">鑑賞</button>
+    </div>
     <div id="infoTabs">
       <button id="tabFacts" class="on"></button>
       <button id="tabObs"></button>
@@ -156,6 +161,10 @@
     <button id="infoMore" aria-expanded="false"></button>
   </aside>
 
+  <div id="immersiveBar" class="hud" hidden>
+    <button id="immersiveExit">戻る</button>
+    <button id="immersiveSave">画像を保存</button>
+  </div>
   <div id="toast" hidden></div>
   <div id="hint">ドラッグで回転 ・ ホイール / ピンチでズーム (Shift+で距離) ・ 天体クリックで接近</div>
 

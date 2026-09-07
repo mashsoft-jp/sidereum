@@ -81,6 +81,9 @@
     // 天体が極小のためニア面もカメラ距離に追従させる (フォボス等の微小衛星まで対応)
     const near = Math.min(Math.max(cam.dist * 0.02, 2e-7), 5);
     const P = mPersp(eFov(), W / H, near, 6000, SCR.P);
+    // レンズの中心をずらし、HUD を除いた空き領域に注視点を置く。
+    // VP を共有する投影・当たり判定・背景も同じ構図に揃う。
+    if (!tourActive) { P[8] = -frameLayout.x; P[9] = -frameLayout.y; }
     // カメラ相対座標で描画 (大きな平行移動を f32 行列に載せない)
     SCR.tgt[0] = fx - eye[0];
     SCR.tgt[1] = fy - eye[1];
@@ -137,7 +140,7 @@
     gl.useProgram(guideP.pr);
     gl.uniform1f(guideP.u.uFade, 0.72 * spaceGuide.sky);
     gl.uniform2f(guideP.u.uDepthFade, 0, 0);
-    if (showConst && constN) {
+    if (!immersiveView && showConst && constN) {
       gl.useProgram(guideP.pr);
       gl.uniformMatrix4fv(guideP.u.uVP, false, VP);
       gl.enableVertexAttribArray(guideP.a.aPos);
@@ -153,7 +156,7 @@
     }
 
     // --- 天球の経緯線 (赤道座標。星座線とは別の切替) ---
-    if (showGrid && gridN) {
+    if (!immersiveView && showGrid && gridN) {
       gl.useProgram(guideP.pr);
       gl.uniformMatrix4fv(guideP.u.uVP, false, VP);
       gl.enableVertexAttribArray(guideP.a.aPos);
@@ -164,7 +167,7 @@
     }
 
     // --- 軌道線 (天体ごとの表示フラグ) ---
-    {
+    if (!immersiveView) {
       gl.useProgram(guideP.pr);
       // 中心天体は現在位置 ± 粗い8分割ぶんを高精細パッチで引き直すため、
       // 粗い折れ線側はその区間をスキップする (二重線防止)。解除後も lastCenter を
@@ -307,7 +310,7 @@
 
     // --- 探査機の軌跡 ---
     // 頂点は絶対ワールド座標なので、カメラ相対にするため -eye だけ平行移動する
-    if (tourPath) {
+    if (!immersiveView && tourPath) {
       gl.useProgram(lineP.pr);
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -400,7 +403,7 @@
     }
 
     // --- 自転軸 (各天体の軌道表示に連動。深度テストで天体の裏側は隠れる) ---
-    if (ORBIT_BODIES.some((b) => b.showOrbit)) {
+    if (!immersiveView && ORBIT_BODIES.some((b) => b.showOrbit)) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.depthMask(false);

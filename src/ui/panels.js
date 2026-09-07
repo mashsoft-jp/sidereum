@@ -155,6 +155,7 @@
     if (vh) vh.textContent = text;
   }
   function applyLang() {
+    syncFramingUI();
     const t = T();
     document.documentElement.lang = lang;
     document.title = t.title;

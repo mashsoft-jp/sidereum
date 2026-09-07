@@ -1573,6 +1573,29 @@
     #dateInput { padding-block: 13px; margin-block: -13px; }
     #timeInput { padding-block: 12px; margin-block: -12px; }
   }
+
+  /* 天体の構図と鑑賞。個別の HUD 開閉・ガイド設定は保持したまま一時的に隠す。 */
+  #frameActions { display: flex; gap: 6px; margin: 0 0 12px; }
+  #frameActions button { flex: 1; min-height: 32px; padding: 4px 6px; font-size: 11px; white-space: nowrap; }
+  #frameEnjoy { color: var(--accent); border-color: var(--accent-dim); }
+  #app.groundMode #frameActions, #app.tourMode #frameActions { display: none; }
+  #immersiveBar {
+    position: absolute; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%); display: flex; gap: 8px; padding: 6px;
+    z-index: 18; white-space: nowrap;
+  }
+  #immersiveBar[hidden] { display: none; }
+  #immersiveBar button { min-height: 36px; padding: 6px 14px; font-size: 11px; }
+  #app.immersive > :is(#title, #menu, #searchBox, #viewMode, #navPanel, #navExpand,
+    #clock, #info, #controls, #ctrlExpand, #angleCell, #gAltCell, #hint, #obsSiteBar) {
+    visibility: hidden !important; pointer-events: none !important;
+  }
+
+  @media (max-width: 720px) and (min-height: 481px) {
+    #app:not(.groundMode) #info:not(.tall) { max-height: 248px; }
+    #frameActions { margin-bottom: 8px; }
+    #frameActions button { min-height: 28px; }
+  }
 </style>
 
 <div id="app">
@@ -1706,6 +1729,11 @@
     <button id="closeInfo" aria-label="閉じる">✕</button>
     <p class="eyebrow" id="infoEyebrow"></p>
     <h2 id="infoName"></h2>
+    <div id="frameActions" class="spaceOnly" role="group" aria-label="天体の見せ方">
+      <button id="frameClose">接近</button>
+      <button id="frameContext">周辺</button>
+      <button id="frameEnjoy">鑑賞</button>
+    </div>
     <div id="infoTabs">
       <button id="tabFacts" class="on"></button>
       <button id="tabObs"></button>
@@ -1716,6 +1744,10 @@
     <button id="infoMore" aria-expanded="false"></button>
   </aside>
 
+  <div id="immersiveBar" class="hud" hidden>
+    <button id="immersiveExit">戻る</button>
+    <button id="immersiveSave">画像を保存</button>
+  </div>
   <div id="toast" hidden></div>
   <div id="hint">ドラッグで回転 ・ ホイール / ピンチでズーム (Shift+で距離) ・ 天体クリックで接近</div>
 
@@ -7169,6 +7201,7 @@
   // 選択マーク (オレンジのリングとラベル強調) を出すか。ガイドツアーの selected は
   // 「カメラの注視先」であって利用者が選んだわけではないので、既定では出さない
   let showSelMark = true;
+  let immersiveView = false;    // 鑑賞中だけ HUD とガイドを隠す。個別の設定は変更しない
   // ガイドツアー実行中。シーンを壊す操作 (天体の選択・再生の切替) を止めるのに使う
   let tourActive = false;
   // ツアーの視線ガイド。注視天体からこの天体へ向かう破線をオーバーレイに描く
@@ -9678,7 +9711,7 @@
     perfCount("星雲", dsoN);
     perfLap("星雲");
     // 星座線 (観測者フレームへ投影。地平線より上のセグメントのみ)。恒星より先に描く
-    if (showConst && CONST_SEG.length) {
+    if (!immersiveView && showConst && CONST_SEG.length) {
       let cn = 0;
       for (let i = 0; i + 5 < CONST_SEG.length; i += 6) {
         const e0 = CONST_SEG[i]*obsE[0]+CONST_SEG[i+1]*obsE[1]+CONST_SEG[i+2]*obsE[2];
@@ -9737,7 +9770,7 @@
     // 天球の経緯線 (赤道座標。星座線と同じ投影・地平線カリング)。
     // 星座線と違い昼でも消さない — 出しているのは目盛りなので、見えないと
     // 切替が効いていないように見える。昼は下限まで落として控えめにする
-    if (showGrid && GRID_SEG.length) {
+    if (!immersiveView && showGrid && GRID_SEG.length) {
       let gn = 0;
       for (let i = 0; i + 5 < GRID_SEG.length; i += 6) {
         const e0 = GRID_SEG[i]*obsE[0]+GRID_SEG[i+1]*obsE[1]+GRID_SEG[i+2]*obsE[2];
@@ -10280,6 +10313,7 @@
   function drawGroundOverlay() {
     octx.setTransform(DPR, 0, 0, DPR, 0, 0);
     octx.clearRect(0, 0, W, H);
+    if (immersiveView) return;
     octx.textAlign = "center";
     lblBegin();
     const o = T().obs;
@@ -10726,6 +10760,9 @@
     // 天体が極小のためニア面もカメラ距離に追従させる (フォボス等の微小衛星まで対応)
     const near = Math.min(Math.max(cam.dist * 0.02, 2e-7), 5);
     const P = mPersp(eFov(), W / H, near, 6000, SCR.P);
+    // レンズの中心をずらし、HUD を除いた空き領域に注視点を置く。
+    // VP を共有する投影・当たり判定・背景も同じ構図に揃う。
+    if (!tourActive) { P[8] = -frameLayout.x; P[9] = -frameLayout.y; }
     // カメラ相対座標で描画 (大きな平行移動を f32 行列に載せない)
     SCR.tgt[0] = fx - eye[0];
     SCR.tgt[1] = fy - eye[1];
@@ -10782,7 +10819,7 @@
     gl.useProgram(guideP.pr);
     gl.uniform1f(guideP.u.uFade, 0.72 * spaceGuide.sky);
     gl.uniform2f(guideP.u.uDepthFade, 0, 0);
-    if (showConst && constN) {
+    if (!immersiveView && showConst && constN) {
       gl.useProgram(guideP.pr);
       gl.uniformMatrix4fv(guideP.u.uVP, false, VP);
       gl.enableVertexAttribArray(guideP.a.aPos);
@@ -10798,7 +10835,7 @@
     }
 
     // --- 天球の経緯線 (赤道座標。星座線とは別の切替) ---
-    if (showGrid && gridN) {
+    if (!immersiveView && showGrid && gridN) {
       gl.useProgram(guideP.pr);
       gl.uniformMatrix4fv(guideP.u.uVP, false, VP);
       gl.enableVertexAttribArray(guideP.a.aPos);
@@ -10809,7 +10846,7 @@
     }
 
     // --- 軌道線 (天体ごとの表示フラグ) ---
-    {
+    if (!immersiveView) {
       gl.useProgram(guideP.pr);
       // 中心天体は現在位置 ± 粗い8分割ぶんを高精細パッチで引き直すため、
       // 粗い折れ線側はその区間をスキップする (二重線防止)。解除後も lastCenter を
@@ -10952,7 +10989,7 @@
 
     // --- 探査機の軌跡 ---
     // 頂点は絶対ワールド座標なので、カメラ相対にするため -eye だけ平行移動する
-    if (tourPath) {
+    if (!immersiveView && tourPath) {
       gl.useProgram(lineP.pr);
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -11045,7 +11082,7 @@
     }
 
     // --- 自転軸 (各天体の軌道表示に連動。深度テストで天体の裏側は隠れる) ---
-    if (ORBIT_BODIES.some((b) => b.showOrbit)) {
+    if (!immersiveView && ORBIT_BODIES.some((b) => b.showOrbit)) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.depthMask(false);
@@ -12104,6 +12141,7 @@
   function drawOverlay() {
     octx.setTransform(DPR, 0, 0, DPR, 0, 0);
     octx.clearRect(0, 0, W, H);
+    if (immersiveView) return;
     octx.textAlign = "center";
     lblBegin();
     // 注視しているだけの天体 (ツアー) には選択マークを付けない。
@@ -12530,6 +12568,7 @@
       followKey = null;
     }
     const k = 1 - Math.exp(-dtc * 5.5);
+    stepFraming(k);
     cam.focus[0] += (cam.focusTgt[0] - cam.focus[0]) * k;
     cam.focus[1] += (cam.focusTgt[1] - cam.focus[1]) * k;
     cam.focus[2] += (cam.focusTgt[2] - cam.focus[2]) * k;
@@ -12627,6 +12666,7 @@
   }
   function select(body, fly) {
     selected = body;
+    syncFramingUI();
     updateNavSel();
     if (!body) {
       infoPanel.classList.remove("open");
@@ -12641,24 +12681,13 @@
       // 地上ビュー中はカメラ飛行の代わりに、その天体の方向へ視点を向ける
       aimGroundAt(body);
     } else if (fly) {
-      // 天体からの接近距離 (km)。サイズに応じて調整、未指定は10万km
-      const zoomKm = {
-        mercury: 50000, moon: 30000, mars: 50000,
-        phobos: 300, deimos: 300,
-        jupiter: 700000, io: 30000, europa: 30000, ganymede: 50000, callisto: 50000,
-        saturn: 700000, titan: 50000,
-        mimas: 5000, enceladus: 6000, tethys: 12000, dione: 12000, rhea: 16000, iapetus: 16000,
-        uranus: 500000, titania: 20000, ariel: 12000, umbriel: 12000, oberon: 16000,
-        neptune: 500000, triton: 30000,
-        pluto: 30000, charon: 20000,
-        ceres: 10000, vesta: 10000, pallas: 10000, juno: 10000,
-        halley: 300, swifttuttle: 300, templetuttle: 300, halebopp: 300,
-        hyakutake: 300, neowise: 300, tsuchinshan: 300,
-        eris: 30000, makemake: 30000, haumea: 30000,
-      };
-      cam.distTgt = body === SUN
-        ? bodyR(SUN) * 4.2
-        : Math.max(bodyR(body) * 2.2, (zoomKm[body.key] || 100000) * KM2W);
+      if (body.mesh) {
+        // 探査機は画面上の記号サイズで描くので、球のフィットではなく従来の接近距離。
+        frameLayout.fit = null;
+        cam.distTgt = Math.max(bodyR(body) * 2.2, 100000 * KM2W);
+      } else {
+        frameBody(body, "close");
+      }
       if (body !== SUN) {
         // 太陽光の当たる側 (太陽と天体の間) へ回り込む
         const w = posW.get(body.key);
@@ -14793,6 +14822,7 @@
     if (vh) vh.textContent = text;
   }
   function applyLang() {
+    syncFramingUI();
     const t = T();
     document.documentElement.lang = lang;
     document.title = t.title;
@@ -16362,6 +16392,173 @@
     searchInput.setAttribute("aria-label", t.search);
     searchInput.placeholder = t.searchPh;
     if (!searchBox.hidden) renderSearch();
+  }
+  //#endregion
+  //#region src/ui/framing.js
+  // 構図はカメラのパンとは独立。HUD の開閉で追尾先や手動のパンを動かさない。
+  const frameLayout = { x: 0, y: 0, rect: null, dirty: true, fit: null, mode: "close" };
+  const frameApp = document.getElementById("app");
+  const frameCloseBtn = document.getElementById("frameClose");
+  const frameContextBtn = document.getElementById("frameContext");
+  const frameEnjoyBtn = document.getElementById("frameEnjoy");
+  const immersiveBar = document.getElementById("immersiveBar");
+  const immersiveExitBtn = document.getElementById("immersiveExit");
+  const immersiveSaveBtn = document.getElementById("immersiveSave");
+
+  function syncFramingUI() {
+    const ja = lang === "ja";
+    frameCloseBtn.textContent = ja ? "接近" : "Close-up";
+    frameContextBtn.textContent = ja ? "周辺" : "Surroundings";
+    frameContextBtn.title = ja ? "天体の周囲を見渡す" : "See the surrounding system";
+    frameEnjoyBtn.textContent = ja ? "鑑賞" : "Enjoy";
+    frameEnjoyBtn.title = ja ? "パネルとガイドを隠して鑑賞" : "Hide panels and guides";
+    immersiveExitBtn.textContent = ja ? "戻る · Esc" : "Return · Esc";
+    immersiveSaveBtn.textContent = ja ? "画像を保存" : "Save image";
+    document.getElementById("frameActions").setAttribute("aria-label", ja ? "天体の見せ方" : "Frame the body");
+    const available = !!selected && !selected.mesh && !tourActive;
+    frameCloseBtn.disabled = frameContextBtn.disabled = frameEnjoyBtn.disabled = !available;
+  }
+
+  // 長方形から HUD を引き、残る最大の領域を使う。縦持ちでは情報カードの上、
+  // 横持ちでは左右のパネルの間が自然に選ばれる。入力は画面上の CSS px。
+  function emptyFrameRect(bounds, obstacles) {
+    let candidates = [bounds];
+    for (const o of obstacles) {
+      const next = [];
+      for (const r of candidates) {
+        if (o.x1 <= r.x0 || o.x0 >= r.x1 || o.y1 <= r.y0 || o.y0 >= r.y1) {
+          next.push(r); continue;
+        }
+        next.push(
+          { ...r, x1: Math.min(r.x1, o.x0) }, { ...r, x0: Math.max(r.x0, o.x1) },
+          { ...r, y1: Math.min(r.y1, o.y0) }, { ...r, y0: Math.max(r.y0, o.y1) });
+      }
+      candidates = next.filter(r => r.x1 - r.x0 >= 48 && r.y1 - r.y0 >= 48);
+    }
+    // 毎回同じ順なので、同面積の候補どうしでちらつかない。
+    candidates.sort((a, b) => (b.x1 - b.x0) * (b.y1 - b.y0) - (a.x1 - a.x0) * (a.y1 - a.y0));
+    return candidates[0] || bounds;
+  }
+
+  function measureFrameRect() {
+    const appRect = frameApp.getBoundingClientRect();
+    const bounds = { x0: 20, y0: 20, x1: W - 20, y1: H - 20 };
+    if (immersiveView) { bounds.y1 -= 54; return bounds; }
+    const box = id => {
+      const el = document.getElementById(id);
+      if (!el || !el.getClientRects().length || getComputedStyle(el).visibility === "hidden") return null;
+      const r = el.getBoundingClientRect();
+      return { x0: r.left - appRect.left - 18, y0: r.top - appRect.top - 18,
+               x1: r.right - appRect.left + 18, y1: r.bottom - appRect.top + 18 };
+    };
+    // 上下の操作帯は全幅を空ける。残りで左右のパネルを避ける。
+    for (const id of ["title", "clock", "viewMode"]) {
+      const r = box(id); if (r) bounds.y0 = Math.max(bounds.y0, r.y1);
+    }
+    if (!frameApp.classList.contains("ctrlHidden")) {
+      const r = box("controls"); if (r) bounds.y1 = Math.min(bounds.y1, r.y0);
+    }
+    const obstacles = [];
+    for (const id of ["navPanel", "info", "angleCell"]) {
+      if (id === "navPanel" && frameApp.classList.contains("navHidden")) continue;
+      if (id === "info" && !infoPanel.classList.contains("open")) continue;
+      const r = box(id); if (r) obstacles.push(r);
+    }
+    return emptyFrameRect(bounds, obstacles);
+  }
+
+  function frameRadius(body, mode) {
+    let radius = bodyR(body) * (body.obl ? Math.max(...body.obl) : 1);
+    if (body.ring) radius = Math.max(radius, bodyR(body) * RING_OUT);
+    if (mode === "context") {
+      if (body === SUN) return PLANETS[3].a * (1 + PLANETS[3].e) * K_REAL;
+      if (body.parent) {
+        const parent = BODY_BY_KEY.get(body.parent);
+        return body.aKm * KM2W * 1.1 + bodyR(parent);
+      }
+      // 月だけの地球は月まで。多数の衛星を持つ惑星は主要な近傍を収める。
+      // 最遠衛星だけを基準にすると主役が点になるので半径の30倍を上限にする。
+      const moons = SATELLITES.filter(s => s.parent === body.key);
+      const limit = moons.length === 1 ? Infinity : radius * 30;
+      radius = Math.max(radius * 3, ...moons.map(s => Math.min(s.aKm * KM2W * 1.1 + bodyR(s), limit)));
+    }
+    return radius;
+  }
+
+  function fitFrameDistance(body) {
+    const r = frameLayout.rect;
+    if (!r) return;
+    const pixels = Math.max(24, Math.min(r.x1 - r.x0, r.y1 - r.y0) * 0.36);
+    const focal = H / (2 * Math.tan(FOV / 2));
+    // 球の見かけの半径は asin(R/d)。極端な横長画面でも輪郭まで収まる。
+    cam.distTgt = frameRadius(body, frameLayout.mode) / Math.sin(Math.atan(pixels / focal));
+    cam.distTgt = Math.max(bodyR(body) * 1.15, Math.min(1400, cam.distTgt));
+  }
+
+  function frameBody(body, mode) {
+    if (!body || body.mesh || groundView || tourActive) return;
+    if (W <= 720 && navVisible) { navVisible = false; applyNavVisible(); }
+    frameLayout.mode = mode;
+    frameLayout.fit = body;
+    camZoomTgt = 1;
+    resetPan();
+    positionInfoPanel();
+    frameLayout.rect = measureFrameRect();
+    fitFrameDistance(body);
+    frameLayout.dirty = true; // パネルの開くアニメーションが終わるまで再計測する
+  }
+
+  function stepFraming(k) {
+    if (frameLayout.dirty) {
+      frameLayout.rect = measureFrameRect();
+      frameLayout.dirty = false;
+      if (frameLayout.fit && selected === frameLayout.fit && !groundView && !tourActive) fitFrameDistance(frameLayout.fit);
+    }
+    const enabled = !groundView && !tourActive && (selected || lastCenter);
+    const r = frameLayout.rect;
+    const x = enabled && r ? (r.x0 + r.x1) / W - 1 : 0;
+    const y = enabled && r ? 1 - (r.y0 + r.y1) / H : 0;
+    frameLayout.x += (x - frameLayout.x) * k;
+    frameLayout.y += (y - frameLayout.y) * k;
+  }
+
+  function setImmersive(v) {
+    if (v && (groundView || tourActive)) return;
+    immersiveView = v;
+    frameApp.classList.toggle("immersive", v);
+    immersiveBar.hidden = !v;
+    frameLayout.dirty = true;
+    if (v) { setMenu(false); immersiveExitBtn.focus({ preventScroll: true }); }
+    else {
+      const back = infoPanel.classList.contains("open") ? frameEnjoyBtn : menuBtn;
+      back.focus({ preventScroll: true });
+    }
+  }
+  frameCloseBtn.addEventListener("click", () => frameBody(selected, "close"));
+  frameContextBtn.addEventListener("click", () => frameBody(selected, "context"));
+  frameEnjoyBtn.addEventListener("click", () => setImmersive(true));
+  immersiveExitBtn.addEventListener("click", () => setImmersive(false));
+  immersiveSaveBtn.addEventListener("click", () => { snapPending = true; });
+  window.addEventListener("keydown", e => {
+    if (immersiveView && e.key === "/") { e.preventDefault(); e.stopImmediatePropagation(); return; }
+    if (e.key === "Escape" && immersiveView && !snapDlgEl.classList.contains("open")) {
+      e.preventDefault(); setImmersive(false);
+    }
+  }, true);
+  // 手動で距離・倍率を変えた後は、その選択を優先。次の「接近/周辺」で再フィット。
+  frameApp.addEventListener("pointerdown", e => {
+    if (e.target === glc || e.target === ovl || e.target.closest("#zoomIn,#zoomOut,#magIn,#magOut,#zoom,#mag")) frameLayout.fit = null;
+  }, true);
+  frameApp.addEventListener("wheel", () => { frameLayout.fit = null; }, { passive: true });
+  for (const id of ["zoom", "mag"]) document.getElementById(id).addEventListener("input", () => { frameLayout.fit = null; });
+  const dirtyFrame = () => { frameLayout.dirty = true; };
+  window.addEventListener("resize", dirtyFrame);
+  frameApp.addEventListener("transitionend", dirtyFrame);
+  const frameMutation = new MutationObserver(dirtyFrame);
+  for (const el of [frameApp, infoPanel]) frameMutation.observe(el, { attributes: true, attributeFilter: ["class"] });
+  if (window.ResizeObserver) {
+    const observer = new ResizeObserver(dirtyFrame);
+    for (const id of ["info", "controls", "navPanel", "title", "clock"]) observer.observe(document.getElementById(id));
   }
   //#endregion
   //#region src/main.js

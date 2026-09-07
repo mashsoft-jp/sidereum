@@ -24,3 +24,5 @@ jobs:
         run: node tools/build.mjs --check
       - name: AR の姿勢変換を確かめる
         run: node tools/ar-test.mjs
+      - name: 天体の構図と周辺表示を確かめる
+        run: node tools/framing-test.mjs
