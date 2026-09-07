@@ -903,8 +903,8 @@
           d: "1981-08-24T03:24", spd: 0.4, play: true, until: "1981-08-26T09:24",
           text: {
             ja: "1981年8月26日、土星。中心から 16万1千km — 1号よりずっと内側を、" +
-                "秒速24kmまで加速しながら抜けます。ここで受けた曲がりが、" +
-                "次の天王星へのコースになりました。",
+                "秒速24kmまで加速しながら抜けます。ここで重力アシストを受け、" +
+                "天王星の方向へ進みます。",
             en: "26 August 1981, Saturn. It passes 161,000 km from the centre — far closer in than " +
                 "Voyager 1 — accelerating to 24 km/s. The bend it takes here is what sets up the " +
                 "course to Uranus.",
