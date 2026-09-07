@@ -6055,7 +6055,7 @@
     varying vec3 vD;
     void main() { vD = aPos; gl_Position = uVP * vec4(aPos, 1.0); }`;
 
-  const terrainFS = PRE + SKY_FN + `
+  const terrainFS = EXT_DERIV + (hasDeriv ? "#define TERRAIN_DERIV 1\n" : "") + PRE + SKY_FN + `
     varying vec3 vD;
     uniform vec3 uSun;      // 太陽方向 (地平フレーム [東, 天頂, -北])
     uniform float uMoon;    // 1 = 月面, 0 = 地上
@@ -6074,34 +6074,43 @@
       return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
                  mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
     }
-    float fbm(vec2 p) {
+    float fbm(vec2 p, float footprint) {
       float v = 0.0, a = 0.5;
-      for (int k = 0; k < 5; k++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
+      for (int k = 0; k < 5; k++) {
+        // 画素より細かな模様は平均値へ戻す。遠方の縞・カメラ移動時のちらつきを防ぐ。
+        float resolved = 1.0 - smoothstep(0.25, 1.0, footprint);
+        v += a * mix(0.5, noise(p), resolved);
+        p *= 2.03; footprint *= 2.03; a *= 0.5;
+      }
       return v;
     }
-    // ボロノイ。x = 最近セル中心までの距離, y = そのセルの乱数 (クレーターの大小・有無に使う)
-    vec2 vor(vec2 p) {
-      vec2 i = floor(p), f = fract(p);
-      float best = 8.0, bid = 0.0;
-      for (int y = -1; y <= 1; y++) {
-        for (int x = -1; x <= 1; x++) {
-          vec2 o = vec2(float(x), float(y));
-          vec2 cc = i + o;
-          vec2 c = o + vec2(hash(cc), hash(cc + vec2(17.3, 31.7)));
-          float d = length(f - c);
-          if (d < best) { best = d; bid = hash(cc + vec2(5.2, 9.1)); }
-        }
-      }
-      return vec2(best, bid);
-    }
-    // クレーター1つぶんの陰影。セルごとに直径を変え、一部のセルには作らない
-    float crater(vec2 v, float sun) {
-      float rad = mix(0.13, 0.34, v.y);                  // セルごとの半径
-      float on = smoothstep(0.18, 0.34, v.y);            // 小さすぎるセルは平地のまま
-      float d = v.x / max(rad, 0.02);
+    float craterShape(float d) {
       float rim = smoothstep(0.78, 1.0, d) * (1.0 - smoothstep(1.0, 1.35, d));
       float bowl = 1.0 - smoothstep(0.0, 0.85, d);
-      return on * (0.95 * rim - 1.15 * bowl);
+      return 0.30 * rim - 0.55 * bowl;
+    }
+    // 高さと傾斜を返す。中心探しは一度だけ行い、放射方向の傾斜から法線を作る。
+    vec3 crater(vec4 v) {
+      float rad = mix(0.13, 0.34, v.y);
+      float on = smoothstep(0.18, 0.34, v.y);
+      float d = v.x / rad;
+      float slope = (craterShape(d + 0.02) - craterShape(max(0.0, d - 0.02))) / (0.04 * rad);
+      return vec3(craterShape(d), slope * v.zw / max(v.x, 1e-4)) * on;
+    }
+
+    // 近いセルへ切り替えるとクレーターが途中で切れるため、各円形の起伏を重ねる。
+    vec3 craterField(vec2 p) {
+      vec2 i = floor(p), f = fract(p);
+      vec3 result = vec3(0.0);
+      for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+          vec2 o = vec2(float(x), float(y)), cc = i + o;
+          vec2 delta = f - o - vec2(hash(cc), hash(cc + vec2(17.3, 31.7)));
+          float dist = length(delta), id = hash(cc + vec2(5.2, 9.1));
+          if (dist < mix(0.13, 0.34, id) * 1.38) result += crater(vec4(dist, id, delta));
+        }
+      }
+      return result;
     }
 
     void main() {
@@ -6119,44 +6128,66 @@
       float dy = max(-d.y, 0.0007);
       float r = 1.7 / dy;                       // 交点までの水平距離 [m 相当]
       vec2 g = d.xz * r;                        // 地面座標
+      float footprint = r * 0.006;              // 微分拡張が無い端末の保守的な近似
+#ifdef TERRAIN_DERIV
+      footprint = max(length(dFdx(g)), length(dFdy(g)));
+#endif
       float fade = 1.0 / (1.0 + r * 0.004);     // 遠いほど細部を潰す (エイリアス防止)
 
       vec3 col;
       if (uMoon > 0.5) {
         // 月面: レゴリスの粒状感 + 大小のクレーター
-        float base = fbm(g * 0.13);
-        float grain = fbm(g * 2.2) * fade;
+        float base = fbm(g * 0.13, footprint * 0.13);
+        float grain = fbm(g * 2.2, footprint * 2.2) * fade;
         // 大小2層のクレーター (直径 約8m / 約2m。立った視点で形が分かるスケール)。
         // 遠方ほど fade で弱め、地平線付近のちらつき (エイリアス) を抑える
-        float k1 = crater(vor(g * 0.12), uSun.y) * min(1.0, fade * 2.2);
-        float k2 = crater(vor(g * 0.5), uSun.y) * fade;
-        // 太陽が低いほどクレーターの陰影が強く出る (実際の月面写真と同じ)
-        float relief = mix(1.5, 0.75, smoothstep(0.0, 0.5, uSun.y));
-        float sh = 0.62 + 0.15 * base + 0.18 * grain + (0.30 * k1 + 0.16 * k2) * relief;
-        col = srgbToLinear(vec3(0.56, 0.545, 0.52)) * clamp(sh, 0.04, 1.5);
-        // 大気が無いので影は漆黒、日向はコントラストが強い
+        vec3 k1 = craterField(g * 0.12) * (1.0 - smoothstep(0.3, 1.2, footprint * 0.12));
+        vec3 k2 = craterField(g * 0.5) * (1.0 - smoothstep(0.3, 1.2, footprint * 0.5));
+        vec2 slope = k1.yz * 0.12 * 0.45 + k2.yz * 0.5 * 0.10;
+        vec3 normal = normalize(vec3(-slope.x, 1.0, -slope.y));
+        float sh = 0.68 + 0.15 * base + 0.12 * grain;
+        // 凹部をわずかに暗くし、縁の向きに応じた直射光で起伏を見せる。
+        sh *= 1.0 + min(0.0, k1.x + k2.x * 0.4) * 0.3;
+        col = srgbToLinear(vec3(0.56, 0.545, 0.52)) * sh;
         float lit = smoothstep(-0.03, 0.06, uSun.y) * uOcc;
-        col *= mix(0.04, 1.0, lit);
+        float direct = max(dot(normal, uSun), 0.0);
+        col *= 0.025 + lit * direct * 1.15;
         col += vec3(0.0061, 0.0090, 0.0152) * (1.0 - lit);   // 地球照のうっすらした青み
       } else {
         // 地上: 土と草地のまだら
-        float base = fbm(g * 0.05);
+        float base = fbm(g * 0.05, footprint * 0.05);
         // patch は GLSL ES 3.00 の予約語 (?gl=2 で通らなくなる) なので使わない
-        float mottle = fbm(g * 0.22 + 13.0);
-        float grain = fbm(g * 1.1) * fade;
-        vec3 soil = srgbToLinear(vec3(0.20, 0.17, 0.13));
-        vec3 gras = srgbToLinear(vec3(0.13, 0.19, 0.11));
+        float mottle = fbm(g * 0.22 + 13.0, footprint * 0.22);
+        float grain = fbm(g * 1.1, footprint * 1.1) * fade;
+        vec3 soil = srgbToLinear(vec3(0.28, 0.25, 0.20));
+        vec3 gras = srgbToLinear(vec3(0.22, 0.27, 0.15));
         col = mix(soil, gras, smoothstep(0.35, 0.65, mottle));
         col *= 0.72 + 0.34 * base + 0.20 * grain;
         col *= mix(0.12, 1.0, uDay);                       // 夜は暗く、昼は明るく
         col = mix(col, col * vec3(1.25, 0.95, 0.78), (1.0 - smoothstep(0.0, 0.3, uSun.y)) * uDay * 0.7);
       }
-      // 地上は大気で地平線へ向かって霞む。月面は大気が無いので霞ませず輪郭を鋭いままにする
+      // 遠景は地面の投影から独立した山並み。整数倍音で方位の継ぎ目を閉じる。
+      float az = atan(d.x + 1e-7, -d.z);
+      float mid = 0.003 + 0.004 * sin(az * 5.0 + 1.2) + 0.002 * sin(az * 11.0);
+      float nearRidge = -0.012 + 0.006 * sin(az * 4.0 + 0.4) + 0.003 * sin(az * 9.0);
       if (uMoon < 0.5) {
-        vec3 haze = mix(vec3(0.0061, 0.0069, 0.0104),    // 画面上の (0.03, 0.035, 0.06)
-                        vec3(0.0974, 0.1167, 0.1602),    //           (0.42, 0.47, 0.56)
-                        uDay);
-        col = mix(col, haze, 1.0 - smoothstep(0.0, 0.030, dy));
+        float twilight = (1.0 - smoothstep(-0.12, 0.25, uSun.y)) * uSkyF;
+        float towardSun = pow(max(dot((vec3(d.x, 0.0, d.z) / max(length(d.xz), 1e-5)), uSun), 0.0), 4.0);
+        vec3 haze = mix(vec3(0.004, 0.005, 0.009), vec3(0.075, 0.105, 0.14), uSkyF);
+        haze = mix(haze, vec3(0.18, 0.085, 0.045), twilight * towardSun * 0.65);
+        vec3 farHill = mix(vec3(0.002, 0.003, 0.005), vec3(0.035, 0.050, 0.060), uSkyF);
+        vec3 midHill = mix(vec3(0.0015, 0.002, 0.003), vec3(0.024, 0.035, 0.025), uSkyF);
+        float layer = smoothstep(mid - 0.0008, mid + 0.0008, d.y);
+        vec3 hills = mix(midHill, mix(farHill, haze, 0.32), layer);
+        // 手前ほど地面の色が残り、遠い稜線ほど空の色を帯びる。
+        col = mix(col, haze, (1.0 - exp(-r * 0.00045)) * 0.45);
+        col = mix(col, hills, smoothstep(nearRidge - 0.001, nearRidge + 0.001, d.y));
+      } else {
+        // 月面に霞は足さず、遠いクレーター縁を硬い明暗で残す。
+        float face = 0.35 + 0.65 * max(dot(normalize(vec3(-d.x * 0.3, 1.0, -d.z * 0.3)), uSun), 0.0);
+        vec3 ridge = vec3(0.10, 0.095, 0.087) * (0.025 + face * smoothstep(-0.03, 0.06, uSun.y) * uOcc);
+        ridge += vec3(0.003, 0.004, 0.006) * (1.0 - smoothstep(-0.03, 0.06, uSun.y));
+        col = mix(col, ridge, smoothstep(-0.009, 0.002, d.y));
       }
       gl_FragColor = vec4(tonemap(col), 1.0);
     }`;

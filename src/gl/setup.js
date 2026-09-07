@@ -172,7 +172,7 @@
   // ---- 風景 (地面の質感 / 空の色。地上・月面ビュー用。すべてプロシージャル生成) ----
   const terrainVS = `@@glsl:terrain.vert@@`;
 
-  const terrainFS = PRE + SKY_FN + `@@glsl:terrain.frag@@`;
+  const terrainFS = EXT_DERIV + (hasDeriv ? "#define TERRAIN_DERIV 1\n" : "") + PRE + SKY_FN + `@@glsl:terrain.frag@@`;
 
   // ---- 点 (星・小惑星・惑星マーカー) ----
   const pointVS = `@@glsl:point.vert@@`;
