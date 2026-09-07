@@ -13334,6 +13334,12 @@
         if (hit && !tourAllowsBody(hit)) return;
         if (hit === selected && hit) toggleSelChrome(hit);
         else if (hit) { showSelMark = true; select(hit, true); }
+        else if (selected) {
+          // 何もない所を押したら選択を外し、追尾もやめる (宇宙ビューと同じ。
+          // 地上だけ外れないままだった 2026-09-08)。向きはその場に残す
+          select(null, false);
+          gTrack = false;
+        }
       } else {
         const hit = hitTest(e.clientX, e.clientY);
         if (hit && !tourAllowsBody(hit)) return;
