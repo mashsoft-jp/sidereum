@@ -1427,6 +1427,8 @@
 
   /* ---- モバイル共通 (縦持ち・横持ち) ---- */
   @media (max-width: 720px), (max-height: 480px) {
+    #navExpand .navListLabel { display: none; }
+    #navExpand { padding: 10px; min-width: 44px; min-height: 44px; justify-content: center; }
     /* 操作パネルの高さを決めているのは行間ではなく、右端の縦スライダー列
        (宇宙=角度 / 地上=高度)。3行すべてにまたがるので、この列を縮めない
        かぎりパネルは縮まない — 中身が 26px しかない行が、この列の 144px に
