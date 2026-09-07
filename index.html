@@ -6087,30 +6087,25 @@
     float craterShape(float d) {
       float rim = smoothstep(0.78, 1.0, d) * (1.0 - smoothstep(1.0, 1.35, d));
       float bowl = 1.0 - smoothstep(0.0, 0.85, d);
-      return 0.30 * rim - 0.55 * bowl;
+      return 0.10 * rim - 0.42 * bowl;
     }
     // 高さと傾斜を返す。中心探しは一度だけ行い、放射方向の傾斜から法線を作る。
     vec3 crater(vec4 v) {
-      float rad = mix(0.13, 0.34, v.y);
+      float rad = mix(0.08, 0.23, v.y);
       float on = smoothstep(0.18, 0.34, v.y);
       float d = v.x / rad;
       float slope = (craterShape(d + 0.02) - craterShape(max(0.0, d - 0.02))) / (0.04 * rad);
       return vec3(craterShape(d), slope * v.zw / max(v.x, 1e-4)) * on;
     }
 
-    // 近いセルへ切り替えるとクレーターが途中で切れるため、各円形の起伏を重ねる。
+    // 中心はセルの内側、外縁も同じセル内へ収める。隣の輪郭とは交差させない。
     vec3 craterField(vec2 p) {
-      vec2 i = floor(p), f = fract(p);
-      vec3 result = vec3(0.0);
-      for (int y = -1; y <= 1; y++) {
-        for (int x = -1; x <= 1; x++) {
-          vec2 o = vec2(float(x), float(y)), cc = i + o;
-          vec2 delta = f - o - vec2(hash(cc), hash(cc + vec2(17.3, 31.7)));
-          float dist = length(delta), id = hash(cc + vec2(5.2, 9.1));
-          if (dist < mix(0.13, 0.34, id) * 1.38) result += crater(vec4(dist, id, delta));
-        }
-      }
-      return result;
+      vec2 cell = floor(p);
+      vec2 center = vec2(0.34) + 0.32 * vec2(hash(cell), hash(cell + vec2(17.3, 31.7)));
+      vec2 delta = fract(p) - center;
+      float dist = length(delta), id = hash(cell + vec2(5.2, 9.1));
+      // 最大外縁 0.23 × 1.37 < 0.34。セル境界で高さ・傾斜ともゼロになる。
+      return crater(vec4(dist, id, delta));
     }
 
     void main() {
@@ -6139,15 +6134,14 @@
         // 月面: レゴリスの粒状感 + 大小のクレーター
         float base = fbm(g * 0.13, footprint * 0.13);
         float grain = fbm(g * 2.2, footprint * 2.2) * fade;
-        // 大小2層のクレーター (直径 約8m / 約2m。立った視点で形が分かるスケール)。
-        // 遠方ほど fade で弱め、地平線付近のちらつき (エイリアス) を抑える
+        // 半径を変えた一層のクレーター。別スケールの輪郭を上乗せしない。
+        // 遠方は画素サイズに合わせて弱め、地平線付近のちらつきを抑える
         vec3 k1 = craterField(g * 0.12) * (1.0 - smoothstep(0.3, 1.2, footprint * 0.12));
-        vec3 k2 = craterField(g * 0.5) * (1.0 - smoothstep(0.3, 1.2, footprint * 0.5));
-        vec2 slope = k1.yz * 0.12 * 0.45 + k2.yz * 0.5 * 0.10;
+        vec2 slope = k1.yz * 0.12 * 0.30;
         vec3 normal = normalize(vec3(-slope.x, 1.0, -slope.y));
         float sh = 0.68 + 0.15 * base + 0.12 * grain;
         // 凹部をわずかに暗くし、縁の向きに応じた直射光で起伏を見せる。
-        sh *= 1.0 + min(0.0, k1.x + k2.x * 0.4) * 0.3;
+        sh *= 1.0 + min(0.0, k1.x) * 0.3;
         col = srgbToLinear(vec3(0.56, 0.545, 0.52)) * sh;
         float lit = smoothstep(-0.03, 0.06, uSun.y) * uOcc;
         float direct = max(dot(normal, uSun), 0.0);
