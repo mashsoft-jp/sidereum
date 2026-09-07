@@ -212,6 +212,7 @@
     document.getElementById("app").classList.toggle("navHidden", !navVisible);
     navCollapseBtn.title = T().menuNavHide;
     navExpandBtn.title = T().menuNavShow;
+    document.querySelectorAll(".navLandscapeLabel").forEach(el => { el.textContent = T().menuNavLabel; });
   }
   navCollapseBtn.addEventListener("click", () => { navVisible = false; applyNavVisible(); });
   navExpandBtn.addEventListener("click", () => { navVisible = true; applyNavVisible(); });
@@ -541,4 +542,3 @@
   aboutEl.addEventListener("click", (e) => {
     if (e.target.id === "aboutClose") hideModals();
   });
-

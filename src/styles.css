@@ -477,6 +477,7 @@
     border: none;
   }
   #navCollapse:hover { color: var(--text); background: rgba(150, 178, 224, 0.12); }
+  .navLandscapeLabel, .navLandscapeClose { display: none; }
   /* 星座をメニューへ移して2つになったので、リストの幅いっぱいに割り付ける
      (2つのまま左端に寄せると、右側が間の抜けた空きになる) */
   #masterToggles {
@@ -1377,7 +1378,34 @@
       max-height: calc(100vh - 134px);
       max-height: calc(100dvh - 134px - var(--sat));
     }
-    #navExpand { left: max(var(--sal), 28px); }
+    #app.navHidden #navPanel {
+      transform: translateX(calc(-100% - max(calc(16px + var(--sal)), 44px) - 8px));
+    }
+    /* 端に接する取っ手ではなく、セーフエリア内で完結するボタンにする。 */
+    #navExpand {
+      left: max(calc(16px + var(--sal)), 44px);
+      padding: 10px 14px;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 11px;
+    }
+    .navLandscapeLabel, .navLandscapeClose { display: inline; }
+    .navEdgeGlyph { display: none; }
+    #navCollapse {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      min-height: 40px;
+      padding: 6px 8px;
+      font-size: 11px;
+      color: var(--text);
+      border-bottom: 1px solid var(--line);
+      border-radius: 0;
+    }
+    .navLandscapeClose { font-size: 18px; color: var(--dim); }
     #nav button { padding: 3px 9px; font-size: 10px; }
     #controls {
       /* ホームバーのセーフエリアも半分だけ尊重して画面下端に寄せる */

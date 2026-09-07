@@ -116,6 +116,7 @@
       sBody: "天体", sSat: "衛星", sProbe: "探査機", sStar: "恒星", sDso: "星雲・星団", sConst: "星座", sShower: "流星群",
       menuFs: "全画面表示",
       menuFsExit: "全画面を終了",
+      menuNavLabel: "天体リスト",
       menuNavHide: "天体リストを隠す",
       menuNavShow: "天体リストを表示",
       obs: {
@@ -243,6 +244,7 @@
       sBody: "Body", sSat: "Moon", sProbe: "Probe", sStar: "Star", sDso: "Deep-sky", sConst: "Constellation", sShower: "Shower",
       menuFs: "Fullscreen",
       menuFsExit: "Exit fullscreen",
+      menuNavLabel: "Body list",
       menuNavHide: "Hide body list",
       menuNavShow: "Show body list",
       obs: {
@@ -422,4 +424,3 @@
     ceres: "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (Dawn)",
     vesta: "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (Dawn)",
   };
-

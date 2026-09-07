@@ -493,6 +493,7 @@
     border: none;
   }
   #navCollapse:hover { color: var(--text); background: rgba(150, 178, 224, 0.12); }
+  .navLandscapeLabel, .navLandscapeClose { display: none; }
   /* 星座をメニューへ移して2つになったので、リストの幅いっぱいに割り付ける
      (2つのまま左端に寄せると、右側が間の抜けた空きになる) */
   #masterToggles {
@@ -1393,7 +1394,34 @@
       max-height: calc(100vh - 134px);
       max-height: calc(100dvh - 134px - var(--sat));
     }
-    #navExpand { left: max(var(--sal), 28px); }
+    #app.navHidden #navPanel {
+      transform: translateX(calc(-100% - max(calc(16px + var(--sal)), 44px) - 8px));
+    }
+    /* 端に接する取っ手ではなく、セーフエリア内で完結するボタンにする。 */
+    #navExpand {
+      left: max(calc(16px + var(--sal)), 44px);
+      padding: 10px 14px;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 11px;
+    }
+    .navLandscapeLabel, .navLandscapeClose { display: inline; }
+    .navEdgeGlyph { display: none; }
+    #navCollapse {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      min-height: 40px;
+      padding: 6px 8px;
+      font-size: 11px;
+      color: var(--text);
+      border-bottom: 1px solid var(--line);
+      border-radius: 0;
+    }
+    .navLandscapeClose { font-size: 18px; color: var(--dim); }
     #nav button { padding: 3px 9px; font-size: 10px; }
     #controls {
       /* ホームバーのセーフエリアも半分だけ尊重して画面下端に寄せる */
@@ -1706,7 +1734,7 @@
   <div id="welcome"></div>
 
   <div id="navPanel" class="hud">
-    <button id="navCollapse" aria-label="リストを隠す">«</button>
+    <button id="navCollapse" aria-label="リストを隠す"><span class="navLandscapeLabel">天体リスト</span><span class="navEdgeGlyph" aria-hidden="true">«</span><span class="navLandscapeClose" aria-hidden="true">×</span></button>
     <!-- 各行の絵だけのトグルと同じ絵をここにも出し、絵と語を結びつける
          (絵は applyLang が入れる。文字だけ差し替えられるよう span で分ける) -->
     <div id="masterToggles">
@@ -1715,7 +1743,7 @@
     </div>
     <nav id="nav" aria-label="天体を選択"></nav>
   </div>
-  <button id="navExpand" aria-label="リストを表示">»</button>
+  <button id="navExpand" aria-label="リストを表示"><span class="navEdgeGlyph" aria-hidden="true">»</span><span class="navLandscapeLabel">天体リスト</span></button>
 
   <div id="clock" class="hud">
     <div class="dtrow">
@@ -2775,6 +2803,7 @@
       sBody: "天体", sSat: "衛星", sProbe: "探査機", sStar: "恒星", sDso: "星雲・星団", sConst: "星座", sShower: "流星群",
       menuFs: "全画面表示",
       menuFsExit: "全画面を終了",
+      menuNavLabel: "天体リスト",
       menuNavHide: "天体リストを隠す",
       menuNavShow: "天体リストを表示",
       obs: {
@@ -2902,6 +2931,7 @@
       sBody: "Body", sSat: "Moon", sProbe: "Probe", sStar: "Star", sDso: "Deep-sky", sConst: "Constellation", sShower: "Shower",
       menuFs: "Fullscreen",
       menuFsExit: "Exit fullscreen",
+      menuNavLabel: "Body list",
       menuNavHide: "Hide body list",
       menuNavShow: "Show body list",
       obs: {
@@ -3081,7 +3111,6 @@
     ceres: "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (Dawn)",
     vesta: "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (Dawn)",
   };
-
   //#endregion
   //#region src/data/tours.js
   // ============================================================
@@ -14400,6 +14429,7 @@
     document.getElementById("app").classList.toggle("navHidden", !navVisible);
     navCollapseBtn.title = T().menuNavHide;
     navExpandBtn.title = T().menuNavShow;
+    document.querySelectorAll(".navLandscapeLabel").forEach(el => { el.textContent = T().menuNavLabel; });
   }
   navCollapseBtn.addEventListener("click", () => { navVisible = false; applyNavVisible(); });
   navExpandBtn.addEventListener("click", () => { navVisible = true; applyNavVisible(); });
@@ -14729,7 +14759,6 @@
   aboutEl.addEventListener("click", (e) => {
     if (e.target.id === "aboutClose") hideModals();
   });
-
   //#endregion
   //#region src/ui/panels.js
   // ---------- 操作方法 (モーダル) ----------
