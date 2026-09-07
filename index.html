@@ -2702,7 +2702,7 @@
       menuGrid: "経緯線",
       menuConst: "星座",
       menuDso: "星雲・星団",
-      menuTerrain: "風景",
+      menuTerrain: "空と地形",
       menuMeteor: "流星群",
       menuBloom: "光の滲み",
       menuHiRes: "高解像度テクスチャ",
@@ -2828,7 +2828,7 @@
       menuGrid: "Coordinate grid",
       menuConst: "Constellations",
       menuDso: "Deep-sky objects",
-      menuTerrain: "Scenery",
+      menuTerrain: "Sky & terrain",
       menuMeteor: "Meteor showers",
       menuBloom: "Glow",
       menuHiRes: "High-res textures",
@@ -3252,10 +3252,10 @@
         {
           scene: false, await: "menu", ui: ["menu"], hi: "#menuBtn",
           text: {
-            ja: "左上のメニューには、共有リンク・風景の表示・単位や言語の切替・" +
+            ja: "左上のメニューには、共有・空と地形の表示・単位や言語の切替・" +
                 "操作方法があります。開いてみてください。基本操作はここまでです。" +
                 "ほかのガイドツアーも同じメニューから開けます。",
-            en: "The menu at the top left holds share links, scenery, units, language " +
+            en: "The menu at the top left holds sharing, sky & terrain, units, language " +
                 "and the full control list — open it and see. That's the basics — the " +
                 "other guided tours live in the same menu.",
           },
@@ -3391,10 +3391,10 @@
         {
           scene: false, await: "menu", ui: ["menu"], hi: "#menuBtn",
           text: {
-            ja: "左上のメニューには、共有リンク・風景の表示・単位や言語の切替・" +
+            ja: "左上のメニューには、共有・空と地形の表示・単位や言語の切替・" +
                 "操作方法があります。開いてみてください。基本操作はここまでです。" +
                 "ほかのガイドツアーも同じメニューから開けます。",
-            en: "The menu at the top left holds share links, scenery, units, language and " +
+            en: "The menu at the top left holds sharing, sky & terrain, units, language and " +
                 "the full control list — open it and see. That's the basics — the other " +
                 "guided tours live in the same menu.",
           },
@@ -9615,7 +9615,7 @@
     // 月面にも大気は無いが塵は同じ場所にあるので出す
     // 太陽が沈みきるまでは出さない (−8° で 0、−16° で満)。円錐は太陽に近いほど
     // 明るく、離角 12° で頭打ちにしてあるだけなので、太陽が地平線の上にあると
-    // 太陽を中心に直径 25° ほどの白い塊になる。風景 OFF の空は昼でも暗いままなので
+    // 太陽を中心に直径 25° ほどの白い塊になる。「空と地形」OFF の空は昼でも暗いままなので
     // 薄明に沈んでくれず、昼の太陽がその塊に見えていた (沈むにつれて減光で塊が
     // 縮み、「太陽が小さくなっていく」と見えた 2026-09-07)。月面にも同じく掛ける —
     // 塵は同じ場所にあるが、太陽が出ていれば眩しさで見えないのは同じ
@@ -14049,7 +14049,8 @@
     updateDsoLabel();
   });
 
-  // 風景 (地面の質感・地平の稜線・空の色) の表示切替。地上・月面ビューのみ効く
+  // 空と地形 (昼の空の明るさ・地平の稜線・地面の質感) の表示切替。地上・月面ビューのみ効く。
+  // 以前の名は「風景」— 切ると昼でも空が暗いままになる理由が伝わらないので改名した (2026-09-08)
   const menuTerrainBtn = document.getElementById("menuTerrain");
   function updateTerrainLabel() {
     setMenuCheck(menuTerrainBtn, T().menuTerrain, showTerrain);
@@ -14563,7 +14564,7 @@
         ["星座", "メニュー「星座」(星座線・星座名・明るい星の名前。黄道も連動)"],
         ["経緯線", "メニュー「経緯線」(天球の赤経・赤緯)"],
         ["星雲・星団", "メニュー「星雲・星団」(メシエ天体)"],
-        ["風景", "メニュー「風景を表示」(地面の質感・地平の稜線・空の色)"],
+        ["空と地形", "メニュー「空と地形」(昼の空の明るさ・地平の稜線・地面の質感。切ると昼でも星空のまま)"],
         ["共有", "メニュー「共有…」(いまの画面を画像に。保存・共有シート・場面のリンクをコピー)"],
         ["設定", "メニュー (画質・単位・言語)"],
       ],
@@ -14597,7 +14598,7 @@
         ["Constellations", "Menu → “Constellations” (lines, names and bright-star names; the ecliptic follows)"],
         ["Coordinate grid", "Menu “Coordinate grid” (RA & Dec on the sky)"],
         ["Deep-sky", "Menu “Deep-sky objects” (Messier catalog)"],
-        ["Scenery", "Menu “Show scenery” (ground texture, ridgeline, sky color)"],
+        ["Sky & terrain", "Menu “Sky & terrain” (daylight sky, ridgeline, ground texture; off keeps a starry sky even by day)"],
         ["Share", "Menu “Share…” (capture the screen as an image · save · share sheet · copy a link to this scene)"],
         ["Settings", "Menu (quality · units · language)"],
       ],

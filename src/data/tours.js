@@ -217,10 +217,10 @@
         {
           scene: false, await: "menu", ui: ["menu"], hi: "#menuBtn",
           text: {
-            ja: "左上のメニューには、共有リンク・風景の表示・単位や言語の切替・" +
+            ja: "左上のメニューには、共有・空と地形の表示・単位や言語の切替・" +
                 "操作方法があります。開いてみてください。基本操作はここまでです。" +
                 "ほかのガイドツアーも同じメニューから開けます。",
-            en: "The menu at the top left holds share links, scenery, units, language " +
+            en: "The menu at the top left holds sharing, sky & terrain, units, language " +
                 "and the full control list — open it and see. That's the basics — the " +
                 "other guided tours live in the same menu.",
           },
@@ -356,10 +356,10 @@
         {
           scene: false, await: "menu", ui: ["menu"], hi: "#menuBtn",
           text: {
-            ja: "左上のメニューには、共有リンク・風景の表示・単位や言語の切替・" +
+            ja: "左上のメニューには、共有・空と地形の表示・単位や言語の切替・" +
                 "操作方法があります。開いてみてください。基本操作はここまでです。" +
                 "ほかのガイドツアーも同じメニューから開けます。",
-            en: "The menu at the top left holds share links, scenery, units, language and " +
+            en: "The menu at the top left holds sharing, sky & terrain, units, language and " +
                 "the full control list — open it and see. That's the basics — the other " +
                 "guided tours live in the same menu.",
           },

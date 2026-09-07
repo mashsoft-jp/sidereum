@@ -75,7 +75,8 @@
     updateDsoLabel();
   });
 
-  // 風景 (地面の質感・地平の稜線・空の色) の表示切替。地上・月面ビューのみ効く
+  // 空と地形 (昼の空の明るさ・地平の稜線・地面の質感) の表示切替。地上・月面ビューのみ効く。
+  // 以前の名は「風景」— 切ると昼でも空が暗いままになる理由が伝わらないので改名した (2026-09-08)
   const menuTerrainBtn = document.getElementById("menuTerrain");
   function updateTerrainLabel() {
     setMenuCheck(menuTerrainBtn, T().menuTerrain, showTerrain);
