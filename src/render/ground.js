@@ -916,8 +916,8 @@
         // (「太陽が小さくなっていく」2026-09-08)。裾は淡い暈にとどめ、円盤の
         // 眩しさは芯に任せる
         const atm = surfaceBody !== "moon";
-        const hb = atm ? 0.40 : 1.0;
-        gl.uniform1f(billP.u.uFall, atm ? 2.4 : 1.6);
+        const hb = atm ? 0.60 : 1.0;
+        gl.uniform1f(billP.u.uFall, atm ? 1.8 : 1.6);
         gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide);
         gl.uniform3f(billP.u.uCol1, 0.55 * fade * hb, 0.32 * fade * gm * hb, 0.12 * fade * bm * hb);
         gl.uniform3f(billP.u.uCol2, 1.00 * fade * hb, 0.86 * fade * gm * hb, 0.66 * fade * bm * hb);
@@ -933,14 +933,14 @@
         // その縁が輪郭として読めて「太陽が大きくなった」に見えてしまう。
         // 欠けるほど光っている面積も小さくなるので、そのぶん縮める
         // 地上では芯を平らな頂 (uFall 0.6) にして、太陽の見た目の大きさを芯で
-        // 決める。半径 1.2° は、これまで昼に裾が飽和させていた塊と同じ広さ
+        // 決める。半径 1.4° は、これまで昼に裾が飽和させていた塊と同じ広さ
         // (0.4°・0.9° と寄せたら「日没前から太陽が小さくなった」と言われた
         // 2026-09-08。本番の高度 12° の塊と並べて合わせた)。頂が平らで減光を緩く受けるので、沈んでも同じ大きさのまま
         // 白→黄→橙と色だけ変わる。月面は大気が無いので従来どおり
         // 日食では芯を欠けた側へ寄せて縮める。平らな頂は円盤より広いので、月面ほど
         // 緩く縮めると (1 − 食分×0.7) 三日月の上に白い円として残る — 地上では
         // (1 − 食分)^2.5 で強く縮め、食分 0.4 で半径 0.34° (三日月の幅) まで落とす
-        const cw = atm ? 0.40 : 0.22;
+        const cw = atm ? 0.45 : 0.22;
         const csh = atm ? Math.pow(1 - sunCov, 2.5) : 1 - sunCov * 0.7;
         gl.uniform1f(billP.u.uFall, atm ? 0.6 : 1.5);
         gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide * cw * gz * csh);
