@@ -221,12 +221,13 @@
   // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
   // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
   let bodyRenderer;
-  let lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP, skyP, dsoP;
+  let guideP, lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP, skyP, dsoP;
   let threshP, blurP, addP;
   try {
     bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
     skyP = program(skyVS, skyFS);
     lineP = program(lineVS, lineFS);
+    guideP = program(`@@glsl:guide.vert@@`, PRE + `@@glsl:guide.frag@@`);
     pointP = program(pointVS, pointFS);
     billP = program(billVS, billFS);
     ringP = program(ringVS, ringFS);

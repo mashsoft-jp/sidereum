@@ -1,3 +1,31 @@
+  // 小さい対象は円で示し、接近すると円盤を囲む短い四隅へクロスフェードする。
+  function drawSpaceSelection(s) {
+    const r = Math.max(s.r, 3) + 6;
+    const t = Math.max(0, Math.min(1, (s.r - 10) / 24));
+    octx.save();
+    octx.strokeStyle = "rgba(242,178,62,0.85)";
+    octx.lineWidth = 1.1;
+    if (t < 1) {
+      octx.globalAlpha = 1 - t;
+      octx.beginPath();
+      octx.arc(s.x, s.y, r, 0, 2 * Math.PI);
+      octx.stroke();
+    }
+    if (t > 0) {
+      octx.globalAlpha = t;
+      const len = Math.min(12, Math.max(6, r * 0.15));
+      octx.beginPath();
+      for (const dx of [-1, 1]) for (const dy of [-1, 1]) {
+        const x = s.x + dx * r, y = s.y + dy * r;
+        octx.moveTo(x - dx * len, y);
+        octx.lineTo(x, y);
+        octx.lineTo(x, y - dy * len);
+      }
+      octx.stroke();
+    }
+    octx.restore();
+  }
+
   // ---------- オーバーレイ (ラベル・選択リング) ----------
   // 文字は lblPut で積むだけにして、最後に lblEnd でまとめて置く (優先度つきの
   // 衝突回避は render/body.js 側)。リングや破線は重なっても読めるので直に描く。
@@ -18,16 +46,12 @@
       if (s.r > H * 0.6) continue;
       const hit = marked === b || spotB === b;
       if (hit) {
-        octx.beginPath();
-        octx.arc(s.x, s.y, Math.max(s.r, 3) + 6, 0, 2 * Math.PI);
-        octx.strokeStyle = "rgba(242,178,62,0.9)";
-        octx.lineWidth = 1.2;
-        octx.stroke();
+        drawSpaceSelection(s);
       }
       lblBlock(s.x, s.y, s.r);   // 円盤の上に星座名などを置かせない
       if (b.showLabel) {
-        lblPut(bName(b), s.x, s.y - Math.max(s.r, 3) - 9, hit ? LBL_SEL : LBL_BODY,
-               hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.75)", LF10);
+        lblPut(bName(b), s.x, s.y - Math.max(s.r, 3) - 9, hit ? LBL_SEL : spaceLabelPriority(b),
+               hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.75)", LF10, spaceLabelAlpha(b));
       }
     }
 
@@ -41,15 +65,11 @@
       const hit = marked === s || spotB === s;
       lblBlock(sp.x, sp.y, sp.r);
       if (s.showLabel && (sp.r > 2 || away)) {
-        lblPut(bName(s), sp.x, sp.y - Math.max(sp.r, 3) - 8, hit ? LBL_SEL : lblPri(s),
-               hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.6)", LF10);
+        lblPut(bName(s), sp.x, sp.y - Math.max(sp.r, 3) - 8, hit ? LBL_SEL : spaceLabelPriority(s),
+               hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.6)", LF10, spaceLabelAlpha(s));
       }
       if (hit) {
-        octx.beginPath();
-        octx.arc(sp.x, sp.y, Math.max(sp.r, 3) + 6, 0, 2 * Math.PI);
-        octx.strokeStyle = "rgba(242,178,62,0.9)";
-        octx.lineWidth = 1.2;
-        octx.stroke();
+        drawSpaceSelection(sp);
       }
     }
 
@@ -121,7 +141,7 @@
         const y = (VP[1] * c.wx + VP[5] * c.wy + VP[9] * c.wz + VP[13]) / w;
         const px = (x * 0.5 + 0.5) * W, py = (1 - (y * 0.5 + 0.5)) * H;
         if (px < 0 || px > W || py < 0 || py > H) continue;
-        lblPut(lang === "ja" ? c.ja : c.en, px, py, LBL_SKY, "rgba(150,178,224,0.5)");
+        lblPut(lang === "ja" ? c.ja : c.en, px, py, LBL_SKY, "rgba(150,178,224,0.5)", LF11, spaceGuide.sky);
       }
       // 明るい星の固有名 (画角が広いうちは 1等星だけ)
       const magLim = namedStarMagLim(FOV / Math.max(1, camZoom));
@@ -134,7 +154,7 @@
         const y = (VP[1] * X + VP[5] * Y + VP[9] * Z + VP[13]) / w;
         const px = (x * 0.5 + 0.5) * W, py = (1 - (y * 0.5 + 0.5)) * H;
         if (px < 0 || px > W || py < 0 || py > H) continue;
-        lblPut(lang === "ja" ? st.ja : st.en, px, py + 13, LBL_DSO, "rgba(190,205,235,0.6)", LF11);
+        lblPut(lang === "ja" ? st.ja : st.en, px, py + 13, LBL_DSO, "rgba(190,205,235,0.6)", LF11, spaceGuide.sky);
       }
       // 黄道ラベル: 画面中央に最も近い可視点に1つ
       let bx = 0, by = 0, bd = Infinity;
@@ -149,7 +169,7 @@
         if (d < bd) { bd = d; bx = px; by = py; }
       }
       if (bd < Infinity) {
-        lblPut(lang === "ja" ? "黄道" : "Ecliptic", bx, by - 6, LBL_SKY, "rgba(226,178,110,0.75)");
+        lblPut(lang === "ja" ? "黄道" : "Ecliptic", bx, by - 6, LBL_SKY, "rgba(226,178,110,0.75)", LF11, spaceGuide.sky);
       }
     }
     lblEnd();

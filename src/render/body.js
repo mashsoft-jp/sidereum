@@ -59,10 +59,11 @@
     if (r >= 8) lblRect(x - r, y - r, x + r, y + r, LBL_MET);
   }
   // (x, y) は fillText と同じ。textAlign="center" の中央と、ベースライン
-  function lblPut(txt, x, y, pri, col, f) {
+  function lblPut(txt, x, y, pri, col, f, alpha = 1) {
+    if (alpha <= 0.02) return;
     let L = lblQPool[lblQ.length];
     if (!L) L = lblQPool[lblQ.length] = { txt: "", x: 0, y: 0, pri: 0, col: "", f: null };
-    L.txt = txt; L.x = x; L.y = y; L.pri = pri; L.col = col; L.f = f || LF11;
+    L.txt = txt; L.x = x; L.y = y; L.pri = pri; L.col = col; L.f = f || LF11; L.alpha = alpha;
     lblQ.push(L);
   }
   function lblEnd() {
@@ -77,7 +78,7 @@
       }
       // 高さは実測せず px から見積もる (measureText の ascent/descent は文字に
       // よって変わるので、同じ大きさの文字が不揃いな箱を持つことになる)
-      const hw = w * 0.5 + 2;
+      const hw = w * 0.5 + (groundView ? 2 : 5);
       const x0 = L.x - hw, x1 = L.x + hw;
       const y0 = L.y - L.f.px * 0.85 - 1, y1 = L.y + L.f.px * 0.3 + 1;
       if (L.pri > LBL_SEL) {
@@ -90,7 +91,9 @@
       lblRect(x0, y0, x1, y1, 0);
       octx.font = L.f.s;
       octx.fillStyle = L.col;
+      octx.globalAlpha = L.alpha;
       octx.fillText(L.txt, L.x, L.y);
+      octx.globalAlpha = 1;
     }
   }
 

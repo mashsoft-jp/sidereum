@@ -17,6 +17,54 @@
   const probeVisible = (pr) =>
     pr.live && (!tourProbes || tourProbes.indexOf(pr.key) >= 0) && !tourProbeHold;
 
+  // 宇宙のガイドは、注視天体が円盤として見えるほど背景へ退く。
+  // 距離そのものではなく投影半径を使い、微小衛星・望遠・小画面でも同じ判断にする。
+  const spaceGuide = { body: null, close: 0, sky: 1 };
+  function updateSpaceGuide() {
+    const b = selected || lastCenter;
+    const p = b && posW.get(b.key);
+    const sp = p && project(p);
+    let close = 0;
+    if (sp && !b.mesh) {
+      const r = bodyR(b) * (b.obl ? b.obl[0] : 1) * H / (2 * Math.tan(eFov() / 2) * sp.w);
+      const size = Math.min(W, H);
+      const t = Math.max(0, Math.min(1, (r / size - 0.012) / 0.058));
+      // パンで主役を画面外へ出したら、背景の文脈を再び読めるようにする。
+      const edge = Math.min(sp.x + r, W + r - sp.x, sp.y + r, H + r - sp.y);
+      const visible = Math.max(0, Math.min(1, edge / Math.max(1, size * 0.1)));
+      close = t * t * (3 - 2 * t) * visible;
+    }
+    spaceGuide.body = b;
+    spaceGuide.close = close;
+    spaceGuide.sky = 1 - close;
+  }
+  function spaceRelated(b) {
+    const focus = spaceGuide.body;
+    if (!focus) return false;
+    const family = focus.parent || focus.key;
+    return b === focus || b.key === family || b.parent === family;
+  }
+  function spaceLabelAlpha(b) {
+    return spaceRelated(b) || b.key === tourSpot || b.key === tourSight || b.mesh
+      ? 1 : 1 - spaceGuide.close;
+  }
+  // 0 (必ず出す選択名) と 1 (通常の惑星名) の間で家族を優先する。
+  // 必ず出す扱いにはしないので、衛星どうしの衝突回避は維持される。
+  function spaceLabelPriority(b) {
+    if (b === spaceGuide.body) return 0.25;
+    if (spaceRelated(b)) return 0.5;
+    return lblPri(b);
+  }
+  function orbitGuide(b) {
+    const keep = spaceRelated(b) ? (b === spaceGuide.body ? 0.28 : 0.65) : 0.025;
+    gl.uniform1f(guideP.u.uFade, 0.85 * (1 - spaceGuide.close * (1 - keep)));
+    const center = b.parent ? posW.get(b.parent) : ZERO3;
+    const dx = center[0] - EYE[0], dy = center[1] - EYE[1], dz = center[2] - EYE[2];
+    const depth = VP[3] * dx + VP[7] * dy + VP[11] * dz + VP[15];
+    const radius = b.parent ? b.aKm * KM2W : b.a * K_REAL * (1 + (b.e || 0));
+    gl.uniform2f(guideP.u.uDepthFade, depth, 1 / Math.max(radius, 1e-12));
+  }
+
   function render(nowSec) {
     if (groundView) { renderGround(nowSec); return; }
     // --- カメラ (注視点 = focus + パンの平行移動分) ---
@@ -39,6 +87,7 @@
     SCR.tgt[2] = fz - eye[2];
     mLookAt(ZERO3, SCR.tgt, UP3, Vm);
     mMul(P, Vm, VP);
+    updateSpaceGuide();
     // 軌道線アンカー: カメラが離れすぎると頂点の f32 誤差が画面に出るため焼き直す
     {
       const dx = eye[0] - ORB_ANCHOR[0], dy = eye[1] - ORB_ANCHOR[1], dz = eye[2] - ORB_ANCHOR[2];
@@ -85,35 +134,38 @@
     gl.drawArrays(gl.POINTS, 0, N_STAR);
 
     // --- 星座線 + 黄道 (背景の天球上。恒星と同じ固定ワールド座標) ---
+    gl.useProgram(guideP.pr);
+    gl.uniform1f(guideP.u.uFade, 0.72 * spaceGuide.sky);
+    gl.uniform2f(guideP.u.uDepthFade, 0, 0);
     if (showConst && constN) {
-      gl.useProgram(lineP.pr);
-      gl.uniformMatrix4fv(lineP.u.uVP, false, VP);
-      gl.enableVertexAttribArray(lineP.a.aPos);
-      gl.uniform4f(lineP.u.uColor, 0.17, 0.23, 0.36, 0.5);
+      gl.useProgram(guideP.pr);
+      gl.uniformMatrix4fv(guideP.u.uVP, false, VP);
+      gl.enableVertexAttribArray(guideP.a.aPos);
+      gl.uniform4f(guideP.u.uColor, 0.17, 0.23, 0.36, 0.5);
       gl.bindBuffer(gl.ARRAY_BUFFER, constVB);
-      gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.vertexAttribPointer(guideP.a.aPos, 3, gl.FLOAT, false, 0, 0);
       gl.drawArrays(gl.LINES, 0, constN);
       // 黄道 (金色の閉ループ)
-      gl.uniform4f(lineP.u.uColor, 0.42, 0.33, 0.13, 0.6);
+      gl.uniform4f(guideP.u.uColor, 0.42, 0.33, 0.13, 0.6);
       gl.bindBuffer(gl.ARRAY_BUFFER, eclVB);
-      gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.vertexAttribPointer(guideP.a.aPos, 3, gl.FLOAT, false, 0, 0);
       gl.drawArrays(gl.LINE_LOOP, 0, ECL_N);
     }
 
     // --- 天球の経緯線 (赤道座標。星座線とは別の切替) ---
     if (showGrid && gridN) {
-      gl.useProgram(lineP.pr);
-      gl.uniformMatrix4fv(lineP.u.uVP, false, VP);
-      gl.enableVertexAttribArray(lineP.a.aPos);
-      gl.uniform4f(lineP.u.uColor, 0.10, 0.19, 0.21, 0.42);
+      gl.useProgram(guideP.pr);
+      gl.uniformMatrix4fv(guideP.u.uVP, false, VP);
+      gl.enableVertexAttribArray(guideP.a.aPos);
+      gl.uniform4f(guideP.u.uColor, 0.10, 0.19, 0.21, 0.42);
       gl.bindBuffer(gl.ARRAY_BUFFER, gridVB);
-      gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.vertexAttribPointer(guideP.a.aPos, 3, gl.FLOAT, false, 0, 0);
       gl.drawArrays(gl.LINES, 0, gridN);
     }
 
     // --- 軌道線 (天体ごとの表示フラグ) ---
     {
-      gl.useProgram(lineP.pr);
+      gl.useProgram(guideP.pr);
       // 中心天体は現在位置 ± 粗い8分割ぶんを高精細パッチで引き直すため、
       // 粗い折れ線側はその区間をスキップする (二重線防止)。解除後も lastCenter を
       // 対象にして、離心軌道 (ハレー彗星等) で天体が軌道からずれないようにする。
@@ -130,14 +182,15 @@
       SCR.t[1] = ORB_ANCHOR[1] - eye[1];
       SCR.t[2] = ORB_ANCHOR[2] - eye[2];
       mTRS(SCR.t, null, 1, SCR.A);
-      gl.uniformMatrix4fv(lineP.u.uVP, false, mMul(VP, SCR.A, SCR.mvp));
+      gl.uniformMatrix4fv(guideP.u.uVP, false, mMul(VP, SCR.A, SCR.mvp));
       PLANETS.forEach((p, pi) => {
         if (!p.showOrbit) return;
         const sel = selected === p;
-        gl.uniform4f(lineP.u.uColor, sel ? 0.95 : 0.42, sel ? 0.70 : 0.50, sel ? 0.24 : 0.63, sel ? 0.55 : 0.16);
+        orbitGuide(p);
+        gl.uniform4f(guideP.u.uColor, sel ? 0.95 : 0.42, sel ? 0.70 : 0.50, sel ? 0.24 : 0.63, sel ? 0.55 : 0.16);
         gl.bindBuffer(gl.ARRAY_BUFFER, orbitVBs[pi]);
-        gl.enableVertexAttribArray(lineP.a.aPos);
-        gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(guideP.a.aPos);
+        gl.vertexAttribPointer(guideP.a.aPos, 3, gl.FLOAT, false, 0, 0);
         if (p !== selP) {
           gl.drawArrays(gl.LINE_STRIP, 0, p.orbN + 1);
         } else if (selI0 >= 0 && selI1 <= p.orbN) {
@@ -164,23 +217,25 @@
           toWorld(v, w);
           patchArr[i*3] = w[0] - eye[0]; patchArr[i*3+1] = w[1] - eye[1]; patchArr[i*3+2] = w[2] - eye[2];
         }
-        gl.uniformMatrix4fv(lineP.u.uVP, false, VP);
+        gl.uniformMatrix4fv(guideP.u.uVP, false, VP);
         // パッチの色は粗い折れ線と合わせる (選択中は明るく、解除後は淡く)
         const pb = selected === selP;
-        gl.uniform4f(lineP.u.uColor, pb ? 0.95 : 0.42, pb ? 0.70 : 0.50, pb ? 0.24 : 0.63, pb ? 0.55 : 0.16);
+        orbitGuide(selP);
+        gl.uniform4f(guideP.u.uColor, pb ? 0.95 : 0.42, pb ? 0.70 : 0.50, pb ? 0.24 : 0.63, pb ? 0.55 : 0.16);
         gl.bindBuffer(gl.ARRAY_BUFFER, patchVB);
         gl.bufferData(gl.ARRAY_BUFFER, patchArr, gl.DYNAMIC_DRAW);
-        gl.enableVertexAttribArray(lineP.a.aPos);
-        gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(guideP.a.aPos);
+        gl.vertexAttribPointer(guideP.a.aPos, 3, gl.FLOAT, false, 0, 0);
         gl.drawArrays(gl.LINE_STRIP, 0, PATCH_N + 1);
       }
       // 衛星の軌道 (母天体に追従)
-      gl.enableVertexAttribArray(lineP.a.aPos);
+      gl.enableVertexAttribArray(guideP.a.aPos);
       for (const s of SATELLITES) {
         if (!s.showOrbit) continue;
         const par = posW.get(s.parent);
         const sel = selected === s;
-        gl.uniform4f(lineP.u.uColor, sel ? 0.95 : 0.42, sel ? 0.70 : 0.50, sel ? 0.24 : 0.63, sel ? 0.55 : 0.16);
+        orbitGuide(s);
+        gl.uniform4f(guideP.u.uColor, sel ? 0.95 : 0.42, sel ? 0.70 : 0.50, sel ? 0.24 : 0.63, sel ? 0.55 : 0.16);
         if (s === MOON) {
           // ELP 理論で現在時刻±半周期をサンプリング (実位置と一致する軌道線)
           const tmp = SCR.v2, T = 27.321661;
@@ -193,15 +248,15 @@
           gl.bufferData(gl.ARRAY_BUFFER, moonOrbBuf, gl.DYNAMIC_DRAW);
           SCR.t[0] = par[0] - eye[0]; SCR.t[1] = par[1] - eye[1]; SCR.t[2] = par[2] - eye[2];
           mTRS(SCR.t, null, 1, SCR.model);
-          gl.uniformMatrix4fv(lineP.u.uVP, false, mMul(VP, SCR.model, SCR.mvp));
-          gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+          gl.uniformMatrix4fv(guideP.u.uVP, false, mMul(VP, SCR.model, SCR.mvp));
+          gl.vertexAttribPointer(guideP.a.aPos, 3, gl.FLOAT, false, 0, 0);
           gl.drawArrays(gl.LINE_STRIP, 0, MOON_ORB_N + 1);
         } else {
           gl.bindBuffer(gl.ARRAY_BUFFER, satOrbVB);
           SCR.t[0] = par[0] - eye[0]; SCR.t[1] = par[1] - eye[1]; SCR.t[2] = par[2] - eye[2];
           mTRS(SCR.t, s.M, s.aKm * KM2W, SCR.model);
-          gl.uniformMatrix4fv(lineP.u.uVP, false, mMul(VP, SCR.model, SCR.mvp));
-          gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
+          gl.uniformMatrix4fv(guideP.u.uVP, false, mMul(VP, SCR.model, SCR.mvp));
+          gl.vertexAttribPointer(guideP.a.aPos, 3, gl.FLOAT, false, 0, 0);
           gl.drawArrays(gl.LINE_STRIP, 0, SAT_ORB_N + 1);
         }
       }
