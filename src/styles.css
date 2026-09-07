@@ -1377,10 +1377,14 @@
       left: max(calc(16px + var(--sal)), 44px);
       max-height: calc(100vh - 134px);
       max-height: calc(100dvh - 134px - var(--sat));
+      transition: none;
     }
     #app.navHidden #navPanel {
-      transform: translateX(calc(-100% - max(calc(16px + var(--sal)), 44px) - 8px));
+      /* 横向きはボタンの位置で展開し、左端へスライドさせない。 */
+      transform: none;
+      visibility: hidden;
     }
+    #app.tourMode.navHidden #navPanel.tourShow { visibility: visible; }
     /* 端に接する取っ手ではなく、セーフエリア内で完結するボタンにする。 */
     #navExpand {
       left: max(calc(16px + var(--sal)), 44px);
