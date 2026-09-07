@@ -666,6 +666,7 @@
   /* 説明文の中に埋め込んだ行見出しアイコン (ツアーのナレーション・操作方法)。
      文字サイズに合わせて拡縮し、強調色で「画面のこれ」と分かるようにする */
   .inlIcon { white-space: nowrap; }
+  .inlIcon .navListIcon { display: inline-block; width: 1.5em; height: 1.5em; vertical-align: -0.35em; color: inherit; }
   .inlIcon .ctlIcon {
     width: 1.15em; height: 1.15em;
     vertical-align: -0.24em;
@@ -3265,11 +3266,11 @@
           text: {
             ja: "画面上の天体をクリックすると、その天体に近づきます。" +
                 "左の天体リストからも選ぶことができます。" +
-                "リストは × で閉じ、土星のアイコン付き「天体リスト」ボタンでその場に開けます。" +
+                "リストは × で閉じ、{bodyList}「天体リスト」ボタンでその場に開けます。" +
                 "それでは地球を選んでみましょう。",
             en: "Click a body on screen to fly closer to it. " +
                 "You can also pick one from the body list on the left. " +
-                "Close the list with × and reopen it in place with the Saturn-icon Body list button. " +
+                "Close the list with × and reopen it in place with the {bodyList} Body list button. " +
                 "Let's try it with Earth.",
           },
         },
@@ -3396,11 +3397,11 @@
           text: {
             ja: "画面上の天体をタップすると、その天体に近づきます。" +
                 "左の天体リストからも選ぶことができます。" +
-                "リストは × で閉じ、左の土星アイコンをタップするとその場に開けます。" +
+                "リストは × で閉じ、左の {bodyList} をタップするとその場に開けます。" +
                 "それでは地球を選んでみましょう。",
             en: "Tap a body on screen to fly closer to it. " +
                 "You can also pick one from the body list on the left. " +
-                "Close the list with × and tap the Saturn icon on the left to reopen it in place. " +
+                "Close the list with × and tap {bodyList} on the left to reopen it in place. " +
                 "Let's try it with Earth.",
           },
         },
@@ -15081,6 +15082,10 @@
   // 戻したときは「パネルの 「カメラ」 プルダウン」と間延びするので落とす
   function tourTextHTML(s) {
     return escHTML(s).replace(/( ?)\{(\w+)\}( ?)/g, (m, pre, k, post) => {
+      if (k === "bodyList") {
+        const icon = navExpandBtn.querySelector(".navListIcon");
+        return pre + '<span class="inlIcon" role="img" aria-label="' + T().menuNavLabel + '">' + icon.outerHTML + "</span>" + post;
+      }
       const el = TOUR_ICON[k] && document.getElementById(TOUR_ICON[k]);
       if (!el) return m;
       // 画面に出ていないアイコンを文章に出すと、探しても見つからないものを
@@ -15958,7 +15963,6 @@
     startTour(t, isFinite(n) ? n - 1 : 0);
     return true;
   }
-
 
 
 

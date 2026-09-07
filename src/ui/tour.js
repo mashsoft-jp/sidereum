@@ -62,6 +62,10 @@
   // 戻したときは「パネルの 「カメラ」 プルダウン」と間延びするので落とす
   function tourTextHTML(s) {
     return escHTML(s).replace(/( ?)\{(\w+)\}( ?)/g, (m, pre, k, post) => {
+      if (k === "bodyList") {
+        const icon = navExpandBtn.querySelector(".navListIcon");
+        return pre + '<span class="inlIcon" role="img" aria-label="' + T().menuNavLabel + '">' + icon.outerHTML + "</span>" + post;
+      }
       const el = TOUR_ICON[k] && document.getElementById(TOUR_ICON[k]);
       if (!el) return m;
       // 画面に出ていないアイコンを文章に出すと、探しても見つからないものを
@@ -939,7 +943,6 @@
     startTour(t, isFinite(n) ? n - 1 : 0);
     return true;
   }
-
 
 
 

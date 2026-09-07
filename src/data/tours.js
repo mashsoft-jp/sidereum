@@ -170,11 +170,11 @@
           text: {
             ja: "画面上の天体をクリックすると、その天体に近づきます。" +
                 "左の天体リストからも選ぶことができます。" +
-                "リストは × で閉じ、土星のアイコン付き「天体リスト」ボタンでその場に開けます。" +
+                "リストは × で閉じ、{bodyList}「天体リスト」ボタンでその場に開けます。" +
                 "それでは地球を選んでみましょう。",
             en: "Click a body on screen to fly closer to it. " +
                 "You can also pick one from the body list on the left. " +
-                "Close the list with × and reopen it in place with the Saturn-icon Body list button. " +
+                "Close the list with × and reopen it in place with the {bodyList} Body list button. " +
                 "Let's try it with Earth.",
           },
         },
@@ -301,11 +301,11 @@
           text: {
             ja: "画面上の天体をタップすると、その天体に近づきます。" +
                 "左の天体リストからも選ぶことができます。" +
-                "リストは × で閉じ、左の土星アイコンをタップするとその場に開けます。" +
+                "リストは × で閉じ、左の {bodyList} をタップするとその場に開けます。" +
                 "それでは地球を選んでみましょう。",
             en: "Tap a body on screen to fly closer to it. " +
                 "You can also pick one from the body list on the left. " +
-                "Close the list with × and tap the Saturn icon on the left to reopen it in place. " +
+                "Close the list with × and tap {bodyList} on the left to reopen it in place. " +
                 "Let's try it with Earth.",
           },
         },
