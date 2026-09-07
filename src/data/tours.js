@@ -1027,7 +1027,7 @@
           d: "1998-04-26T12:30", spd: 0.012, play: true, until: "1998-04-26T13:20",
           text: {
             ja: "1998年4月26日、最初のスイングバイは金星でした。高度 284km — " +
-                "厚い雲のすぐ上をかすめて、金星の公転運動から速度をもらいます。",
+                "厚い雲のすぐ上をかすめ、金星の公転運動によって加速します。",
             en: "26 April 1998: the first swing-by was Venus. It skimmed 284 km above the thick " +
                 "clouds, taking speed from the planet's own motion around the Sun.",
           },
