@@ -5,12 +5,31 @@ import assert from 'node:assert/strict';
 
 const source = readFileSync(new URL('../src/ui/framing.js', import.meta.url), 'utf8');
 const ctx = vm.createContext({});
-for (const name of ['emptyFrameRect', 'frameRadius', 'fitFrameDistance']) {
+for (const name of ['emptyFrameRect', 'measureFrameRect', 'frameRadius', 'fitFrameDistance']) {
   const start = source.indexOf(`  function ${name}(`);
   const end = source.indexOf('\n  function ', start + 1);
   vm.runInContext(source.slice(start, end), ctx);
 }
 const run = code => vm.runInContext(code, ctx);
+// リストの開閉・幅変更で構図の中心と自動フィットの領域を変えない。
+let navHidden = false;
+const navBox = {left:16, top:108, right:256, bottom:620};
+ctx.frameApp = {getBoundingClientRect:()=>({left:0,top:0}), classList:{contains:k=>k==='navHidden' && navHidden}};
+ctx.infoPanel = {classList:{contains:()=>false}};
+ctx.immersiveView = false;
+ctx.document = {getElementById:id=>id==='navPanel' ? {getClientRects:()=>[navBox], getBoundingClientRect:()=>navBox} : null};
+ctx.getComputedStyle = ()=>({visibility:'visible'});
+for (const [w,h] of [[1280,720],[390,844],[844,390]]) {
+  ctx.W=w; ctx.H=h;
+  navHidden=false;
+  const open=run('measureFrameRect()');
+  navHidden=true;
+  assert.deepEqual(run('measureFrameRect()'),open,'リストの開閉で構図を動かさない');
+  navHidden=false;
+  navBox.right=320;
+  assert.deepEqual(run('measureFrameRect()'),open,'リストの幅でも構図を動かさない');
+  navBox.right=256;
+}
 const overlaps = (a, b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
 for (const [width, height, obstacles] of [
   [1280, 720, [{ x0: 0, x1: 240, y0: 90, y1: 650 }, { x0: 900, x1: 1280, y0: 110, y1: 620 }]],

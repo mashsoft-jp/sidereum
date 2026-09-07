@@ -62,8 +62,8 @@
       const r = box("controls"); if (r) bounds.y1 = Math.min(bounds.y1, r.y0);
     }
     const obstacles = [];
-    for (const id of ["navPanel", "info", "angleCell"]) {
-      if (id === "navPanel" && frameApp.classList.contains("navHidden")) continue;
+    // 天体リストは重ねて表示する。開閉で構図や自動フィットの倍率を変えない。
+    for (const id of ["info", "angleCell"]) {
       if (id === "info" && !infoPanel.classList.contains("open")) continue;
       const r = box(id); if (r) obstacles.push(r);
     }
@@ -161,5 +161,5 @@
   for (const el of [frameApp, infoPanel]) frameMutation.observe(el, { attributes: true, attributeFilter: ["class"] });
   if (window.ResizeObserver) {
     const observer = new ResizeObserver(dirtyFrame);
-    for (const id of ["info", "controls", "navPanel", "title", "clock"]) observer.observe(document.getElementById(id));
+    for (const id of ["info", "controls", "title", "clock"]) observer.observe(document.getElementById(id));
   }
