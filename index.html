@@ -6585,9 +6585,9 @@
              + texture2D(uTex, vUv + uTexel * vec2(-1.0,  1.0)).rgb
              + texture2D(uTex, vUv + uTexel * vec2( 1.0,  1.0)).rgb;
       c *= 0.25;
-      // 明るさは最大成分で見る。輝度で見ると、青い大気の縁のように
-      // 「特定の色だけが強い」ところを取りこぼす
-      float l = max(max(c.r, c.g), c.b);
+      // 一色だけ強い大気の縁や惑星の色を、白い光源と同じ強さで滲ませない。
+      // ここは表示済みの色から抽出する LDR Bloom。知覚的な明るさで選ぶ。
+      float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
       // しきい値の前後を滑らかに立ち上げる (硬く切ると滲みの縁が階段状になる)
       gl_FragColor = vec4(c * smoothstep(uThresh, min(uThresh + 0.25, 1.0), l), 1.0);
     }
@@ -6613,10 +6613,15 @@
     // (乗算済みアルファ) で「背景をそのまま残して足すだけ」を意味する
     varying vec2 vUv;
     uniform sampler2D uTex;
+    uniform sampler2D uScene; // 滲ませる前の画面
     uniform float uAmount;
 
     void main() {
-      gl_FragColor = vec4(texture2D(uTex, vUv).rgb * uAmount, 0.0);
+      vec3 glow = texture2D(uTex, vUv).rgb * uAmount;
+      vec3 scene = texture2D(uScene, vUv).rgb;
+      // スクリーン合成の差分だけを加算する。明るい面ほど追加量が減り、
+      // 雲や砂漠の階調を白へ押し潰さず、暗い背景には柔らかな滲みを残す。
+      gl_FragColor = vec4(glow * (1.0 - scene), 0.0);
     }
 `;
 
@@ -7112,7 +7117,7 @@
   // ぼかす → 画面へ加算。UI と天体名は別のキャンバスなので最初から対象外
   const BLOOM_DIV = 4;
   const BLOOM_THRESH = 0.72;   // これ以下の明るさは滲ませない
-  const BLOOM_AMOUNT = 0.45;   // 戻すときの強さ
+  const BLOOM_AMOUNT = 0.40;   // 戻すときの強さ
 
   let bloomOn = localStorage.getItem("ssBloom") !== "0";   // 既定 ON
   let bloomReady = false;      // 確保に失敗した端末では以後あきらめる
@@ -7227,6 +7232,10 @@
     gl.useProgram(addP.pr);
     gl.bindTexture(gl.TEXTURE_2D, bloomTex[0]);
     gl.uniform1i(addP.u.uTex, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, sceneTex);
+    gl.uniform1i(addP.u.uScene, 1);
+    gl.activeTexture(gl.TEXTURE0);
     gl.uniform1f(addP.u.uAmount, BLOOM_AMOUNT);
     postDraw(addP);
 

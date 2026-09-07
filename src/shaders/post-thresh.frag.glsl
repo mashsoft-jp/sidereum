@@ -12,9 +12,9 @@
              + texture2D(uTex, vUv + uTexel * vec2(-1.0,  1.0)).rgb
              + texture2D(uTex, vUv + uTexel * vec2( 1.0,  1.0)).rgb;
       c *= 0.25;
-      // 明るさは最大成分で見る。輝度で見ると、青い大気の縁のように
-      // 「特定の色だけが強い」ところを取りこぼす
-      float l = max(max(c.r, c.g), c.b);
+      // 一色だけ強い大気の縁や惑星の色を、白い光源と同じ強さで滲ませない。
+      // ここは表示済みの色から抽出する LDR Bloom。知覚的な明るさで選ぶ。
+      float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
       // しきい値の前後を滑らかに立ち上げる (硬く切ると滲みの縁が階段状になる)
       gl_FragColor = vec4(c * smoothstep(uThresh, min(uThresh + 0.25, 1.0), l), 1.0);
     }

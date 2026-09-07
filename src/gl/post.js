@@ -8,7 +8,7 @@
   // ぼかす → 画面へ加算。UI と天体名は別のキャンバスなので最初から対象外
   const BLOOM_DIV = 4;
   const BLOOM_THRESH = 0.72;   // これ以下の明るさは滲ませない
-  const BLOOM_AMOUNT = 0.45;   // 戻すときの強さ
+  const BLOOM_AMOUNT = 0.40;   // 戻すときの強さ
 
   let bloomOn = localStorage.getItem("ssBloom") !== "0";   // 既定 ON
   let bloomReady = false;      // 確保に失敗した端末では以後あきらめる
@@ -123,6 +123,10 @@
     gl.useProgram(addP.pr);
     gl.bindTexture(gl.TEXTURE_2D, bloomTex[0]);
     gl.uniform1i(addP.u.uTex, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, sceneTex);
+    gl.uniform1i(addP.u.uScene, 1);
+    gl.activeTexture(gl.TEXTURE0);
     gl.uniform1f(addP.u.uAmount, BLOOM_AMOUNT);
     postDraw(addP);
 
