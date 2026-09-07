@@ -144,7 +144,16 @@
       if (dy < -Math.PI) dy += 2 * Math.PI;
       cam.yawTgt += dy;
       cam.pitchTgt = Math.max(-1.52, Math.min(1.52, Math.asin(Math.max(-1, Math.min(1, oy)))));
-      camZoomTgt = Math.max(1, Math.min(MAG_MAX, FOV / (fovDeg * DEG)));
+      if (what === "const") {
+        // 星座は拡大率を 1 倍・距離を最遠にする。星座線は天球に貼りついているので
+        // 距離で大きさは変わらないが、近くにいると惑星の軌道や天体が手前に重なって
+        // 星座が読めない (ユーザー指定 2026-09-08)。拡大率は 1 倍で画角いっぱいに
+        // 取る — 星座の広がり (数十度) に合わせて絞ると、はみ出すものが多い
+        camZoomTgt = 1;
+        cam.distTgt = ZD_MAX;
+      } else {
+        camZoomTgt = Math.max(1, Math.min(MAG_MAX, FOV / (fovDeg * DEG)));
+      }
       resetPan();
       return;
     }
