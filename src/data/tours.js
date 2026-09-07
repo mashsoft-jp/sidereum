@@ -1218,8 +1218,8 @@
           text: {
             ja: "同じ5月7日3時半の空を、今度はシドニーから見ます。同じ瞬間でも、" +
                 "放射点の高度は26°ではなく37°です。" +
-                "流星は放射点の高さ (の正弦) に比例して増えるので、南半球のほうが多く見えます。" +
-                "みずがめ座ηの放射点は赤緯 −1° — ほぼ天の赤道上にあり、南半球に有利な群です。",
+                "放射点が高いほど、見える流星の数は増えます。" +
+                "みずがめ座η流星群は、南半球のほうが多くの流星を見られます。",
             en: "The same 03:30 sky, now from Sydney. At that same moment the radiant stands " +
                 "37° up instead of 26°. " +
                 "The rate scales with the sine of that altitude, so the southern sky wins. " +
@@ -1275,9 +1275,9 @@
         {
           site: [35.68, 139.69],
           text: {
-            ja: "同じ瞬間の東京は昼です。極大が数時間しかない群は、そのとき夜だった地域しか見られません。" +
-                "しぶんぎ座はさらに放射点の赤緯が +49.5° と高く、南緯40°より南では地平線の上に昇りません。" +
-                "「流星群は世界中で見られる」わけではない、というのはこの二つの意味においてです。",
+            ja: "同じ瞬間、東京は昼なので、流星が最も多く流れる時間を見逃してしまいます。" +
+                "また、しぶんぎ座流星群の放射点は北寄りにあり、南緯40°より南では地平線の上に昇りません。" +
+                "流星群を見られるかどうかは、活動のピークが夜に重なるか、そして放射点が空に昇るかによって変わります。",
             en: "At that same moment Tokyo is in daylight. When a peak lasts only hours, only the side of " +
                 "the planet that happens to be in darkness sees it. The Quadrantid radiant also sits at " +
                 "declination +49.5°, so south of latitude 40°S it never rises at all. " +
