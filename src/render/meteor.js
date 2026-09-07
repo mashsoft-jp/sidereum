@@ -1,8 +1,7 @@
   // ---------- 流星 (地上ビューのみ) ----------
-  // 出現数はシム時間に比例させる。再生速度がそのまま「眺める速さ」になり、
-  // 3分/秒 (180倍) で流せば ZHR 100 の群が毎秒1個ほど流れる。ただし1本1本が流れる
-  // 速さは実時間 — 探査機の自転と同じ扱いで、早送りしても線が一瞬で消える
-  // ことはない。停止中は 1秒=1秒 で流す。
+  // 出現・移動・減衰はすべてシミュレーション時刻に揃える。
+  // 早送りでは光跡の寿命も短くなり、停止中は発生も移動も止まる。
+  // 描画フレームより短命になる高速再生では、見えない流星もある。
   //
   // 見かけの速さ・長さは決め打ちではなく、対地速度から出している。高度 95km
   // を秒速 v [km/s] で飛ぶと、放射点から角距離 ψ の位置での角速度は
@@ -21,7 +20,7 @@
   let metVB = null;
   // リボン1枚ぶんの頂点並び: 0=前の分割点 / 1=今の分割点、side は幅方向の符号
   const MET_TRI = [0, 0, 1, 0, 1, 1], MET_SIDE = [-1, 1, -1, 1, 1, -1];
-  let metPrevSec = -1, metPrevSim = 0;
+  let metPrevSec = -1, metPrevSim = 0, metClock = 0;
   const metActive = [];        // いま降っている群 [{ s, zhr, alt, dir }]
   const _rad = [0, 0, 0], _mf = [0, 0, 0], _me1 = [0, 0, 0], _me2 = [0, 0, 0];
   let showMeteor = localStorage.getItem("ssMeteor") !== "0";   // 既定 ON
@@ -137,6 +136,7 @@
     const w = Math.min(1, Math.max(0, (v - 30) / 40));
     const wh = Math.min(0.65, Math.max(0, bri * 0.1));
     const r = (1.00 + (0.70 - 1.00) * w), g = (0.72 + (0.80 - 0.72) * w), b = (0.36 + (1.00 - 0.36) * w);
+    if (metClock - nowSec > dur + tau * 3) return; // フレーム間ですでに消えた流星
     meteors.push({
       t0: nowSec, dur, len, tau,
       px, py, pz, tx, ty, tz,
@@ -153,21 +153,30 @@
   }
 
   function updateMeteors(nowSec) {
-    const dtReal = metPrevSec < 0 ? 0 : Math.min(0.25, Math.max(0, nowSec - metPrevSec));
+    const first = metPrevSec < 0;
+    const dtReal = first ? 0 : Math.max(0, nowSec - metPrevSec);
+    const dtSim = first ? 0 : (simDays - metPrevSim) * 86400;
+    const expected = playing ? Math.max(0, daysPerSec * 86400 * dtReal) : 0;
+    // 日時の直接変更・逆行・タブ復帰では古い光跡と発生の繰越を捨てる。
+    // ツアー終端の減速は expected 以下なので、通常の時間経過として扱える。
+    const reset = first || dtReal > 0.5 || dtSim < -0.0001
+      || dtSim > expected + Math.max(0.01, expected * 0.05);
     metPrevSec = nowSec;
-    const dSim = Math.abs(simDays - metPrevSim);
     metPrevSim = simDays;
     metActive.length = 0;
-    // 月面には大気が無いので流星は光らない
-    if (!showMeteor || !groundView || surfaceBody !== "earth") { meteors.length = 0; return; }
-    // 寿命の尽きたものを落とす
+    const enabled = showMeteor && groundView && surfaceBody === "earth";
+    if (reset || !enabled) {
+      meteors.length = 0;
+      for (const s of MET_ALL) s.acc = 0;
+    }
+    if (!enabled) return;  // 月面には大気が無いので流星は光らない
+    const dt = reset || !playing ? 0 : Math.max(0, dtSim);
+    metClock += dt;
     for (let i = meteors.length - 1; i >= 0; i--) {
       const m = meteors[i];
-      if (nowSec - m.t0 > m.dur + m.tau * 3) meteors.splice(i, 1);
+      if (metClock - m.t0 > m.dur + m.tau * 3) meteors.splice(i, 1);
     }
-    // 1フレームで進める時間。日時をジャンプしたときに一気に湧かないよう頭打ちにする
-    const dtH = playing ? Math.min(dSim * 24, 1.0) : dtReal / 3600;
-    if (dtH <= 0) return;
+    const dtH = dt / 3600;
     const coneF = 1 - Math.cos(metConeHalf());
     const nightF = metNightF();
     // 昼でも放射点の印は出す (「空にはあるが見えない」を示すため)。出現数だけ 0 になる
@@ -188,12 +197,10 @@
       // 実際の出現数 = ZHR × sin(放射点高度) × 月明かり × 夜か
       const hr = zhr * sinAlt * moonF * nightF * MET_ZSCALE * coneF;
       s.acc = Math.min(4, s.acc + hr * dtH);
-      while (s.acc >= 1 && meteors.length < MET_MAX) {
+      while (dt > 0 && s.acc >= 1 && meteors.length < MET_MAX) {
         s.acc -= 1;
-        // 発生時刻はフレーム内へばらけさせる。全部を今フレームの頭から始めると
-        // 「まとめて出てまとめて消える」拍が見えるし、フレーム間隔が空く端末
-        // (低 fps・タブ復帰直後) では出た瞬間に寿命が尽きて1本も見えなくなる
-        const t0 = nowSec - Math.random() * Math.min(0.4, Math.max(dtReal, 0.016));
+        // フレーム内のシミュレーション時刻へばらす。実時間で寿命を延ばさない。
+        const t0 = metClock - Math.random() * dt;
         if (spor) metSpawn(null, 15 + Math.random() * 55, t0);
         else metSpawn(_rad, s.v, t0);
       }
@@ -201,12 +208,12 @@
   }
 
   // 光跡を1本のリボンとして描く。加算合成なので、後ろの星が透けて見える
-  function drawMeteors(nowSec) {
+  function drawMeteors() {
     if (!meteors.length) return;
     let n = 0;
     const pxW = gFov / H * SKYR;                // 画面1px ぶんの world 幅
     for (const m of meteors) {
-      const age = nowSec - m.t0;
+      const age = metClock - m.t0;
       const span = m.tau * 3;                   // 先端から後ろへ引く時間
       const endF = age <= m.dur ? 1 : Math.max(0, 1 - (age - m.dur) / span);
       if (endF <= 0) continue;
