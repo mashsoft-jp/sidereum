@@ -12927,7 +12927,20 @@
     st.setProperty("--titleR", Math.round(titleEl.getBoundingClientRect().right) + "px");
     st.setProperty("--clockL", Math.round(document.getElementById("clock").getBoundingClientRect().left) + "px");
   }
-  window.addEventListener("resize", placeObsSite);
+  // 回転や言語切替で置き直す。resize だけでは足りない — iOS は横→縦の回転で
+  // レイアウトが確定する前に resize を送ってくるので、横向きのときの値が残り、
+  // 縦持ちのビュー切替が画面の右端からはみ出した (2026-09-08)。要素の大きさの
+  // 変化そのものを見る ResizeObserver (レイアウト後に呼ばれる) を主にし、
+  // resize / orientationchange は次のフレームでもう一度測る保険にする
+  const placeSoon = () => { placeObsSite(); requestAnimationFrame(placeObsSite); setTimeout(placeObsSite, 350); };
+  window.addEventListener("resize", placeSoon);
+  window.addEventListener("orientationchange", placeSoon);
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(placeObsSite);
+    ro.observe(document.documentElement);
+    ro.observe(titleEl);
+    ro.observe(document.getElementById("clock"));
+  }
   placeObsSite();
   function siteLabel() {
     const o = T().obs;
