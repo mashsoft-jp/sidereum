@@ -87,7 +87,7 @@
         vec3 col = mix(vec3(0.055, 0.145, 0.400),     // レイリー (青)
                        vec3(0.520, 0.220, 0.080),     // 前方散乱 (朝焼け色)
                        fwd * 0.7)
-                 * (1.0 - exp(-tau)) * sun;
+                 * (1.0 - exp(-tau)) * sun * 0.62;
         gl_FragColor = vec4(tonemap(col * uExt), 0.0);   // 乗算済みアルファでの加算
         return;
       }
@@ -276,6 +276,7 @@
       // 地球だけ、地表のあとに雲・夜景・大気を重ねる。そのぶんの持ち回り
       float isEarth = step(3.5, uType) * step(uType, 4.5) * uHasTex;
       float cloud = 0.0;
+      float cloudLight = 0.0;
 
       if (uComet > 0.5) {
         // ---- 彗星核: 自発光しない、煤と有機物に覆われた非常に暗い表面 ----
@@ -297,9 +298,13 @@
           // 雲が地表へ落とす影。雲層は地表より CLOUD_H だけ高いので、地表の点から
           // 太陽へ伸ばした線が雲層を横切る位置は接平面方向へ CLOUD_H/cosθ ずれる。
           // 太陽が低いほど影が長く伸びる (朝夕の斜光と同じ)
-          float ndl = max(dot(p, L), 0.08);
-          vec3 Lt = L - p * dot(L, p);                        // 太陽方向の接平面成分
-          vec3 east = normalize(cross(vec3(0.0, 1.0, 0.0), p));
+          // 太陽は描画座標、p は地表座標。モデルの回転を戻してから影をずらす。
+          vec3 localL = vec3(dot(L, normalize(uModel[0].xyz)),
+                             dot(L, normalize(uModel[1].xyz)),
+                             dot(L, normalize(uModel[2].xyz)));
+          float ndl = max(dot(p, localL), 0.08);
+          vec3 Lt = localL - p * dot(localL, p);                        // 太陽方向の接平面成分
+          vec3 east = vec3(p.z, 0.0, -p.x) / max(length(p.xz), 1e-5);
           vec3 north = cross(p, east);
           float k = 0.0016 / ndl;                             // 弧長 (地球半径 = 1)
           float cosLat = max(sqrt(max(1.0 - p.y * p.y, 0.0)), 0.15);
@@ -321,7 +326,10 @@
           float fWater = 0.02 + 0.98 * pow(1.0 - max(dot(L, Hv), 0.0), 5.0);
           spec = pow(max(dot(N, Hv), 0.0), 240.0) * fWater * ocean * (1.0 - cloud) * 4.0;
 
-          alb = mix(alb, vec3(0.90), cloud);
+          // 地表と同じ色へ混ぜず、雲の光を後で合成する。
+          // 雲の照明は地表より緩やかに落とし、薄い雲から地表が透ける。
+          cloudLight = sqrt(max(mu0, 0.0)) * 0.68;
+          alb *= 1.0 - cloud;
         }
       } else if (uType < 1.5) {
         // ---- 岩石 (テクスチャ無し小天体) ----
@@ -385,6 +393,10 @@
 
       if (isEarth > 0.5) {
         float ndl = dot(N, L);
+        // 雲の直射光も食の遮蔽を受ける。夜側は環境光だけを残す。
+        float cloudVisibility = mu0 > 1e-4 ? clamp(dif / mu0, 0.0, 1.0) : 0.0;
+        vec3 cloudTint = mix(vec3(1.0, 0.72, 0.48), vec3(1.0), smoothstep(0.0, 0.22, ndl));
+        c += cloud * (vec3(0.68 * ambient) + cloudTint * cloudLight * cloudVisibility * direct);
         // ---- 大気 ----
         // 縁ほど大気を長く見通すので青みが強い。太陽が向こう側にあるとき
         // (視線と太陽が同じ側 = 前方散乱) は明け方の空のように暖色へ振れる
@@ -393,11 +405,13 @@
         vec3 air = mix(vec3(0.052, 0.135, 0.360),    // レイリー (青)
                        vec3(0.420, 0.180, 0.070),    // 前方散乱 (夕焼け色)
                        fwd * 0.75);
-        c += air * limb * smoothstep(-0.28, 0.22, ndl) * (1.0 - uAirDay);
+        float airPath = limb * smoothstep(-0.18, 0.25, ndl) * (1.0 - uAirDay);
+        // 加算だけだと地表と青い縁が白く飽和する。透過した地表光と散乱光を合わせる。
+        c = c * exp(-vec3(0.32, 0.55, 0.95) * airPath) + air * airPath * 0.48;
 
         // ---- 夜景 ----
         // 昼夜境界の内側だけ。雲の下は遮られ、地上ビューの昼空では見えない
-        float night = smoothstep(0.10, -0.12, ndl);
+        float night = 1.0 - smoothstep(-0.12, 0.10, ndl);
         c += vec3(1.0, 0.78, 0.45) * SAMPLE(uNight, uv).r
              * night * (1.0 - cloud * 0.85) * 0.55 * (1.0 - uAirDay);
       }

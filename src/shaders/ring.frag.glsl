@@ -38,9 +38,8 @@
         float b = dot(O, D);
         if (b < 0.0) {                            // 太陽の方へ近づいていく場合だけ
           float miss = dot(O, O) - b * b / dot(D, D);   // 最接近距離² (球の半径 = 1)
-          // 実際はほぼ真っ黒になるが、それだと環の構造が読めなくなる。
-          // 影と分かる程度に落として、3割の明るさを残す (見やすさを優先)
-          shadow = mix(0.30, 1.0, smoothstep(0.90, 1.10, miss));
+          // 影の縁を締め、影の中も環の構造がわずかに読める明るさを残す。
+          shadow = mix(0.12, 1.0, smoothstep(0.985, 1.015, miss));
         }
       }
 
@@ -67,5 +66,7 @@
       // エアライトへ alpha を掛けるのは、背景の空を隠したぶんだけ足し戻す
       // ため (乗算済みアルファ。隠していない画素の空はそのまま背後に残る)
       c = c * uExt + skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain * alpha;
-      gl_FragColor = vec4(tonemap(c), alpha);
+      // c は透過率込みの光。非線形のトーンマップ後に乗算済みアルファへ戻す。
+      // 先に alpha を掛けたまま変換すると、薄い C 環まで白く浮いてしまう。
+      gl_FragColor = vec4(tonemap(c / max(alpha, 1e-4)) * alpha, alpha);
     }
