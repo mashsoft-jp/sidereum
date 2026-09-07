@@ -125,6 +125,9 @@
     { ja: "リオデジャネイロ", en: "Rio de Janeiro", lat: -22.91, lon: -43.17, tz: "America/Sao_Paulo" },
     { ja: "ケープタウン", en: "Cape Town", lat: -33.92, lon: 18.42, tz: "Africa/Johannesburg" },
     { ja: "レイキャビク", en: "Reykjavík", lat: 64.15, lon: -21.94, tz: "Atlantic/Reykjavik" },
+    // 極点の表示基準として経度0°・UTCを採用 (基地の現地時刻ではない)。
+    { ja: "北極点", en: "North Pole", lat: 90, lon: 0, tz: "UTC" },
+    { ja: "南極点", en: "South Pole", lat: -90, lon: 0, tz: "UTC" },
   ];
   // 観測地に重なる都市 (無ければ null)
   const siteCity = () => CITIES.find(
