@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-const ctx = vm.createContext({ Math, Float32Array, localStorage: { getItem: () => null } });
+const ctx = vm.createContext({ Math: Object.assign(Object.create(Math), {random: () => 0.5}), Float32Array, localStorage: { getItem: () => null } });
 vm.runInContext(`
   const SHOWERS = [], SPORADIC = {zhr:0, acc:0};
   let simDays=100, playing=true, daysPerSec=1/86400, groundView=true, surfaceBody='earth';
@@ -35,4 +35,28 @@ run('meteors.push({t0:metClock,dur:1,tau:1}); updateMeteors(10)');
 assert.equal(run('meteors.length'),0,'タブ復帰で古い光跡を消す');
 run('meteors.push({t0:metClock,dur:1,tau:1}); surfaceBody="moon"; updateMeteors(10.1)');
 assert.equal(run('meteors.length'),0,'月面には表示しない');
-console.log('meteor-test: speed / pause / lifetime / jump / reverse / resume / moon passed');
+// 低いフレームレートでも待ち時間を積み上げ、実際の光跡を生成する。
+run(`
+  surfaceBody='earth'; daysPerSec=1/86400; metPrevSec=-1;
+  var gAz=0, gAlt=Math.PI/2;
+  const testShower={zhr:120,acc:0,v:35};
+  MET_ALL.unshift(testShower);
+  function showerZhr(s){return s.zhr;}
+  metRadiantG=function(s,out){out[0]=0;out[1]=1;out[2]=0;};
+  let emitted=0;
+  const originalSpawn=metSpawn;
+  metSpawn=function(...args){
+    const before=meteors.length;
+    originalSpawn(...args);
+    emitted+=meteors.length-before;
+  };
+  updateMeteors(0);
+  for(let i=1;i<=1000;i++){
+    simDays+=0.6/86400;
+    updateMeteors(i*0.6);
+  }
+`);
+assert.ok(run('emitted')>0,'0.6秒間隔の描画でも120個/時の群から光跡が生成される');
+assert.ok(Math.abs(run('testShower.acc')-run('(120*MET_ZSCALE*(1-Math.cos(metConeHalf()))/6)%1'))<1e-4,
+  '描画遅延で出現待ちの端数を失わない');
+console.log('meteor-test: speed / pause / lifetime / jump / reverse / resume / moon / slow frames passed');

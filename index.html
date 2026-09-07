@@ -11728,9 +11728,9 @@
     const dtReal = first ? 0 : Math.max(0, nowSec - metPrevSec);
     const dtSim = first ? 0 : (simDays - metPrevSim) * 86400;
     const expected = playing ? Math.max(0, daysPerSec * 86400 * dtReal) : 0;
-    // 日時の直接変更・逆行・タブ復帰では古い光跡と発生の繰越を捨てる。
+    // 日時の直接変更・逆行では古い光跡と発生の繰越を捨てる。
     // ツアー終端の減速は expected 以下なので、通常の時間経過として扱える。
-    const reset = first || dtReal > 0.5 || dtSim < -0.0001
+    const reset = first || dtSim < -0.0001
       || dtSim > expected + Math.max(0.01, expected * 0.05);
     metPrevSec = nowSec;
     metPrevSim = simDays;
@@ -11741,6 +11741,9 @@
       for (const s of MET_ALL) s.acc = 0;
     }
     if (!enabled) return;  // 月面には大気が無いので流星は光らない
+    // 描画の遅延だけで出現待ちをやり直さない。タブ復帰の古い光跡は消すが、
+    // 発生数と寿命は経過したシミュレーション時間で進める。
+    if (dtReal > 5) meteors.length = 0;
     const dt = reset || !playing ? 0 : Math.max(0, dtSim);
     metClock += dt;
     for (let i = meteors.length - 1; i >= 0; i--) {
