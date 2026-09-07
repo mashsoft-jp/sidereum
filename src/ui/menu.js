@@ -204,7 +204,7 @@
       `build ${d.getFullYear()}/${p2(d.getMonth() + 1)}/${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
   })();
 
-  // 天体リストの表示/非表示 (« で左へ引っ込み、左端の » で出てくる。モバイルは初期非表示)
+  // 天体リストの表示/非表示 (ボタンの位置で展開。モバイルは初期非表示)
   let navVisible = !window.matchMedia("(max-width: 720px)").matches;
   const navCollapseBtn = document.getElementById("navCollapse");
   const navExpandBtn = document.getElementById("navExpand");
@@ -212,7 +212,7 @@
     document.getElementById("app").classList.toggle("navHidden", !navVisible);
     navCollapseBtn.title = T().menuNavHide;
     navExpandBtn.title = T().menuNavShow;
-    document.querySelectorAll(".navLandscapeLabel").forEach(el => { el.textContent = T().menuNavLabel; });
+    document.querySelectorAll(".navListLabel").forEach(el => { el.textContent = T().menuNavLabel; });
   }
   navCollapseBtn.addEventListener("click", () => { navVisible = false; applyNavVisible(); });
   navExpandBtn.addEventListener("click", () => { navVisible = true; applyNavVisible(); });

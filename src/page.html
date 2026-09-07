@@ -123,7 +123,7 @@
   <div id="welcome"></div>
 
   <div id="navPanel" class="hud">
-    <button id="navCollapse" aria-label="リストを隠す"><span class="navLandscapeLabel">天体リスト</span><span class="navEdgeGlyph" aria-hidden="true">«</span><span class="navLandscapeClose" aria-hidden="true">×</span></button>
+    <button id="navCollapse" aria-label="リストを隠す"><svg class="navListIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="12" cy="12" r="5.5"/><ellipse cx="12" cy="12" rx="11" ry="3.2" transform="rotate(-28 12 12)"/></svg><span class="navListLabel">天体リスト</span><span class="navListClose" aria-hidden="true">×</span></button>
     <!-- 各行の絵だけのトグルと同じ絵をここにも出し、絵と語を結びつける
          (絵は applyLang が入れる。文字だけ差し替えられるよう span で分ける) -->
     <div id="masterToggles">
@@ -132,7 +132,7 @@
     </div>
     <nav id="nav" aria-label="天体を選択"></nav>
   </div>
-  <button id="navExpand" aria-label="リストを表示"><span class="navEdgeGlyph" aria-hidden="true">»</span><span class="navLandscapeLabel">天体リスト</span></button>
+  <button id="navExpand" aria-label="リストを表示"><svg class="navListIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="12" cy="12" r="5.5"/><ellipse cx="12" cy="12" rx="11" ry="3.2" transform="rotate(-28 12 12)"/></svg><span class="navListLabel">天体リスト</span></button>
 
   <div id="clock" class="hud">
     <div class="dtrow">
