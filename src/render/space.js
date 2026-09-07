@@ -361,8 +361,11 @@
         // camZoom を掛けるので見かけの角度が一定になる = 拡大すれば大きく見える
         // 探査機視点で乗っている機体だけ、近づくほど大きく描く (tourRideMag)
         const rideMag = tourRide && pr.key === tourRideOn ? tourRideMag : 1;
+        // 縦持ちの追走は構図のためカメラを引くので、その距離で主役を点にしない。
+        // 機体の成長・着陸時の縮小は tourRideMag 側で引き続き制御する。
+        const portraitRide = W < H && tourRide && pr.key === tourRideOn;
         const px = PROBE_PX * camZoom * rideMag *
-                   Math.min(1, near / (Math.hypot(dx, dy, dz) || 1));
+                   (portraitRide ? 1 : Math.min(1, near / (Math.hypot(dx, dy, dz) || 1)));
         if (px < 3) continue;
         pr.px = px;
         any = true;
@@ -641,4 +644,3 @@
 
     drawOverlay();
   }
-

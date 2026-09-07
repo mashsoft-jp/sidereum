@@ -582,7 +582,9 @@
     // フライバイでは機体が惑星の脇へ回り込んでいく動きが画に出る (遠くを直進
     // しているうちは進行方向が目標を向いていて、この項は効かない)。
     // 履歴ではなく現在の位置関係だけで決まるので、時計が止まればカメラも止まる
-    const off = Math.tan(eFov() * 0.5 * 0.42);
+    // 縦持ちは狭い横幅を基準にする。高さだけで決めると機体が左右へ見切れる。
+    const portrait = W < H;
+    const off = Math.tan(eFov() * 0.5 * 0.42) * Math.min(1, W / H);
     let lx = -off * 0.80 * rx + off * 0.55 * ux;
     let ly =                    off * 0.55 * uy;
     let lz = -off * 0.80 * rz + off * 0.55 * uz;
@@ -602,7 +604,16 @@
     // (機体の画素数は camZoom に比例する)。天体だけが寄りのぶん大きくなる
     tourRideMag = (tourRideRef > 0
       ? Math.min(3.2, Math.max(1, Math.sqrt(tourRideRef / bd))) : 1) / tourRideZoom;
-    const back = bd * 0.06;
+    let back = bd * 0.06;
+    if (portrait) {
+      // 実際の機体の軌道は変えず、カメラだけ引く。環を含む天体の直径を
+      // 横幅の76%以内に収め、前景の機体にも余白を残す。
+      const radius = bodyR(tb) * (tb.ring ? RING_OUT : tb.obl ? Math.max(...tb.obl) : 1);
+      const fit = radius / Math.sin(Math.atan(Math.tan(eFov() / 2) * W / H * 0.76));
+      back = Math.max(back, fit - bd);
+      // ここでの機体サイズは投影半径。縦長の画面では成長の上限も横幅で決める。
+      tourRideMag = Math.min(tourRideMag, W * 0.12 / (PROBE_PX * camZoom));
+    }
     const e = [p[0] + back * (bx - lx),
                p[1] + back * (by - ly),
                p[2] + back * (bz - lz)];
@@ -653,7 +664,8 @@
     if (tourRideSpd > 0 && tourRideRef > 0) {
       // 目標に近いほど遅く。加えて warm があれば出だしも遅くする — 距離だけで
       // 決めると、出発直後 (まだ遠い) が一番速くなり、分離の瞬間が一瞬で終わる
-      let f = Math.min(1, d / tourRideRef);
+      // 縦持ちでカメラを引いた量が再生速度に影響しないよう、機体の距離を使う。
+      let f = Math.min(1, (portrait ? bd * 1.06 : d) / tourRideRef);
       if (tourRideWarm > 0) f = Math.min(f, (simDays - tourRideT0) / tourRideWarm);
       daysPerSec = tourRideSpd * Math.max(tourRideSlow, f);
     }
@@ -943,8 +955,6 @@
     startTour(t, isFinite(n) ? n - 1 : 0);
     return true;
   }
-
-
 
 
 

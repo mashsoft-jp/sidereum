@@ -26,5 +26,7 @@ jobs:
         run: node tools/ar-test.mjs
       - name: 天体の構図と周辺表示を確かめる
         run: node tools/framing-test.mjs
+      - name: 縦持ちの探査機ツアーの構図を確かめる
+        run: node tools/tour-ride-test.mjs
       - name: 流星の再生速度と寿命を確かめる
         run: node tools/meteor-test.mjs
