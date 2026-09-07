@@ -1169,6 +1169,17 @@
     white-space: nowrap;
   }
   #hint.fade { opacity: 0; }
+  /* ---- 一言だけ出して消える通知 (検索で地上ビューへ切り替えたとき等)。
+     #hint は狭い画面で消しているので、こちらは全サイズで出す ---- */
+  #toast {
+    position: absolute; left: 50%; top: 38%; transform: translateX(-50%);
+    padding: 8px 16px; border-radius: 16px;
+    background: rgba(12, 16, 28, 0.86); border: 1px solid var(--line);
+    color: var(--text); font-size: 12px; letter-spacing: 0.06em; white-space: nowrap;
+    pointer-events: none; z-index: 30; opacity: 0; transition: opacity 0.4s;
+  }
+  #toast.show { opacity: 1; }
+  #toast[hidden] { display: block; }   /* hidden は opacity で消すあいだも位置を保つための保険 */
 
   /* 高解像度テクスチャの保存確認。ツアーバーと同じ位置・幅に置く
      (同時に出ることはない — ツアー中はメニューを開けない) */
@@ -1705,6 +1716,7 @@
     <button id="infoMore" aria-expanded="false"></button>
   </aside>
 
+  <div id="toast" hidden></div>
   <div id="hint">ドラッグで回転 ・ ホイール / ピンチでズーム (Shift+で距離) ・ 天体クリックで接近</div>
 
   <!-- 高解像度テクスチャを ON にした直後の確認。先に適用してから「保存してよいか」を
@@ -2727,6 +2739,7 @@
         tag: "#Sidereum",
       },
       search: "検索", searchPh: "天体・星座・星雲・流星群を検索", searchNone: "見つかりません",
+      searchToGround: "地上ビューに切り替えました", searchBelow: "いまは地平線の下です",
       sBody: "天体", sSat: "衛星", sProbe: "探査機", sStar: "恒星", sDso: "星雲・星団", sConst: "星座", sShower: "流星群",
       menuFs: "全画面表示",
       menuFsExit: "全画面を終了",
@@ -2853,6 +2866,7 @@
         tag: "#Sidereum",
       },
       search: "Search", searchPh: "Search bodies, constellations, deep-sky, showers", searchNone: "No matches",
+      searchToGround: "Switched to the ground view", searchBelow: "Below the horizon right now",
       sBody: "Body", sSat: "Moon", sProbe: "Probe", sStar: "Star", sDso: "Deep-sky", sConst: "Constellation", sShower: "Shower",
       menuFs: "Fullscreen",
       menuFsExit: "Exit fullscreen",
@@ -14756,6 +14770,20 @@
     setMenu(false);
   });
 
+  // ---------- 一言の通知 (数秒で消える。狭い画面でも出す) ----------
+  const toastEl = document.getElementById("toast");
+  let toastTimer = 0;
+  function showToast(text, ms) {
+    toastEl.textContent = text;
+    toastEl.hidden = false;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toastEl.classList.remove("show");
+      toastTimer = setTimeout(() => { toastEl.hidden = true; }, 450);
+    }, ms || 2600);
+  }
+
   // ---------- ヒント (ビューに応じて出し分け・切替時に再表示) ----------
   const hint = document.getElementById("hint");
   let hintTimer = setTimeout(hideHint, 9000);
@@ -16141,32 +16169,23 @@
   // 注視点をはさんで反対側へカメラを回して、天球のその方向を向く (空は視点中心の
   // 天球なので向きだけが効く)。地上へ飛ばしていた頃は「戸惑う」と言われた
   const _sg = [0, 0, 0];
+  // 空に貼りついたもの (星座・恒星・星雲星団・流星群) は地上ビューで見る。宇宙ビュー
+  // から選んだら地上へ切り替えて一言出す。宇宙ビューで向きだけ合わせる案 (2026-09-06) は、
+  // カメラが常に太陽を見るので星座の中央に太陽と内惑星が重なり、最遠まで引いても外縁
+  // 天体の軌道が画面いっぱいに残って読めなかった (2026-09-08)。天体 (惑星・衛星・彗星・
+  // 探査機) はいまのビューのまま選ぶので、宇宙ビューの検索が無くなるわけではない
+  function toGroundForSky() {
+    if (groundView) return false;
+    enterGround();
+    showToast(T().searchToGround);
+    return true;
+  }
+  // 空の方向 d (ワールドの単位ベクトル) を fovDeg の画角で向く
   function aimSkyDir(d, fovDeg, what) {
     if (what === "dso" && !dsoOn) menuDsoBtn.click();
     if ((what === "const" || what === "star") && !showConst) menuConstBtn.click();   // 星の名前も星座の切替に従う
+    const jumped = toGroundForSky();
     const l = Math.hypot(d[0], d[1], d[2]) || 1;
-    if (!groundView) {
-      // カメラの位置は注視点から (cos p cos y, sin p, cos p sin y) の向き。見る向きは
-      // その逆なので、目標の方向 u に対してカメラは −u 側に置く (select の lit と同じ約束)
-      const ox = -d[0] / l, oy = -d[1] / l, oz = -d[2] / l;
-      let dy = (Math.atan2(oz, ox) - cam.yawTgt) % (2 * Math.PI);
-      if (dy > Math.PI) dy -= 2 * Math.PI;
-      if (dy < -Math.PI) dy += 2 * Math.PI;
-      cam.yawTgt += dy;
-      cam.pitchTgt = Math.max(-1.52, Math.min(1.52, Math.asin(Math.max(-1, Math.min(1, oy)))));
-      if (what === "const") {
-        // 星座は拡大率を 1 倍・距離を最遠にする。星座線は天球に貼りついているので
-        // 距離で大きさは変わらないが、近くにいると惑星の軌道や天体が手前に重なって
-        // 星座が読めない (ユーザー指定 2026-09-08)。拡大率は 1 倍で画角いっぱいに
-        // 取る — 星座の広がり (数十度) に合わせて絞ると、はみ出すものが多い
-        camZoomTgt = 1;
-        cam.distTgt = ZD_MAX;
-      } else {
-        camZoomTgt = Math.max(1, Math.min(MAG_MAX, FOV / (fovDeg * DEG)));
-      }
-      resetPan();
-      return;
-    }
     buildObsFrame();
     select(null, false);
     gTrack = false; gRadTrack = "";
@@ -16180,20 +16199,20 @@
     gAzTgt = gAz + dz;
     gAltTgt = Math.max(-1.3, Math.min(GALT_MAX, alt));
     gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, fovDeg * DEG));
+    // 宇宙から入った直後は「前の向き」に意味が無いので、回さずにその方向から始める
+    if (jumped) { gAz = gAzTgt; gAlt = gAltTgt; gFov = gFovTgt; }
+    // 地平線の下なら地面のほうを向くことになる。真っ暗な画面の理由を一言添える
+    if (alt < 0) showToast((jumped ? T().searchToGround + " · " : "") + T().searchBelow, 3200);
     updateGroundUI();
   }
   function goSearchShower(key) {
-    if (!groundView) {
-      // 宇宙ビューでは放射点の方向を向くだけ (流星は地上ビューでしか降らない)
-      const sh = SHOWERS.find((x) => x.key === key);
-      if (sh) aimSkyDir(sh.dirW, 62, "shower");
-      return;
-    }
+    const jumped = toGroundForSky();
     buildObsFrame();
     setMeteor(true);
     select(null, false);
-    aimGroundAtRadiant(key, false);
+    aimGroundAtRadiant(key, jumped);
     gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, 62 * DEG));
+    if (jumped) gFov = gFovTgt;
     updateGroundUI();
   }
 

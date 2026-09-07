@@ -235,6 +235,20 @@
     setMenu(false);
   });
 
+  // ---------- 一言の通知 (数秒で消える。狭い画面でも出す) ----------
+  const toastEl = document.getElementById("toast");
+  let toastTimer = 0;
+  function showToast(text, ms) {
+    toastEl.textContent = text;
+    toastEl.hidden = false;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toastEl.classList.remove("show");
+      toastTimer = setTimeout(() => { toastEl.hidden = true; }, 450);
+    }, ms || 2600);
+  }
+
   // ---------- ヒント (ビューに応じて出し分け・切替時に再表示) ----------
   const hint = document.getElementById("hint");
   let hintTimer = setTimeout(hideHint, 9000);

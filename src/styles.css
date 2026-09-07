@@ -1153,6 +1153,17 @@
     white-space: nowrap;
   }
   #hint.fade { opacity: 0; }
+  /* ---- 一言だけ出して消える通知 (検索で地上ビューへ切り替えたとき等)。
+     #hint は狭い画面で消しているので、こちらは全サイズで出す ---- */
+  #toast {
+    position: absolute; left: 50%; top: 38%; transform: translateX(-50%);
+    padding: 8px 16px; border-radius: 16px;
+    background: rgba(12, 16, 28, 0.86); border: 1px solid var(--line);
+    color: var(--text); font-size: 12px; letter-spacing: 0.06em; white-space: nowrap;
+    pointer-events: none; z-index: 30; opacity: 0; transition: opacity 0.4s;
+  }
+  #toast.show { opacity: 1; }
+  #toast[hidden] { display: block; }   /* hidden は opacity で消すあいだも位置を保つための保険 */
 
   /* 高解像度テクスチャの保存確認。ツアーバーと同じ位置・幅に置く
      (同時に出ることはない — ツアー中はメニューを開けない) */

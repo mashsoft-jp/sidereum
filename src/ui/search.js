@@ -131,32 +131,23 @@
   // 注視点をはさんで反対側へカメラを回して、天球のその方向を向く (空は視点中心の
   // 天球なので向きだけが効く)。地上へ飛ばしていた頃は「戸惑う」と言われた
   const _sg = [0, 0, 0];
+  // 空に貼りついたもの (星座・恒星・星雲星団・流星群) は地上ビューで見る。宇宙ビュー
+  // から選んだら地上へ切り替えて一言出す。宇宙ビューで向きだけ合わせる案 (2026-09-06) は、
+  // カメラが常に太陽を見るので星座の中央に太陽と内惑星が重なり、最遠まで引いても外縁
+  // 天体の軌道が画面いっぱいに残って読めなかった (2026-09-08)。天体 (惑星・衛星・彗星・
+  // 探査機) はいまのビューのまま選ぶので、宇宙ビューの検索が無くなるわけではない
+  function toGroundForSky() {
+    if (groundView) return false;
+    enterGround();
+    showToast(T().searchToGround);
+    return true;
+  }
+  // 空の方向 d (ワールドの単位ベクトル) を fovDeg の画角で向く
   function aimSkyDir(d, fovDeg, what) {
     if (what === "dso" && !dsoOn) menuDsoBtn.click();
     if ((what === "const" || what === "star") && !showConst) menuConstBtn.click();   // 星の名前も星座の切替に従う
+    const jumped = toGroundForSky();
     const l = Math.hypot(d[0], d[1], d[2]) || 1;
-    if (!groundView) {
-      // カメラの位置は注視点から (cos p cos y, sin p, cos p sin y) の向き。見る向きは
-      // その逆なので、目標の方向 u に対してカメラは −u 側に置く (select の lit と同じ約束)
-      const ox = -d[0] / l, oy = -d[1] / l, oz = -d[2] / l;
-      let dy = (Math.atan2(oz, ox) - cam.yawTgt) % (2 * Math.PI);
-      if (dy > Math.PI) dy -= 2 * Math.PI;
-      if (dy < -Math.PI) dy += 2 * Math.PI;
-      cam.yawTgt += dy;
-      cam.pitchTgt = Math.max(-1.52, Math.min(1.52, Math.asin(Math.max(-1, Math.min(1, oy)))));
-      if (what === "const") {
-        // 星座は拡大率を 1 倍・距離を最遠にする。星座線は天球に貼りついているので
-        // 距離で大きさは変わらないが、近くにいると惑星の軌道や天体が手前に重なって
-        // 星座が読めない (ユーザー指定 2026-09-08)。拡大率は 1 倍で画角いっぱいに
-        // 取る — 星座の広がり (数十度) に合わせて絞ると、はみ出すものが多い
-        camZoomTgt = 1;
-        cam.distTgt = ZD_MAX;
-      } else {
-        camZoomTgt = Math.max(1, Math.min(MAG_MAX, FOV / (fovDeg * DEG)));
-      }
-      resetPan();
-      return;
-    }
     buildObsFrame();
     select(null, false);
     gTrack = false; gRadTrack = "";
@@ -170,20 +161,20 @@
     gAzTgt = gAz + dz;
     gAltTgt = Math.max(-1.3, Math.min(GALT_MAX, alt));
     gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, fovDeg * DEG));
+    // 宇宙から入った直後は「前の向き」に意味が無いので、回さずにその方向から始める
+    if (jumped) { gAz = gAzTgt; gAlt = gAltTgt; gFov = gFovTgt; }
+    // 地平線の下なら地面のほうを向くことになる。真っ暗な画面の理由を一言添える
+    if (alt < 0) showToast((jumped ? T().searchToGround + " · " : "") + T().searchBelow, 3200);
     updateGroundUI();
   }
   function goSearchShower(key) {
-    if (!groundView) {
-      // 宇宙ビューでは放射点の方向を向くだけ (流星は地上ビューでしか降らない)
-      const sh = SHOWERS.find((x) => x.key === key);
-      if (sh) aimSkyDir(sh.dirW, 62, "shower");
-      return;
-    }
+    const jumped = toGroundForSky();
     buildObsFrame();
     setMeteor(true);
     select(null, false);
-    aimGroundAtRadiant(key, false);
+    aimGroundAtRadiant(key, jumped);
     gFovTgt = Math.max(gMinFov(), Math.min(MAX_FOV, 62 * DEG));
+    if (jumped) gFov = gFovTgt;
     updateGroundUI();
   }
 
