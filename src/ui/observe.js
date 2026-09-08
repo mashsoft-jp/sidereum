@@ -281,21 +281,25 @@
   }
 
   let infoTab = "facts", currentInfoBody = null, lastObsStr = "";
-  // 「詳しく見る」: 狭い画面で情報カードを 160px から 50vh へ広げる。
+  // 「詳しく見る」: 縦持ちの要約カードから全項目と説明へ広げる。
   // 開いた状態は天体を選び直しても持ち越す (詳細を読み比べたいはずなので)
   const infoMoreBtn = document.getElementById("infoMore");
   let infoTall = false;
   function syncInfoMore() {
     const t = T();
     infoPanel.classList.toggle("tall", infoTall);
+    infoPanel.classList.toggle("noSummaryRows", !document.getElementById("infoRows").children.length);
     infoMoreBtn.textContent = infoTall ? t.obs.less : t.obs.more;
     infoMoreBtn.setAttribute("aria-expanded", infoTall ? "true" : "false");
-    // 畳んだ状態で中身が収まっているなら、押しても何も起きないので出さない。
-    // 広げているときは「折りたたむ」が要るので必ず出す
-    infoMoreBtn.style.visibility =
-      (infoTall || infoPanel.scrollHeight > infoPanel.clientHeight + 2) ? "" : "hidden";
+    // 要約では全項目を隠しているので、展開ボタンを常に用意する。
+    // PC・横持ちでは CSS でボタンごと隠す。
+    infoMoreBtn.style.visibility = "";
   }
-  infoMoreBtn.addEventListener("click", () => { infoTall = !infoTall; syncInfoMore(); });
+  infoMoreBtn.addEventListener("click", () => {
+    infoTall = !infoTall;
+    infoPanel.scrollTop = 0;
+    syncInfoMore();
+  });
 
   const tabFactsBtn = document.getElementById("tabFacts");
   const tabObsBtn = document.getElementById("tabObs");
@@ -351,7 +355,7 @@
         ? t.imgPrefix + cr + (MONO_TEX.has(body.key) ? t.monoTex : "")
         : t.procTex;
     }
-    syncInfoMore();   // 中身を入れ終えてから測る (溢れているかで出し分けるため)
+    syncInfoMore();   // 要約と詳細の表示状態を更新
   }
   function openInfo(body) { currentInfoBody = body; renderInfoBody(); infoPanel.classList.add("open"); }
   // 観測モード表示中は時間経過に合わせて数値を更新
