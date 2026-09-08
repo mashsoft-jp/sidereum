@@ -282,7 +282,7 @@
 
   let infoTab = "facts", currentInfoBody = null, lastObsStr = "";
   // 「詳しく見る」: 縦持ちの要約カードから全項目と説明へ広げる。
-  // 開いた状態は天体を選び直しても持ち越す (詳細を読み比べたいはずなので)
+  // 開いたままの天体切り替えでは状態を保持し、閉じた後は要約から開く。
   const infoMoreBtn = document.getElementById("infoMore");
   let infoTall = false;
   function syncInfoMore() {
@@ -357,7 +357,15 @@
     }
     syncInfoMore();   // 要約と詳細の表示状態を更新
   }
-  function openInfo(body) { currentInfoBody = body; renderInfoBody(); infoPanel.classList.add("open"); }
+  function openInfo(body) {
+    if (!infoPanel.classList.contains("open")) {
+      infoTall = false;
+      infoPanel.scrollTop = 0;
+    }
+    currentInfoBody = body;
+    renderInfoBody();
+    infoPanel.classList.add("open");
+  }
   // 観測モード表示中は時間経過に合わせて数値を更新
   function updateObs() {
     // 月面ビューへ切り替えただけでは情報パネルは再描画されないので、
