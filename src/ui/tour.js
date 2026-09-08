@@ -61,7 +61,10 @@
   // トークンの前後の空白ごと拾う。アイコンにはその空白が要るが、日本語で語に
   // 戻したときは「パネルの 「カメラ」 プルダウン」と間延びするので落とす
   function tourTextHTML(s) {
-    return escHTML(s).replace(/( ?)\{(\w+)\}( ?)/g, (m, pre, k, post) => {
+    return escHTML(s)
+      .replace(/\b\d{4}年\d{1,2}月\d{1,2}日|\b\d{1,2} (?:January|February|March|April|May|June|July|August|September|October|November|December) \d{4}\b/g,
+        date => '<span class="tourDate">' + date + '</span>')
+      .replace(/( ?)\{(\w+)\}( ?)/g, (m, pre, k, post) => {
       if (k === "bodyList") {
         const icon = navExpandBtn.querySelector(".navListIcon");
         return pre + '<span class="inlIcon" role="img" aria-label="' + T().menuNavLabel + '">' + icon.outerHTML + "</span>" + post;
@@ -84,6 +87,7 @@
   // レイヤを作る指定は #tourBar 側から落としてあり、これはその上での保険
   function setTourText(html) {
     tourTextEl.innerHTML = html;
+    tourTextEl.scrollTop = 0;
     tourTextEl.style.opacity = "0.999";
     requestAnimationFrame(() => { tourTextEl.style.opacity = ""; });
   }
