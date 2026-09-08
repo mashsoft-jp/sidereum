@@ -474,6 +474,7 @@
     } else {
       followKey = null;
     }
+    stepEnjoymentOrbit(dtc);
     const k = 1 - Math.exp(-dtc * 5.5);
     stepFraming(k);
     cam.focus[0] += (cam.focusTgt[0] - cam.focus[0]) * k;

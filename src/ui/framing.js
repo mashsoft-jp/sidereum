@@ -14,7 +14,7 @@
     frameContextBtn.textContent = ja ? "周辺" : "Surroundings";
     frameContextBtn.title = ja ? "天体の周囲を見渡す" : "See the surrounding system";
     frameEnjoyBtn.textContent = ja ? "鑑賞" : "Enjoy";
-    frameEnjoyBtn.title = ja ? "見やすい方向へ移動し、パネルとガイドを隠して鑑賞" : "Find a scenic angle and hide panels and guides";
+    frameEnjoyBtn.title = ja ? "見やすい方向へ移動し、天体の周りをゆっくり回って鑑賞" : "Find a scenic angle and slowly orbit the body";
     immersiveExitBtn.textContent = ja ? "戻る · Esc" : "Return · Esc";
     immersiveSaveBtn.textContent = ja ? "画像を保存" : "Save image";
     document.getElementById("frameActions").setAttribute("aria-label", ja ? "天体の見せ方" : "Frame the body");
@@ -215,9 +215,32 @@
     frameLayout.y += (y - frameLayout.y) * k;
   }
 
+  // 鑑賞の周回はシミュレーションの再生速度から独立した実時間。
+  // 一周約4分。接近の完了後と手動操作のあとに間を置き、徐々に動き出す。
+  let enjoymentWait = 0, enjoymentSpeed = 0;
+  function pauseEnjoymentOrbit() {
+    if (immersiveView) { enjoymentWait = 3; enjoymentSpeed = 0; }
+  }
+  for (const event of ["pointerdown", "pointerup", "pointercancel", "wheel", "keydown"]) {
+    window.addEventListener(event, pauseEnjoymentOrbit, { passive: true });
+  }
+  function stepEnjoymentOrbit(dt) {
+    if (!immersiveView || groundView || tourActive || !(selected || lastCenter) ||
+        matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      enjoymentSpeed = 0; return;
+    }
+    if (cameraFlight || pointers.size || snapPending || snapDlgEl.classList.contains("open") || document.hidden) {
+      enjoymentWait = 3; enjoymentSpeed = 0; return;
+    }
+    if (enjoymentWait > 0) { enjoymentWait = Math.max(0, enjoymentWait - dt); return; }
+    enjoymentSpeed += (Math.PI / 120 - enjoymentSpeed) * (1 - Math.exp(-dt / 2));
+    cam.yawTgt += enjoymentSpeed * dt;
+  }
+
   function setImmersive(v) {
     if (v && (groundView || tourActive)) return;
     immersiveView = v;
+    enjoymentWait = 3; enjoymentSpeed = 0;
     frameApp.classList.toggle("immersive", v);
     immersiveBar.hidden = !v;
     frameLayout.dirty = true;
