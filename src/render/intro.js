@@ -21,7 +21,8 @@
   let introOnEnd = null;      // ガイドを出すときに呼ぶもの
   let introShown = false;     // ガイドをもう出したか
   let introLogo = null;       // 導入中だけ中央に重ねるワードマーク
-  let introLogoSize = 0;
+  let introLogoStart = null;
+  let introBackdrop = null;
   let introDist = 0, introYaw = 0, introPitch = 0;   // 着地点 (開始時に控える)
 
   function introActive() { return introOn; }
@@ -43,7 +44,7 @@
     introOn = true;
     introShown = false;
     introT0 = 0;
-    introLogoSize = 0;
+    introLogoStart = null;
     introDist = cam.distTgt;
     introYaw = cam.yawTgt;
     introPitch = cam.pitchTgt;
@@ -51,6 +52,11 @@
     cam.yaw = cam.yawTgt = introYaw - INTRO_YAW;
     cam.pitch = cam.pitchTgt = INTRO_PITCH;
     introApp.classList.add("introMode");
+    introBackdrop = document.createElement("div");
+    introBackdrop.id = "introBackdrop";
+    introApp.appendChild(introBackdrop);
+    welcomeEl.classList.remove("introLanded");
+    welcomeEl.classList.add("introPrepare");
     introLogo = document.createElement("div");
     introLogo.id = "introLogo";
     introLogo.className = "logo";
@@ -65,6 +71,9 @@
     if (introShown) return;
     introShown = true;
     if (introLogo) { introLogo.remove(); introLogo = null; }
+    if (introBackdrop) { introBackdrop.remove(); introBackdrop = null; }
+    welcomeEl.classList.remove("introPrepare", "introDock");
+    welcomeEl.classList.add("introLanded");
     introApp.classList.remove("introMode");
     // 消えていた HUD がいきなり現れないよう、1回だけ浮かび上がらせる
     introApp.classList.add("introOut");
@@ -89,20 +98,35 @@
     if (!introOn) return;
     if (!introT0) introT0 = nowSec;
     const t = nowSec - introT0;
+    // 方位の移動が始まる最初のフレームから0.3秒後に表示を始める。
+    const fade = Math.max(0, Math.min(1, (t - 0.3) / 0.9));
+    introLogo.style.opacity = String(fade);
+    introBackdrop.style.opacity = String(fade);
     if (t >= INTRO_SEC + INTRO_LOGO_SEC) { endIntro(); return; }
     if (t >= INTRO_SEC) {
       // カメラを着地点に固定してから、中央のロゴだけを小さくする。
       cam.dist = cam.distTgt = introDist;
       cam.yaw = cam.yawTgt = introYaw;
       cam.pitch = cam.pitchTgt = introPitch;
-      if (!introLogoSize) {
-        introLogoSize = parseFloat(getComputedStyle(introLogo).fontSize);
-        introLogo.style.animation = "none";
+      if (!introLogoStart) {
+        const r = introLogo.getBoundingClientRect();
+        introLogoStart = { x: r.x + r.width / 2, y: r.y + r.height / 2,
+          size: parseFloat(getComputedStyle(introLogo).fontSize) };
+        welcomeEl.classList.remove("introPrepare");
+        welcomeEl.classList.add("introDock");
       }
-      const u = (t - INTRO_SEC) / INTRO_LOGO_SEC;
-      const e = u * u * (3 - 2 * u);
-      introLogo.style.fontSize = (introLogoSize + (18 - introLogoSize) * e) + "px";
-      introLogo.style.opacity = String(1 - Math.max(0, (u - 0.7) / 0.3));
+      // 実際のダイアログを測り、縦持ち・横持ちでも見出しにぴたりと合わせる。
+      const target = document.getElementById("welcomeLogo");
+      const r = target.getBoundingClientRect(), appRect = introApp.getBoundingClientRect();
+      const size = parseFloat(getComputedStyle(target).fontSize);
+      const u = (t - INTRO_SEC) / INTRO_LOGO_SEC, e = u * u * (3 - 2 * u);
+      introLogo.style.left = (introLogoStart.x + (r.x + r.width / 2 - introLogoStart.x) * e - appRect.x) + "px";
+      introLogo.style.top = (introLogoStart.y + (r.y + r.height / 2 - introLogoStart.y) * e - appRect.y) + "px";
+      introLogo.style.fontSize = (introLogoStart.size + (size - introLogoStart.size) * e) + "px";
+      introLogo.style.letterSpacing = (0.13 + 0.13 * e) + "em";
+      introLogo.style.textShadow = "none";
+      welcomeEl.style.setProperty("--introShade", String(0.72 * e));
+      welcomeEl.style.setProperty("--introCard", String(e));
       return;
     }
     // 距離と俯角は間を置いてから動かす。方位だけは最初から一定の速さで

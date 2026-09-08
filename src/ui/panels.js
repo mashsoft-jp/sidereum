@@ -115,7 +115,7 @@
     };
     welcomeEl.innerHTML =
       `<div id="welcomeCard">` +
-        `<h2 class="logo">SIDEREUM<span class="yomi">${c.yomi}</span></h2>` +
+        `<h2 class="logo"><span id="welcomeLogo">SIDEREUM</span><span class="yomi">${c.yomi}</span></h2>` +
         `<p class="lead">${c.lead}</p>` +
         `<ul>${c.rows.map((r) => `<li>${r}</li>`).join("")}</ul>` +
         // 操作方法の一覧はメニューからいつでも開けるので、ここには出さない。
