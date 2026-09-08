@@ -81,6 +81,7 @@
       if (!sp || sp.hidden) continue;
       if (sp.x < -40 || sp.x > W + 40 || sp.y < -40 || sp.y > H + 40) continue;
       const hit = marked === pr || spotB === pr;
+      if (tourProbeDot && spotB === pr) drawSpaceSelection({ x: sp.x, y: sp.y, r: 3 });
       lblPut(bName(pr), sp.x, sp.y - (pr.px ? pr.px * 0.5 : 4) - 8, hit ? LBL_SEL : LBL_PROBE,
              hit ? "rgba(242,178,62,0.95)" : "rgba(180,205,240,0.85)", LF10);
     }
@@ -540,4 +541,3 @@
     perfDraw();           // 計測の表示はいちばん最後 (オーバーレイを消さないため)
     requestAnimationFrame(frame);
   }
-

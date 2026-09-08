@@ -1001,22 +1001,22 @@
           d: "1997-10-15T00:05", play: false, constel: false, spot: "cassini",
           probeIn: true,
           text: {
-            ja: "1997年10月15日打ち上げ。5.7トンの探査機を土星まで直接送れるロケットは" +
-                "当時なく、内側の惑星で重力アシストを重ねて速度を稼ぐ計画が組まれました。",
-            en: "Launched 15 October 1997. No rocket of the day could send 5.7 tonnes straight to Saturn, " +
-                "so the plan was to borrow speed from the inner planets instead.",
+            ja: "1997年10月15日打ち上げ。打ち上げに使うロケットだけでは、5.7トンの探査機を土星まで直接送れないため、" +
+                "内側の惑星で重力アシスト（スイングバイ）を重ねて加速する計画です。",
+            en: "Launched 15 October 1997. The launch vehicle alone cannot send 5.7 tonnes straight to Saturn, " +
+                "so the mission uses gravity-assist swing-bys of the inner planets to accelerate.",
           },
         },
         {
           sel: null, fit: 1.7, a: 0.6, y: 0.9, spot: "cassini", front: null, path: true,
           orbits: TOUR_PLANET_ORBITS, spd: 25, play: true, until: "1998-04-26T12:30",
           text: {
-            ja: "金星を2回、そして地球を1回かすめます。すれ違うたびに惑星の公転運動を" +
-                "少しだけ借りて加速し、内側の太陽系で2年近くかけて外へ向かう勢いを溜めました。" +
-                "土星へ行くのに、まず太陽の方へ向かうことになります。",
-            en: "Twice past Venus, then once past Earth. Each pass borrows a little of the planet's " +
-                "orbital motion, and over nearly two years in the inner Solar System it builds up " +
-                "the speed to head outward — which means starting off sunward.",
+            ja: "金星を2回、そして地球を1回かすめます。惑星の公転運動を利用したスイングバイで加速し、" +
+                "2年近くかけて、太陽系の外側へ向かうための速度を得ます。" +
+                "目的地は土星ですが、まずは太陽の方へ向かいます。",
+            en: "Twice past Venus, then once past Earth. Swing-bys use the planets' orbital motion to accelerate " +
+                "the spacecraft. Over nearly two years in the inner Solar System it builds up " +
+                "the speed to head outward. Saturn is the destination, but the journey begins sunward.",
           },
         },
         {
@@ -1026,7 +1026,7 @@
           sel: "venus", ride: "venus", spot: null, mag: 1, orbits: false, path: false,
           d: "1998-04-26T12:30", spd: 0.012, play: true, until: "1998-04-26T13:20",
           text: {
-            ja: "1998年4月26日、最初のスイングバイは金星でした。高度 284km — " +
+            ja: "1998年4月26日、最初のスイングバイは金星です。高度 284km — " +
                 "厚い雲のすぐ上をかすめ、金星の公転運動によって加速します。",
             en: "26 April 1998: the first swing-by was Venus. It skimmed 284 km above the thick " +
                 "clouds, taking speed from the planet's own motion around the Sun.",
@@ -1046,10 +1046,10 @@
           sel: "earth", ride: "earth", spot: null, mag: 1, orbits: false, path: false,
           d: "1999-08-18T02:00", spd: 0.012, play: true, until: "1999-08-18T03:24",
           text: {
-            ja: "1999年8月18日、最後のスイングバイは地球でした。高度 1,171km — " +
+            ja: "1999年8月18日、地球でスイングバイを行います。高度 1,171km — " +
                 "国際宇宙ステーションの3倍ほどの高さを、秒速19kmで駆け抜けます。" +
                 "ここで得た加速で、ようやく外側へ向かえるようになりました。",
-            en: "18 August 1999: the last swing-by was Earth itself. It tore past 1,171 km up — about " +
+            en: "18 August 1999: Cassini performs a swing-by of Earth. It tore past 1,171 km up — about " +
                 "three times the altitude of the Space Station — at 19 km/s. That kick finally sent " +
                 "it outward.",
           },
@@ -1067,12 +1067,12 @@
           sel: "jupiter", ride: "jupiter", spot: null, mag: 20, orbits: false, path: false,
           d: "2000-12-30T10:05", play: false,
           text: {
-            ja: "2000年12月30日、木星。といっても 970万km — ボイジャーの15倍も離れた" +
-                "遠い通過です。それでも4か月にわたって撮り続け、当時最も精細な木星の" +
+            ja: "2000年12月30日、木星を通過。といっても 970万km — ボイジャー2号の約15倍も離れた距離です。" +
+                "それでも4か月にわたって撮り続け、当時最も精細な木星の" +
                 "全球画像を作りました。このとき木星を回っていたガリレオ探査機と、" +
                 "内と外から同時に観測しています。",
-            en: "30 December 2000, Jupiter — though at 9.7 million km, fifteen times farther out than " +
-                "the Voyagers. Even so it imaged the planet for four months and produced the most " +
+            en: "30 December 2000: Cassini passes Jupiter at 9.7 million km, about fifteen times farther out than " +
+                "Voyager 2. Even so it imaged the planet for four months and produced the most " +
                 "detailed global portrait of Jupiter made up to then, observing alongside the " +
                 "Galileo orbiter already circling below.",
           },
@@ -1082,10 +1082,10 @@
           spot: "cassini", d: "2000-12-30T10:05",
           spd: 130, play: true, until: "2004-06-20",
           text: {
-            ja: "最後の3年半。木星の重力で得た速度で土星へ向かいます。" +
-                "打ち上げからここまで、35億kmを7年近くかけて飛んできました。",
-            en: "Three and a half years to go. Jupiter's gravity carries it the rest of the way to " +
-                "Saturn — 3.5 billion km in nearly seven years since launch.",
+            ja: "木星で最後のスイングバイを終え、いよいよ土星へ向かいます。到着までは、あと3年半です。" +
+                "土星に着くまでの道のりは、打ち上げから約35億km、7年近くに及びます。",
+            en: "After its final swing-by at Jupiter, Cassini heads for Saturn, still three and a half years away. " +
+                "By arrival, it will have travelled 3.5 billion km over nearly seven years since launch.",
           },
         },
         {
@@ -1131,7 +1131,7 @@
           // 太陽向きに合わせておくと、両端とも半分ほど陽が当たった形になる。
           // 周回の位相 (probes.js) は、最後にカッシーニが土星の右下へ来るよう合わせた
           sel: "saturn", ride: null, on: null, km: 350000, lit: false, a: 0.177, y: 0.247,
-          orbits: false, path: false, stay: 0, dot: true,
+          orbits: false, path: false, stay: 0, dot: true, spot: "cassini",
           spd: 90, play: true, until: "2017-09-08",
           text: {
             ja: "13年の周回。エンケラドスの氷の裂け目から水が噴き出しているのを見つけ、" +
@@ -1143,15 +1143,13 @@
           },
         },
         {
-          // 最後の突入。カッシーニに付いて土星へ降りていく
-          // 機体に付いていくと視線が軌道に沿ってしまい、土星を真横から見る形に
-          // なる。降りていく向きと直角に構えて、雲の中へ入っていくのを横から見る
-          sel: "saturn", ride: null, dot: true, mag: 1, stay: 0,
-          km: 400000, lit: false, a: -1.082, y: 5.149,
+          // 機体の後方から降下を追い、カメラは雲頂の外に留まる。
+          sel: "saturn", ride: "saturn", on: "cassini", dot: false, spot: null,
+          mag: 1, stay: 85000, slow: 0.06, warm: 0, lit: false,
           d: "2017-09-08", spd: 0.6, play: true, until: "2017-09-15T08:00",
           text: {
             ja: "燃料が尽きたあと制御を失えば、いつかエンケラドスに落ちるかもしれない。" +
-                "その海を汚さないため、最後は土星自身へ落とすことが決められました。" +
+                "その海を汚さないため、最後は土星に落とすことになりました。" +
                 "2017年9月15日、秒速34kmで大気へ — 燃え尽きるまでの間、" +
                 "最後の瞬間までデータを送り続けました。",
             en: "Out of fuel and out of control, it might one day have fallen onto Enceladus. To keep " +
