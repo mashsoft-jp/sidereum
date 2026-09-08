@@ -231,6 +231,7 @@
   const snapDlgEl = document.getElementById("snapDlg");
   let snapPending = false;
   let snapBlob = null, snapURL = null, snapName = "";
+  let snapSource = null, snapMeta = null, snapRatio = "screen", snapRevision = 0;
   menuShareBtn.addEventListener("click", () => { setMenu(false); snapPending = true; });
   function snapWhen() {
     return dateInput.value.replace(/-/g, "/") + " " + timeInput.value + " " + tzText.textContent;
@@ -283,54 +284,125 @@
     x.restore();
   }
 
+  // 選択天体を中心に切り出す。収まらなければ周囲を広めに残して余白を付ける。
+  function snapshotCrop(width, height, ratio, subject) {
+    let w = Math.min(width, height * ratio), h = w / ratio;
+    const contain = !!subject && (subject.r * 2.3 > w || subject.r * 2.3 > h * .78);
+    if (contain) {
+      w = Math.min(width, Math.max(w, subject.r * 2.3));
+      h = Math.min(height, Math.max(h, subject.r * 2.3 / .78));
+    }
+    const cx = subject ? subject.x : width / 2, cy = subject ? subject.y : height / 2;
+    return { x: Math.max(0, Math.min(width - w, cx - w / 2)),
+      y: Math.max(0, Math.min(height - h, cy - h * (subject ? .44 : .5))), w, h, contain };
+  }
+  function snapshotSubject() {
+    const b = selected || lastCenter;
+    if (!b) return null;
+    let p, r;
+    if (groundView) {
+      const v = groundVis.find(v => v.b === b);
+      if (!v) return null;
+      p = projGround([v.px, v.py, v.pz]); r = v.rpx * (b.ring ? RING_OUT : 1);
+    } else {
+      const w = posW.get(b.key);
+      p = w && project(w);
+      if (p) {
+        const radius = frameRadius(b, "close");
+        r = radius * H / (2 * Math.tan(eFov() / 2) * p.w);
+      }
+    }
+    if (!p || p.x < 0 || p.x > W || p.y < 0 || p.y > H) return null;
+    return { x: p.x * DPR, y: p.y * DPR, r: Math.max(8, r || 0) * DPR };
+  }
+  function renderSnapshot() {
+    if (!snapSource) return;
+    const revision = ++snapRevision, t = T().snap;
+    const sizes = { wide: [1600, 900], portrait: [900, 1600], square: [1200, 1200] };
+    const size = sizes[snapRatio] || [snapSource.width, snapSource.height];
+    const c = document.createElement("canvas"); c.width = size[0]; c.height = size[1];
+    const x = c.getContext("2d");
+    x.fillStyle = "#04060e"; x.fillRect(0, 0, c.width, c.height);
+    const crop = snapRatio === "screen" ? { x: 0, y: 0, w: snapSource.width, h: snapSource.height, contain: false }
+      : snapshotCrop(snapSource.width, snapSource.height, c.width / c.height, snapMeta.subject);
+    if (crop.contain) {
+      const scale = Math.min(c.width / crop.w, c.height / crop.h);
+      const w = crop.w * scale, h = crop.h * scale;
+      x.drawImage(snapSource, crop.x, crop.y, crop.w, crop.h, (c.width - w) / 2, (c.height - h) / 2, w, h);
+    } else x.drawImage(snapSource, crop.x, crop.y, crop.w, crop.h, 0, 0, c.width, c.height);
+    const captionScale = snapRatio === "screen" ? snapMeta.dpr : c.width / (snapRatio === "portrait" ? 390 : 720);
+    drawSnapshotCaption(x, c.width / captionScale, c.height / captionScale, captionScale, snapMeta.when, snapMeta.site);
+    for (const btn of snapDlgEl.querySelectorAll("[data-ratio]")) btn.setAttribute("aria-pressed", String(btn.dataset.ratio === snapRatio));
+    for (const id of ["snapSave", "snapShare"]) {
+      const btn = document.getElementById(id); if (btn) btn.disabled = true;
+    }
+    snapDlgEl.setAttribute("aria-busy", "true");
+    c.toBlob(blob => {
+      if (revision !== snapRevision || !snapSource) return;
+      if (!blob) {
+        snapDlgEl.setAttribute("aria-busy", "false");
+        document.getElementById("snapSize").textContent = t.failed;
+        return;
+      }
+      if (snapURL) URL.revokeObjectURL(snapURL);
+      snapBlob = blob; snapURL = URL.createObjectURL(blob);
+      if (snapURL) document.getElementById("snapImg").src = snapURL;
+      document.getElementById("snapSize").textContent = c.width + " × " + c.height + (crop.contain ? " · " + t.padded : "");
+      document.getElementById("snapSave").disabled = false;
+      const share = document.getElementById("snapShare");
+      if (share) {
+        share.hidden = !navigator.canShare({ files: [new File([blob], snapName, { type: "image/png" })] });
+        share.disabled = false;
+      }
+      snapDlgEl.setAttribute("aria-busy", "false");
+    }, "image/png");
+  }
   function snapshotIfPending() {
     if (!snapPending) return;
     snapPending = false;
     const c = document.createElement("canvas");
     c.width = glc.width; c.height = glc.height;
     const x = c.getContext("2d");
-    x.drawImage(glc, 0, 0);
-    x.drawImage(ovl, 0, 0);
-    drawSnapshotCaption(x, c.width / DPR, c.height / DPR, DPR, snapWhen(), snapSite());
+    x.drawImage(glc, 0, 0); x.drawImage(ovl, 0, 0);
+    const meta = { when: snapWhen(), site: snapSite(), url: buildShareURL(), subject: snapshotSubject(), dpr: DPR };
+    hideModals();
+    snapSource = c; snapMeta = meta; snapRatio = "screen";
     snapName = "sidereum-" + dateInput.value.replace(/-/g, "") + "-" + timeInput.value.replace(":", "") + ".png";
-    c.toBlob((blob) => {
-      if (!blob) return;
-      hideModals();   // 他のモーダルと、前回のプレビュー (closeSnapDlg) を先に片付ける
-      snapBlob = blob;
-      snapURL = URL.createObjectURL(blob);
-      buildSnapDlg();
-      snapDlgEl.classList.add("open");
-      modalScrim.classList.add("on");
-    }, "image/png");
+    buildSnapDlg();
+    snapDlgEl.classList.add("open"); modalScrim.classList.add("on");
+    renderSnapshot();
   }
   // SNS へ渡す文とリンク。リンクは今の場面の共有URL (開けば同じ空になる)
   function snapShareText() {
     const t = T().snap;
-    return t.text(snapWhen(), snapSite()) + " " + t.tag;
+    return t.text(snapMeta.when, snapMeta.site) + " " + t.tag;
   }
   function buildSnapDlg() {
     const t = T().snap;
-    const canShare = !!(navigator.canShare && snapBlob &&
-      navigator.canShare({ files: [new File([snapBlob], snapName, { type: "image/png" })] }));
+    const canShare = !!(navigator.canShare && navigator.share);
     snapDlgEl.innerHTML =
       '<button id="snapDlgClose" aria-label="close">' + uiIcon("close") + '</button>' +
       "<h2>" + t.title + "</h2>" +
-      '<img id="snapImg" alt="">' +
+      '<div class="snapRatios" role="group" aria-label="' + t.ratio + '">' +
+        ["screen", "wide", "portrait", "square"].map(key => '<button data-ratio="' + key + '" aria-pressed="' + (key === snapRatio) + '">' + t[key] + '</button>').join("") +
+      '</div><img id="snapImg" alt="' + t.preview + '"><p id="snapSize" aria-live="polite"></p>' +
       '<div class="snapBtns">' +
         '<button id="snapSave" class="primary">' + t.save + "</button>" +
         (canShare ? '<button id="snapShare">' + t.share + "</button>" : "") +
         '<button id="snapLink">' + t.link + "</button>" +
       "</div>";
-    document.getElementById("snapImg").src = snapURL;
+    if (snapURL) document.getElementById("snapImg").src = snapURL;
   }
   function closeSnapDlg() {
-    if (!snapDlgEl.classList.contains("open") && !snapURL) return;
+    if (!snapDlgEl.classList.contains("open") && !snapURL && !snapSource) return;
     snapDlgEl.classList.remove("open");
     if (snapURL) { URL.revokeObjectURL(snapURL); snapURL = null; }
-    snapBlob = null;
+    snapRevision++; snapSource = null; snapMeta = null; snapBlob = null;
     snapDlgEl.innerHTML = "";
   }
   snapDlgEl.addEventListener("click", (e) => {
+    const ratioBtn = e.target.closest("[data-ratio]");
+    if (ratioBtn) { snapRatio = ratioBtn.dataset.ratio; renderSnapshot(); return; }
     const id = e.target.id;
     if (id === "snapDlgClose") { hideModals(); return; }
     if (id === "snapSave") {
@@ -340,7 +412,7 @@
       return;
     }
     if (id === "snapLink") {
-      const url = buildShareURL(), btn = e.target;
+      const url = snapMeta.url, btn = e.target;
       const done = () => {
         btn.textContent = T().snap.linkDone;
         clearTimeout(shareResetTimer);
@@ -355,7 +427,7 @@
     }
     if (id === "snapShare") {
       const file = new File([snapBlob], snapName, { type: "image/png" });
-      navigator.share({ files: [file], text: snapShareText(), url: buildShareURL() }).catch(() => {});   // 取り消しは無視
+      navigator.share({ files: [file], text: snapShareText(), url: snapMeta.url }).catch(() => {});   // 取り消しは無視
       return;
     }
   });

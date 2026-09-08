@@ -1653,3 +1653,8 @@
   .tgl.exp .uiIcon { width: 10px; height: 10px; }
   #gAltCell .step .uiIcon, #angleCell .step .uiIcon { width: 10px; height: 10px; }
   .nextIcon { display: inline-flex; vertical-align: middle; pointer-events: none; }
+
+  .snapRatios { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .snapRatios button { flex: 1; padding: 7px 8px; font-size: 11px; white-space: nowrap; }
+  .snapRatios button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent-dim); background: rgba(242,178,62,.08); }
+  #snapSize { margin: 8px 0 0; color: var(--dim); font-size: 10px; text-align: center; min-height: 1.4em; }

@@ -106,6 +106,7 @@
       menuUnitToKm: "距離を km 表示",
       menuShare: "共有…",
       snap: {
+        ratio: "画像の比率", screen: "現在の画面", wide: "横 16:9", portrait: "縦 9:16", square: "正方形", padded: "余白付き", failed: "画像を作成できませんでした。比率を選び直してください。", preview: "共有画像のプレビュー",
         title: "共有", save: "画像を保存", share: "共有…",
         link: "リンクをコピー", linkDone: "コピーしました",
         text: (when, site) => "Sidereum で見た " + when + " の" + (site ? site + "の空" : "太陽系"),
@@ -234,6 +235,7 @@
       menuUnitToKm: "Distances in km",
       menuShare: "Share\u2026",
       snap: {
+        ratio: "Image ratio", screen: "Current view", wide: "Wide 16:9", portrait: "Tall 9:16", square: "Square", padded: "Padded", failed: "Could not create the image. Choose a ratio to retry.", preview: "Shared image preview",
         title: "Share", save: "Save image", share: "Share\u2026",
         link: "Copy link", linkDone: "Copied!",
         text: (when, site) => (site ? "The sky over " + site + " at " + when : "The Solar System at " + when) + " in Sidereum",
