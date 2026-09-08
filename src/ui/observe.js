@@ -51,7 +51,7 @@
     hideHint();
   }
 
-  // モバイル: 情報パネルを操作パネルのすぐ上に配置 (実高さを測って追従)。
+  // モバイル: 情報パネルは操作パネルと、その上へ張り出す折りたたみボタンを避ける。
   // 横持ちは右側の情報パネルが中央寄せの操作パネルと重ならないよう高さを制限
   function positionInfoPanel() {
     const ctrlHidden = document.getElementById("app").classList.contains("ctrlHidden");
@@ -61,8 +61,12 @@
         infoPanel.style.bottom = "12px";   // パネル格納中は画面下端まで使う
         return;
       }
-      const top = document.getElementById("controls").getBoundingClientRect().top;
-      infoPanel.style.bottom = Math.round(window.innerHeight - top + 8) + "px";
+      const controlsTop = document.getElementById("controls").getBoundingClientRect().top;
+      const collapse = document.getElementById("ctrlCollapse");
+      const top = collapse.getClientRects().length
+        ? Math.min(controlsTop, collapse.getBoundingClientRect().top) : controlsTop;
+      // ボタンの上へ広げているタップ領域 (10px) にも余白を残す。
+      infoPanel.style.bottom = Math.round(window.innerHeight - top + 12) + "px";
     } else if (window.matchMedia("(max-height: 480px)").matches) {
       infoPanel.style.bottom = "";
       if (ctrlHidden) { infoPanel.style.maxHeight = ""; return; }
@@ -75,6 +79,10 @@
     }
   }
   window.addEventListener("resize", positionInfoPanel);
+  if (window.ResizeObserver) {
+    const infoPositionObserver = new ResizeObserver(positionInfoPanel);
+    for (const id of ["controls", "ctrlCollapse"]) infoPositionObserver.observe(document.getElementById(id));
+  }
 
   // 操作パネルの折りたたみ (⌄ で画面下へ格納、⌃ で復帰)
   const ctrlCollapseBtn = document.getElementById("ctrlCollapse");
