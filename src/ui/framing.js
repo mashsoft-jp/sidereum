@@ -14,7 +14,7 @@
     frameContextBtn.textContent = ja ? "周辺" : "Surroundings";
     frameContextBtn.title = ja ? "天体の周囲を見渡す" : "See the surrounding system";
     frameEnjoyBtn.textContent = ja ? "鑑賞" : "Enjoy";
-    frameEnjoyBtn.title = ja ? "パネルとガイドを隠して鑑賞" : "Hide panels and guides";
+    frameEnjoyBtn.title = ja ? "見やすい方向へ移動し、パネルとガイドを隠して鑑賞" : "Find a scenic angle and hide panels and guides";
     immersiveExitBtn.textContent = ja ? "戻る · Esc" : "Return · Esc";
     immersiveSaveBtn.textContent = ja ? "画像を保存" : "Save image";
     document.getElementById("frameActions").setAttribute("aria-label", ja ? "天体の見せ方" : "Frame the body");
@@ -162,6 +162,45 @@
     frameLayout.dirty = true;
   }
 
+  // 太陽から約40度ずれた方向なら、明るい面と明暗の境目を一緒に見せられる。
+  // 同じ照明条件の候補から現在の視点に近いものを選び、無駄な大回りを避ける。
+  function enjoymentDirection(body) {
+    const current = [Math.cos(cam.pitch) * Math.cos(cam.yaw), Math.sin(cam.pitch),
+      Math.cos(cam.pitch) * Math.sin(cam.yaw)];
+    if (body === SUN) return current;
+    const w = posW.get(body.key), sun = posW.get(SUN.key);
+    const light = sun.map((v, i) => v - w[i]);
+    const length = Math.hypot(...light);
+    if (length < 1e-12) return current;
+    for (let i = 0; i < 3; i++) light[i] /= length;
+    const dot = (a, b) => a.reduce((n, v, i) => n + v * b[i], 0);
+    const ref = Math.abs(light[1]) < .9 ? [0, 1, 0] : [1, 0, 0];
+    const side = [light[1] * ref[2] - light[2] * ref[1],
+      light[2] * ref[0] - light[0] * ref[2], light[0] * ref[1] - light[1] * ref[0]];
+    const sideLength = Math.hypot(...side);
+    for (let i = 0; i < 3; i++) side[i] /= sideLength;
+    const up = [side[1] * light[2] - side[2] * light[1],
+      side[2] * light[0] - side[0] * light[2], side[0] * light[1] - side[1] * light[0]];
+    let best = current, bestScore = -Infinity;
+    const phase = 40 * Math.PI / 180;
+    for (let n = 0; n < 72; n++) {
+      const angle = n * Math.PI / 36;
+      const d = light.map((v, i) => v * Math.cos(phase) +
+        (side[i] * Math.cos(angle) + up[i] * Math.sin(angle)) * Math.sin(phase));
+      let score = dot(d, current);
+      if (body.key === "saturn") {
+        const opening = dot(d, SATURN_POLE_W), litSide = dot(light, SATURN_POLE_W);
+        // 環が線にならず、できるだけ太陽に照らされた側が見える候補を優先。
+        score -= Math.max(0, .45 - Math.abs(opening)) * 12;
+        if (Math.abs(litSide) > .05 && opening * litSide < 0) score -= 3;
+      }
+      // 真上付近は操作時の方位が不安定になるため避ける。
+      if (Math.abs(d[1]) > .94) score -= 4;
+      if (score > bestScore) { bestScore = score; best = d; }
+    }
+    return best;
+  }
+
   function stepFraming(k) {
     if (frameLayout.dirty) {
       frameLayout.rect = measureFrameRect();
@@ -182,7 +221,16 @@
     frameApp.classList.toggle("immersive", v);
     immersiveBar.hidden = !v;
     frameLayout.dirty = true;
-    if (v) { setMenu(false); immersiveExitBtn.focus({ preventScroll: true }); }
+    if (v) {
+      setMenu(false);
+      if (selected && !selected.mesh) {
+        const direction = enjoymentDirection(selected);
+        frameBody(selected, "close");
+        cam.yawTgt = Math.atan2(direction[2], direction[0]);
+        cam.pitchTgt = Math.asin(Math.max(-1, Math.min(1, direction[1])));
+      }
+      immersiveExitBtn.focus({ preventScroll: true });
+    }
     else {
       const back = infoPanel.classList.contains("open") ? frameEnjoyBtn : menuBtn;
       back.focus({ preventScroll: true });
