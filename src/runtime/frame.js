@@ -65,7 +65,7 @@
       const away = pp ? Math.hypot(sp.x - pp.x, sp.y - pp.y) > 16 : true;
       const hit = marked === s || spotB === s;
       lblBlock(sp.x, sp.y, sp.r);
-      if (s.showLabel && (sp.r > 2 || away)) {
+      if (s.showLabel && (hit || sp.r > 2 || away)) {
         lblPut(bName(s), sp.x, sp.y - Math.max(sp.r, 3) - 8, hit ? LBL_SEL : spaceLabelPriority(s),
                hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.6)", LF10, spaceLabelAlpha(s));
       }
