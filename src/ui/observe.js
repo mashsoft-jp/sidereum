@@ -7,11 +7,12 @@
   // 見たい面へ枠と文字が重なるのを避けるため。解除は何もない所を押す
   function toggleSelChrome(body) {
     showSelMark = !showSelMark;
-    if (showSelMark) openInfo(body);
+    if (showSelMark) { selectionMarkAt = performance.now(); openInfo(body); }
     else infoPanel.classList.remove("open");
   }
   function select(body, fly) {
     selected = body;
+    selectionMarkAt = performance.now();
     syncFramingUI();
     updateNavSel();
     if (!body) {

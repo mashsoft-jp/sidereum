@@ -1,10 +1,23 @@
+  // 選択直後だけ少し外側から印を収める。時間速度や停止状態には連動させない。
+  const selectionReducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  function selectionMarkStyle(body) {
+    const u = selectionReducedMotion.matches || body !== selected || !showSelMark
+      ? 1 : Math.max(0, Math.min(1, (performance.now() - selectionMarkAt) / 700));
+    const rest = Math.pow(1 - u, 3);
+    return { gap: 6 + 5 * rest, alpha: 0.65 + 0.2 * Math.sin(Math.PI * u) - 0.4 * rest,
+      glow: 5 * Math.sin(Math.PI * u) };
+  }
+
   // 小さい対象は円で示し、接近すると円盤を囲む短い四隅へクロスフェードする。
-  function drawSpaceSelection(s) {
-    const r = Math.max(s.r, 3) + 6;
+  function drawSpaceSelection(s, body) {
+    const mark = selectionMarkStyle(body);
+    const r = Math.max(s.r, 3) + mark.gap;
     const t = Math.max(0, Math.min(1, (s.r - 10) / 24));
     octx.save();
-    octx.strokeStyle = "rgba(242,178,62,0.85)";
-    octx.lineWidth = 1.1;
+    octx.strokeStyle = `rgba(242,178,62,${mark.alpha})`;
+    octx.lineWidth = 1;
+    octx.shadowColor = "rgba(242,178,62,0.5)";
+    octx.shadowBlur = mark.glow;
     if (t < 1) {
       octx.globalAlpha = 1 - t;
       octx.beginPath();
@@ -47,7 +60,7 @@
       if (s.r > H * 0.6) continue;
       const hit = marked === b || spotB === b;
       if (hit) {
-        drawSpaceSelection(s);
+        drawSpaceSelection(s, b);
       }
       lblBlock(s.x, s.y, s.r);   // 円盤の上に星座名などを置かせない
       if (b.showLabel) {
@@ -70,7 +83,7 @@
                hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.6)", LF10, spaceLabelAlpha(s));
       }
       if (hit) {
-        drawSpaceSelection(sp);
+        drawSpaceSelection(sp, s);
       }
     }
 
@@ -81,7 +94,8 @@
       if (!sp || sp.hidden) continue;
       if (sp.x < -40 || sp.x > W + 40 || sp.y < -40 || sp.y > H + 40) continue;
       const hit = marked === pr || spotB === pr;
-      if (tourProbeDot && spotB === pr) drawSpaceSelection({ x: sp.x, y: sp.y, r: 3 });
+      if (marked === pr || (tourProbeDot && spotB === pr))
+        drawSpaceSelection({ x: sp.x, y: sp.y, r: Math.max(3, (pr.px || 0) * 0.5) }, pr);
       lblPut(bName(pr), sp.x, sp.y - (pr.px ? pr.px * 0.5 : 4) - 8, hit ? LBL_SEL : LBL_PROBE,
              hit ? "rgba(242,178,62,0.95)" : "rgba(180,205,240,0.85)", LF10);
     }

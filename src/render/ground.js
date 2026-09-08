@@ -1127,12 +1127,16 @@
         // 「潰れているのは間違い」に見えてしまう (印は画面の縦に潰せばよい —
         // 地上ビューのカメラは傾かないので、天体の位置の鉛直は画面の縦)
         const kv = flatK(v.py / (Math.hypot(v.px, v.py, v.pz) || 1));
-        const rr = Math.max(v.rpx, 3);
+        const rr = Math.max(v.rpx, 3), mark = selectionMarkStyle(v.b);
+        octx.save();
         octx.beginPath();
-        octx.ellipse(s.x, s.y, rr + 6, rr * kv + 6, rollPhi, 0, 2 * Math.PI);
-        octx.strokeStyle = "rgba(242,178,62,0.9)";
-        octx.lineWidth = 1.2;
+        octx.ellipse(s.x, s.y, rr + mark.gap, rr * kv + mark.gap, rollPhi, 0, 2 * Math.PI);
+        octx.strokeStyle = `rgba(242,178,62,${mark.alpha})`;
+        octx.lineWidth = 1;
+        octx.shadowColor = "rgba(242,178,62,0.5)";
+        octx.shadowBlur = mark.glow;
         octx.stroke();
+        octx.restore();
       }
       if (v.rpx < H * 0.3) lblBlock(s.x, s.y, v.rpx);   // 円盤の上に星座名などを置かせない
       if (!v.b.showLabel) continue;

@@ -4,6 +4,7 @@
   let playing = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let daysPerSec = 8;
   let selected = null;                    // SUN / PLANETS[i] / MOON / null
+  let selectionMarkAt = -Infinity;          // 選択演出の開始 (実時間 ms)
   let lastCenter = null;                   // 最後に中心にした天体 (解除後のズーム下限に使用)
   // 選択マーク (オレンジのリングとラベル強調) を出すか。ガイドツアーの selected は
   // 「カメラの注視先」であって利用者が選んだわけではないので、既定では出さない
