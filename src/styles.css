@@ -868,6 +868,16 @@
   #app.tourMode #menuBtn.tourShow { display: block; }
 
   /* ---- 初回の導入 (銀河系から太陽系へ寄る) ---- */
+  #introLogo {
+    position: absolute; left: 50%; top: 50%; z-index: 39;
+    transform: translate(-50%, -50%);
+    font-size: clamp(28px, 8vw, 112px); letter-spacing: 0.13em;
+    white-space: nowrap; line-height: 1.2; padding-left: 0.13em;
+    pointer-events: none;
+    text-shadow: 0 2px 18px rgba(4, 6, 14, 0.9);
+    animation: introIn 0.9s ease-out both;
+  }
+
   /* 銀河の絵は画面いっぱいなので、そのあいだ HUD は出さない。
      終わったら (introMode が外れたら) 短く浮かび上がらせる */
   #app.introMode #title,
