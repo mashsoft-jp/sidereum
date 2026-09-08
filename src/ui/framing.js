@@ -104,7 +104,7 @@
   function beginCameraFlight(body) {
     if (!body || groundView || tourActive || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const target = posW.get(body.key);
-    cameraFlight = { body, elapsed: 0, duration: 2.2,
+    cameraFlight = { body, elapsed: 0, duration: 2.8,
       offset: cam.focus.map((v, i) => v - target[i]), pan: cam.panOff.slice(),
       dist: Math.max(cam.dist, 1e-12), yaw: cam.yaw, pitch: cam.pitch, zoom: camZoom };
   }
@@ -113,21 +113,23 @@
     if (!f) return;
     if (groundView || tourActive || selected !== f.body) { cameraFlight = null; return; }
     f.elapsed += dt;
-    const t = Math.min(1, f.elapsed / f.duration), e = flightEase(t);
-    const focus = flightEase(t / 0.65), target = posW.get(f.body.key);
+    const t = Math.min(1, f.elapsed / f.duration);
+    const focus = flightEase(t / 0.32), target = posW.get(f.body.key);
+    const e = flightEase((t - 0.32) / 0.68);
     // 注視点を先に揃え、最後の接近で中心が横へ流れないようにする。
     for (let i = 0; i < 3; i++) {
       cam.focus[i] = target[i] + f.offset[i] * (1 - focus);
       cam.panOff[i] = f.pan[i] * (1 - focus);
     }
-    // 距離は対数で補間する。桁が変わる接近でも見かけの拡大を均等に配分する。
-    cam.dist = Math.exp(Math.log(f.dist) * (1 - e) + Math.log(Math.max(cam.distTgt, 1e-12)) * e);
+    // 先に向きを揃えてから接近する。距離の対数ではなく逆数 (見かけの大きさ)
+    // を補間し、大きく見え始める終盤へ拡大が集中するのを防ぐ。
+    cam.dist = 1 / ((1 - e) / f.dist + e / Math.max(cam.distTgt, 1e-12));
     let yaw = (cam.yawTgt - f.yaw) % (2 * Math.PI);
     if (yaw > Math.PI) yaw -= 2 * Math.PI;
     if (yaw < -Math.PI) yaw += 2 * Math.PI;
-    cam.yaw = f.yaw + yaw * e;
-    cam.pitch = f.pitch + (cam.pitchTgt - f.pitch) * e;
-    camZoom = f.zoom + (camZoomTgt - f.zoom) * e;
+    cam.yaw = f.yaw + yaw * focus;
+    cam.pitch = f.pitch + (cam.pitchTgt - f.pitch) * focus;
+    camZoom = f.zoom + (camZoomTgt - f.zoom) * focus;
     if (t >= 1) cameraFlight = null;
   }
   function cancelCameraFlight() {
