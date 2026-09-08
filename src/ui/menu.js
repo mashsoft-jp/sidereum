@@ -255,7 +255,7 @@
     x.fillText(snapWhen() + (site ? "   " + site : ""), pad, c.height - pad);
     // 右下: ロゴと著作権表示 (About と同じ表記)
     x.textAlign = "right";
-    x.font = "300 " + fs + "px Jura, system-ui, sans-serif";
+    x.font = "400 " + fs + "px Megrim, system-ui, sans-serif";
     x.fillStyle = "rgba(242,178,62,0.9)";
     x.fillText("S I D E R E U M", c.width - pad, c.height - pad - lh);
     x.font = Math.round(10 * DPR) + "px system-ui, -apple-system, sans-serif";
@@ -502,8 +502,8 @@
     const c = lang === "ja" ? {
       lic: "ライセンス",
       licBody: '© 2026 <a href="https://www.mashsoft.co.jp" target="_blank" rel="noopener">Mashsoft Inc.</a> — コードは MIT License で公開されています。' +
-        'ロゴの書体は <a href="https://github.com/ossobuffo/jura" target="_blank" rel="noopener">Jura</a> Light ' +
-        '(© 2019 The Jura Project Authors, <a href="https://scripts.sil.org/OFL" target="_blank" rel="noopener">SIL Open Font License 1.1</a>) ' +
+        'ロゴの書体は <a href="https://fonts.google.com/specimen/Megrim" target="_blank" rel="noopener">Megrim</a> ' +
+        '(© 2009, 2010, 2011 Daniel Johnson, <a href="https://scripts.sil.org/OFL" target="_blank" rel="noopener">SIL Open Font License 1.1</a>) ' +
         'から SIDEREUM の7文字だけを切り出して埋め込んでいます。',
       img: "画像クレジット",
       imgBody: "以下の天体の表面には、NASA / USGS のパブリックドメイン画像を使用しています。",
@@ -515,8 +515,8 @@
       lic: "License",
       licBody: '© 2026 <a href="https://www.mashsoft.co.jp" target="_blank" rel="noopener">Mashsoft Inc.</a> — The code is released under the MIT License. ' +
         'The wordmark embeds the seven letters of SIDEREUM subset from ' +
-        '<a href="https://github.com/ossobuffo/jura" target="_blank" rel="noopener">Jura</a> Light ' +
-        '(© 2019 The Jura Project Authors, <a href="https://scripts.sil.org/OFL" target="_blank" rel="noopener">SIL Open Font License 1.1</a>).',
+        '<a href="https://fonts.google.com/specimen/Megrim" target="_blank" rel="noopener">Megrim</a> ' +
+        '(© 2009, 2010, 2011 Daniel Johnson, <a href="https://scripts.sil.org/OFL" target="_blank" rel="noopener">SIL Open Font License 1.1</a>).',
       img: "Image credits",
       imgBody: "The surfaces of the following bodies use public-domain imagery from NASA / USGS.",
       proc: "The Sun, Saturn (incl. rings), Uranus, Neptune, Pallas and Juno use procedurally generated textures (not actual imagery).",

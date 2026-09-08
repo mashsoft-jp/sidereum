@@ -14,17 +14,17 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>Sidereum (シデレウム β版) — 見上げる空から、太陽系の果てまで</title>
 <style>
-  /* ロゴの書体。Jura Light から SIDEREUM の7文字 (S I D E R E U M) だけを
+  /* ロゴの書体。Megrim から SIDEREUM の7文字 (S I D E R E U M) だけを
      切り出して埋め込んである。外部リクエストを増やさないための data: URL で、
-     1KB ほどなのでテクスチャと違って毎回引き直させても問題にならない。
+     数KB ほどなのでテクスチャと違って毎回引き直させても問題にならない。
      7文字しか入っていないので、他の文字は自動的に --font-ui へ落ちる。
-     Copyright 2019 The Jura Project Authors (https://github.com/ossobuffo/jura)
+     Copyright (c) 2009, 2010, 2011 Daniel Johnson
      SIL Open Font License 1.1 — https://scripts.sil.org/OFL */
   @font-face {
-    font-family: "Jura Light";
+    font-family: "Megrim";
     font-style: normal;
-    font-weight: 300;
-    src: url(data:font/woff2;base64,d09GMgABAAAAAAREAA8AAAAACCgAAAPsAAUbIwAAAAAAAAAAAAAAAAAAAAAAAAAAGhYbIBwqBmA/U1RBVCoAVBEICoUUhCQBNgIkAyALEgAEIAWEfAcgG58GUZQvynSInwmmysajUHgGkUzETO16LvYQC6PQrV94fhdEkFdVB4MkCyl7oF8EMkfhJfrv5zRAqrqq92Q7CLnNlVmH8OfTQNgaNU2u54c4uD0JU8kTxPofoJfz/3+v6n+h8Ji2pnjEI3Iz5yqlgK1ggDrWBKsFqKdgBSsQ17YRohkPW4t4p6fWj60BAlgAgIIguBEEMIjVIVaYrE6CgQbwXwAQwCBdlwRZrdXZY7XQBiIu1tQXyYEKeqi2FZitrqIcJF9lsWSFf6DybafCv3Xu278VwbNAzoIAqPO1T5BIRhA8CBBKBGJJ/ZKUiQKgIAAikgMBUAAVCCUjQCiFMgQsPChoVDS3dnR+oYIBd/ie22+PHbYnkF8Q/x9sAMEDQCABL3ADMQAA7RGbRb2xvxXlnxBpFEo0J4p3hOnnXKWGXzFa9vHr10Udce2aYTmHAhyGG/6K33BZmgF8hvVtbIPprMMzfC2y4GR9pg6yKsRgiD+t/VrNb+dps3XAytXhuSU51KUw8drR38ALBBPgdKvbNUkYTA6/ajqUohTT9Qj78LXR5vVsugJSUuCKEUBmd6Te1aFj5tJ1G0Becs+2F9v2o6937nyt9eXO3a97jnudNdWqrXFqOXfQw85eQPYf9mDY5z49IjzSzoEzEdwveOlUswZbl2QmrDDyctIykzJNwPFq/W7fnuAC5dwGRWz6R5WoU1tqmr43th1z0ytr1q5dU2Lm2NWjA/M+7J1/ZL31o/oPGFnidUD/Uev5LbtWr9pZpm5a794zEmfQjtOm9+41I3rjooUbNiwUfTq5F6zHnDi2c6dx6eM6dx43rkvn8dG7V8Xqd7ax3ZS5evTo1Xyo/nx9S/l8pfp+6PsG3drXrsR8OQDDEKDHpOSs497eLKDEV4/qvgBws/quzQDPdvad9u/ov+6uma5lzgAuFAAE/gJ2d4GJ//1iG4R1G4/6Aj0fd62ScJeD7NT/fcV8v0yP5EvvLnwjgIfGVFpSUgyrCOCm4RjXvCCxCDBXCE0sV8Ff8nD9mCulOP4UyjUpAUux1lUwlEiGkMYnIpNIMcBlc7wAJ6kIWOAID9ghkFwkwIA+jkkhBAW6ac5jGtQriyWRgWB83mcKIBULQlGIj4vFEEteaKjHBI6CQlT02YrEW1lebVm46wjMmSNgbDmo6Fxa64EiFQKwQ93nKBOKEBGuAt5BPx2qeIiCWTBwEDG4UGkij8iUHZ05gdTK5Mrthph3EDkChlItBSL1sVAY5uptLG5teG4FbDXwxeSbV0nQk+mSoERlUAs6zNvGP0OBCpA21GAoU1CoZB766IRla2LlKjrqPLlklrz/Kx8A) format("woff2");
+    font-weight: 400;
+    src: url(data:font/woff2;base64,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) format("woff2");
   }
   :root {
     --bg: #04060e;
@@ -35,7 +35,7 @@
     --accent: #f2b23e;
     --accent-dim: rgba(242, 178, 62, 0.35);
     --font-ui: "Avenir Next", "Futura", "Hiragino Sans", "Yu Gothic UI", system-ui, sans-serif;
-    --font-logo: "Jura Light", var(--font-ui);
+    --font-logo: "Megrim", var(--font-ui);
     --font-num: "SF Mono", "Menlo", "Consolas", monospace;
     /* セーフエリア (iOS PWA の standalone ではノッチ/ステータスバー下までコンテンツが広がる) */
     --sat: env(safe-area-inset-top, 0px);
@@ -447,7 +447,7 @@
      最後の M の後ろにも空きが付くので、続くカッコ書きに margin は要らない */
   .logo {
     font-family: var(--font-logo);
-    font-weight: 300;
+    font-weight: 400;
     color: var(--accent);
   }
   .logo .beta, .logo .yomi {
@@ -14470,7 +14470,7 @@
     x.fillText(snapWhen() + (site ? "   " + site : ""), pad, c.height - pad);
     // 右下: ロゴと著作権表示 (About と同じ表記)
     x.textAlign = "right";
-    x.font = "300 " + fs + "px Jura, system-ui, sans-serif";
+    x.font = "400 " + fs + "px Megrim, system-ui, sans-serif";
     x.fillStyle = "rgba(242,178,62,0.9)";
     x.fillText("S I D E R E U M", c.width - pad, c.height - pad - lh);
     x.font = Math.round(10 * DPR) + "px system-ui, -apple-system, sans-serif";
@@ -14717,8 +14717,8 @@
     const c = lang === "ja" ? {
       lic: "ライセンス",
       licBody: '© 2026 <a href="https://www.mashsoft.co.jp" target="_blank" rel="noopener">Mashsoft Inc.</a> — コードは MIT License で公開されています。' +
-        'ロゴの書体は <a href="https://github.com/ossobuffo/jura" target="_blank" rel="noopener">Jura</a> Light ' +
-        '(© 2019 The Jura Project Authors, <a href="https://scripts.sil.org/OFL" target="_blank" rel="noopener">SIL Open Font License 1.1</a>) ' +
+        'ロゴの書体は <a href="https://fonts.google.com/specimen/Megrim" target="_blank" rel="noopener">Megrim</a> ' +
+        '(© 2009, 2010, 2011 Daniel Johnson, <a href="https://scripts.sil.org/OFL" target="_blank" rel="noopener">SIL Open Font License 1.1</a>) ' +
         'から SIDEREUM の7文字だけを切り出して埋め込んでいます。',
       img: "画像クレジット",
       imgBody: "以下の天体の表面には、NASA / USGS のパブリックドメイン画像を使用しています。",
@@ -14730,8 +14730,8 @@
       lic: "License",
       licBody: '© 2026 <a href="https://www.mashsoft.co.jp" target="_blank" rel="noopener">Mashsoft Inc.</a> — The code is released under the MIT License. ' +
         'The wordmark embeds the seven letters of SIDEREUM subset from ' +
-        '<a href="https://github.com/ossobuffo/jura" target="_blank" rel="noopener">Jura</a> Light ' +
-        '(© 2019 The Jura Project Authors, <a href="https://scripts.sil.org/OFL" target="_blank" rel="noopener">SIL Open Font License 1.1</a>).',
+        '<a href="https://fonts.google.com/specimen/Megrim" target="_blank" rel="noopener">Megrim</a> ' +
+        '(© 2009, 2010, 2011 Daniel Johnson, <a href="https://scripts.sil.org/OFL" target="_blank" rel="noopener">SIL Open Font License 1.1</a>).',
       img: "Image credits",
       imgBody: "The surfaces of the following bodies use public-domain imagery from NASA / USGS.",
       proc: "The Sun, Saturn (incl. rings), Uranus, Neptune, Pallas and Juno use procedurally generated textures (not actual imagery).",

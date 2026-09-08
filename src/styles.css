@@ -1,14 +1,14 @@
-  /* ロゴの書体。Jura Light から SIDEREUM の7文字 (S I D E R E U M) だけを
+  /* ロゴの書体。Megrim から SIDEREUM の7文字 (S I D E R E U M) だけを
      切り出して埋め込んである。外部リクエストを増やさないための data: URL で、
-     1KB ほどなのでテクスチャと違って毎回引き直させても問題にならない。
+     数KB ほどなのでテクスチャと違って毎回引き直させても問題にならない。
      7文字しか入っていないので、他の文字は自動的に --font-ui へ落ちる。
-     Copyright 2019 The Jura Project Authors (https://github.com/ossobuffo/jura)
+     Copyright (c) 2009, 2010, 2011 Daniel Johnson
      SIL Open Font License 1.1 — https://scripts.sil.org/OFL */
   @font-face {
-    font-family: "Jura Light";
+    font-family: "Megrim";
     font-style: normal;
-    font-weight: 300;
-    src: url(data:font/woff2;base64,@@font:jura-logo@@) format("woff2");
+    font-weight: 400;
+    src: url(data:font/woff2;base64,@@font:megrim-logo@@) format("woff2");
   }
   :root {
     --bg: #04060e;
@@ -19,7 +19,7 @@
     --accent: #f2b23e;
     --accent-dim: rgba(242, 178, 62, 0.35);
     --font-ui: "Avenir Next", "Futura", "Hiragino Sans", "Yu Gothic UI", system-ui, sans-serif;
-    --font-logo: "Jura Light", var(--font-ui);
+    --font-logo: "Megrim", var(--font-ui);
     --font-num: "SF Mono", "Menlo", "Consolas", monospace;
     /* セーフエリア (iOS PWA の standalone ではノッチ/ステータスバー下までコンテンツが広がる) */
     --sat: env(safe-area-inset-top, 0px);
@@ -431,7 +431,7 @@
      最後の M の後ろにも空きが付くので、続くカッコ書きに margin は要らない */
   .logo {
     font-family: var(--font-logo);
-    font-weight: 300;
+    font-weight: 400;
     color: var(--accent);
   }
   .logo .beta, .logo .yomi {
