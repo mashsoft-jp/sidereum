@@ -1633,3 +1633,13 @@
     border-color: var(--panel-edge);
     box-shadow: var(--panel-shadow);
   }
+
+  /* 小さな操作記号も同じ線幅・丸い端で揃える。イベントはボタンへ通す。 */
+  .uiIcon { width: 12px; height: 12px; display: inline-block; vertical-align: middle; pointer-events: none; }
+  .uiIcon * { pointer-events: none; }
+  #menuBtn .uiIcon { width: 15px; height: 15px; }
+  .navListClose { display: flex; align-items: center; }
+  .navListClose .uiIcon { width: 12px; height: 12px; }
+  .tgl.exp .uiIcon { width: 10px; height: 10px; }
+  #gAltCell .step .uiIcon, #angleCell .step .uiIcon { width: 10px; height: 10px; }
+  .nextIcon { display: inline-flex; vertical-align: middle; pointer-events: none; }

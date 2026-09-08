@@ -62,6 +62,7 @@ const MANIFEST = [
   "render/intro.js",     // 初回の導入 (太陽系のはるか外から寄る)
   "runtime/perf.js",     // 描画負荷の表示 (?perf=1 のときだけ)
   "runtime/frame.js",    // オーバーレイ・時刻表示・メインループ
+  "ui/icons.js",         // 共通の操作アイコン
   "ui/observe.js",       // 選択・観測モード・観測地・天体リスト
   "ui/controls.js",      // 入力・操作パネル・設定保存
   "ui/ar.js",            // AR モード (端末の姿勢センサーで地上ビューのカメラを向ける)

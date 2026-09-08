@@ -583,7 +583,7 @@
     const catName = () => (lang === "ja" ? cat.ja : cat.en);
     const ex = document.createElement("button");
     ex.className = "tgl exp";
-    ex.textContent = "▸";
+    ex.innerHTML = uiIcon("right");
     ex.setAttribute("aria-expanded", "false");
     ARIA_BTNS.push({ el: ex, text: () => T().ariaMembers(catName()) });
     // カテゴリの ◌/N は子をまとめて切り替える
@@ -611,7 +611,7 @@
     let expanded = false;
     const setExp = (v) => {
       expanded = v;
-      ex.textContent = v ? "▾" : "▸";
+      ex.innerHTML = uiIcon(v ? "down" : "right");
       ex.setAttribute("aria-expanded", v ? "true" : "false");
       for (const r2 of childRows) r2.style.display = v ? "flex" : "none";
     };
@@ -629,7 +629,7 @@
       b.expanded = b.key === "earth";            // 地球のみ初期展開
       const ex = document.createElement("button");
       ex.className = "tgl exp";
-      ex.textContent = b.expanded ? "▾" : "▸";
+      ex.innerHTML = uiIcon(b.expanded ? "down" : "right");
       ex.setAttribute("aria-expanded", b.expanded ? "true" : "false");
       ARIA_BTNS.push({ el: ex, text: () => T().ariaSats(bName(b)) });
       row.insertBefore(ex, row.children[1]);
@@ -642,7 +642,7 @@
       });
       const setSatExp = (v) => {
         b.expanded = v;
-        ex.textContent = v ? "▾" : "▸";
+        ex.innerHTML = uiIcon(v ? "down" : "right");
         ex.setAttribute("aria-expanded", v ? "true" : "false");
         for (const r2 of satRows) r2.style.display = v ? "flex" : "none";
       };

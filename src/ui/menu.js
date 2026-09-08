@@ -313,7 +313,7 @@
     const canShare = !!(navigator.canShare && snapBlob &&
       navigator.canShare({ files: [new File([snapBlob], snapName, { type: "image/png" })] }));
     snapDlgEl.innerHTML =
-      '<button id="snapDlgClose" aria-label="close">\u2715</button>' +
+      '<button id="snapDlgClose" aria-label="close">' + uiIcon("close") + '</button>' +
       "<h2>" + t.title + "</h2>" +
       '<img id="snapImg" alt="">' +
       '<div class="snapBtns">' +
@@ -556,7 +556,7 @@
       disc: "This app is not affiliated with, nor endorsed by, NASA or USGS.",
     };
     aboutEl.innerHTML =
-      `<button id="aboutClose" aria-label="close">✕</button>` +
+      `<button id="aboutClose" aria-label="close">${uiIcon("close")}</button>` +
       `<h2 class="logo">SIDEREUM<span class="yomi">${lang === "ja" ? "(シデレウム β版)" : "(Beta)"}</span></h2>` +
       `<h3>${c.lic}</h3><p>${c.licBody}</p>` +
       `<h3>${c.img}</h3><p>${c.imgBody}</p>` +

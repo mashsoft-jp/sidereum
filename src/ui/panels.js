@@ -87,7 +87,7 @@
     const tbl = (rows) => `<table><tbody>` +
       rows.map((r) => `<tr><td>${r[0]}</td><td>${tourTextHTML(r[1])}</td></tr>`).join("") + `</tbody></table>`;
     howtoEl.innerHTML =
-      `<button id="howtoClose" aria-label="close">✕</button>` +
+      `<button id="howtoClose" aria-label="close">${uiIcon("close")}</button>` +
       `<h2>${c.title}</h2>` +
       `<h3>${c.space}</h3>${tbl(c.space_rows)}` +
       `<h3>${c.ground}</h3>${tbl(c.ground_rows)}` +

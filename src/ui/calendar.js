@@ -87,12 +87,12 @@
     }
     sel += "</select>";
     const yearBar = '<div class="calYear">' +
-      '<button id="calPrev" aria-label="' + c.prev + '"' + (calYear <= CAL_Y_MIN ? " disabled" : "") + ">\u25c0</button>" +
+      '<button id="calPrev" aria-label="' + c.prev + '"' + (calYear <= CAL_Y_MIN ? " disabled" : "") + ">" + uiIcon("left") + "</button>" +
       sel +
-      '<button id="calNext" aria-label="' + c.next + '"' + (calYear >= CAL_Y_MAX ? " disabled" : "") + ">\u25b6</button>" +
+      '<button id="calNext" aria-label="' + c.next + '"' + (calYear >= CAL_Y_MAX ? " disabled" : "") + ">" + uiIcon("right") + "</button>" +
       (calYear !== thisYear ? '<button id="calThisYear">' + c.thisYear + "</button>" : "") +
       "</div>";
-    const head = '<button id="skyCalClose" aria-label="close">\u2715</button>' +
+    const head = '<button id="skyCalClose" aria-label="close">' + uiIcon("close") + '</button>' +
                  "<h2>" + c.title + "</h2>" + yearBar +
                  "<p>" + c.lead(siteLabel()) + "</p>";
     let body = "";
@@ -260,7 +260,7 @@
         '<button class="calGo" data-i="' + i + '">' + c.go + "</button>" +
       "</div>";
     }
-    todayEvEl.innerHTML = '<button id="todayEvClose" aria-label="close">\u2715</button>' +
+    todayEvEl.innerHTML = '<button id="todayEvClose" aria-label="close">' + uiIcon("close") + '</button>' +
       "<h2>" + c.todayTitle + "</h2><p>" + c.todayLead(dateStr) + "</p>" + body +
       '<div class="todayFoot"><button id="todayEvCal">' + c.title + "</button>" +
       '<button id="todayEvOk">' + c.todayClose + "</button></div>";

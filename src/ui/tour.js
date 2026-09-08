@@ -704,7 +704,8 @@
     tourDotsEl.innerHTML = tour.steps
       .map((_, i) => '<i class="' + (i === tourIdx ? "on" : "") + '"></i>').join("");
     tourPrevBtn.disabled = tourIdx === 0;
-    tourNextBtn.textContent = tourIdx === tour.steps.length - 1 ? t.tourDone : t.tourNext;
+    tourNextBtn.innerHTML = tourIdx === tour.steps.length - 1 ? escHTML(t.tourDone) :
+      escHTML(t.tourNext) + ' <span class="nextIcon">' + uiIcon("right") + "</span>";
     // 操作の検知で進むツアーでは自動送りに意味がないので出さない
     tourAutoBtn.textContent = t.tourAuto;
     tourAutoBtn.classList.toggle("on", tourAuto);
@@ -906,7 +907,7 @@
     rows.forEach((r, n) => { r.no = n + 1; r.st = tourSeenState(r.tr, seen); });
     rows.sort((a, b) => (a.st === 2) - (b.st === 2) || a.no - b.no);
     tourListEl.innerHTML =
-      '<button id="tourListClose" aria-label="close">✕</button>' +
+      '<button id="tourListClose" aria-label="close">' + uiIcon("close") + '</button>' +
       "<h2>" + t.menuTour + "</h2>" +
       rows.map((r) =>
         '<div class="tourCard' + (r.st === 2 ? " done" : "") + '">' +

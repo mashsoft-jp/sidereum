@@ -21,7 +21,7 @@
   <div id="noGL">お使いの環境では WebGL が利用できないため、<br>3D 表示を開始できませんでした。</div>
 
   <header id="title" class="hud">
-    <button id="menuBtn" aria-label="メニュー" aria-haspopup="true">☰</button>
+    <button id="menuBtn" data-ui-icon="menu" aria-label="メニュー" aria-haspopup="true">☰</button>
     <h1 class="logo">SIDEREUM<span class="beta">(β版)</span></h1>
     <!-- 天体名検索 (ui/search.js)。"/" キーでも開く -->
     <button id="searchBtn" aria-label="検索"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><circle cx="5.1" cy="5.1" r="3.4"/><path d="M7.7 7.7l2.9 2.9"/></svg></button>
@@ -123,7 +123,7 @@
   <div id="welcome"></div>
 
   <div id="navPanel" class="hud">
-    <button id="navCollapse" aria-label="リストを隠す"><svg class="navListIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="12" cy="12" r="5.5"/><ellipse cx="12" cy="12" rx="11" ry="3.2" transform="rotate(-28 12 12)"/></svg><span class="navListLabel">天体リスト</span><span class="navListClose" aria-hidden="true">×</span></button>
+    <button id="navCollapse" aria-label="リストを隠す"><svg class="navListIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="12" cy="12" r="5.5"/><ellipse cx="12" cy="12" rx="11" ry="3.2" transform="rotate(-28 12 12)"/></svg><span class="navListLabel">天体リスト</span><span class="navListClose" data-ui-icon="close" aria-hidden="true">×</span></button>
     <!-- 各行の絵だけのトグルと同じ絵をここにも出し、絵と語を結びつける
          (絵は applyLang が入れる。文字だけ差し替えられるよう span で分ける) -->
     <div id="masterToggles">
@@ -143,7 +143,7 @@
   </div>
 
   <aside id="info" class="hud" aria-live="polite">
-    <button id="closeInfo" aria-label="閉じる">✕</button>
+    <button id="closeInfo" data-ui-icon="close" aria-label="閉じる">✕</button>
     <p class="eyebrow" id="infoEyebrow"></p>
     <h2 id="infoName"></h2>
     <div id="frameActions" class="spaceOnly" role="group" aria-label="天体の見せ方">
@@ -179,12 +179,12 @@
   </div>
 
   <footer id="controls" class="hud">
-    <button id="ctrlCollapse" aria-label="操作パネルを隠す">⌄</button>
+    <button id="ctrlCollapse" data-ui-icon="down" aria-label="操作パネルを隠す">⌄</button>
     <button id="play" class="primary"><span id="playIcon"><svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="2.4" y="1.8" width="2.6" height="8.4" rx="0.7"/><rect x="7" y="1.8" width="2.6" height="8.4" rx="0.7"/></svg></span><span id="playLabel">停止</span></button>
     <label class="slider" id="speedLabel" for="speed" title="速度"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="6" r="4.5"/><path d="M6 3.3V6.1l2 1.3"/></svg><span class="vh">速度</span></label>
-    <button id="speedDown" class="step" aria-label="遅くする">−</button>
+    <button id="speedDown" data-ui-icon="minus" class="step" aria-label="遅くする">−</button>
     <input type="range" id="speed" min="0" max="100" value="0" aria-label="時間の速さ">
-    <button id="speedUp" class="step" aria-label="速くする">＋</button>
+    <button id="speedUp" data-ui-icon="plus" class="step" aria-label="速くする">＋</button>
     <span id="speedVal"></span>
 
     <!-- カメラ視点プルダウン (距離・ズームの左横、col1 を2行ぶん占有) -->
@@ -200,31 +200,31 @@
     <span id="camIcon" class="spaceOnly" aria-hidden="true" title="カメラ"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round"><path d="M1 4.1h2.3l.9-1.3h3.6l.9 1.3H11v5.4H1z"/><circle cx="6" cy="6.7" r="1.9"/></svg><span class="vh">カメラ</span></span>
     <span class="camGap"></span>
     <span class="slider spaceOnly" id="magLabel" title="ズーム"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><circle cx="5.1" cy="5.1" r="3.3"/><path d="M7.6 7.6l2.7 2.7"/></svg><span class="vh">ズーム</span></span>
-    <button id="magOut" class="step spaceOnly" aria-label="ズームアウト">−</button>
+    <button id="magOut" data-ui-icon="minus" class="step spaceOnly" aria-label="ズームアウト">−</button>
     <input type="range" id="mag" class="spaceOnly" min="0" max="100" value="0" aria-label="拡大率">
-    <button id="magIn" class="step spaceOnly" aria-label="ズームイン">＋</button>
+    <button id="magIn" data-ui-icon="plus" class="step spaceOnly" aria-label="ズームイン">＋</button>
     <span id="magVal" class="spaceOnly"></span>
 
     <span class="camGap"></span>
     <span class="slider spaceOnly" id="zoomLabel" title="距離"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.3 2.6v6.8M10.7 2.6v6.8M1.3 6h9.4M3.2 4.4L1.6 6l1.6 1.6M8.8 4.4L10.4 6 8.8 7.6"/></svg><span class="vh">距離</span></span>
-    <button id="zoomOut" class="step spaceOnly" aria-label="遠ざける">−</button>
+    <button id="zoomOut" data-ui-icon="minus" class="step spaceOnly" aria-label="遠ざける">−</button>
     <input type="range" id="zoom" class="spaceOnly" min="0" max="100" value="40" aria-label="注視点との距離">
-    <button id="zoomIn" class="step spaceOnly" aria-label="近づける">＋</button>
+    <button id="zoomIn" data-ui-icon="plus" class="step spaceOnly" aria-label="近づける">＋</button>
     <span id="zoomVal" class="spaceOnly"></span>
 
     <!-- 地上ビュー用 -->
     <span class="groundOnly"></span>
     <span class="slider groundOnly" id="gFovLabel" title="ズーム"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><circle cx="5.1" cy="5.1" r="3.3"/><path d="M7.6 7.6l2.7 2.7"/></svg><span class="vh">ズーム</span></span>
-    <button id="gFovOut" class="step groundOnly" aria-label="ズームアウト">−</button>
+    <button id="gFovOut" data-ui-icon="minus" class="step groundOnly" aria-label="ズームアウト">−</button>
     <input type="range" id="gFov" class="groundOnly" min="0" max="100" value="43" aria-label="ズーム">
-    <button id="gFovIn" class="step groundOnly" aria-label="ズームイン">＋</button>
+    <button id="gFovIn" data-ui-icon="plus" class="step groundOnly" aria-label="ズームイン">＋</button>
     <span id="gFovVal" class="groundOnly"></span>
 
     <span class="groundOnly"></span>
     <span class="slider groundOnly" id="gAzLabel" title="方位"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="4.6"/><path d="M6 2.2l1.7 5.6L6 6.6 4.3 7.8z" fill="currentColor" stroke="none"/></svg><span class="vh">方位</span></span>
-    <button id="gAzLeft" class="step groundOnly" aria-label="左へ回す">◀</button>
+    <button id="gAzLeft" data-ui-icon="left" class="step groundOnly" aria-label="左へ回す">◀</button>
     <svg id="gAzTape" class="groundOnly" viewBox="-90 -22 180 36" aria-hidden="true"></svg>
-    <button id="gAzRight" class="step groundOnly" aria-label="右へ回す">▶</button>
+    <button id="gAzRight" data-ui-icon="right" class="step groundOnly" aria-label="右へ回す">▶</button>
     <span id="gAzDir" class="groundOnly"></span>
 
   </footer>
@@ -233,22 +233,22 @@
        右端へ置き、高さは画面に合わせて伸縮させる -->
     <div id="angleCell" class="hud spaceOnly">
       <span id="angleLabel" title="角度"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><path d="M1.2 9.6h9.6M1.2 9.6L9.4 2.8"/><path d="M6.6 9.6a5.4 5.4 0 0 0-1.1-3.1"/></svg><span class="vh">角度</span></span>
-      <button id="angleUp" class="step" aria-label="上から見下ろす">▲</button>
+      <button id="angleUp" data-ui-icon="up" class="step" aria-label="上から見下ろす">▲</button>
       <!-- 0° の位置に小さな横棒 (.zeroTick)。目盛りは無いので、水平がどこかを示す -->
       <span class="vslWrap"><input type="range" id="angle" min="-90" max="90" value="20" aria-label="カメラ俯角"><span class="zeroTick" aria-hidden="true"></span></span>
-      <button id="angleDown" class="step" aria-label="横から見る">▼</button>
+      <button id="angleDown" data-ui-icon="down" class="step" aria-label="横から見る">▼</button>
       <span id="angleVal"></span>
     </div>
 
     <div id="gAltCell" class="hud groundOnly">
       <span id="gAltLabelTop" title="高度"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><path d="M1.2 9.6h9.6M1.2 9.6L9.4 2.8"/><path d="M6.6 9.6a5.4 5.4 0 0 0-1.1-3.1"/></svg><span class="vh">高度</span></span>
-      <button id="gAltUp" class="step" aria-label="上を向く">▲</button>
+      <button id="gAltUp" data-ui-icon="up" class="step" aria-label="上を向く">▲</button>
       <span class="vslWrap"><input type="range" id="gAlt" min="-80" max="90" value="30" aria-label="高度"><span class="zeroTick" aria-hidden="true"></span></span>
-      <button id="gAltDown" class="step" aria-label="下を向く">▼</button>
+      <button id="gAltDown" data-ui-icon="down" class="step" aria-label="下を向く">▼</button>
       <span id="gAltVal"></span>
     </div>
 
-  <button id="ctrlExpand" aria-label="操作パネルを表示">⌃</button>
+  <button id="ctrlExpand" data-ui-icon="up" aria-label="操作パネルを表示">⌃</button>
 
   <!-- ガイドツアーのナレーションバー (ツアー中のみ表示。操作パネルと入れ替わる) -->
   <div id="tourBar" class="hud">
@@ -257,11 +257,11 @@
       <span id="tourTitle"></span>
       <span id="tourStep"></span>
       <span id="tourDone" aria-live="polite"></span>
-      <button id="tourClose" aria-label="ツアーを終了">✕</button>
+      <button id="tourClose" data-ui-icon="close" aria-label="ツアーを終了">✕</button>
     </div>
     <p id="tourText"></p>
     <div id="tourNav">
-      <button id="tourPrev" aria-label="前のシーン">◀</button>
+      <button id="tourPrev" data-ui-icon="left" aria-label="前のシーン">◀</button>
       <div id="tourDots"></div>
       <button id="tourResume" hidden></button>
       <button id="tourAuto"></button>
