@@ -428,6 +428,7 @@
     // コンテキストを失ったら描き続けない (gl.* は無視されるだけだが、案内を
     // 出したうえで回し続ける意味がない)。復帰は gl/setup.js が開き直しで行う
     if (glLost) return;
+    finishTextureFades();
     perfFrame(now);          // 描画負荷の計測 (?perf=1 のときだけ動く)
     const raw = (now - last) / 1000;
     last = now;

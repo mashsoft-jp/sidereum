@@ -274,6 +274,7 @@
         gl.uniform1f(u.uSunT, simDays - Math.floor(simDays / 238) * 238);
         gl.activeTexture(gl.TEXTURE0);
         gl.uniform1i(u.uTex, 0);
+        gl.uniform1i(u.uTexPrevious, 5);
         gl.uniform1f(u.uTime, time);
         gl.uniform3f(u.uCam, cameraPosition[0], cameraPosition[1], cameraPosition[2]);
         if (depthTest) gl.enable(gl.DEPTH_TEST); else gl.disable(gl.DEPTH_TEST);
@@ -318,6 +319,11 @@
       draw({ body, model, mvp, sunPosition, radiusPx, eclipse, ext = null, shine = null }) {
         if (!inPass) throw new Error("bodyRenderer: beginPass より前に draw が呼ばれました");
         const tx = texByKey.get(body.key);
+        const old = texPrevious.get(body.key);
+        const fade = old ? Math.min(1, Math.max(0, (performance.now() - old.time) / TEX_FADE_MS)) : 1;
+        gl.activeTexture(gl.TEXTURE5);
+        gl.bindTexture(gl.TEXTURE_2D, old ? old.tex : (tx || noTex));
+        gl.uniform1f(u.uTexBlend, fade * fade * (3 - 2 * fade));
         // 法線図を持つ天体だけユニット4を差し替える。持たない天体でも
         // 「持っていない」ことを毎回伝える (前の天体の値を引き継がせない)
         const nx = nrmByKey.get(body.key);

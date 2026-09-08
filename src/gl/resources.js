@@ -1,4 +1,12 @@
   const texByKey = new Map();
+  const texPrevious = new Map(), texRequests = new Map();
+  const TEX_FADE_MS = 650;
+  function finishTextureFades() {
+    const now = performance.now();
+    for (const [key, old] of texPrevious) if (now - old.time >= TEX_FADE_MS) {
+      gl.deleteTexture(old.tex); texPrevious.delete(key);
+    }
+  }
   const noTex = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, noTex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0]));
@@ -21,8 +29,8 @@
   const texWarn = (key, why) =>
     console.warn(`テクスチャ ${texURL(key)} を使えませんでした: ${why}` +
       (location.protocol === "file:" ? " — file:// では画像を読み込めません。HTTP で配信してください" : ""));
-  // 既存のテクスチャオブジェクトへ読み直す。解像度を切り替えても GL の
-  // ハンドルは変えないので、これを持っている描画側に手を入れる必要がない
+  // 表面画像は新しい GL テクスチャへ読み込み、旧画像から短くクロスフェードする。
+  // 雲・夜景・法線図などの補助画像は既存ハンドルへ読み直す。
   // 読み込み中の枚数。0 に戻ったところで Service Worker へ控えを頼む
   // (読み込み中に頼むと、同じものをもう一度取りに行かせることになる)
   let texPending = 0;
@@ -31,19 +39,25 @@
   }
   function loadTexInto(tex, key) {
     texPending++;
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    // ミップ付きのまま differing サイズを入れると、生成し直すまでの間だけ
-    // 不完全なテクスチャ (真っ黒) になる。生成後に付け直すので一旦 LINEAR へ
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    const request = (texRequests.get(key) || 0) + 1;
+    texRequests.set(key, request);
     const img = new Image();
     img.onload = () => {
       texSettled();
+      if (texRequests.get(key) !== request) return; // 素早く解像度を切り替えた場合は最新だけ採用
+      const surface = Object.prototype.hasOwnProperty.call(TEXTURES, key);
+      const next = surface ? gl.createTexture() : tex;
       // file:// で開くと画像自体は読めても不透明オリジン扱いになり、ここが
       // SecurityError で落ちる。取り込めなかったぶんは仮色のまま描く
       try {
-        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.bindTexture(gl.TEXTURE_2D, next);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
       } catch (e) {
+        if (surface) gl.deleteTexture(next);
         texWarn(key, e.message);
         return;
       }
@@ -54,6 +68,12 @@
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
         if (anisoMax > 1) gl.texParameterf(gl.TEXTURE_2D, anisoExt.TEXTURE_MAX_ANISOTROPY_EXT, anisoMax);
       }
+      if (surface) {
+        const old = texPrevious.get(key);
+        if (old) gl.deleteTexture(old.tex);
+        texPrevious.set(key, { tex: texByKey.get(key) || tex, time: performance.now() });
+        texByKey.set(key, next);
+      }
     };
     // tex/ を index.html と一緒に置き忘れた場合にここへ来る
     img.onerror = () => { texSettled(); texWarn(key, "取得できませんでした"); };
@@ -63,6 +83,7 @@
   function loadTex(key) {
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     // 読み込み完了までの仮色
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([70, 70, 74]));
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);

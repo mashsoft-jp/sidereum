@@ -8,7 +8,8 @@
     uniform float uAirGain; // 目の順応 (空ドームと同じ値)
     uniform vec3 uExt;      // 大気減光の透過率 (RGB)。大気が無い経路では 1
     uniform vec4 uParams;
-    uniform sampler2D uTex;
+    uniform sampler2D uTex, uTexPrevious;
+    uniform float uTexBlend;
     uniform mat4 uModel;        // 中心・極方向・スケールを取り出すのに使う
     uniform float uRingOn;      // 環を持つ天体 (土星) だけ 1
     uniform vec2 uRingR;        // 環プロファイルの参照範囲 (内径, 1/(外径-内径))
@@ -288,6 +289,7 @@
       } else if (uHasTex > 0.5) {
         // ---- 実テクスチャ (NASA/USGS 全球マップ) ----
         alb = srgbToLinear(SAMPLE(uTex, uv).rgb);
+        if (uTexBlend < 1.0) alb = mix(srgbToLinear(SAMPLE(uTexPrevious, uv).rgb), alb, uTexBlend);
         if (uType > 3.5 && uType < 4.5) {
           // ---- 地球: 雲・雲の影・海面の反射 ----
           // 雲は地表とは別に、ゆっくり東へ流す。1 を超えたぶんは REPEAT に任せる
