@@ -14623,6 +14623,51 @@
   function snapSite() {
     return groundView && surfaceBody === "earth" ? siteLabel() : "";
   }
+  // 画像内の文字は CSS ピクセルで組み、保存解像度に合わせて拡大する。
+  function drawSnapshotCaption(x, width, height, scale, when, site) {
+    const compact = width < 560;
+    const pad = Math.min(24, Math.max(14, width * 0.025));
+    const bottom = height - pad;
+    const metaRows = site ? 2 : 1;
+    const footer = (compact ? 54 : 34) + metaRows * 18;
+    x.save(); x.scale(scale, scale);
+    // 明るい地平線でも読めるよう、下端だけ緩やかに暗くする。
+    const shade = x.createLinearGradient(0, height - footer - pad, 0, height);
+    shade.addColorStop(0, "rgba(4,6,14,0)");
+    shade.addColorStop(0.55, "rgba(4,6,14,0.32)");
+    shade.addColorStop(1, "rgba(4,6,14,0.68)");
+    x.fillStyle = shade; x.fillRect(0, height - footer - pad, width, footer + pad);
+    x.textBaseline = "bottom";
+    x.shadowColor = "rgba(0,0,0,0.6)"; x.shadowBlur = 2;
+    const logoY = compact ? bottom - metaRows * 18 - 12 : bottom - 18;
+    x.font = "400 16px Megrim, system-ui, sans-serif";
+    x.fillStyle = "rgba(242,178,62,0.82)";
+    x.textAlign = compact ? "left" : "right";
+    x.fillText("S I D E R E U M", compact ? pad : width - pad, logoY);
+    x.font = "9px system-ui, -apple-system, sans-serif";
+    x.fillStyle = "rgba(201,213,234,0.52)"; x.textAlign = "right";
+    x.fillText("\u00a9 2026 Mashsoft Inc.", width - pad, compact ? logoY : bottom);
+    x.textAlign = "left";
+    const metaWidth = compact ? width - pad * 2 : width - pad * 2 - 180;
+    // 観測地名が長い場合もロゴに重ならない。全文は共有リンクに保持される。
+    const line = (text, y) => {
+      let label = text;
+      if (x.measureText(label).width > metaWidth) {
+        while (label && x.measureText(label + "…").width > metaWidth) label = label.slice(0, -1);
+        label += "…";
+      }
+      x.fillText(label, pad, y);
+    };
+    x.font = "11px system-ui, -apple-system, sans-serif";
+    x.fillStyle = "rgba(201,213,234,0.78)";
+    line(when, bottom - (site ? 18 : 0));
+    if (site) {
+      x.fillStyle = "rgba(201,213,234,0.60)";
+      line(site, bottom);
+    }
+    x.restore();
+  }
+
   function snapshotIfPending() {
     if (!snapPending) return;
     snapPending = false;
@@ -14631,21 +14676,7 @@
     const x = c.getContext("2d");
     x.drawImage(glc, 0, 0);
     x.drawImage(ovl, 0, 0);
-    const fs = Math.round(12 * DPR), pad = Math.round(14 * DPR), lh = Math.round(16 * DPR);
-    x.textBaseline = "bottom";
-    x.shadowColor = "rgba(0,0,0,0.85)"; x.shadowBlur = 4 * DPR;
-    x.font = fs + "px system-ui, -apple-system, sans-serif";
-    x.fillStyle = "rgba(201,213,234,0.92)";
-    const site = snapSite();
-    x.fillText(snapWhen() + (site ? "   " + site : ""), pad, c.height - pad);
-    // 右下: ロゴと著作権表示 (About と同じ表記)
-    x.textAlign = "right";
-    x.font = "400 " + fs + "px Megrim, system-ui, sans-serif";
-    x.fillStyle = "rgba(242,178,62,0.9)";
-    x.fillText("S I D E R E U M", c.width - pad, c.height - pad - lh);
-    x.font = Math.round(10 * DPR) + "px system-ui, -apple-system, sans-serif";
-    x.fillStyle = "rgba(201,213,234,0.8)";
-    x.fillText("\u00a9 2026 Mashsoft Inc.", c.width - pad, c.height - pad);
+    drawSnapshotCaption(x, c.width / DPR, c.height / DPR, DPR, snapWhen(), snapSite());
     snapName = "sidereum-" + dateInput.value.replace(/-/g, "") + "-" + timeInput.value.replace(":", "") + ".png";
     c.toBlob((blob) => {
       if (!blob) return;
