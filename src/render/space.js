@@ -21,6 +21,12 @@
   // 宇宙のガイドは、注視天体が円盤として見えるほど背景へ退く。
   // 距離そのものではなく投影半径を使い、微小衛星・望遠・小画面でも同じ判断にする。
   const spaceGuide = { body: null, close: 0, sky: 1 };
+  // 星座は広い星空の案内。対象未選択でも、望遠で画角が狭くなれば控えめにする。
+  // 30度以上は従来の濃さ、8度以下は8%。境目は連続で、引けば元に戻る。
+  function skyGuideVisibility(fov) {
+    const t = Math.max(0, Math.min(1, (fov * 180 / Math.PI - 8) / 22));
+    return .08 + .92 * t * t * (3 - 2 * t);
+  }
   function updateSpaceGuide() {
     const b = selected || lastCenter;
     const p = b && posW.get(b.key);
@@ -37,7 +43,7 @@
     }
     spaceGuide.body = b;
     spaceGuide.close = close;
-    spaceGuide.sky = 1 - close;
+    spaceGuide.sky = (1 - close) * skyGuideVisibility(eFov());
   }
   function spaceRelated(b) {
     const focus = spaceGuide.body;
