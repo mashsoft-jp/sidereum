@@ -23,7 +23,7 @@
   }
 
   // 長方形から常設の操作帯を引き、残る最大の領域を使う。
-  // 情報カードと天体リストは構図に影響しない。入力は画面上の CSS px。
+  // コンパクト表示では情報カードも避ける。入力は画面上の CSS px。
   function emptyFrameRect(bounds, obstacles) {
     let candidates = [bounds];
     for (const o of obstacles) {
@@ -62,7 +62,11 @@
       const r = box("controls"); if (r) bounds.y1 = Math.min(bounds.y1, r.y0);
     }
     const obstacles = [];
-    // 情報カードと天体リストは重ねて表示する。開閉で中心も倍率も変えない。
+    // PC の情報カードと天体リストは重ねる。スマホの縦・横表示では
+    // 情報カードを避け、天体がその下に隠れない位置と倍率に合わせる。
+    if ((W <= 720 || H <= 480) && infoPanel.classList.contains("open")) {
+      const r = box("info"); if (r) obstacles.push(r);
+    }
     for (const id of ["angleCell"]) {
       const r = box(id); if (r) obstacles.push(r);
     }
@@ -205,8 +209,8 @@
   window.addEventListener("resize", dirtyFrame);
   frameApp.addEventListener("transitionend", dirtyFrame);
   const frameMutation = new MutationObserver(dirtyFrame);
-  frameMutation.observe(frameApp, { attributes: true, attributeFilter: ["class"] });
+  for (const el of [frameApp, infoPanel]) frameMutation.observe(el, { attributes: true, attributeFilter: ["class"] });
   if (window.ResizeObserver) {
     const observer = new ResizeObserver(dirtyFrame);
-    for (const id of ["controls", "title", "clock"]) observer.observe(document.getElementById(id));
+    for (const id of ["info", "controls", "title", "clock"]) observer.observe(document.getElementById(id));
   }

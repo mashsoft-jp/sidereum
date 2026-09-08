@@ -30,8 +30,7 @@ for (const [w,h] of [[1280,720],[390,844],[844,390]]) {
   assert.deepEqual(run('measureFrameRect()'),open,'リストの幅でも構図を動かさない');
   navBox.right=256;
 }
-// 情報カードも重ねるだけ。PC の右カード・スマホの下カードとも、
-// 開閉と詳細の展開で中心やフィットに使う寸法を変えない。
+// PC は情報カードの開閉でも構図を維持。スマホの縦・横表示はカードを避ける。
 let infoOpen = true;
 let infoBox;
 ctx.infoPanel = {classList:{contains:()=>infoOpen}};
@@ -45,9 +44,16 @@ for (const [w,h] of [[1280,720],[390,844],[844,390]]) {
   infoOpen=true;
   const open=run('measureFrameRect()');
   infoOpen=false;
-  assert.deepEqual(run('measureFrameRect()'),open,'情報カードの開閉で中心・フィット領域を動かさない');
-  infoOpen=true; infoBox.top=80; infoBox.bottom=h-20;
-  assert.deepEqual(run('measureFrameRect()'),open,'情報カードの詳細展開でも構図を動かさない');
+  const closed=run('measureFrameRect()');
+  const compact=w<=720 || h<=480;
+  if (compact) {
+    assert.notDeepEqual(closed,open,'スマホは情報カードの開閉に応じて構図を調整');
+    assert.ok(open.x1<=infoBox.left || open.x0>=infoBox.right || open.y1<=infoBox.top || open.y0>=infoBox.bottom,'スマホは情報カードを避ける');
+  } else assert.deepEqual(closed,open,'PC は情報カードの開閉で構図を動かさない');
+  infoOpen=true; infoBox.top=w<=720 ? h-460 : 80; infoBox.bottom=h-20;
+  const expanded=run('measureFrameRect()');
+  if (compact) assert.ok(expanded.x1<=infoBox.left || expanded.x0>=infoBox.right || expanded.y1<=infoBox.top || expanded.y0>=infoBox.bottom,'スマホは展開後のカードも避ける');
+  else assert.deepEqual(expanded,open,'PC は詳細展開でも構図を動かさない');
 }
 const overlaps = (a, b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
 for (const [width, height, obstacles] of [
