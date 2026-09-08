@@ -98,6 +98,48 @@
     cam.distTgt = Math.max(bodyR(body) * 1.15, Math.min(1400, cam.distTgt));
   }
 
+  // 手動の接近だけ、注視点と距離を同じ時間軸で動かす。ツアーは専用の進行を使う。
+  let cameraFlight = null;
+  const flightEase = t => { const u = Math.max(0, Math.min(1, t)); return u * u * u * (u * (u * 6 - 15) + 10); };
+  function beginCameraFlight(body) {
+    if (!body || groundView || tourActive || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const target = posW.get(body.key);
+    cameraFlight = { body, elapsed: 0, duration: 2.2,
+      offset: cam.focus.map((v, i) => v - target[i]), pan: cam.panOff.slice(),
+      dist: Math.max(cam.dist, 1e-12), yaw: cam.yaw, pitch: cam.pitch, zoom: camZoom };
+  }
+  function stepCameraFlight(dt) {
+    const f = cameraFlight;
+    if (!f) return;
+    if (groundView || tourActive || selected !== f.body) { cameraFlight = null; return; }
+    f.elapsed += dt;
+    const t = Math.min(1, f.elapsed / f.duration), e = flightEase(t);
+    const focus = flightEase(t / 0.65), target = posW.get(f.body.key);
+    // 注視点を先に揃え、最後の接近で中心が横へ流れないようにする。
+    for (let i = 0; i < 3; i++) {
+      cam.focus[i] = target[i] + f.offset[i] * (1 - focus);
+      cam.panOff[i] = f.pan[i] * (1 - focus);
+    }
+    // 距離は対数で補間する。桁が変わる接近でも見かけの拡大を均等に配分する。
+    cam.dist = Math.exp(Math.log(f.dist) * (1 - e) + Math.log(Math.max(cam.distTgt, 1e-12)) * e);
+    let yaw = (cam.yawTgt - f.yaw) % (2 * Math.PI);
+    if (yaw > Math.PI) yaw -= 2 * Math.PI;
+    if (yaw < -Math.PI) yaw += 2 * Math.PI;
+    cam.yaw = f.yaw + yaw * e;
+    cam.pitch = f.pitch + (cam.pitchTgt - f.pitch) * e;
+    camZoom = f.zoom + (camZoomTgt - f.zoom) * e;
+    if (t >= 1) cameraFlight = null;
+  }
+  function cancelCameraFlight() {
+    if (!cameraFlight) return;
+    cameraFlight = null; frameLayout.fit = null;
+    cam.distTgt = cam.dist; cam.yawTgt = cam.yaw; cam.pitchTgt = cam.pitch; camZoomTgt = camZoom;
+  }
+  // 次の操作を先に受け付ける。選択ボタンの処理より前に前回の移動を止める。
+  for (const event of ["pointerdown", "wheel", "keydown"]) {
+    window.addEventListener(event, cancelCameraFlight, { capture: true, passive: true });
+  }
+
   function frameBody(body, mode) {
     if (!body || body.mesh || groundView || tourActive) return;
     if (W <= 720 && navVisible) { navVisible = false; applyNavVisible(); }
@@ -108,6 +150,7 @@
     positionInfoPanel();
     frameLayout.rect = measureFrameRect();
     fitFrameDistance(body);
+    beginCameraFlight(body);
     frameLayout.dirty = true; // パネルの開くアニメーションが終わるまで再計測する
   }
 

@@ -11,6 +11,7 @@
     else infoPanel.classList.remove("open");
   }
   function select(body, fly) {
+    cameraFlight = null;
     selected = body;
     selectionMarkAt = performance.now();
     syncFramingUI();
@@ -32,6 +33,7 @@
         // 探査機は画面上の記号サイズで描くので、球のフィットではなく従来の接近距離。
         frameLayout.fit = null;
         cam.distTgt = Math.max(bodyR(body) * 2.2, 100000 * KM2W);
+        beginCameraFlight(body);
       } else {
         frameBody(body, "close");
       }
