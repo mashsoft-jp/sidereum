@@ -30,6 +30,25 @@ for (const [w,h] of [[1280,720],[390,844],[844,390]]) {
   assert.deepEqual(run('measureFrameRect()'),open,'リストの幅でも構図を動かさない');
   navBox.right=256;
 }
+// 情報カードも重ねるだけ。PC の右カード・スマホの下カードとも、
+// 開閉と詳細の展開で中心やフィットに使う寸法を変えない。
+let infoOpen = true;
+let infoBox;
+ctx.infoPanel = {classList:{contains:()=>infoOpen}};
+ctx.document = {getElementById:id=>id==='info' ? {
+  getClientRects:()=>infoOpen ? [infoBox] : [], getBoundingClientRect:()=>infoBox
+} : null};
+for (const [w,h] of [[1280,720],[390,844],[844,390]]) {
+  ctx.W=w; ctx.H=h;
+  infoBox = w<=720 ? {left:8,top:h-360,right:w-8,bottom:h-100}
+    : {left:w-350,top:110,right:w-40,bottom:h-100};
+  infoOpen=true;
+  const open=run('measureFrameRect()');
+  infoOpen=false;
+  assert.deepEqual(run('measureFrameRect()'),open,'情報カードの開閉で中心・フィット領域を動かさない');
+  infoOpen=true; infoBox.top=80; infoBox.bottom=h-20;
+  assert.deepEqual(run('measureFrameRect()'),open,'情報カードの詳細展開でも構図を動かさない');
+}
 const overlaps = (a, b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
 for (const [width, height, obstacles] of [
   [1280, 720, [{ x0: 0, x1: 240, y0: 90, y1: 650 }, { x0: 900, x1: 1280, y0: 110, y1: 620 }]],

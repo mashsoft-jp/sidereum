@@ -22,8 +22,8 @@
     frameCloseBtn.disabled = frameContextBtn.disabled = frameEnjoyBtn.disabled = !available;
   }
 
-  // 長方形から HUD を引き、残る最大の領域を使う。縦持ちでは情報カードの上、
-  // 横持ちでは左右のパネルの間が自然に選ばれる。入力は画面上の CSS px。
+  // 長方形から常設の操作帯を引き、残る最大の領域を使う。
+  // 情報カードと天体リストは構図に影響しない。入力は画面上の CSS px。
   function emptyFrameRect(bounds, obstacles) {
     let candidates = [bounds];
     for (const o of obstacles) {
@@ -62,9 +62,8 @@
       const r = box("controls"); if (r) bounds.y1 = Math.min(bounds.y1, r.y0);
     }
     const obstacles = [];
-    // 天体リストは重ねて表示する。開閉で構図や自動フィットの倍率を変えない。
-    for (const id of ["info", "angleCell"]) {
-      if (id === "info" && !infoPanel.classList.contains("open")) continue;
+    // 情報カードと天体リストは重ねて表示する。開閉で中心も倍率も変えない。
+    for (const id of ["angleCell"]) {
       const r = box(id); if (r) obstacles.push(r);
     }
     return emptyFrameRect(bounds, obstacles);
@@ -156,7 +155,7 @@
     frameLayout.rect = measureFrameRect();
     fitFrameDistance(body);
     beginCameraFlight(body);
-    frameLayout.dirty = true; // パネルの開くアニメーションが終わるまで再計測する
+    frameLayout.dirty = true;
   }
 
   function stepFraming(k) {
@@ -206,8 +205,8 @@
   window.addEventListener("resize", dirtyFrame);
   frameApp.addEventListener("transitionend", dirtyFrame);
   const frameMutation = new MutationObserver(dirtyFrame);
-  for (const el of [frameApp, infoPanel]) frameMutation.observe(el, { attributes: true, attributeFilter: ["class"] });
+  frameMutation.observe(frameApp, { attributes: true, attributeFilter: ["class"] });
   if (window.ResizeObserver) {
     const observer = new ResizeObserver(dirtyFrame);
-    for (const id of ["info", "controls", "title", "clock"]) observer.observe(document.getElementById(id));
+    for (const id of ["controls", "title", "clock"]) observer.observe(document.getElementById(id));
   }
