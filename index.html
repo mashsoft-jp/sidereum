@@ -16829,22 +16829,25 @@
     if (groundView || tourActive || selected !== f.body) { cameraFlight = null; return; }
     f.elapsed += dt;
     const t = Math.min(1, f.elapsed / f.duration);
-    const focus = flightEase(t / 0.32), target = posW.get(f.body.key);
-    const e = flightEase((t - 0.32) / 0.68);
-    // 注視点を先に揃え、最後の接近で中心が横へ流れないようにする。
-    for (let i = 0; i < 3; i++) {
-      cam.focus[i] = target[i] + f.offset[i] * (1 - focus);
-      cam.panOff[i] = f.pan[i] * (1 - focus);
-    }
-    // 先に向きを揃えてから接近する。距離の対数ではなく逆数 (見かけの大きさ)
-    // を補間し、大きく見え始める終盤へ拡大が集中するのを防ぐ。
+    const e = flightEase(t), target = posW.get(f.body.key);
+    // 回転・中心合わせ・接近を同時に進める。距離の逆数で見かけの拡大を均す。
     cam.dist = 1 / ((1 - e) / f.dist + e / Math.max(cam.distTgt, 1e-12));
+    // 中心のずれもワールド距離ではなく角度で減らす。接近で残差が拡大されて
+    // 終盤に天体が横へ走ることを防ぎ、遠くの別天体からでも連続して向き直る。
+    const offset = Math.hypot(...f.offset.map((v, i) => v + f.pan[i]));
+    const residual = offset > 1e-12
+      ? cam.dist * Math.tan(Math.atan2(offset, f.dist) * (1 - e)) / offset
+      : (1 - e) * cam.dist / f.dist;
+    for (let i = 0; i < 3; i++) {
+      cam.focus[i] = target[i] + f.offset[i] * residual;
+      cam.panOff[i] = f.pan[i] * residual;
+    }
     let yaw = (cam.yawTgt - f.yaw) % (2 * Math.PI);
     if (yaw > Math.PI) yaw -= 2 * Math.PI;
     if (yaw < -Math.PI) yaw += 2 * Math.PI;
-    cam.yaw = f.yaw + yaw * focus;
-    cam.pitch = f.pitch + (cam.pitchTgt - f.pitch) * focus;
-    camZoom = f.zoom + (camZoomTgt - f.zoom) * focus;
+    cam.yaw = f.yaw + yaw * e;
+    cam.pitch = f.pitch + (cam.pitchTgt - f.pitch) * e;
+    camZoom = f.zoom + (camZoomTgt - f.zoom) * e;
     if (t >= 1) cameraFlight = null;
   }
   function cancelCameraFlight() {

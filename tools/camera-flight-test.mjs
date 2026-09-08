@@ -10,14 +10,21 @@ for (const fps of [15, 60, 120]) {
     frameLayout:{fit:body},posW:new Map([['test',[10,0,0]]]),matchMedia:()=>({matches:false}),window:{addEventListener(){}}});
   vm.runInContext(code,ctx);
   vm.runInContext('beginCameraFlight(selected)',ctx);
-  let previous=cam.dist;
+  let previous=cam.dist, previousAngle=Math.atan2(10,1000);
   const sizes=[];
   for(let i=0;i<Math.ceil(2.8*fps)+1;i++) {
     vm.runInContext(`stepCameraFlight(${1/fps})`,ctx);
     assert.ok(cam.dist<=previous+1e-10 && cam.dist>=.001-1e-10);
     assert.ok(Number.isFinite(cam.focus[0]));previous=cam.dist;
     sizes.push(.001 / cam.dist);
-    if (cam.dist < 999) assert.equal(cam.focus[0],10,'center must arrive before approach');
+    const angle=Math.atan2(Math.abs(10-cam.focus[0]),cam.dist);
+    assert.ok(angle<=previousAngle+1e-9,'angular offset must decrease throughout approach');
+    previousAngle=angle;
+    if (i===Math.floor(fps*.5)) {
+      assert.ok(cam.dist<1000 && cam.dist>.001,'approach already in progress');
+      assert.ok(cam.pitch>0 && cam.pitch<.3,'rotation overlaps approach');
+      assert.ok(angle>0,'centering overlaps approach');
+    }
   }
   const speeds=sizes.slice(1).map((s,i)=>(s-sizes[i])*fps);
   const late=speeds.slice(Math.floor(2.2*fps));
