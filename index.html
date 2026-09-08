@@ -12026,8 +12026,8 @@
     if (!introOn) return;
     if (!introT0) introT0 = nowSec;
     const t = nowSec - introT0;
-    // 方位の移動が始まる最初のフレームから1秒後に表示を始める。
-    const fade = Math.max(0, Math.min(1, (t - 1.0) / 0.9));
+    // 方位の移動が始まる最初のフレームから2秒後に表示を始める。
+    const fade = Math.max(0, Math.min(1, (t - 2.0) / 0.9));
     introLogo.style.opacity = String(fade);
     introBackdrop.style.opacity = String(fade);
     if (t >= INTRO_SEC + INTRO_LOGO_SEC) { endIntro(); return; }
