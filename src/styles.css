@@ -879,6 +879,8 @@
     white-space: nowrap; line-height: 1.2; opacity: 0;
     pointer-events: none; text-shadow: 0 2px 18px rgba(4, 6, 14, 0.9);
   }
+  #introLogo svg { height: 1.2em; display: inline-block; vertical-align: top; overflow: visible; margin-right: 0.13em; }
+  #introLogo .introPen { filter: drop-shadow(0 0 20px #f2b23e); }
   #welcomeLogo { display: inline-block; line-height: 1.2; }
   #welcome.introPrepare, #welcome.introDock { display: flex; pointer-events: none; }
   #welcome.introPrepare { visibility: hidden; }
