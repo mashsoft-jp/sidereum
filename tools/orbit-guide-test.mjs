@@ -1,0 +1,17 @@
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const source=readFileSync(new URL('../src/render/space.js',import.meta.url),'utf8');
+const a={key:'a',parent:'planet',aKm:100,showOrbit:true};
+const b={key:'b',parent:'planet',aKm:101,showOrbit:true};
+const ctx=vm.createContext({selected:null,tourSpot:null,posW:new Map([['planet',[0,0,0]]]),EYE:[0,0,1000],KM2W:1,H:800,eFov:()=>Math.PI/4,SATELLITES:[a,b],body:a});
+vm.runInContext(source.slice(source.indexOf('  function satelliteOrbitReadability'),source.indexOf('  function orbitGuide')),ctx);
+const value=()=>vm.runInContext('satelliteOrbitReadability(body)',ctx);
+const dense=value(); assert.ok(dense<.3);
+ctx.EYE=[0,0,10];assert.equal(value(),1);
+ctx.EYE=[0,0,1000];ctx.selected=a;assert.equal(value(),1);
+ctx.selected=null;ctx.tourSpot='a';assert.equal(value(),1);
+ctx.tourSpot=null;b.showOrbit=false;assert.equal(value(),1);
+assert.equal(a.showOrbit,true);
+ctx.body={key:'planet'};assert.equal(value(),1);
+console.log('orbit guide: dense satellites fade, close or selected orbits remain, hidden siblings ignored, settings preserved');

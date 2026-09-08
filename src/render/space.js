@@ -56,9 +56,28 @@
     if (spaceRelated(b)) return 0.5;
     return lblPri(b);
   }
+  // 衛星軌道が数ピクセルに密集する引きでは、束になった線を背景へ退ける。
+  // ON/OFF は変更せず、寄って間隔が開けば滑らかに元の明るさへ戻す。
+  function satelliteOrbitReadability(b) {
+    if (!b.parent || b === selected || b.key === tourSpot) return 1;
+    const center = posW.get(b.parent);
+    if (!center) return 1;
+    const distance = Math.max(1e-12, Math.hypot(center[0] - EYE[0], center[1] - EYE[1], center[2] - EYE[2]));
+    const pixelsPerKm = KM2W * H / (2 * Math.tan(eFov() / 2) * distance);
+    let gap = Infinity;
+    for (const other of SATELLITES) {
+      if (other !== b && other.parent === b.parent && other.showOrbit)
+        gap = Math.min(gap, Math.abs(other.aKm - b.aKm));
+    }
+    const u = Math.max(0, Math.min(1, Math.min(b.aKm * pixelsPerKm / 10, gap * pixelsPerKm / 8)));
+    return 0.18 + 0.82 * u * u * (3 - 2 * u);
+  }
+
   function orbitGuide(b) {
-    const keep = spaceRelated(b) ? (b === spaceGuide.body ? 0.28 : 0.65) : 0.025;
-    gl.uniform1f(guideP.u.uFade, 0.85 * (1 - spaceGuide.close * (1 - keep)));
+    const focus = spaceGuide.body;
+    const keep = spaceRelated(b)
+      ? (b === focus ? (b.parent ? 0.9 : 0.28) : (focus && focus.parent ? 0.3 : 0.65)) : 0.025;
+    gl.uniform1f(guideP.u.uFade, 0.85 * (1 - spaceGuide.close * (1 - keep)) * satelliteOrbitReadability(b));
     const center = b.parent ? posW.get(b.parent) : ZERO3;
     const dx = center[0] - EYE[0], dy = center[1] - EYE[1], dz = center[2] - EYE[2];
     const depth = VP[3] * dx + VP[7] * dy + VP[11] * dz + VP[15];
