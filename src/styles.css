@@ -12,7 +12,11 @@
   }
   :root {
     --bg: #04060e;
-    --panel: rgba(9, 14, 28, 0.86);
+    --panel: rgba(9, 14, 28, 0.90);
+    --panel-solid: rgba(9, 14, 28, 0.96);
+    --panel-edge: rgba(150, 178, 224, 0.23);
+    --panel-shade: linear-gradient(180deg, rgba(150, 178, 224, 0.035), rgba(4, 6, 14, 0.14));
+    --panel-shadow: 0 6px 22px rgba(0, 0, 0, 0.18);
     --line: rgba(150, 178, 224, 0.16);
     --text: #c9d5ea;
     --dim: #6e7d99;
@@ -693,8 +697,8 @@
   #viewMode {
     position: absolute; top: calc(14px + var(--sat)); left: 50%; transform: translateX(-50%);
     z-index: 15; display: flex; gap: 3px; padding: 4px;
-    background: rgba(16, 22, 42, 0.82); border: 1px solid var(--line);
-    border-radius: 20px; backdrop-filter: blur(4px);
+    background: var(--panel); border: 1px solid var(--panel-edge);
+    border-radius: 20px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   }
   #viewMode button {
     padding: 5px 16px; font-size: 12px; letter-spacing: 0.08em;
@@ -712,7 +716,7 @@
       left: 0; right: 0; margin-inline: auto; transform: none; width: max-content;
       padding: 0; gap: 0; border-radius: 15px;
       backdrop-filter: none; -webkit-backdrop-filter: none;
-      background: rgba(9, 14, 28, 0.92);
+      background: var(--panel-solid);
     }
     #viewMode > button { display: none; }
     /* 縦の余白はタイトルの箱と同じ高さ (37px) になるよう取る。上端の行に並べたとき、
@@ -792,7 +796,7 @@
   #controls #ctrlCollapse {
     position: absolute; top: -25px; left: 50%; transform: translateX(-50%);
     padding: 2px 20px; font-size: 12px; line-height: 1.5;
-    color: var(--dim); background: rgba(16, 22, 42, 0.72);
+    color: var(--dim); background: var(--panel);
     border: 1px solid var(--line); border-bottom: none;
     border-radius: 8px 8px 0 0; backdrop-filter: blur(4px);
   }
@@ -802,7 +806,7 @@
     position: absolute; left: 50%; transform: translateX(-50%);
     bottom: calc(6px + env(safe-area-inset-bottom, 0px));
     z-index: 13; padding: 2px 20px; font-size: 12px; line-height: 1.5;
-    color: var(--dim); background: rgba(16, 22, 42, 0.72);
+    color: var(--dim); background: var(--panel);
     border: 1px solid var(--line); border-radius: 10px;
     backdrop-filter: blur(4px); display: none;
   }
@@ -831,7 +835,7 @@
     display: none;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    background: rgba(9, 14, 28, 0.94);
+    background: var(--panel-solid);
   }
   #tourBar.open { display: block; }
   /* ツアー中は操作パネル・天体リスト・ヒントを引っ込め、画面を空ける。
@@ -1612,4 +1616,11 @@
     #app:not(.groundMode) #info:not(.tall) { max-height: 248px; }
     #frameActions { margin-bottom: 8px; }
     #frameActions button { min-height: 28px; }
+  }
+
+  /* 外側の境界は内側のボタンより一段明瞭に。透ける星や軌道の上でも読める面にする。 */
+  .hud, #welcomeCard, #viewMode, #navExpand, #ctrlExpand, #controls #ctrlCollapse {
+    background-image: var(--panel-shade);
+    border-color: var(--panel-edge);
+    box-shadow: var(--panel-shadow);
   }
