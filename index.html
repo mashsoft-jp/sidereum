@@ -1699,11 +1699,15 @@
     html.appleFullscreen #searchBox { left: calc(80px + var(--sal)); }
   }
 
-/* Full photographic attribution remains visible, including in immersive views. */
-#dsoPhotoCredit { position:absolute; left:50%; top:calc(70px + env(safe-area-inset-top, 0px)); transform:translateX(-50%); width:max-content; max-width:min(520px,calc(100% - 120px)); padding:6px 9px; border-radius:5px; background:rgba(5,9,18,.78); color:#b9c7dc; font:10px/1.45 system-ui,sans-serif; z-index:12; overflow-wrap:anywhere; }
-#dsoPhotoCredit[hidden] { display:none; }
-#dsoPhotoCredit a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
-@media (max-width:600px) and (orientation:portrait) { #dsoPhotoCredit { top:auto; bottom:calc(164px + env(safe-area-inset-bottom,0px)); max-width:calc(100% - 48px); font-size:10px; } }
+/* Explicit photograph viewer: the frame and attribution belong to the image. */
+#dsoPhotoDialog { box-sizing:border-box; width:min(760px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow:auto; padding:20px; color:var(--text); background:#090f1b; border:1px solid #73839d; border-radius:8px; box-shadow:0 16px 60px #0009; }
+#dsoPhotoDialog::backdrop { background:rgba(0,0,0,.55); }
+#dsoPhotoDialog h2 { margin:0 32px 8px 0; font-size:17px; color:var(--accent); }
+#dsoPhotoDialog img { display:block; width:auto; height:auto; max-width:100%; max-height:min(58dvh,calc(100dvh - 220px)); margin:12px auto; border:1px solid #68758b; background:#000; object-fit:contain; }
+#dsoPhotoDialog p { font:12px/1.6 system-ui,sans-serif; margin:8px 0 0; overflow-wrap:anywhere; }
+#dsoPhotoDialog a { color:#c3d4ee; text-decoration:underline; }
+#dsoPhotoDialog .dsoPhotoClose { position:absolute; right:12px; top:8px; width:32px; height:32px; border:none; background:none; color:var(--text); font-size:24px; }
+@media (max-width:600px) { #dsoPhotoDialog { padding:16px; } #dsoPhotoDialog img { max-height:min(50dvh,calc(100dvh - 220px)); } }
 </style>
 
 <div id="app">
@@ -1711,7 +1715,7 @@
   <canvas id="overlay"></canvas>
   <div id="noGL">お使いの環境では WebGL が利用できないため、<br>3D 表示を開始できませんでした。</div>
 
-  <div id="dsoPhotoCredit" hidden></div>
+  <dialog id="dsoPhotoDialog" aria-labelledby="dsoPhotoTitle"></dialog>
   <header id="title" class="hud">
     <button id="menuBtn" data-ui-icon="menu" aria-label="メニュー" aria-haspopup="true">☰</button>
     <h1 class="logo">SIDEREUM<span class="beta">(β版)</span></h1>
@@ -6756,7 +6760,7 @@
   // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
   // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
   let bodyRenderer;
-  let guideP, lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP, skyP, dsoP, dsoPhotoP;
+  let guideP, lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP, skyP, dsoP;
   let threshP, blurP, addP;
   try {
     bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
@@ -6788,34 +6792,6 @@
     comaP = program(comaVS, comaFS);
     meteorP = program(meteorVS, meteorFS);
     dsoP = program(dsoVS, dsoFS);
-    dsoPhotoP = program(dsoVS, PRE + `    varying vec2 vQ;
-    varying vec3 vCol;
-    uniform sampler2D uPhoto;
-    uniform float uCore;
-    uniform float uReflection;
-    uniform vec2 uTexel;
-    void main() {
-      vec2 uv = vec2(vQ.x * 0.5 + 0.5, 0.5 - vQ.y * 0.5);
-      vec4 texel = texture2D(uPhoto, uv);
-      vec3 rgb = texel.rgb;
-      float edge = (1.0-smoothstep(0.80,1.0,abs(vQ.x))) * (1.0-smoothstep(0.80,1.0,abs(vQ.y)));
-      edge *= mix(1.0, 1.0-smoothstep(0.48,0.90,length(vQ)), uCore);
-      if (uReflection > 0.5) {
-        // In the space view retain diffuse reflection nebulosity, not the dense
-        // photographic background star field. The catalogue supplies the stars.
-        vec2 delta = uTexel * 2.0;
-        rgb = min(rgb, texture2D(uPhoto, uv + vec2(delta.x,0.0)).rgb);
-        rgb = min(rgb, texture2D(uPhoto, uv - vec2(delta.x,0.0)).rgb);
-        rgb = min(rgb, texture2D(uPhoto, uv + vec2(0.0,delta.y)).rgb);
-        rgb = min(rgb, texture2D(uPhoto, uv - vec2(0.0,delta.y)).rgb);
-        edge *= 1.0-smoothstep(0.12,0.92,length((vQ-vec2(0.0,-0.08))*vec2(1.0,0.9)));
-        rgb *= 0.32;
-      }
-      // Remove the JPEG sky pedestal; dark mosaic gaps contribute no light.
-      rgb = max(vec3(0.0), rgb - vec3(0.018));
-      gl_FragColor = vec4(rgb * vCol * edge * texel.a * 0.8, 0.0);
-    }
-`);
     terrainP = program(terrainVS, terrainFS);
     meshP = program(meshVS, meshFS);
     threshP = program(postVS, threshFS);
@@ -9426,187 +9402,18 @@
   //#endregion
   //#region src/data/dso-photos.js
   const DSO_PHOTO_LICENSE = "https://creativecommons.org/licenses/by/4.0/";
-  const DSO_PHOTO_CHANGES = "Sky projection, brightness adjustment, edge feathering and space-view M45 background suppression by Sidereum";
+  const DSO_PHOTO_CHANGES = "Original image, resized to fit the viewer";
   const DSO_PHOTOS = [];
-  DSO_PHOTOS.push({m:31,id:'heic2501a',ra:10.9324167,dec:41.3858111,w:140.60,h:32.88,north:125});
-  DSO_PHOTOS.push({m:42,id:'heic0601a',ra:83.7905417,dec:-5.4139778,w:30.03,h:30.03,north:0});
-  DSO_PHOTOS.push({m:57,id:'heic1310a',ra:283.3967083,dec:33.028925,w:2.10,h:2.10,north:-11.7});
-  DSO_PHOTOS.push({m:13,id:'opo0840a',ra:250.4197917,dec:36.459775,w:3.53,h:3.53,north:0});
-  // Approximate DSS registration from Alcyone, Atlas and Electra; see tex/dso/CREDITS.md.
-  DSO_PHOTOS.push({m:45,id:'davidedemartin_5',ra:56.661,dec:24.204,w:171.6,h:162.906,north:0});
+  DSO_PHOTOS.push({m:31,id:'heic2501a'});
+  DSO_PHOTOS.push({m:42,id:'heic0601a'});
+  DSO_PHOTOS.push({m:57,id:'heic1310a'});
+  DSO_PHOTOS.push({m:13,id:'opo0840a'});
+  DSO_PHOTOS.push({m:45,id:'davidedemartin_5'});
   for (const p of DSO_PHOTOS) {
     p.file = 'tex/dso/m' + p.m + '.jpg';
     p.source = 'https://esahubble.org/' + (p.m === 45 ? 'projects/fits_liberator/fitsimages/' : 'images/') + p.id + '/';
   }
   ["NASA, ESA, B. Williams (University of Washington)", "NASA, ESA, M. Robberto ( Space Telescope Science Institute/ESA) and the Hubble Space Telescope Orion Treasury Project Team", "NASA, ESA, and C. Robert O’Dell (Vanderbilt University).", "NASA, ESA, and the Hubble Heritage Team (STScI/AURA)", "Davide De Martin & the ESA/ESO/NASA Photoshop FITS Liberator"].forEach((credit, i) => { DSO_PHOTOS[i].credit = credit; });
-  //#endregion
-  //#region src/render/dso-photos.js
-  // Photographs are fixed to the equatorial sky, independent of camera roll.
-  // Each image uses its own footprint, not the object's catalogue diameter.
-  let dsoPhotoVisible = [];
-  let dsoPhotoVB = null;
-  const dsoPhotoVertices = new Float32Array(6 * 8);
-  function dsoPhotoDirection(p, x, y) {
-    const ra = p.ra * DEG, dec = p.dec * DEG, a = p.north * DEG;
-    const xx = x * Math.tan(p.w * DEG / 120), yy = y * Math.tan(p.h * DEG / 120);
-    const east = -xx * Math.cos(a) + yy * Math.sin(a);
-    const north = xx * Math.sin(a) + yy * Math.cos(a);
-    const cd = Math.cos(dec), sd = Math.sin(dec), cr = Math.cos(ra), sr = Math.sin(ra);
-    const q = [cd * cr - east * sr - north * sd * cr,
-               cd * sr + east * cr - north * sd * sr, sd + north * cd];
-    const len = Math.hypot(...q);
-    return eqToWorld(q[0]/len, q[1]/len, q[2]/len, [0,0,0]);
-  }
-  // Fade inward from missing mosaic tiles, without inventing unobserved pixels.
-  function featherDsoMosaic(canvas) {
-    const ctx = canvas.getContext('2d'), w = canvas.width, h = canvas.height;
-    const pixels = ctx.getImageData(0,0,w,h), rgba = pixels.data;
-    const dist = new Float32Array(w*h);
-    for (let i=0;i<dist.length;i++) dist[i] = rgba[i*4]+rgba[i*4+1]+rgba[i*4+2] <= 3 ? 0 : w+h;
-    for (let y=0;y<h;y++) for (let x=0;x<w;x++) {
-      const i=y*w+x;
-      dist[i]=Math.min(dist[i],x?dist[i-1]+1:0,y?dist[i-w]+1:0);
-    }
-    for (let y=h-1;y>=0;y--) for (let x=w-1;x>=0;x--) {
-      const i=y*w+x;
-      dist[i]=Math.min(dist[i],x<w-1?dist[i+1]+1:0,y<h-1?dist[i+w]+1:0);
-      const t=Math.min(1,dist[i]/(h*0.11));
-      rgba[i*4+3]=Math.round(255*t*t*(3-2*t));
-    }
-    ctx.putImageData(pixels,0,0);
-  }
-  function loadDsoPhoto(p) {
-    if (p.loading || p.texture || p.failed) return;
-    p.loading = true;
-    const img = new Image();
-    img.onload = () => {
-      try {
-        const limit = Math.min(2048, gl.getParameter(gl.MAX_TEXTURE_SIZE));
-        const scale = Math.min(1, limit / Math.max(img.width, img.height));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(img.width * scale));
-        canvas.height = Math.max(1, Math.round(img.height * scale));
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        if (p.m === 31) featherDsoMosaic(canvas);
-        const texture = gl.createTexture();
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        // UV's top is 0; leave the provider's JPEG unmodified on disk.
-        const flip = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, flip);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        p.texture = texture; p.texel = [1/canvas.width, 1/canvas.height]; p.readyAt = performance.now();
-      } catch (_) { p.failed = true; }
-      p.loading = false;
-    };
-    img.onerror = () => { p.loading = false; p.failed = true; };
-    img.src = p.file;
-  }
-  function dsoPhotoPoint(dir, radius, ground) {
-    const out = [0,0,0,1,1,1];
-    if (ground) {
-      if (!groundSkyPoint(dir[0], dir[1], dir[2], out)) return null;
-    } else {
-      for (let j=0;j<3;j++) out[j] = dir[j] * radius;
-    }
-    return out;
-  }
-  function dsoPhotoInFrame(points, vp) {
-    const clip = points.map(p => [
-      vp[0]*p[0]+vp[4]*p[1]+vp[8]*p[2]+vp[12],
-      vp[1]*p[0]+vp[5]*p[1]+vp[9]*p[2]+vp[13],
-      vp[3]*p[0]+vp[7]*p[1]+vp[11]*p[2]+vp[15]
-    ]);
-    if (clip.every(c => c[2] <= 0)) return false;
-    return ![[-1,0],[1,0],[-1,1],[1,1]].some(([sign,axis]) => clip.every(c => sign*c[axis] > c[2]));
-  }
-  function prepareDsoPhotos(vp, radius, vis, halfFov, halfH, ground) {
-    dsoPhotoVisible = [];
-    for (const p of DSO_PHOTOS) {
-      p.alpha = 0;
-      const pixels = Math.min(p.w,p.h) * DEG / 60 / (2 * Math.tan(halfFov)) * halfH * 2;
-      const zoom = Math.max(0, Math.min(1, (pixels - 18) / 100));
-      if (!dsoOn || vis <= 0.04 || !zoom) continue;
-      if (!p.directions) p.directions = [[-1,-1],[1,-1],[-1,1],[1,1]].map(([x,y]) => dsoPhotoDirection(p,x,y));
-      const points = p.directions.map(d => dsoPhotoPoint(d, radius, ground));
-      // A complete image is faded out at the horizon rather than stretched across it.
-      if (points.some(p => !p) || !dsoPhotoInFrame(points, vp)) continue;
-      loadDsoPhoto(p);
-      if (!p.texture) continue;
-      p.alpha = zoom * Math.min(1, (performance.now() - p.readyAt) / 700) * vis;
-      if (p.alpha <= 0) continue;
-      p.points = points; p.spaceReflection = p.m === 45 && !ground;
-      dsoPhotoVisible.push(p);
-    }
-  }
-  function drawDsoPhotos(vp) {
-    if (!dsoPhotoVisible.length) return;
-    if (!dsoPhotoVB) dsoPhotoVB = gl.createBuffer();
-    gl.useProgram(dsoPhotoP.pr);
-    gl.uniformMatrix4fv(dsoPhotoP.u.uVP, false, vp);
-    gl.uniform1i(dsoPhotoP.u.uPhoto, 0);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, dsoPhotoVB);
-    const attrs = dsoPhotoP.a;
-    for (const name of ['aPos','aQuad','aCol']) gl.enableVertexAttribArray(attrs[name]);
-    gl.vertexAttribPointer(attrs.aPos, 3, gl.FLOAT, false, 32, 0);
-    gl.vertexAttribPointer(attrs.aQuad, 2, gl.FLOAT, false, 32, 12);
-    gl.vertexAttribPointer(attrs.aCol, 3, gl.FLOAT, false, 32, 20);
-    for (const p of dsoPhotoVisible) {
-      gl.uniform1f(dsoPhotoP.u.uCore, p.m === 13 ? 1 : 0);
-      gl.uniform1f(dsoPhotoP.u.uReflection, p.spaceReflection ? 1 : 0);
-      gl.uniform2f(dsoPhotoP.u.uTexel, p.texel[0], p.texel[1]);
-      [0,1,2,2,1,3].forEach((i,k) => {
-        const pt=p.points[i], offset=k*8;
-        dsoPhotoVertices.set(pt.slice(0,3), offset);
-        dsoPhotoVertices[offset+3] = i%2 ? 1 : -1;
-        dsoPhotoVertices[offset+4] = i>=2 ? 1 : -1;
-        for (let j=0;j<3;j++) dsoPhotoVertices[offset+5+j]=pt[3+j]*p.alpha;
-      });
-      gl.bufferData(gl.ARRAY_BUFFER, dsoPhotoVertices, gl.DYNAMIC_DRAW);
-      gl.bindTexture(gl.TEXTURE_2D, p.texture);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
-    }
-  }
-  function dsoPhotoCreditHTML(p) {
-    return '<a href="'+p.source+'" target="_blank" rel="noopener">M'+p.m+' — '+p.credit.replace(/&/g,'&amp;')+'</a>';
-  }
-  let dsoPhotoCreditKey = '';
-  function updateDsoPhotoCredit() {
-    const key = lang + ':' + dsoPhotoVisible.map(p=>p.m+(p.spaceReflection?'s':'')).join(',');
-    if (key === dsoPhotoCreditKey) return;
-    dsoPhotoCreditKey = key;
-    const el = document.getElementById('dsoPhotoCredit');
-    el.hidden = !dsoPhotoVisible.length;
-    el.innerHTML = dsoPhotoVisible.length ? '<span>'+(lang==='ja'?'観測画像（肉眼での見え方とは異なります）':'Observation imagery (not a naked-eye view)')+'</span><br>'+dsoPhotoVisible.map(dsoPhotoCreditHTML).join('<br>')+'<br><a href="'+DSO_PHOTO_LICENSE+'" target="_blank" rel="noopener">CC BY 4.0</a> · '+(lang==='ja'?'投影・明るさ・周縁を調整':'Projection, brightness and edges adjusted')+(dsoPhotoVisible.some(p=>p.spaceReflection) ? (lang==='ja'?'・写真背景を抑制':' · Photo background suppressed') : '') : '';
-  }
-  // Draw after cropping, so every export ratio retains its complete attribution.
-  function drawDsoPhotoExportCredit(x, width, height, scale, photos, footer) {
-    if (!photos || !photos.length) return;
-    x.save(); x.scale(scale, scale);
-    x.font = '10px system-ui, sans-serif';
-    const lines = [];
-    const texts = photos.map(p => 'M'+p.m+' — '+p.credit+' | '+p.source);
-    texts.push('CC BY 4.0: '+DSO_PHOTO_LICENSE, DSO_PHOTO_CHANGES);
-    for (const text of texts) {
-      let line = '';
-      for (const ch of text) {
-        if (line && x.measureText(line+ch).width > width-32) { lines.push(line); line=''; }
-        line += ch;
-      }
-      if (line) lines.push(line);
-    }
-    const bottom = height-footer-20, top = bottom-lines.length*14-8;
-    x.fillStyle='rgba(4,6,14,.86)'; x.fillRect(0,top,width,bottom-top+6);
-    x.fillStyle='#c9d5ea'; x.textAlign='left'; x.textBaseline='top';
-    lines.forEach((line,i) => x.fillText(line,16,top+5+i*14));
-    x.restore();
-  }
   //#endregion
   //#region src/render/dso.js
   // ---------- 星雲・星団・銀河 ----------
@@ -9684,7 +9491,7 @@
   // 描かないものは false を返す。halfFovPx = 画角の半分に対する画面の半分の
   // 画素数 (最小の大きさを決めるのに使う)
   function drawDso(vp32, R, U, radius, vis, halfFov, halfH, toDome) {
-    prepareDsoPhotos(vp32, radius, vis, halfFov, halfH, toDome === groundDsoAt);
+    dsoHits.length = 0;
     if (!dsoOn || vis <= 0.04) return;
     dsoInit();
     dsoN = 0;
@@ -9704,13 +9511,13 @@
       const minR = radius * halfFov * (DSO_MIN_PX / halfH);
       if (ar < minR) { amp *= (ar * br) / (minR * minR); ar = minR; br = minR; }
       const c = DSO_COL[d[7]] || DSO_COL[6];
-      const photo = DSO_PHOTOS.find(p => p.m === d[0]);
-      const k = Math.min(DSO_MAX, amp) * vis * (1 - (photo ? photo.alpha : 0));
+      const k = Math.min(DSO_MAX, amp) * vis;
       const pa = d[6] >= 0 ? d[6] * DEG : 0;
+      recordDsoHit(i, _p, vp32, halfFov, halfH);
       dsoQuad(_p[0], _p[1], _p[2], R, U, ar, br, pa,
               c[0] * k * _p[3], c[1] * k * _p[4], c[2] * k * _p[5]);
     }
-    if (!dsoN) { drawDsoPhotos(vp32); return; }
+    if (!dsoN) return;
     if (!dsoVB) dsoVB = gl.createBuffer();
     gl.useProgram(dsoP.pr);
     gl.uniformMatrix4fv(dsoP.u.uVP, false, vp32);
@@ -9724,7 +9531,6 @@
     gl.vertexAttribPointer(dsoP.a.aQuad, 2, gl.FLOAT, false, S, 12);
     gl.vertexAttribPointer(dsoP.a.aCol, 3, gl.FLOAT, false, S, 20);
     gl.drawArrays(gl.TRIANGLES, 0, dsoN * 6);
-    drawDsoPhotos(vp32);
   }
   // 宇宙ビューでの位置 (drawDso のコールバック)。恒星と同じ天球へ置くだけで、
   // 真空なので大気差も減光も無い
@@ -9864,9 +9670,6 @@
   const _dsoR = [0, 0, 0], _dsoU = [0, 0, 0];
   function groundDsoAt(i, out) {
     const wx = dsoW[i*3], wy = dsoW[i*3+1], wz = dsoW[i*3+2];
-    return groundSkyPoint(wx, wy, wz, out);
-  }
-  function groundSkyPoint(wx, wy, wz, out) {
     const up = wx*obsU[0]+wy*obsU[1]+wz*obsU[2];
     if (up < 0.005) return false;
     const east = wx*obsE[0]+wy*obsE[1]+wz*obsE[2];
@@ -13245,7 +13048,6 @@
     introStep(now / 1000);   // 初回の導入: カメラを寄せる (流していなければ素通り)
     perfLap("更新");
     render(now / 1000);
-    updateDsoPhotoCredit();
     perfLap("描画(他)");
     bloomPass();          // 明るいところの滲み (シーンを描き終えてから)
     perfLap("Bloom");
@@ -14050,7 +13852,7 @@
 
   glc.addEventListener("pointermove", (e) => {
     if (!pointers.has(e.pointerId)) {
-      glc.classList.toggle("hover", !!hitTest(e.clientX, e.clientY));
+      glc.classList.toggle("hover", !!hitTest(e.clientX, e.clientY) || hitTestDso(e.clientX, e.clientY) >= 0);
       return;
     }
     const prev = pointers.get(e.pointerId);
@@ -14114,7 +13916,10 @@
         pointers.has(e.pointerId) && dragMoved < 5 && pointers.size === 1 && e.button === 0) {
       // 同じ天体を再度押したら選択の飾りだけを消す (注視先は動かさない)。
       // リストのボタンと同じ扱い
-      if (groundView) {
+      const skyHit = !tourActive && !(groundView ? hitTestGround(e.clientX, e.clientY) : hitTest(e.clientX, e.clientY))
+        ? hitTestDso(e.clientX, e.clientY) : -1;
+      if (skyHit >= 0) { openDsoPhoto(skyHit); }
+      else if (groundView) {
         // 選択 + その方向へカメラを向けて追尾 (以後のズームでも中央に保つ)
         const hit = hitTestGround(e.clientX, e.clientY);
         if (hit && !tourAllowsBody(hit)) return;
@@ -15026,13 +14831,12 @@
     return groundView && surfaceBody === "earth" ? siteLabel() : "";
   }
   // 画像内の文字は CSS ピクセルで組み、保存解像度に合わせて拡大する。
-  function drawSnapshotCaption(x, width, height, scale, when, site, photos) {
+  function drawSnapshotCaption(x, width, height, scale, when, site) {
     const compact = width < 560;
     const pad = Math.min(24, Math.max(14, width * 0.025));
     const bottom = height - pad;
     const metaRows = site ? 2 : 1;
     const footer = (compact ? 54 : 34) + metaRows * 18;
-    drawDsoPhotoExportCredit(x, width, height, scale, photos, footer);
     x.save(); x.scale(scale, scale);
     // 明るい地平線でも読めるよう、下端だけ緩やかに暗くする。
     const shade = x.createLinearGradient(0, height - footer - pad, 0, height);
@@ -15118,7 +14922,7 @@
       x.drawImage(snapSource, crop.x, crop.y, crop.w, crop.h, (c.width - w) / 2, (c.height - h) / 2, w, h);
     } else x.drawImage(snapSource, crop.x, crop.y, crop.w, crop.h, 0, 0, c.width, c.height);
     const captionScale = snapRatio === "screen" ? snapMeta.dpr : c.width / (snapRatio === "portrait" ? 390 : 720);
-    drawSnapshotCaption(x, c.width / captionScale, c.height / captionScale, captionScale, snapMeta.when, snapMeta.site, snapMeta.photos);
+    drawSnapshotCaption(x, c.width / captionScale, c.height / captionScale, captionScale, snapMeta.when, snapMeta.site);
     for (const btn of snapDlgEl.querySelectorAll("[data-ratio]")) btn.setAttribute("aria-pressed", String(btn.dataset.ratio === snapRatio));
     for (const id of ["snapSave", "snapShare"]) {
       const btn = document.getElementById(id); if (btn) btn.disabled = true;
@@ -15151,7 +14955,7 @@
     c.width = glc.width; c.height = glc.height;
     const x = c.getContext("2d");
     x.drawImage(glc, 0, 0); x.drawImage(ovl, 0, 0);
-    const meta = { when: snapWhen(), site: snapSite(), url: buildShareURL(), subject: snapshotSubject(), photos: dsoPhotoVisible.map(p => ({m:p.m, credit:p.credit, source:p.source})), dpr: DPR };
+    const meta = { when: snapWhen(), site: snapSite(), url: buildShareURL(), subject: snapshotSubject(), dpr: DPR };
     hideModals();
     snapSource = c; snapMeta = meta; snapRatio = "screen";
     snapName = "sidereum-" + dateInput.value.replace(/-/g, "") + "-" + timeInput.value.replace(":", "") + ".png";
@@ -15423,7 +15227,7 @@
       `<p>${c.proc}</p>` +
       `<h3>${lang === "ja" ? "星雲・星団・銀河の観測画像" : "Deep-sky observation imagery"}</h3>` +
       `<p>${DSO_PHOTOS.map(dsoPhotoCreditHTML).join("<br>")}</p>` +
-      `<p><a href="${DSO_PHOTO_LICENSE}" target="_blank" rel="noopener">CC BY 4.0</a> · ${DSO_PHOTO_CHANGES}. ${lang === "ja" ? "肉眼での見え方とは異なる観測合成画像です。M13は中心部、M31はモザイクの撮影範囲を表示します。すばるの位置合わせは概略です。ESA/Hubbleによる本アプリの承認・推奨を意味しません。" : "Observation composites, not naked-eye views. M13 covers the core; M31 follows the mosaic footprint. M45 registration is approximate. No ESA/Hubble endorsement is implied."}</p>` +
+      `<p><a href="${DSO_PHOTO_LICENSE}" target="_blank" rel="noopener">CC BY 4.0</a> · ${DSO_PHOTO_CHANGES}. ${lang === "ja" ? "肉眼での見え方とは異なる観測合成画像です。天体をタップすると写真を開けます。M13は中心部、M31はモザイク写真です。ESA/Hubbleによる本アプリの承認・推奨を意味しません。" : "Observation composites, not naked-eye views. Tap an object to open its photograph. M13 shows the core; M31 is a mosaic. No ESA/Hubble endorsement is implied."}</p>` +
       `<h3>${c.data}</h3><p>${c.dataBody}</p><p>${c.disc}</p>`;
   }
   menuAboutBtn.addEventListener("click", () => {
@@ -15443,6 +15247,7 @@
   const modalScrim = document.getElementById("modalScrim");
   // モーダル(操作方法/ライセンス)を閉じる。背景スクリムのクリックでも閉じられる
   function hideModals() {
+    closeDsoPhoto();
     aboutEl.classList.remove("open");
     howtoEl.classList.remove("open");
     tourListEl.classList.remove("open");
@@ -16962,6 +16767,71 @@
     buildSkyCal();
   }
   //#endregion
+  //#region src/ui/dso-photos.js
+  // Photographs are an explicit detail view; the sky stays procedural.
+  const dsoHits = [];
+  function recordDsoHit(i, p, vp, halfFov, halfH) {
+    const depth = vp[3]*p[0]+vp[7]*p[1]+vp[11]*p[2]+vp[15];
+    if (depth <= 0) return;
+    const x = ((vp[0]*p[0]+vp[4]*p[1]+vp[8]*p[2]+vp[12])/depth+1)*W/2;
+    const y = (1-(vp[1]*p[0]+vp[5]*p[1]+vp[9]*p[2]+vp[13])/depth)*H/2;
+    const radius = DSO[i][4]/120*DEG/halfFov*halfH;
+    if (x+radius<0 || x-radius>W || y+radius<0 || y-radius>H) return;
+    dsoHits.push({i,x,y,r:Math.max(18,Math.min(radius,Math.min(W,H)*0.25)),
+      labelY:y+Math.min(radius,H*0.2)+13, labelled:groundView && dsoLabelled(i,halfFov)});
+  }
+  function hitTestDso(x,y) {
+    if (!dsoOn) return -1;
+    let best=-1, score=Infinity;
+    for (const h of dsoHits) {
+      const distance=Math.hypot(x-h.x,y-h.y);
+      const label=h.labelled && Math.abs(y-h.labelY)<14 && Math.abs(x-h.x)<Math.max(35,dsoName(h.i).length*6);
+      if ((distance<=h.r || label) && distance<score) { best=h.i; score=distance; }
+    }
+    return best;
+  }
+  function dsoPhotoCreditHTML(p) {
+    return '<a href="'+p.source+'" target="_blank" rel="noopener">M'+p.m+' — '+p.credit.replace(/&/g,'&amp;')+'</a>';
+  }
+  const dsoPhotoDialog = document.getElementById('dsoPhotoDialog');
+  function closeDsoPhoto() { if (dsoPhotoDialog.open) dsoPhotoDialog.close(); }
+  function openDsoPhoto(i) {
+    const d=DSO[i]; if (!d) return;
+    hideModals(); setMenu(false);
+    const p=DSO_PHOTOS.find(p=>p.m===d[0]), ja=lang==='ja';
+    dsoPhotoDialog.replaceChildren();
+    const close=document.createElement('button'); close.className='dsoPhotoClose';
+    close.textContent='×'; close.setAttribute('aria-label',ja?'写真を閉じる':'Close photograph');
+    close.addEventListener('click',closeDsoPhoto);
+    const title=document.createElement('h2'); title.id='dsoPhotoTitle';
+    title.textContent=(d[0]?'M'+d[0]+' · ':'')+dsoName(i);
+    dsoPhotoDialog.append(close,title);
+    const note=document.createElement('p'); note.className='dsoPhotoNote';
+    note.textContent=ja?'観測画像 — 肉眼での見え方とは異なります':'Observation imagery — not a naked-eye view';
+    if (p) {
+      dsoPhotoDialog.append(note);
+      const img=document.createElement('img'); img.alt=title.textContent; img.decoding='async';
+      const status=document.createElement('p'); status.className='dsoPhotoStatus';
+      status.textContent=ja?'読み込み中…':'Loading…'; status.setAttribute('role','status');
+      img.onload=()=>{ status.remove(); };
+      img.onerror=()=>{ img.remove(); status.textContent=ja?'画像を読み込めませんでした。閉じてもう一度お試しください。':'Image unavailable. Close and try again.'; };
+      // No network or GPU image work until the user opens this frame.
+      img.src=p.file;
+      const credits=document.createElement('p'); credits.className='dsoPhotoCredits';
+      credits.innerHTML=dsoPhotoCreditHTML(p)+'<br><a href="'+DSO_PHOTO_LICENSE+'" target="_blank" rel="noopener">CC BY 4.0</a>';
+      dsoPhotoDialog.append(status,img,credits);
+    } else {
+      note.textContent=ja?'この天体の観測画像はまだ用意していません。':'No observation image is available for this object yet.';
+      dsoPhotoDialog.append(note);
+    }
+    dsoPhotoDialog.showModal();
+  }
+  dsoPhotoDialog.addEventListener('click',e=>{
+    if (e.target!==dsoPhotoDialog) return;
+    const r=dsoPhotoDialog.getBoundingClientRect();
+    if(e.clientX<r.left || e.clientX>r.right || e.clientY<r.top || e.clientY>r.bottom) closeDsoPhoto();
+  });
+  //#endregion
   //#region src/ui/search.js
   // ---------- 天体名検索 ----------
   // 天体・衛星・探査機・星雲星団・星座・流星群を名前で探して飛ぶ。日本語名と英語名の
@@ -16996,11 +16866,7 @@
       const m = d[0] ? "M" + d[0] : "";
       ix.push({ kind: "dso", keys: [m, m && "M " + d[0], m && "メシエ" + d[0], d[8], d[9]],
                 label: () => (m ? m + " " : "") + (lang === "ja" ? (d[8] || d[9]) : (d[9] || d[8])),
-                go: () => {
-                  const photo = DSO_PHOTOS.find(p => p.m === d[0]);
-                  aimSkyRaDec(photo ? photo.ra : d[1], photo ? photo.dec : d[2],
-                    photo ? Math.max(photo.w, photo.h) / 60 * 1.8 / Math.min(1, W/H) : 12, "dso");
-                } });
+                go: () => { aimSkyRaDec(d[1], d[2], 12, "dso"); openDsoPhoto(DSO.indexOf(d)); } });
     }
     for (const c of CONST_LABELS) {
       ix.push({ kind: "const", keys: [c.ja, c.en, c.ab], label: () => (lang === "ja" ? c.ja : c.en),

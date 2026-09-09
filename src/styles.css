@@ -1683,8 +1683,12 @@
     html.appleFullscreen #searchBox { left: calc(80px + var(--sal)); }
   }
 
-/* Full photographic attribution remains visible, including in immersive views. */
-#dsoPhotoCredit { position:absolute; left:50%; top:calc(70px + env(safe-area-inset-top, 0px)); transform:translateX(-50%); width:max-content; max-width:min(520px,calc(100% - 120px)); padding:6px 9px; border-radius:5px; background:rgba(5,9,18,.78); color:#b9c7dc; font:10px/1.45 system-ui,sans-serif; z-index:12; overflow-wrap:anywhere; }
-#dsoPhotoCredit[hidden] { display:none; }
-#dsoPhotoCredit a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
-@media (max-width:600px) and (orientation:portrait) { #dsoPhotoCredit { top:auto; bottom:calc(164px + env(safe-area-inset-bottom,0px)); max-width:calc(100% - 48px); font-size:10px; } }
+/* Explicit photograph viewer: the frame and attribution belong to the image. */
+#dsoPhotoDialog { box-sizing:border-box; width:min(760px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow:auto; padding:20px; color:var(--text); background:#090f1b; border:1px solid #73839d; border-radius:8px; box-shadow:0 16px 60px #0009; }
+#dsoPhotoDialog::backdrop { background:rgba(0,0,0,.55); }
+#dsoPhotoDialog h2 { margin:0 32px 8px 0; font-size:17px; color:var(--accent); }
+#dsoPhotoDialog img { display:block; width:auto; height:auto; max-width:100%; max-height:min(58dvh,calc(100dvh - 220px)); margin:12px auto; border:1px solid #68758b; background:#000; object-fit:contain; }
+#dsoPhotoDialog p { font:12px/1.6 system-ui,sans-serif; margin:8px 0 0; overflow-wrap:anywhere; }
+#dsoPhotoDialog a { color:#c3d4ee; text-decoration:underline; }
+#dsoPhotoDialog .dsoPhotoClose { position:absolute; right:12px; top:8px; width:32px; height:32px; border:none; background:none; color:var(--text); font-size:24px; }
+@media (max-width:600px) { #dsoPhotoDialog { padding:16px; } #dsoPhotoDialog img { max-height:min(50dvh,calc(100dvh - 220px)); } }

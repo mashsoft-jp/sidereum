@@ -51,7 +51,7 @@
 
   glc.addEventListener("pointermove", (e) => {
     if (!pointers.has(e.pointerId)) {
-      glc.classList.toggle("hover", !!hitTest(e.clientX, e.clientY));
+      glc.classList.toggle("hover", !!hitTest(e.clientX, e.clientY) || hitTestDso(e.clientX, e.clientY) >= 0);
       return;
     }
     const prev = pointers.get(e.pointerId);
@@ -115,7 +115,10 @@
         pointers.has(e.pointerId) && dragMoved < 5 && pointers.size === 1 && e.button === 0) {
       // 同じ天体を再度押したら選択の飾りだけを消す (注視先は動かさない)。
       // リストのボタンと同じ扱い
-      if (groundView) {
+      const skyHit = !tourActive && !(groundView ? hitTestGround(e.clientX, e.clientY) : hitTest(e.clientX, e.clientY))
+        ? hitTestDso(e.clientX, e.clientY) : -1;
+      if (skyHit >= 0) { openDsoPhoto(skyHit); }
+      else if (groundView) {
         // 選択 + その方向へカメラを向けて追尾 (以後のズームでも中央に保つ)
         const hit = hitTestGround(e.clientX, e.clientY);
         if (hit && !tourAllowsBody(hit)) return;

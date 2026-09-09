@@ -4,6 +4,7 @@
   const modalScrim = document.getElementById("modalScrim");
   // モーダル(操作方法/ライセンス)を閉じる。背景スクリムのクリックでも閉じられる
   function hideModals() {
+    closeDsoPhoto();
     aboutEl.classList.remove("open");
     howtoEl.classList.remove("open");
     tourListEl.classList.remove("open");

@@ -221,7 +221,7 @@
   // 天体用プログラムは変数に持たず、レンダラのクロージャへ閉じ込める。
   // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
   let bodyRenderer;
-  let guideP, lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP, skyP, dsoP, dsoPhotoP;
+  let guideP, lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP, skyP, dsoP;
   let threshP, blurP, addP;
   try {
     bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
@@ -235,7 +235,6 @@
     comaP = program(comaVS, comaFS);
     meteorP = program(meteorVS, meteorFS);
     dsoP = program(dsoVS, dsoFS);
-    dsoPhotoP = program(dsoVS, PRE + `@@glsl:dso-photo.frag@@`);
     terrainP = program(terrainVS, terrainFS);
     meshP = program(meshVS, meshFS);
     threshP = program(postVS, threshFS);

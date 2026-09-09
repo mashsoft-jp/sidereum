@@ -550,7 +550,6 @@
     introStep(now / 1000);   // 初回の導入: カメラを寄せる (流していなければ素通り)
     perfLap("更新");
     render(now / 1000);
-    updateDsoPhotoCredit();
     perfLap("描画(他)");
     bloomPass();          // 明るいところの滲み (シーンを描き終えてから)
     perfLap("Bloom");

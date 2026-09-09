@@ -245,13 +245,12 @@
     return groundView && surfaceBody === "earth" ? siteLabel() : "";
   }
   // 画像内の文字は CSS ピクセルで組み、保存解像度に合わせて拡大する。
-  function drawSnapshotCaption(x, width, height, scale, when, site, photos) {
+  function drawSnapshotCaption(x, width, height, scale, when, site) {
     const compact = width < 560;
     const pad = Math.min(24, Math.max(14, width * 0.025));
     const bottom = height - pad;
     const metaRows = site ? 2 : 1;
     const footer = (compact ? 54 : 34) + metaRows * 18;
-    drawDsoPhotoExportCredit(x, width, height, scale, photos, footer);
     x.save(); x.scale(scale, scale);
     // 明るい地平線でも読めるよう、下端だけ緩やかに暗くする。
     const shade = x.createLinearGradient(0, height - footer - pad, 0, height);
@@ -337,7 +336,7 @@
       x.drawImage(snapSource, crop.x, crop.y, crop.w, crop.h, (c.width - w) / 2, (c.height - h) / 2, w, h);
     } else x.drawImage(snapSource, crop.x, crop.y, crop.w, crop.h, 0, 0, c.width, c.height);
     const captionScale = snapRatio === "screen" ? snapMeta.dpr : c.width / (snapRatio === "portrait" ? 390 : 720);
-    drawSnapshotCaption(x, c.width / captionScale, c.height / captionScale, captionScale, snapMeta.when, snapMeta.site, snapMeta.photos);
+    drawSnapshotCaption(x, c.width / captionScale, c.height / captionScale, captionScale, snapMeta.when, snapMeta.site);
     for (const btn of snapDlgEl.querySelectorAll("[data-ratio]")) btn.setAttribute("aria-pressed", String(btn.dataset.ratio === snapRatio));
     for (const id of ["snapSave", "snapShare"]) {
       const btn = document.getElementById(id); if (btn) btn.disabled = true;
@@ -370,7 +369,7 @@
     c.width = glc.width; c.height = glc.height;
     const x = c.getContext("2d");
     x.drawImage(glc, 0, 0); x.drawImage(ovl, 0, 0);
-    const meta = { when: snapWhen(), site: snapSite(), url: buildShareURL(), subject: snapshotSubject(), photos: dsoPhotoVisible.map(p => ({m:p.m, credit:p.credit, source:p.source})), dpr: DPR };
+    const meta = { when: snapWhen(), site: snapSite(), url: buildShareURL(), subject: snapshotSubject(), dpr: DPR };
     hideModals();
     snapSource = c; snapMeta = meta; snapRatio = "screen";
     snapName = "sidereum-" + dateInput.value.replace(/-/g, "") + "-" + timeInput.value.replace(":", "") + ".png";
@@ -642,7 +641,7 @@
       `<p>${c.proc}</p>` +
       `<h3>${lang === "ja" ? "星雲・星団・銀河の観測画像" : "Deep-sky observation imagery"}</h3>` +
       `<p>${DSO_PHOTOS.map(dsoPhotoCreditHTML).join("<br>")}</p>` +
-      `<p><a href="${DSO_PHOTO_LICENSE}" target="_blank" rel="noopener">CC BY 4.0</a> · ${DSO_PHOTO_CHANGES}. ${lang === "ja" ? "肉眼での見え方とは異なる観測合成画像です。M13は中心部、M31はモザイクの撮影範囲を表示します。すばるの位置合わせは概略です。ESA/Hubbleによる本アプリの承認・推奨を意味しません。" : "Observation composites, not naked-eye views. M13 covers the core; M31 follows the mosaic footprint. M45 registration is approximate. No ESA/Hubble endorsement is implied."}</p>` +
+      `<p><a href="${DSO_PHOTO_LICENSE}" target="_blank" rel="noopener">CC BY 4.0</a> · ${DSO_PHOTO_CHANGES}. ${lang === "ja" ? "肉眼での見え方とは異なる観測合成画像です。天体をタップすると写真を開けます。M13は中心部、M31はモザイク写真です。ESA/Hubbleによる本アプリの承認・推奨を意味しません。" : "Observation composites, not naked-eye views. Tap an object to open its photograph. M13 shows the core; M31 is a mosaic. No ESA/Hubble endorsement is implied."}</p>` +
       `<h3>${c.data}</h3><p>${c.dataBody}</p><p>${c.disc}</p>`;
   }
   menuAboutBtn.addEventListener("click", () => {

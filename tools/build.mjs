@@ -54,7 +54,6 @@ const MANIFEST = [
   "data/dso.js",         // 星雲・星団・銀河 (メシエ天体, OpenNGC 由来)
   "data/starnames.js",   // 明るい星の固有名 (カタログの星へ寄せる)
   "data/dso-photos.js", // Licensed observation imagery
-  "render/dso-photos.js", // Equatorial image footprints
   "render/dso.js",       // 星雲・星団の描画 (両ビュー共用)
   "render/ground.js",    // 地上ビュー (観測者フレーム・renderGround)
   "ui/view-mode.js",     // ビュー切替・月面観測地点・月の表側マップ
@@ -72,6 +71,7 @@ const MANIFEST = [
   "ui/panels.js",        // 操作方法・初回ガイド・言語切替・ヒント
   "ui/tour.js",          // ガイドツアーの実行・ナレーションバー・一覧
   "ui/calendar.js",      // 天文カレンダー (イベント一覧とその日時への移動)・今夜の空
+  "ui/dso-photos.js",   // Tap a deep-sky object to view its photograph
   "ui/search.js",        // 天体名検索
   "ui/framing.js",       // 空き領域への構図合わせ・接近/周辺・鑑賞表示
   "ui/screensaver.js",  // ランダムな鑑賞シーンを巡る

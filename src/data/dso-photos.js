@@ -1,12 +1,11 @@
   const DSO_PHOTO_LICENSE = "https://creativecommons.org/licenses/by/4.0/";
-  const DSO_PHOTO_CHANGES = "Sky projection, brightness adjustment, edge feathering and space-view M45 background suppression by Sidereum";
+  const DSO_PHOTO_CHANGES = "Original image, resized to fit the viewer";
   const DSO_PHOTOS = [];
-  DSO_PHOTOS.push({m:31,id:'heic2501a',ra:10.9324167,dec:41.3858111,w:140.60,h:32.88,north:125});
-  DSO_PHOTOS.push({m:42,id:'heic0601a',ra:83.7905417,dec:-5.4139778,w:30.03,h:30.03,north:0});
-  DSO_PHOTOS.push({m:57,id:'heic1310a',ra:283.3967083,dec:33.028925,w:2.10,h:2.10,north:-11.7});
-  DSO_PHOTOS.push({m:13,id:'opo0840a',ra:250.4197917,dec:36.459775,w:3.53,h:3.53,north:0});
-  // Approximate DSS registration from Alcyone, Atlas and Electra; see tex/dso/CREDITS.md.
-  DSO_PHOTOS.push({m:45,id:'davidedemartin_5',ra:56.661,dec:24.204,w:171.6,h:162.906,north:0});
+  DSO_PHOTOS.push({m:31,id:'heic2501a'});
+  DSO_PHOTOS.push({m:42,id:'heic0601a'});
+  DSO_PHOTOS.push({m:57,id:'heic1310a'});
+  DSO_PHOTOS.push({m:13,id:'opo0840a'});
+  DSO_PHOTOS.push({m:45,id:'davidedemartin_5'});
   for (const p of DSO_PHOTOS) {
     p.file = 'tex/dso/m' + p.m + '.jpg';
     p.source = 'https://esahubble.org/' + (p.m === 45 ? 'projects/fits_liberator/fitsimages/' : 'images/') + p.id + '/';
