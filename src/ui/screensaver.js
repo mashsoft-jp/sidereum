@@ -16,6 +16,7 @@
     { ja: "ハワイ", en: "Hawaii", lat: 19.82, lon: -155.47, d: "2026-09-08T22:00" },
   ];
   function screensaverRunning() { return !!saverState; }
+  function screensaverSky() { return saverState?.kind === "earthSky" || saverState?.kind === "moonSky"; }
   function screensaverOverview() { return saverState?.kind === "overview"; }
   function shuffledSaverKinds(random = Math.random) {
     const bag = SAVER_KINDS.slice();
@@ -82,7 +83,7 @@
     // setObsSite を通さず、スクリーンセーバー中の観測地を永続設定に書かない。
     geoZone = null; frameLayout.fit = null; cameraFlight = null;
     gTrack = false; gRadTrack = "";
-    showConst = false; showGrid = false; showTerrain = true; showSelMark = false;
+    showConst = kind === "earthSky" || kind === "moonSky"; showGrid = false; showTerrain = true; showSelMark = false;
     for (const b of ORBIT_BODIES) b.showOrbit = kind === "overview" && !b.parent && !b.ast && !b.comet && (!b.tno || b.key === "pluto");
     applyTourScene(s);
     if (s.view === "moon") {
@@ -168,7 +169,7 @@
     } else if (s.kind === "cometGround" || s.kind === "cometMoon") {
       // 方位は既存の天体追尾に任せ、広角へゆっくり引く。尾を画面外へ追いやらない。
       gFovTgt = Math.min(MAX_FOV, gFovTgt * Math.exp(dt * .003));
-    } else if (s.kind === "earthSky" || s.kind === "moonSky") gAzTgt += dt * .004;
+    } else if (s.kind === "earthSky" || s.kind === "moonSky") gAzTgt += dt * .008;
   }
   function stepScreensaver(dt) {
     const s = saverState;
@@ -176,9 +177,9 @@
     syncSaverDate();
     moveSaverCamera(dt);
     s.age += dt;
-    // 終了案内は開始時の一度だけ。場面名は切り替えごとに約10秒で消す。
+    // 終了案内は開始時の一度だけ。場面名と日時は鑑賞中も残す。
     saverHint.style.opacity = String(Math.max(0, Math.min(1, 10 - s.age)));
-    saverBar.style.opacity = String(s.phase === "out" ? 0 : Math.max(0, Math.min(1, 10 - s.elapsed)));
+    saverBar.style.opacity = String(s.phase === "out" ? 0 : 1);
     if (s.phase === "out") {
       s.fade += dt; saverFade.style.opacity = String(Math.min(1, s.fade / .8));
       if (s.fade >= .8) { applySaverScene(nextSaverKind()); s.phase = "in"; s.fade = 0; }

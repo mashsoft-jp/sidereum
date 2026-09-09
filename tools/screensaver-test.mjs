@@ -39,7 +39,7 @@ const step = seconds => { for (let i = 0; i < seconds * 60; i++) run('stepScreen
 step(10);
 assert.ok(ctx.cam.yawTgt > 0);
 step(1);
-assert.equal(element('saverBar').style.opacity, '0');
+assert.equal(element('saverBar').style.opacity, '1', '10秒後もタイトルを残す');
 assert.equal(element('saverHint').style.opacity, '0');
 const elapsed = run('saverState.elapsed');
 ctx.document.hidden = true; step(60);

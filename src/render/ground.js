@@ -420,7 +420,7 @@
     perfCount("星雲", dsoN);
     perfLap("星雲");
     // 星座線 (観測者フレームへ投影。地平線より上のセグメントのみ)。恒星より先に描く
-    if (!immersiveView && showConst && CONST_SEG.length) {
+    if ((!immersiveView || screensaverSky()) && showConst && CONST_SEG.length) {
       let cn = 0;
       for (let i = 0; i + 5 < CONST_SEG.length; i += 6) {
         const e0 = CONST_SEG[i]*obsE[0]+CONST_SEG[i+1]*obsE[1]+CONST_SEG[i+2]*obsE[2];
@@ -1022,7 +1022,7 @@
   function drawGroundOverlay() {
     octx.setTransform(DPR, 0, 0, DPR, 0, 0);
     octx.clearRect(0, 0, W, H);
-    if (immersiveView) return;
+    if (immersiveView && !screensaverSky()) return;
     octx.textAlign = "center";
     lblBegin();
     const o = T().obs;
