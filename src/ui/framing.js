@@ -6,6 +6,7 @@
   const frameEnjoyBtn = document.getElementById("frameEnjoy");
   const immersiveBar = document.getElementById("immersiveBar");
   const immersiveExitBtn = document.getElementById("immersiveExit");
+  const immersivePauseBtn = document.getElementById("immersivePause");
   const immersiveSaveBtn = document.getElementById("immersiveSave");
 
   function syncFramingUI() {
@@ -16,6 +17,8 @@
     frameEnjoyBtn.textContent = ja ? "鑑賞" : "Enjoy";
     frameEnjoyBtn.title = ja ? "見やすい方向へ移動し、天体の周りをゆっくり回って鑑賞" : "Find a scenic angle and slowly orbit the body";
     immersiveExitBtn.textContent = ja ? "戻る · Esc" : "Return · Esc";
+    immersivePauseBtn.textContent = enjoymentPaused ? (ja ? "周回を再開" : "Resume orbit") : (ja ? "周回を停止" : "Pause orbit");
+    immersivePauseBtn.setAttribute("aria-pressed", String(enjoymentPaused));
     immersiveSaveBtn.textContent = ja ? "画像を保存" : "Save image";
     document.getElementById("frameActions").setAttribute("aria-label", ja ? "天体の見せ方" : "Frame the body");
     const available = !!selected && !selected.mesh && !tourActive;
@@ -217,7 +220,7 @@
 
   // 鑑賞の周回はシミュレーションの再生速度から独立した実時間。
   // 一周約4分。接近の完了後と手動操作のあとに間を置き、徐々に動き出す。
-  let enjoymentWait = 0, enjoymentSpeed = 0;
+  let enjoymentWait = 0, enjoymentSpeed = 0, enjoymentPaused = false;
   function pauseEnjoymentOrbit() {
     if (immersiveView) { enjoymentWait = 3; enjoymentSpeed = 0; }
   }
@@ -225,7 +228,7 @@
     window.addEventListener(event, pauseEnjoymentOrbit, { passive: true });
   }
   function stepEnjoymentOrbit(dt) {
-    if (!immersiveView || groundView || tourActive || !(selected || lastCenter) ||
+    if (!immersiveView || enjoymentPaused || groundView || tourActive || !(selected || lastCenter) ||
         matchMedia("(prefers-reduced-motion: reduce)").matches) {
       enjoymentSpeed = 0; return;
     }
@@ -240,6 +243,8 @@
   function setImmersive(v) {
     if (v && (groundView || tourActive)) return;
     immersiveView = v;
+    enjoymentPaused = false;
+    syncFramingUI();
     enjoymentWait = 3; enjoymentSpeed = 0;
     frameApp.classList.toggle("immersive", v);
     immersiveBar.hidden = !v;
@@ -263,6 +268,13 @@
   frameContextBtn.addEventListener("click", () => frameBody(selected, "context"));
   frameEnjoyBtn.addEventListener("click", () => setImmersive(true));
   immersiveExitBtn.addEventListener("click", () => setImmersive(false));
+  immersivePauseBtn.addEventListener("click", () => {
+    enjoymentPaused = !enjoymentPaused;
+    enjoymentSpeed = 0; enjoymentWait = 0;
+    // 接近中はその移動を完了させ、周回中なら緩和の残りも止める。
+    if (enjoymentPaused && !cameraFlight) cam.yawTgt = cam.yaw;
+    syncFramingUI();
+  });
   immersiveSaveBtn.addEventListener("click", () => { snapPending = true; });
   window.addEventListener("keydown", e => {
     if (immersiveView && e.key === "/") { e.preventDefault(); e.stopImmediatePropagation(); return; }

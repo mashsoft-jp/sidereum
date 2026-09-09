@@ -17,6 +17,8 @@ for(const fps of [15,60,120]) {
   for(const flag of ['cameraFlight','snapPending','groundView','tourActive']) {
     ctx[flag]=true;yaw=ctx.cam.yawTgt;step(1);assert.equal(ctx.cam.yawTgt,yaw,flag);ctx[flag]=null;
   }
+  vm.runInContext('enjoymentPaused = true',ctx);yaw=ctx.cam.yawTgt;step(10);assert.equal(ctx.cam.yawTgt,yaw,'一時停止は自動で解除しない');
+  vm.runInContext('enjoymentPaused = false',ctx);step(5);assert.ok(ctx.cam.yawTgt>yaw,'再開すると周回を再開');
   ctx.immersiveView=false;yaw=ctx.cam.yawTgt;step(5);assert.equal(ctx.cam.yawTgt,yaw,'鑑賞終了で停止');
   ctx.immersiveView=true;ctx.matchMedia=()=>({matches:true});step(5);assert.equal(ctx.cam.yawTgt,yaw,'動きを減らす設定');
 }
