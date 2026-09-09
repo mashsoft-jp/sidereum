@@ -179,8 +179,13 @@
   const fsSupported = !!(docEl.requestFullscreen || docEl.webkitRequestFullscreen);
   if (!fsSupported) menuFsBtn.style.display = "none";
   const isFs = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  // iPadOS のデスクトップ用UAも拾う。ブラウザの全画面終了ボタンは
+  // safe-area-inset に含まれないため、横持ちでは別に左上の空間を確保する。
+  const appleTouch = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   function updateFsLabel() {
     menuFsBtn.textContent = isFs() ? T().menuFsExit : T().menuFs;
+    docEl.classList.toggle("appleFullscreen", appleTouch && isFs());
   }
   menuFsBtn.addEventListener("click", () => {
     if (isFs()) {

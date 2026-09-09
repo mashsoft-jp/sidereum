@@ -1675,3 +1675,10 @@
   #saverTitle { color: #e5eaf2; font-size: 14px; line-height: 1.6; letter-spacing: .08em; }
   #saverDate { color: #a2aebf; font-size: 10px; margin-top: 4px; }
   .screensaverMode #gl, .screensaverMode #overlay { pointer-events: none; }
+
+  /* iPad Safari の全画面終了×が左上に重なるため、メニュー一式を右へ逃がす。 */
+  @media (orientation: landscape) {
+    html.appleFullscreen #title,
+    html.appleFullscreen #menu,
+    html.appleFullscreen #searchBox { left: calc(80px + var(--sal)); }
+  }
