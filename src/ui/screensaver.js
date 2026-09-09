@@ -1,6 +1,7 @@
   // 鑑賞をランダムに巡る。設定保存やツアーの進捗とは独立した、一時的な表示。
   let saverState = null;
   const saverBar = document.getElementById("saverBar"), saverFade = document.getElementById("saverFade");
+  const saverHint = document.getElementById("saverHint");
   const SAVER_KINDS = ["body", "cometSpace", "cometGround", "cometMoon", "overview", "earthSky", "moonSky"];
   const SAVER_COMETS = [
     { key: "hyakutake", d: "1996-03-24T18:30", fit: .35, gfov: 90 },
@@ -26,11 +27,9 @@
   function syncScreensaverUI() {
     const ja = lang === "ja";
     document.getElementById("menuSaver").textContent = ja ? "スクリーンセーバー" : "Screensaver";
-    document.getElementById("saverExit").innerHTML = (ja ? "戻る" : "Return") + '<span class="keyboardHint">(Esc)</span>';
-    document.getElementById("saverNext").textContent = ja ? "次の景色" : "Next scene";
-    const paused = !!saverState?.paused, btn = document.getElementById("saverPause");
-    btn.textContent = paused ? (ja ? "再開" : "Resume") : (ja ? "一時停止" : "Pause");
-    btn.setAttribute("aria-pressed", String(paused));
+    const touch = matchMedia("(hover: none) and (pointer: coarse)").matches;
+    saverHint.textContent = ja ? (touch ? "画面をタップすると終了します" : "画面をクリック、または Esc キーで終了します")
+      : (touch ? "Tap the screen to exit" : "Click the screen or press Esc to exit");
     if (saverState?.title) document.getElementById("saverTitle").textContent = saverState.title[ja ? "ja" : "en"];
   }
   function saverMoonPlace(index) {
@@ -104,9 +103,8 @@
       frameLayout.mode = "close"; frameLayout.rect = measureFrameRect(); frameLayout.fit = selected;
       fitFrameDistance(selected); cam.dist = cam.distTgt;
     }
-    state.kind = kind; state.orbit = orbit; state.scenePlaying = playing; state.title = title;
+    state.kind = kind; state.orbit = orbit; state.title = title;
     state.elapsed = 0; state.duration = 35 + Math.random() * 15;
-    if (state.paused) setPlaying(false);
     // 地点や日付が変わったことを、短い場面名と実際の表示日時で伝える。
     syncSaverDate();
     refreshObsSiteUI(); syncScreensaverUI(); frameLayout.dirty = true;
@@ -130,12 +128,14 @@
     const extra = { moonLat, moonLon, moonSite: moonSiteEl.value, geoZone, infoTall, infoTab,
       frame: { ...frameLayout }, currentInfoBody, gRadTrack, immersiveView, enjoymentPaused, navVisible };
     exitAR(); hideModals(); setMenu(false);
-    saverState = { saved, extra, bag: [], kind: null, elapsed: 0, phase: "in", fade: 0, paused: false };
+    saverState = { saved, extra, bag: [], kind: null, elapsed: 0, phase: "in", fade: 0, age: 0 };
     immersiveView = true; frameApp.classList.add("immersive", "screensaverMode");
     immersiveBar.hidden = true; saverBar.hidden = false; saverFade.hidden = false;
     saverFade.style.opacity = "1";
     applySaverScene("body");
-    document.getElementById("saverExit").focus({ preventScroll: true });
+    saverHint.hidden = false;
+    saverBar.style.opacity = saverHint.style.opacity = "1";
+    saverBar.focus({ preventScroll: true });
   }
   function stopScreensaver() {
     if (!saverState) return;
@@ -151,13 +151,17 @@
     gRadTrack = extra.gRadTrack; enjoymentPaused = extra.enjoymentPaused;
     Object.assign(frameLayout, extra.frame, { dirty: true });
     navVisible = extra.navVisible; applyNavVisible(); refreshObsSiteUI();
-    saverState = null; saverBar.hidden = true; saverFade.hidden = true; immersiveBar.hidden = !immersiveView;
+    saverState = null; saverHint.hidden = true; saverBar.hidden = true; saverFade.hidden = true; immersiveBar.hidden = !immersiveView;
     syncFramingUI(); menuBtn.focus({ preventScroll: true });
   }
   function stepScreensaver(dt) {
     const s = saverState;
     if (!s || document.hidden) return;
     syncSaverDate();
+    s.age += dt;
+    // 終了案内は開始時の一度だけ。場面名は切り替えごとに約10秒で消す。
+    saverHint.style.opacity = String(Math.max(0, Math.min(1, 10 - s.age)));
+    saverBar.style.opacity = String(s.phase === "out" ? 0 : Math.max(0, Math.min(1, 10 - s.elapsed)));
     if (s.phase === "out") {
       s.fade += dt; saverFade.style.opacity = String(Math.min(1, s.fade / .8));
       if (s.fade >= .8) { applySaverScene(nextSaverKind()); s.phase = "in"; s.fade = 0; }
@@ -168,7 +172,6 @@
       if (s.fade >= 1) s.phase = "show";
       return;
     }
-    if (s.paused) return;
     s.elapsed += dt;
     if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
       if (s.orbit) cam.yawTgt += dt * Math.PI / 120;
@@ -177,17 +180,14 @@
     if (s.elapsed >= s.duration) { s.phase = "out"; s.fade = 0; }
   }
   document.getElementById("menuSaver").addEventListener("click", startScreensaver);
-  document.getElementById("saverExit").addEventListener("click", stopScreensaver);
-  document.getElementById("saverNext").addEventListener("click", () => {
-    if (saverState?.phase === "show") { saverState.phase = "out"; saverState.fade = 0; }
-  });
-  document.getElementById("saverPause").addEventListener("click", () => {
+  // 終了操作が復元後の天体選択やカメラ操作に伝わらないよう、手前で受け取る。
+  for (const type of ["pointerdown", "pointerup"]) window.addEventListener(type, e => {
+    if (saverState) e.stopImmediatePropagation();
+  }, true);
+  window.addEventListener("click", e => {
     if (!saverState) return;
-    saverState.paused = !saverState.paused;
-    setPlaying(saverState.paused ? false : saverState.scenePlaying);
-    if (saverState.paused) { cam.yawTgt = cam.yaw; gAzTgt = gAz; }
-    syncScreensaverUI();
-  });
+    e.preventDefault(); e.stopImmediatePropagation(); stopScreensaver();
+  }, true);
   window.addEventListener("keydown", e => {
     if (e.key === "Escape" && saverState) { e.preventDefault(); stopScreensaver(); }
   });
