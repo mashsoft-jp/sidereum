@@ -10,7 +10,7 @@ const element = id => {
 const listeners = {};
 const ctx = vm.createContext({
   document: { hidden: false, getElementById: element }, window: { addEventListener(type, fn) { listeners[type] = fn; } },
-  matchMedia: () => ({ matches: false }), lang: 'ja', simDays: 0, J2000: Date.UTC(2000, 0, 1, 12), DAY_MS: 86400000,
+  matchMedia: () => ({ matches: false }), MAX_FOV: Math.PI / 2, lang: 'ja', simDays: 0, J2000: Date.UTC(2000, 0, 1, 12), DAY_MS: 86400000,
   cam: { yaw: 0, yawTgt: 0 }, gAz: 0, gAzTgt: 0,
 });
 const run = code => vm.runInContext(code, ctx);
@@ -56,6 +56,22 @@ ctx.matchMedia = () => ({ matches: true });
 const still = ctx.cam.yawTgt; step(2); assert.equal(ctx.cam.yawTgt, still);
 ctx.simDays = 1; step(1);
 assert.equal(element('saverDate').textContent, '2000-01-02 12:00 UTC');
+// 全種類が低fpsでも同じ量だけ動く。地上・月面の彗星は追尾の方位を変えない。
+ctx.matchMedia = () => ({ matches: false });
+for (const kind of ['body', 'overview', 'cometSpace', 'cometGround', 'cometMoon', 'earthSky', 'moonSky']) {
+  const samples = [];
+  for (const fps of [15, 60]) {
+    run(`saverState = { kind: '${kind}', orbit: ${kind === 'body'} }; cam.yawTgt = 0; cam.distTgt = 100; gAzTgt = 0; gFovTgt = 1.2;`);
+    for (let i = 0; i < fps * 50; i++) run(`moveSaverCamera(${1 / fps})`);
+    const result = run('[cam.yawTgt, cam.distTgt, gAzTgt, gFovTgt]');
+    assert.ok(result.some((n, i) => Math.abs(n - [0, 100, 0, 1.2][i]) > .01), kind + ' moves');
+    if (kind === 'cometGround' || kind === 'cometMoon') {
+      assert.equal(result[2], 0); assert.ok(result[3] > 1.2 && result[3] < Math.PI / 2);
+    }
+    samples.push(result);
+  }
+  samples[0].forEach((n, i) => assert.ok(Math.abs(n - samples[1][i]) < 1e-8, kind + ' frame rate independent'));
+}
 let exits = 0;
 ctx.recordExit = () => exits++;
 run('stopScreensaver = () => { recordExit(); saverState = null; }');

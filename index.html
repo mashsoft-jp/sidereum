@@ -17300,7 +17300,7 @@
       title = { ja: b.name + "を巡る", en: b.en + " · orbit" };
     } else if (kind.startsWith("comet")) {
       const c = pick(SAVER_COMETS), b = BODY_BY_KEY.get(c.key);
-      s = { ...s, d: c.d, sel: c.key, fit: c.fit, side: true, a: .4, aim: true, gfov: c.gfov };
+      s = { ...s, d: c.d, sel: c.key, fit: c.fit, side: true, a: .4, aim: true, gfov: c.gfov * .84 };
       if (kind === "cometGround") { s.view = "ground"; obsLat = 35.68; obsLon = 139.69; }
       if (kind === "cometMoon") s.view = "moon";
       const ja = kind === "cometSpace" ? "宇宙" : kind === "cometGround" ? "東京の空" : "月面";
@@ -17394,10 +17394,25 @@
     saverState = null; saverHint.hidden = true; saverBar.hidden = true; saverFade.hidden = true; immersiveBar.hidden = !immersiveView;
     syncFramingUI(); menuBtn.focus({ preventScroll: true });
   }
+  function moveSaverCamera(dt) {
+    const s = saverState;
+    if (!s || document.hidden || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (s.orbit) cam.yawTgt += dt * Math.PI / 120;
+    else if (s.kind === "overview") cam.yawTgt += dt * .006;
+    else if (s.kind === "cometSpace") {
+      // 尾を横から見た構図を保ち、少し回り込みながら引いていく。
+      cam.yawTgt += dt * .004;
+      cam.distTgt *= Math.exp(dt * .003);
+    } else if (s.kind === "cometGround" || s.kind === "cometMoon") {
+      // 方位は既存の天体追尾に任せ、広角へゆっくり引く。尾を画面外へ追いやらない。
+      gFovTgt = Math.min(MAX_FOV, gFovTgt * Math.exp(dt * .003));
+    } else if (s.kind === "earthSky" || s.kind === "moonSky") gAzTgt += dt * .004;
+  }
   function stepScreensaver(dt) {
     const s = saverState;
     if (!s || document.hidden) return;
     syncSaverDate();
+    moveSaverCamera(dt);
     s.age += dt;
     // 終了案内は開始時の一度だけ。場面名は切り替えごとに約10秒で消す。
     saverHint.style.opacity = String(Math.max(0, Math.min(1, 10 - s.age)));
@@ -17413,10 +17428,6 @@
       return;
     }
     s.elapsed += dt;
-    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      if (s.orbit) cam.yawTgt += dt * Math.PI / 120;
-      else if (s.kind === "earthSky" || s.kind === "moonSky") gAzTgt += dt * .002;
-    }
     if (s.elapsed >= s.duration) { s.phase = "out"; s.fade = 0; }
   }
   document.getElementById("menuSaver").addEventListener("click", startScreensaver);
