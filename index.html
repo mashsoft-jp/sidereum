@@ -17383,7 +17383,7 @@
       title = { ja: b.name + "を巡る", en: b.en + " · orbit" };
     } else if (kind.startsWith("comet")) {
       const c = pick(SAVER_COMETS), b = BODY_BY_KEY.get(c.key);
-      s = { ...s, d: c.d, sel: c.key, fit: c.fit, side: true, a: .4, aim: true, gfov: c.gfov * .84 };
+      s = { ...s, d: c.d, sel: c.key, fit: c.fit, side: true, a: .4, aim: true, gfov: c.gfov * .55 };
       if (kind === "cometGround") { s.view = "ground"; obsLat = 35.68; obsLon = 139.69; }
       if (kind === "cometMoon") s.view = "moon";
       const ja = kind === "cometSpace" ? "宇宙" : kind === "cometGround" ? "東京の空" : "月面";
@@ -17490,12 +17490,12 @@
     if (s.orbit) cam.yawTgt += dt * Math.PI / 120;
     else if (s.kind === "overview") cam.yawTgt += dt * .006;
     else if (s.kind === "cometSpace") {
-      // 尾を横から見た構図を保ち、少し回り込みながら引いていく。
-      cam.yawTgt += dt * .004;
-      cam.distTgt *= Math.exp(dt * .003);
+      // 尾を横から見る向きから、約40秒で32°回り込み、距離も約1.6倍にする。
+      cam.yawTgt += dt * .014;
+      cam.distTgt *= Math.exp(dt * .012);
     } else if (s.kind === "cometGround" || s.kind === "cometMoon") {
-      // 方位は既存の天体追尾に任せ、広角へゆっくり引く。尾を画面外へ追いやらない。
-      gFovTgt = Math.min(MAX_FOV, gFovTgt * Math.exp(dt * .003));
+      // 方位は天体追尾に任せ、約40秒で画角を約1.5倍に広げる。
+      gFovTgt = Math.min(MAX_FOV, gFovTgt * Math.exp(dt * .010));
     } else if (s.kind === "earthSky" || s.kind === "moonSky") gAzTgt += dt * .008;
   }
   function stepScreensaver(dt) {

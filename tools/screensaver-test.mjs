@@ -88,13 +88,14 @@ ctx.matchMedia = () => ({ matches: false });
 for (const kind of ['body', 'overview', 'cometSpace', 'cometGround', 'cometMoon', 'earthSky', 'moonSky']) {
   const samples = [];
   for (const fps of [15, 60]) {
-    run(`saverState = { kind: '${kind}', orbit: ${kind === 'body'} }; cam.yawTgt = 0; cam.distTgt = 100; gAzTgt = 0; gFovTgt = 1.2;`);
+    run(`saverState = { kind: '${kind}', orbit: ${kind === 'body'} }; cam.yawTgt = 0; cam.distTgt = 100; gAzTgt = 0; gFovTgt = .8;`);
     for (let i = 0; i < fps * 50; i++) run(`moveSaverCamera(${1 / fps})`);
     const result = run('[cam.yawTgt, cam.distTgt, gAzTgt, gFovTgt]');
-    assert.ok(result.some((n, i) => Math.abs(n - [0, 100, 0, 1.2][i]) > .01), kind + ' moves');
+    assert.ok(result.some((n, i) => Math.abs(n - [0, 100, 0, .8][i]) > .01), kind + ' moves');
     if (kind === 'cometGround' || kind === 'cometMoon') {
-      assert.equal(result[2], 0); assert.ok(result[3] > 1.2 && result[3] < Math.PI / 2);
+      assert.equal(result[2], 0); assert.ok(result[3] > 1.3 && result[3] < Math.PI / 2);
     }
+    if (kind === 'cometSpace') { assert.ok(result[0] > .65); assert.ok(result[1] > 180); }
     samples.push(result);
   }
   samples[0].forEach((n, i) => assert.ok(Math.abs(n - samples[1][i]) < 1e-8, kind + ' frame rate independent'));
