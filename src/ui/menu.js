@@ -605,7 +605,7 @@
     "io", "europa", "ganymede", "callisto", "pluto", "ceres", "vesta"];
   function buildAbout() {
     const rows = CREDIT_ORDER
-      .map((k) => `<tr><td>${bName(BODY_BY_KEY.get(k))}</td><td>${IMG_CREDIT[k]}</td></tr>`)
+      .map((k) => `<tr><td>${bName(BODY_BY_KEY.get(k))}</td><td><a href="${IMG_SOURCE[k]}" target="_blank" rel="noopener">${IMG_CREDIT[k]}</a></td></tr>`)
       .join("");
     const c = lang === "ja" ? {
       lic: "ライセンス",

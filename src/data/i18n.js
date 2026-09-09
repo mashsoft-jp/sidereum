@@ -426,3 +426,19 @@
     ceres: "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (Dawn)",
     vesta: "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (Dawn)",
   };
+  // Public source/product pages for the surface imagery listed in About.
+  const IMG_SOURCE = {
+    mercury: "https://astrogeology.usgs.gov/search/map/mercury_messenger_mdis_basemap_md3_color_global_mosaic_665m",
+    venus: "https://astrogeology.usgs.gov/search/map/venus-magellan-global-products",
+    earth: "https://visibleearth.nasa.gov/images/57752/blue-marble-land-surface-shallow-water-and-shaded-topography",
+    moon: "https://svs.gsfc.nasa.gov/4720/",
+    mars: "https://astrogeology.usgs.gov/search/map/mars-viking-global-products",
+    jupiter: "https://science.nasa.gov/resource/cassinis-best-maps-of-jupiter-cylindrical-map-2/",
+    io: "https://astrogeology.usgs.gov/search/map/io_galileo_ssi_voyager_color_merged_global_mosaic_1km",
+    europa: "https://astrogeology.usgs.gov/search/map/europa_voyager_galileo_ssi_global_mosaic_500m",
+    ganymede: "https://astrogeology.usgs.gov/search/map/ganymede_voyager_galileo_ssi_color_global_mosaic_1_4km",
+    callisto: "https://astrogeology.usgs.gov/search/map/callisto_galileo_voyager_global_mosaic_1km",
+    pluto: "https://science.nasa.gov/photojournal/global-map-of-pluto/",
+    ceres: "https://astrogeology.usgs.gov/search/map/ceres_dawn_fc_global_mosaic_140m",
+    vesta: "https://astrogeology.usgs.gov/search/map/vesta_dawn_fc_hamo_global_mosaic_60m",
+  };

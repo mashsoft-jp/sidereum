@@ -271,7 +271,10 @@
     color: var(--accent);
   }
   #about h2 .yomi, #howto h2 .yomi { font-size: 0.72em; letter-spacing: 0.1em; margin-left: 0; }
-  #about h2.logo { font-size: 16px; letter-spacing: 0.26em; }
+  #about h2.logo { font-size: 28px; letter-spacing: 0.20em; line-height: 1.4; padding-right: 20px; }
+  #about h2.logo .yomi { display: block; font-size: 12px; letter-spacing: 0.1em; margin-top: 3px; }
+  #about td a { text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+  @media (max-width: 600px) { #about h2.logo { font-size: 24px; } }
   #about h3, #howto h3 {
     margin: 16px 0 6px;
     font-size: 10px;
@@ -3204,6 +3207,22 @@
     pluto: "NASA/JHUAPL/SwRI (New Horizons)",
     ceres: "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (Dawn)",
     vesta: "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (Dawn)",
+  };
+  // Public source/product pages for the surface imagery listed in About.
+  const IMG_SOURCE = {
+    mercury: "https://astrogeology.usgs.gov/search/map/mercury_messenger_mdis_basemap_md3_color_global_mosaic_665m",
+    venus: "https://astrogeology.usgs.gov/search/map/venus-magellan-global-products",
+    earth: "https://visibleearth.nasa.gov/images/57752/blue-marble-land-surface-shallow-water-and-shaded-topography",
+    moon: "https://svs.gsfc.nasa.gov/4720/",
+    mars: "https://astrogeology.usgs.gov/search/map/mars-viking-global-products",
+    jupiter: "https://science.nasa.gov/resource/cassinis-best-maps-of-jupiter-cylindrical-map-2/",
+    io: "https://astrogeology.usgs.gov/search/map/io_galileo_ssi_voyager_color_merged_global_mosaic_1km",
+    europa: "https://astrogeology.usgs.gov/search/map/europa_voyager_galileo_ssi_global_mosaic_500m",
+    ganymede: "https://astrogeology.usgs.gov/search/map/ganymede_voyager_galileo_ssi_color_global_mosaic_1_4km",
+    callisto: "https://astrogeology.usgs.gov/search/map/callisto_galileo_voyager_global_mosaic_1km",
+    pluto: "https://science.nasa.gov/photojournal/global-map-of-pluto/",
+    ceres: "https://astrogeology.usgs.gov/search/map/ceres_dawn_fc_global_mosaic_140m",
+    vesta: "https://astrogeology.usgs.gov/search/map/vesta_dawn_fc_hamo_global_mosaic_60m",
   };
   //#endregion
   //#region src/data/tours.js
@@ -15187,7 +15206,7 @@
     "io", "europa", "ganymede", "callisto", "pluto", "ceres", "vesta"];
   function buildAbout() {
     const rows = CREDIT_ORDER
-      .map((k) => `<tr><td>${bName(BODY_BY_KEY.get(k))}</td><td>${IMG_CREDIT[k]}</td></tr>`)
+      .map((k) => `<tr><td>${bName(BODY_BY_KEY.get(k))}</td><td><a href="${IMG_SOURCE[k]}" target="_blank" rel="noopener">${IMG_CREDIT[k]}</a></td></tr>`)
       .join("");
     const c = lang === "ja" ? {
       lic: "ライセンス",
