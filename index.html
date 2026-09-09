@@ -17309,8 +17309,9 @@
       const en = kind === "cometSpace" ? "Space" : kind === "cometGround" ? "Tokyo sky" : "Moon surface";
       title = { ja: b.name + " · " + ja, en: b.en + " · " + en };
     } else if (kind === "overview") {
-      s.fit = pick([2.2, 34]); s.a = Math.PI / 2 - .01; s.y = -.6; s.spd = .4;
-      title = { ja: s.fit < 3 ? "真上から見る内惑星" : "真上から見る太陽系", en: s.fit < 3 ? "Inner planets · from above" : "Solar System · from above" };
+      // 水星〜火星が見渡せる範囲で、約40秒の間に公転がはっきり分かる速さに。
+      s.fit = 2.2; s.a = Math.PI / 2 - .01; s.y = -.6; s.spd = 2;
+      title = { ja: "真上から見る内惑星", en: "Inner planets · from above" };
     } else if (kind === "earthSky") {
       const site = pick(SAVER_PLACES); obsLat = site.lat; obsLon = site.lon;
       s.view = "ground"; delete s.d; s.dLocal = site.d; s.gfov = 90; s.spd = 30 / 86400;
