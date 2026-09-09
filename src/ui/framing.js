@@ -98,7 +98,7 @@
     const r = frameLayout.rect;
     if (!r) return;
     // スクリーンセーバーの太陽は光芒の周囲にも余白を残す。
-    const fill = frameLayout.mode === "saverSun" ? 0.27 : 0.36;
+    const fill = frameLayout.mode === "saverSun" ? 0.16 : 0.36;
     const pixels = Math.max(24, Math.min(r.x1 - r.x0, r.y1 - r.y0) * fill);
     const focal = H / (2 * Math.tan(FOV / 2));
     // 球の見かけの半径は asin(R/d)。極端な横長画面でも輪郭まで収まる。
