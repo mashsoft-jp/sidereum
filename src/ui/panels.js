@@ -201,6 +201,7 @@
     updateMenuHeads();
     menuHelpBtn.textContent = t.menuHelp;
     menuTourBtn.textContent = t.menuTour;
+    syncScreensaverUI();
     menuCalBtn.textContent = t.menuCal;
     menuAboutBtn.textContent = t.menuAbout;
     updateGridLabel();

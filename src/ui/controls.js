@@ -436,7 +436,7 @@
   function saveSettings() {
     // 導入のあいだは保存しない。演出のためにカメラをヘリオポーズまで引いて
     // いるので、そのまま書くと次に開いたときの「既定」が 124au になる
-    if (introActive()) return;
+    if (introActive() || screensaverRunning()) return;
     try {
       localStorage.setItem("ssSpeed", String(daysPerSec));
       localStorage.setItem("ssZoom", String(cam.distTgt));
@@ -540,7 +540,7 @@
 
   window.addEventListener("keydown", (e) => {
     // ツアー中は操作パネルを隠しているので、ショートカットだけ効くのは筋が悪い
-    if (e.code === "Space" && e.target === document.body && !tourActive) {
+    if (e.code === "Space" && e.target === document.body && !tourActive && !screensaverRunning()) {
       e.preventDefault();
       setPlaying(!playing);
     }

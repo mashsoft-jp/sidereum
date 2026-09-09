@@ -60,6 +60,7 @@
       <div class="menuHead" id="menuGrpGuide"></div>
       <button id="menuHelp" role="menuitem"></button>
       <button id="menuTour" role="menuitem"></button>
+      <button id="menuSaver" role="menuitem"></button>
       <button id="menuCal" role="menuitem"></button>
     </div>
     <div class="menuGroup" role="group" aria-labelledby="menuGrpShow">
@@ -165,6 +166,11 @@
     <button id="immersiveExit">戻る</button>
     <button id="immersivePause" aria-pressed="false">周回を停止</button>
     <button id="immersiveSave">画像を保存</button>
+  </div>
+  <div id="saverFade" hidden aria-hidden="true"></div>
+  <div id="saverBar" class="hud" hidden>
+    <div id="saverTitle"></div><div id="saverDate"></div>
+    <div class="saverActions"><button id="saverExit"></button><button id="saverPause" aria-pressed="false"></button><button id="saverNext"></button></div>
   </div>
   <div id="toast" hidden></div>
   <div id="hint">ドラッグで回転 ・ ホイール / ピンチでズーム (Shift+で距離) ・ 天体クリックで接近</div>

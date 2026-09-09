@@ -72,6 +72,7 @@ const MANIFEST = [
   "ui/calendar.js",      // 天文カレンダー (イベント一覧とその日時への移動)・今夜の空
   "ui/search.js",        // 天体名検索
   "ui/framing.js",       // 空き領域への構図合わせ・接近/周辺・鑑賞表示
+  "ui/screensaver.js",  // ランダムな鑑賞シーンを巡る
   "main.js",             // 起動処理 (必ず最後)
 ];
 

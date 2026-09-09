@@ -193,7 +193,7 @@
     }
 
     // --- 軌道線 (天体ごとの表示フラグ) ---
-    if (!immersiveView) {
+    if (!immersiveView || screensaverOverview()) {
       gl.useProgram(guideP.pr);
       // 中心天体は現在位置 ± 粗い8分割ぶんを高精細パッチで引き直すため、
       // 粗い折れ線側はその区間をスキップする (二重線防止)。解除後も lastCenter を
@@ -432,7 +432,7 @@
     }
 
     // --- 自転軸 (各天体の軌道表示に連動。深度テストで天体の裏側は隠れる) ---
-    if (!immersiveView && ORBIT_BODIES.some((b) => b.showOrbit)) {
+    if ((!immersiveView || screensaverOverview()) && ORBIT_BODIES.some((b) => b.showOrbit)) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.depthMask(false);

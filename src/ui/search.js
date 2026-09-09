@@ -208,7 +208,7 @@
   });
   // "/" で開く (入力欄にフォーカスが無いときだけ)
   window.addEventListener("keydown", (e) => {
-    if (e.key === "/" && e.target === document.body && !tourActive && !introOn) {
+    if (e.key === "/" && e.target === document.body && !tourActive && !introOn && !screensaverRunning()) {
       e.preventDefault();
       openSearch();
     }

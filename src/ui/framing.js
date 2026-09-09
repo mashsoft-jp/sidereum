@@ -228,7 +228,7 @@
     window.addEventListener(event, pauseEnjoymentOrbit, { passive: true });
   }
   function stepEnjoymentOrbit(dt) {
-    if (!immersiveView || enjoymentPaused || groundView || tourActive || !(selected || lastCenter) ||
+    if (!immersiveView || screensaverRunning() || enjoymentPaused || groundView || tourActive || !(selected || lastCenter) ||
         matchMedia("(prefers-reduced-motion: reduce)").matches) {
       enjoymentSpeed = 0; return;
     }
@@ -278,7 +278,7 @@
   immersiveSaveBtn.addEventListener("click", () => { snapPending = true; });
   window.addEventListener("keydown", e => {
     if (immersiveView && e.key === "/") { e.preventDefault(); e.stopImmediatePropagation(); return; }
-    if (e.key === "Escape" && immersiveView && !snapDlgEl.classList.contains("open")) {
+    if (e.key === "Escape" && immersiveView && !screensaverRunning() && !snapDlgEl.classList.contains("open")) {
       e.preventDefault(); setImmersive(false);
     }
   }, true);

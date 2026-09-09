@@ -5,7 +5,7 @@ const src=readFileSync(new URL('../src/ui/framing.js',import.meta.url),'utf8');
 const code=src.slice(src.indexOf('  let enjoymentWait'),src.indexOf('  function setImmersive'));
 const results=[];
 for(const fps of [15,60,120]) {
-  const ctx=vm.createContext({immersiveView:true,groundView:false,tourActive:false,selected:{},lastCenter:null,
+  const ctx=vm.createContext({immersiveView:true,screensaverRunning:()=>false,groundView:false,tourActive:false,selected:{},lastCenter:null,
     cameraFlight:null,pointers:new Map(),snapPending:false,snapDlgEl:{classList:{contains:()=>false}},
     document:{hidden:false},matchMedia:()=>({matches:false}),window:{addEventListener(){}},cam:{yawTgt:0}});
   vm.runInContext(code,ctx);

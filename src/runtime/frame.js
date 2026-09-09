@@ -433,11 +433,12 @@
     const raw = (now - last) / 1000;
     last = now;
     const dtc = Math.min(0.5, raw);       // カメラ緩和用 (低 fps でも追従)
+    stepScreensaver(document.hidden || raw > 1 ? 0 : dtc);
     // シミュレーション時刻は「実経過時間 × 再生速度」の連続関数にする。
     // タブ非表示中は rAF が止まるが、復帰フレームで隠れていた時間ぶんを
     // 一括で進める (クランプすると 1秒=1秒 でも時計が現実から遅れていく)
     if (playing) {
-      let adv = daysPerSec * raw;
+      let adv = daysPerSec * (screensaverRunning() ? (document.hidden || raw > 1 ? 0 : dtc) : raw);
       // ツアーの早送りは、指定日時でいきなり止めずに手前から落として着地させる。
       // 残り時間が窓 (今の速さで 1.2秒ぶん) を切ったら √ で減速 — 減速度が一定に
       // なるので、止まる瞬間だけが急にならない
