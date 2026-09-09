@@ -120,3 +120,18 @@ for (const type of ['pointerup', 'touchend']) {
   assert.equal(next.stopped, false, '新しい操作は遮らない');
 }
 console.log('screensaver: coverage, fade, temporary titles/hint, hidden tab, reduced motion, date and exit passed');
+// Only the requested distant scenes override the normal label visibility.
+ctx.SUN = {key:'sun',showLabel:false};
+ctx.PLANETS = ['mercury','venus','earth','mars','jupiter','saturn','uranus','neptune','pluto'].map(key=>({key,showLabel:false,tno:key==='pluto'}));
+ctx.PLANETS.push({key:'ceres',ast:true},{key:'halley',comet:true},{key:'eris',tno:true});
+ctx.BODY_BY_KEY = new Map(ctx.PLANETS.map(b=>[b.key,b]));
+run("saverState={kind:'paleDot'}");
+assert.deepEqual(Array.from(run('screensaverLabelBodies().map(b=>b.key)')),['earth']);
+run("saverState.kind='overview'");
+assert.deepEqual(Array.from(run('screensaverLabelBodies().map(b=>b.key)')),['sun','mercury','venus','earth','mars','jupiter','saturn','uranus','neptune','pluto']);
+for(const kind of ['body','cometSpace','voyager','cassini','earthSky']) {
+ ctx.testKind=kind;run('saverState.kind=testKind');assert.equal(run('screensaverLabelBodies().length'),0);
+}
+run('saverState=null');assert.equal(run('screensaverLabelBodies().length'),0);
+assert.equal(ctx.PLANETS[0].showLabel,false,'normal visibility preferences stay unchanged');
+console.log('screensaver labels: Pale Blue Dot, overview, other scenes and preserved preferences passed');

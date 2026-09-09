@@ -46,6 +46,18 @@
     octx.setTransform(DPR, 0, 0, DPR, 0, 0);
     octx.clearRect(0, 0, W, H);
     if (immersiveView) {
+      // 遠景では実寸の点を探せるよう、必要な場面だけ名前を添える。
+      // ユーザーの通常表示用 showLabel は変更しない。
+      octx.textAlign = "center";
+      lblBegin();
+      for (const b of screensaverLabelBodies()) {
+        if (!b) continue;
+        const s = screenPos.get(b.key);
+        if (!s || s.hidden || s.x < 0 || s.x > W || s.y < 0 || s.y > H) continue;
+        lblPut(bName(b), s.x, s.y - Math.max(s.r, 3) - 12, LBL_SEL,
+          "rgba(201,213,234,0.88)", LF12);
+      }
+      lblEnd();
       // 土星周回の主役が環や衛星に紛れないよう、機体の位置だけを示す。
       if (screensaverRunning() && tourSpot === "cassini") {
         const sp = screenPos.get("cassini");

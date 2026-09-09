@@ -63,6 +63,11 @@
   function screensaverRunning() { return !!saverState; }
   function screensaverSky() { return saverState?.kind === "earthSky" || saverState?.kind === "moonSky" || saverState?.kind === "meteorTour"; }
   function screensaverOverview() { return saverState?.kind === "overview"; }
+  function screensaverLabelBodies() {
+    if (saverState?.kind === "paleDot") return [BODY_BY_KEY.get("earth")];
+    if (screensaverOverview()) return [SUN, ...PLANETS.filter(b => !b.ast && !b.comet && (!b.tno || b.key === "pluto"))];
+    return [];
+  }
   function shuffledSaverKinds(random = Math.random) {
     const bag = SAVER_KINDS.slice();
     for (let i = bag.length - 1; i > 0; i--) {
