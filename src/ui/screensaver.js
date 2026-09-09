@@ -2,7 +2,52 @@
   let saverState = null;
   const saverBar = document.getElementById("saverBar"), saverFade = document.getElementById("saverFade");
   const saverHint = document.getElementById("saverHint");
-  const SAVER_KINDS = ["body", "cometSpace", "cometGround", "cometMoon", "overview", "earthSky", "moonSky"];
+  const SAVER_KINDS = ["body", "cometSpace", "cometGround", "cometMoon", "overview", "earthSky", "moonSky", "voyager", "cassini", "paleDot", "meteorTour", "eclipseTour"];
+  // ステップ番号は0始まり。ガイドの日時・照準を共有し、説明UIや進捗は動かさない。
+  const SAVER_TOUR_CLIPS = {
+    voyager: [
+      ["voyager1", 2, "ボイジャー1号 · 木星接近", "Voyager 1 · Jupiter"],
+      ["voyager1", 6, "ボイジャー1号 · 土星接近", "Voyager 1 · Saturn"],
+      ["voyager2", 2, "ボイジャー2号 · 木星接近", "Voyager 2 · Jupiter"],
+      ["voyager2", 4, "ボイジャー2号 · 土星接近", "Voyager 2 · Saturn"],
+      ["voyager2", 6, "ボイジャー2号 · 天王星接近", "Voyager 2 · Uranus"],
+      ["voyager2", 8, "ボイジャー2号 · 海王星接近", "Voyager 2 · Neptune"],
+    ],
+    cassini: [["cassini", 10, "カッシーニ · 土星を巡る", "Cassini · orbiting Saturn"]],
+    paleDot: [["voyager1", 7, "ペイル・ブルー・ドット · ボイジャー1号から見る地球", "Pale Blue Dot · Earth from Voyager 1"]],
+    meteorTour: [
+      ["meteors", 4, "ペルセウス座流星群 · 東京", "Perseids · Tokyo"],
+      ["meteors", 5, "ふたご座流星群 · 東京", "Geminids · Tokyo"],
+    ],
+    eclipseTour: [
+      ["eclipses", 0, "月が地球の影に入る · 皆既月食", "Total lunar eclipse · entering Earth's shadow"],
+      ["eclipses", 6, "東京で見る皆既日食", "Total solar eclipse · Tokyo"],
+      ["eclipses", 8, "札幌で見る金環日食", "Annular solar eclipse · Sapporo"],
+    ],
+  };
+  function saverTourScene(clip) {
+    const source = TOURS.find(t => t.id === clip[0]);
+    const scene = { ...tourStateAt(clip[1], source), cut: true, play: true };
+    // ペイル・ブルー・ドットは撮影地点を保ち、日時をほぼ実時間で進める。
+    if (clip[0] === "voyager1" && clip[1] === 7) { delete scene.until; scene.spd = 1 / 86400; }
+    else {
+      // ひとつの見せ場が約38秒に収まるよう、元の開始〜終了を通して見せる。
+      if (clip[0] === "cassini") { scene.d = "2006-03-15"; scene.until = "2007-03-15"; }
+      if (clip[0] === "eclipses" && clip[1] === 0) scene.until = "2025-09-07T19:45";
+      scene.spd = (Date.parse(scene.until + "Z") - Date.parse(scene.d + "Z")) / DAY_MS / 38;
+    }
+    return { source, scene, title: { ja: clip[2], en: clip[3] } };
+  }
+  function captureSaverTourVisuals() {
+    return { tourProbes, tourProbe, tourRideOn, tourRide, tourRideStay, tourRideSlow,
+      tourRideWarm, tourRideT0, tourRideSpd, tourRideRef, tourRideMag, tourRideZoom,
+      tourProbeDot, tourRideEye, tourProbeHold, tourSpot, tourMeteorRealtime };
+  }
+  function restoreSaverTourVisuals(v) {
+    ({ tourProbes, tourProbe, tourRideOn, tourRide, tourRideStay, tourRideSlow,
+      tourRideWarm, tourRideT0, tourRideSpd, tourRideRef, tourRideMag, tourRideZoom,
+      tourProbeDot, tourRideEye, tourProbeHold, tourSpot, tourMeteorRealtime } = v);
+  }
   const SAVER_COMETS = [
     { key: "hyakutake", d: "1996-03-24T18:30", fit: .35, gfov: 90 },
     { key: "halebopp", d: "1997-03-30T10:30", fit: 1.2, gfov: 65 },
@@ -16,7 +61,7 @@
     { ja: "ハワイ", en: "Hawaii", lat: 19.82, lon: -155.47, d: "2026-09-08T22:00" },
   ];
   function screensaverRunning() { return !!saverState; }
-  function screensaverSky() { return saverState?.kind === "earthSky" || saverState?.kind === "moonSky"; }
+  function screensaverSky() { return saverState?.kind === "earthSky" || saverState?.kind === "moonSky" || saverState?.kind === "meteorTour"; }
   function screensaverOverview() { return saverState?.kind === "overview"; }
   function shuffledSaverKinds(random = Math.random) {
     const bag = SAVER_KINDS.slice();
@@ -54,8 +99,21 @@
   function applySaverScene(kind) {
     const state = saverState, pick = a => a[Math.floor(Math.random() * a.length)];
     const base = { view: "space", sel: null, d: "2026-09-08T12:00", play: true, spd: 1 / 86400, mag: 1, cut: true };
-    let s = { ...base }, title, orbit = false;
-    if (kind === "body") {
+    restoreSaverTourVisuals(state.tourVisuals);
+    let s = { ...base }, title, orbit = false, clip = null;
+    if (SAVER_TOUR_CLIPS[kind]) {
+      clip = saverTourScene(pick(SAVER_TOUR_CLIPS[kind])); s = clip.scene; title = clip.title;
+      if (s.site) { [obsLat, obsLon] = s.site; delete s.site; }
+      tourProbes = clip.source.probe ? [].concat(clip.source.probe) : null;
+      tourProbe = tourProbes?.[0] || null; tourRideOn = s.on || tourProbe;
+      tourRide = s.ride || null; tourRideEye = !!s.rideEye;
+      tourRideStay = (s.stay || 0) * KM2W; tourRideSlow = 1; tourRideWarm = 0;
+      tourProbeHold = false; tourProbeDot = false;
+      tourSpot = kind === "cassini" ? "cassini" : null;
+      tourMeteorRealtime = kind === "meteorTour";
+    }
+    if (clip) { /* ツアーから取り出したシーンを使う */ }
+    else if (kind === "body") {
       const b = BODY_BY_KEY.get(pick(["sun", "mercury", "venus", "earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"]));
       s.sel = b.key; s.lit = true; orbit = true;
       title = { ja: b.name + "を巡る", en: b.en + " · orbit" };
@@ -83,10 +141,10 @@
     // setObsSite を通さず、スクリーンセーバー中の観測地を永続設定に書かない。
     geoZone = null; frameLayout.fit = null; cameraFlight = null;
     gTrack = false; gRadTrack = "";
-    showConst = kind === "earthSky" || kind === "moonSky"; showGrid = false; showTerrain = true; showSelMark = false;
+    showConst = kind === "earthSky" || kind === "moonSky" || kind === "meteorTour"; showGrid = false; showTerrain = true; showSelMark = false;
     for (const b of ORBIT_BODIES) b.showOrbit = kind === "overview" && !b.parent && !b.ast && !b.comet && (!b.tno || b.key === "pluto");
     applyTourScene(s);
-    if (s.view === "moon") {
+    if (s.view === "moon" && !clip) {
       findSaverMoonNight(kind === "cometMoon" ? selected : null);
       if (kind === "cometMoon") {
         aimGroundAt(selected, true);
@@ -98,6 +156,10 @@
       gTrack = false; gRadTrack = "";
       gAz = gAzTgt = Math.random() * Math.PI * 2; gAlt = gAltTgt = 35 * DEG;
     }
+    if (kind === "cassini") {
+      frameLayout.mode = "close"; frameLayout.rect = measureFrameRect(); frameLayout.fit = selected;
+      fitFrameDistance(selected); cam.dist = cam.distTgt;
+    }
     if (orbit) {
       const d = enjoymentDirection(selected);
       cam.yaw = cam.yawTgt = Math.atan2(d[2], d[0]);
@@ -107,7 +169,7 @@
       fitFrameDistance(selected); cam.dist = cam.distTgt;
     }
     state.kind = kind; state.orbit = orbit; state.title = title;
-    state.elapsed = 0; state.duration = 35 + Math.random() * 15;
+    state.elapsed = 0; state.duration = clip ? 39 : 35 + Math.random() * 15;
     // 地点や日付が変わったことを、短い場面名と実際の表示日時で伝える。
     syncSaverDate();
     refreshObsSiteUI(); syncScreensaverUI(); frameLayout.dirty = true;
@@ -131,11 +193,11 @@
     const extra = { moonLat, moonLon, moonSite: moonSiteEl.value, geoZone, infoTall, infoTab,
       frame: { ...frameLayout }, currentInfoBody, gRadTrack, immersiveView, enjoymentPaused, navVisible };
     exitAR(); hideModals(); setMenu(false);
-    saverState = { saved, extra, bag: [], kind: null, elapsed: 0, phase: "in", fade: 0, age: 0 };
+    saverState = { saved, extra, bag: [], kind: null, elapsed: 0, phase: "in", fade: 0, age: 0, tourVisuals: captureSaverTourVisuals() };
     immersiveView = true; frameApp.classList.add("immersive", "screensaverMode");
     immersiveBar.hidden = true; saverBar.hidden = false; saverFade.hidden = false;
     saverFade.style.opacity = "1";
-    applySaverScene("body");
+    applySaverScene(nextSaverKind());
     saverHint.hidden = false;
     saverBar.style.opacity = saverHint.style.opacity = "1";
     saverBar.focus({ preventScroll: true });
@@ -143,6 +205,7 @@
   function stopScreensaver() {
     if (!saverState) return;
     const { saved, extra } = saverState;
+    restoreSaverTourVisuals(saverState.tourVisuals);
     hideModals();
     obsLat = saved.obsLat; obsLon = saved.obsLon; geoZone = extra.geoZone;
     moonLat = extra.moonLat; moonLon = extra.moonLon; moonSiteEl.value = extra.moonSite;

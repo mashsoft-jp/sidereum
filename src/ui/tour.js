@@ -312,10 +312,10 @@
   }
 
   // 0..i のステップを畳み込んだ状態 (書かれていない項目は前のステップを引き継ぐ)
-  function tourStateAt(i) {
+  function tourStateAt(i, source = tour) {
     const st = {};
     for (let k = 0; k <= i; k++) {
-      const s = tour.steps[k];
+      const s = source.steps[k];
       // 同じものを別々の書き方で指定する項目は、後から書いた方だけを残す。
       // 両方が畳み込まれると、適用側の優先順で先に書いた方が勝ってしまう
       if (s.d) delete st.dLocal;                                  // 日時

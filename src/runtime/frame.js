@@ -45,7 +45,17 @@
   function drawOverlay() {
     octx.setTransform(DPR, 0, 0, DPR, 0, 0);
     octx.clearRect(0, 0, W, H);
-    if (immersiveView) return;
+    if (immersiveView) {
+      // 土星周回の主役が環や衛星に紛れないよう、機体の位置だけを示す。
+      if (screensaverRunning() && tourSpot === "cassini") {
+        const sp = screenPos.get("cassini");
+        if (sp && !sp.hidden) {
+          octx.beginPath(); octx.arc(sp.x, sp.y, 10, 0, Math.PI * 2);
+          octx.strokeStyle = "rgba(242,178,62,.9)"; octx.lineWidth = 1.2; octx.stroke();
+        }
+      }
+      return;
+    }
     octx.textAlign = "center";
     lblBegin();
     // 注視しているだけの天体 (ツアー) には選択マークを付けない。

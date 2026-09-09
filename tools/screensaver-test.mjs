@@ -17,19 +17,45 @@ const ctx = vm.createContext({
 const run = code => vm.runInContext(code, ctx);
 run(readFileSync(new URL('../src/ui/screensaver.js', import.meta.url), 'utf8'));
 run(`saverState = { bag: [], kind: 'body', phase: 'show', fade: 0, age: 0, elapsed: 0, duration: 40, orbit: true, scenePlaying: true }`);
-// 7場面ごとの抽選で全種類を必ず巡り、袋の境界でも同じ種類を続けない。
+// 全種類ごとの抽選で全種類を必ず巡り、袋の境界でも同じ種類を続けない。
 let previous = 'body';
 for (let round = 0; round < 100; round++) {
   const seen = new Set();
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 12; i++) {
     const kind = run('nextSaverKind()');
     assert.notEqual(kind, previous);
     seen.add(kind); previous = kind;
     run(`saverState.kind = ${JSON.stringify(kind)}`);
   }
-  assert.equal(seen.size, 7);
+  assert.equal(seen.size, 12);
 }
 run(`saverState.kind = 'body'`);
+// 元ツアーを変更せず、全抜粋が有効な日時と照準を持つ。
+run(readFileSync(new URL('../src/data/tours.js', import.meta.url), 'utf8'));
+ctx.mqNarrow = { matches: true };
+const tourSource = readFileSync(new URL('../src/ui/tour.js', import.meta.url), 'utf8');
+run(tourSource.slice(tourSource.indexOf('  function tourStateAt('), tourSource.indexOf('  function applyTourStep(')));
+const originals = run('JSON.stringify(TOURS)');
+const clips = run('Object.values(SAVER_TOUR_CLIPS).flat()');
+assert.equal(clips.length, 13);
+for (const clip of clips) {
+  ctx.clip = clip; const { scene } = run('saverTourScene(clip)');
+  assert.ok(Number.isFinite(Date.parse(scene.d + 'Z')));
+  assert.ok(scene.spd > 0 && Number.isFinite(scene.spd));
+  assert.ok(scene.ride || scene.aim || scene.radiant || clip[0] === 'cassini');
+  if (scene.until) assert.ok(Date.parse(scene.until + 'Z') > Date.parse(scene.d + 'Z'));
+}
+assert.equal(run('JSON.stringify(TOURS)'), originals);
+const visualKeys = ['tourProbes','tourProbe','tourRideOn','tourRide','tourRideStay','tourRideSlow',
+  'tourRideWarm','tourRideT0','tourRideSpd','tourRideRef','tourRideMag','tourRideZoom',
+  'tourProbeDot','tourRideEye','tourProbeHold','tourSpot','tourMeteorRealtime'];
+for (const [i, key] of visualKeys.entries()) ctx[key] = i;
+ctx.savedVisuals = run('captureSaverTourVisuals()');
+for (const key of visualKeys) ctx[key] = null;
+run('restoreSaverTourVisuals(savedVisuals)');
+for (const [i, key] of visualKeys.entries()) assert.equal(ctx[key], i, key + ' restored');
+
+
 const scenes = [];
 ctx.applyTourScene = () => {};
 ctx.recordScene = kind => scenes.push({ kind, opacity: Number(element('saverFade').style.opacity) });
