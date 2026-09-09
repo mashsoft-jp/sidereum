@@ -28,9 +28,14 @@ for(const p of run('DSO_PHOTOS')){
 }
 assert.equal(requests,5);
 run('openDsoPhoto(DSO.findIndex(d=>d[0]===1))');assert.equal(requests,5,'missing photos do not fetch an invalid URL');
+assert.equal(dialog.open,false,'missing photos do not open a dialog');
 ctx.vp=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
-run('dsoHits.length=0; recordDsoHit(0,[0,0,0],vp,0.5,300)');
-assert.equal(run('hitTestDso(400,300)'),0);
+run('dsoHits.length=0; recordDsoHit(DSO.findIndex(d=>d[0]===1),[0,0,0],vp,0.5,300)');
+assert.equal(run('hitTestDso(400,300)'),-1,'objects without photos are not interactive');
+const photoIndex=run('DSO.findIndex(d=>d[0]===45)');
+ctx.photoIndex=photoIndex;
+run('recordDsoHit(photoIndex,[0,0,0],vp,0.5,300)');
+assert.equal(run('hitTestDso(400,300)'),photoIndex);
 assert.equal(run('hitTestDso(20,20)'),-1);
 run('dsoOn=false');assert.equal(run('hitTestDso(400,300)'),-1,'hidden layer cannot be selected');
 console.log('DSO viewer: deferred image requests, all five credits, close, missing photos and sky hit testing passed');
