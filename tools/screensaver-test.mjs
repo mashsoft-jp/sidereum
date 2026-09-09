@@ -9,6 +9,7 @@ const element = id => {
 };
 const listeners = {};
 const ctx = vm.createContext({
+  performance: { now: () => 1000 },
   document: { hidden: false, getElementById: element }, window: { addEventListener(type, fn) { listeners[type] = fn; } },
   matchMedia: () => ({ matches: false }), MAX_FOV: Math.PI / 2, lang: 'ja', simDays: 0, J2000: Date.UTC(2000, 0, 1, 12), DAY_MS: 86400000,
   cam: { yaw: 0, yawTgt: 0 }, gAz: 0, gAzTgt: 0,
@@ -80,4 +81,15 @@ listeners.click(event);
 assert.equal(exits, 1); assert.ok(event.prevented && event.stopped, '終了クリックを背後へ渡さない');
 listeners.click(event); assert.equal(exits, 1);
 run('saverState = {}'); listeners.keydown({ ...event, key: 'Escape' }); assert.equal(exits, 2);
+// click が届かないSafari経路でも、指を離すだけで終了する。
+for (const type of ['pointerup', 'touchend']) {
+  run('saverState = {}');
+  const before = exits;
+  listeners[type]({ ...event, cancelable: true }); assert.equal(exits, before + 1);
+  const click = { ...event, prevented: false, stopped: false };
+  listeners.click(click); assert.ok(click.prevented && click.stopped, '互換クリックを復元画面へ渡さない');
+  const down = { ...event, stopped: false }; listeners.pointerdown(down);
+  const next = { ...event, prevented: false, stopped: false }; listeners.click(next);
+  assert.equal(next.stopped, false, '新しい操作は遮らない');
+}
 console.log('screensaver: coverage, fade, temporary titles/hint, hidden tab, reduced motion, date and exit passed');

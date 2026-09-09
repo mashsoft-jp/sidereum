@@ -17449,12 +17449,28 @@
   }
   document.getElementById("menuSaver").addEventListener("click", startScreensaver);
   // 終了操作が復元後の天体選択やカメラ操作に伝わらないよう、手前で受け取る。
-  for (const type of ["pointerdown", "pointerup"]) window.addEventListener(type, e => {
+  let saverExitClickUntil = 0;
+  for (const type of ["pointerdown", "touchstart"]) window.addEventListener(type, e => {
+    saverExitClickUntil = 0; // 次の独立した操作は通常どおり受け付ける。
     if (saverState) e.stopImmediatePropagation();
   }, true);
+  // Safari は非クリック要素へのタップで click が発生しないことがある。
+  // 指を離した時点で終了し、後から届く互換クリックだけを消費する。
+  function endSaverFromPointer(e) {
+    if (!saverState && performance.now() >= saverExitClickUntil) return;
+    if (e.cancelable) e.preventDefault();
+    e.stopImmediatePropagation();
+    if (saverState) {
+      saverExitClickUntil = performance.now() + 700;
+      stopScreensaver();
+    }
+  }
+  window.addEventListener("pointerup", endSaverFromPointer, { capture: true, passive: false });
+  window.addEventListener("touchend", endSaverFromPointer, { capture: true, passive: false });
   window.addEventListener("click", e => {
-    if (!saverState) return;
-    e.preventDefault(); e.stopImmediatePropagation(); stopScreensaver();
+    if (!saverState && performance.now() >= saverExitClickUntil) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (saverState) stopScreensaver();
   }, true);
   window.addEventListener("keydown", e => {
     if (e.key === "Escape" && saverState) { e.preventDefault(); stopScreensaver(); }
