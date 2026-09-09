@@ -121,6 +121,9 @@
   const _dsoR = [0, 0, 0], _dsoU = [0, 0, 0];
   function groundDsoAt(i, out) {
     const wx = dsoW[i*3], wy = dsoW[i*3+1], wz = dsoW[i*3+2];
+    return groundSkyPoint(wx, wy, wz, out);
+  }
+  function groundSkyPoint(wx, wy, wz, out) {
     const up = wx*obsU[0]+wy*obsU[1]+wz*obsU[2];
     if (up < 0.005) return false;
     const east = wx*obsE[0]+wy*obsE[1]+wz*obsE[2];

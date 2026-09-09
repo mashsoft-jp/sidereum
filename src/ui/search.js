@@ -31,7 +31,11 @@
       const m = d[0] ? "M" + d[0] : "";
       ix.push({ kind: "dso", keys: [m, m && "M " + d[0], m && "メシエ" + d[0], d[8], d[9]],
                 label: () => (m ? m + " " : "") + (lang === "ja" ? (d[8] || d[9]) : (d[9] || d[8])),
-                go: () => aimSkyRaDec(d[1], d[2], 12, "dso") });
+                go: () => {
+                  const photo = DSO_PHOTOS.find(p => p.m === d[0]);
+                  aimSkyRaDec(photo ? photo.ra : d[1], photo ? photo.dec : d[2],
+                    photo ? Math.max(photo.w, photo.h) / 60 * 1.8 / Math.min(1, W/H) : 12, "dso");
+                } });
     }
     for (const c of CONST_LABELS) {
       ix.push({ kind: "const", keys: [c.ja, c.en, c.ab], label: () => (lang === "ja" ? c.ja : c.en),

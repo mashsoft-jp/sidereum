@@ -53,6 +53,8 @@ const MANIFEST = [
   "data/showers.js",     // 流星群の放射点・出現数
   "data/dso.js",         // 星雲・星団・銀河 (メシエ天体, OpenNGC 由来)
   "data/starnames.js",   // 明るい星の固有名 (カタログの星へ寄せる)
+  "data/dso-photos.js", // Licensed observation imagery
+  "render/dso-photos.js", // Equatorial image footprints
   "render/dso.js",       // 星雲・星団の描画 (両ビュー共用)
   "render/ground.js",    // 地上ビュー (観測者フレーム・renderGround)
   "ui/view-mode.js",     // ビュー切替・月面観測地点・月の表側マップ

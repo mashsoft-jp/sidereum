@@ -1682,3 +1682,9 @@
     html.appleFullscreen #menu,
     html.appleFullscreen #searchBox { left: calc(80px + var(--sal)); }
   }
+
+/* Full photographic attribution remains visible, including in immersive views. */
+#dsoPhotoCredit { position:absolute; left:50%; top:calc(70px + env(safe-area-inset-top, 0px)); transform:translateX(-50%); width:max-content; max-width:min(520px,calc(100% - 120px)); padding:6px 9px; border-radius:5px; background:rgba(5,9,18,.78); color:#b9c7dc; font:10px/1.45 system-ui,sans-serif; z-index:12; overflow-wrap:anywhere; }
+#dsoPhotoCredit[hidden] { display:none; }
+#dsoPhotoCredit a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
+@media (max-width:600px) and (orientation:portrait) { #dsoPhotoCredit { top:auto; bottom:calc(164px + env(safe-area-inset-bottom,0px)); max-width:calc(100% - 48px); font-size:10px; } }

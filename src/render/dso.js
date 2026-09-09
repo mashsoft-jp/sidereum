@@ -73,6 +73,7 @@
   // 描かないものは false を返す。halfFovPx = 画角の半分に対する画面の半分の
   // 画素数 (最小の大きさを決めるのに使う)
   function drawDso(vp32, R, U, radius, vis, halfFov, halfH, toDome) {
+    prepareDsoPhotos(vp32, radius, vis, halfFov, halfH, toDome === groundDsoAt);
     if (!dsoOn || vis <= 0.04) return;
     dsoInit();
     dsoN = 0;
@@ -92,12 +93,13 @@
       const minR = radius * halfFov * (DSO_MIN_PX / halfH);
       if (ar < minR) { amp *= (ar * br) / (minR * minR); ar = minR; br = minR; }
       const c = DSO_COL[d[7]] || DSO_COL[6];
-      const k = Math.min(DSO_MAX, amp) * vis;
+      const photo = DSO_PHOTOS.find(p => p.m === d[0]);
+      const k = Math.min(DSO_MAX, amp) * vis * (1 - (photo ? photo.alpha : 0));
       const pa = d[6] >= 0 ? d[6] * DEG : 0;
       dsoQuad(_p[0], _p[1], _p[2], R, U, ar, br, pa,
               c[0] * k * _p[3], c[1] * k * _p[4], c[2] * k * _p[5]);
     }
-    if (!dsoN) return;
+    if (!dsoN) { drawDsoPhotos(vp32); return; }
     if (!dsoVB) dsoVB = gl.createBuffer();
     gl.useProgram(dsoP.pr);
     gl.uniformMatrix4fv(dsoP.u.uVP, false, vp32);
@@ -111,6 +113,7 @@
     gl.vertexAttribPointer(dsoP.a.aQuad, 2, gl.FLOAT, false, S, 12);
     gl.vertexAttribPointer(dsoP.a.aCol, 3, gl.FLOAT, false, S, 20);
     gl.drawArrays(gl.TRIANGLES, 0, dsoN * 6);
+    drawDsoPhotos(vp32);
   }
   // 宇宙ビューでの位置 (drawDso のコールバック)。恒星と同じ天球へ置くだけで、
   // 真空なので大気差も減光も無い

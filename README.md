@@ -197,4 +197,8 @@ python3 -m fontTools.subset jura-latin.woff2 --text="SIDEREUM" --flavor=woff2 \
 
 © 2026 [Mashsoft Inc.](https://www.mashsoft.co.jp)
 
-コードは [MIT License](LICENSE) です。埋め込みの天体画像はパブリックドメイン(米国政府著作物)であり、MIT ライセンスの対象外です。
+コードは [MIT License](LICENSE) です。天体表面の政府機関由来画像はパブリックドメインで、コードの MIT ライセンスとは別に扱います。
+
+`tex/dso/` の M31・M42・M45・M57・M13 の観測画像は **CC BY 4.0** です。パブリックドメインではありません。画像ごとの完全なクレジット・出典・取得元・加工内容は [tex/dso/CREDITS.md](tex/dso/CREDITS.md) に記録しています。アプリの画像表示時と共有画像にもクレジットを保持してください。[ESA/Hubble の利用条件](https://esahubble.org/copyright/) に従い、提供元による承認・推奨を示唆しないでください。
+
+観測画像は拡大時に遅延読み込みします。検索で対象を選ぶと撮影範囲に合う倍率に移動します。M13 は中心部、M31 はモザイクの撮影範囲を使い、肉眼の見え方とは区別して表示します。位置・角度は公開メタデータに従います（M45 の位置合わせは概略）。画像は元の JPEG のまま保存し、周縁処理と明るさ調整は表示時に行います。
