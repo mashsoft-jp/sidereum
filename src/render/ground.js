@@ -1002,8 +1002,8 @@
       gl.useProgram(lineP.pr);
       gl.uniformMatrix4fv(lineP.u.uVP, false, gVP32);
       gl.enableVertexAttribArray(lineP.a.aPos);
-      // 空と地形OFF: 下半球も透かし、地平線だけを暖色で示す。
-      gl.uniform4f(lineP.u.uColor, 0.52, 0.36, 0.22, 1);
+      // 空と地形OFF: 下半球も透かし、地平線は黄道の金色と区別できる青緑で示す。
+      gl.uniform4f(lineP.u.uColor, 0.24, 0.58, 0.55, 1);
       gl.bindBuffer(gl.ARRAY_BUFFER, horizonVB);
       gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
       gl.drawArrays(gl.LINE_STRIP, 0, horizonN);
