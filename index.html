@@ -9579,7 +9579,7 @@
   const gP64 = new Float64Array(16), gV64 = new Float64Array(16), gM64 = new Float64Array(16);
   const gM64F = new Float64Array(16);   // 上を地平ぎわの扁平で潰したもの (投影用)
   let groundVB = null, groundPtVB = null, horizonVB = null, horizonN = 0, groundDomeN = 0;
-  // 風景表現 (稜線つきドーム + 空ドーム)。showTerrain が OFF なら従来の平坦ドームを使う
+  // 風景表現 (稜線つきドーム + 空ドーム)。showTerrain が OFF なら遮蔽せず全天を表示する
   let ridgeVB = { earth: null, moon: null }, ridgeN = 0, skyVB = null, skyN = 0;
   let showTerrain = localStorage.getItem("ssTerrain") === "1";   // 既定 OFF
   let starVis = 1;   // 昼の空での星・星座の可視度 (0=昼で見えない)。オーバーレイ文字にも使う
@@ -9612,7 +9612,7 @@
   // (シェーダ側) にも同じものを掛ける。式は Sæmundsson (真高度 → 大気差 [分角])
   const _rf = [1, 0];                   // [水平成分の倍率, 見かけの sinAlt]
   function refractUp(u) {
-    if (surfaceBody === "moon") { _rf[0] = 1; _rf[1] = u; return _rf; }   // 大気が無い
+    if (!showTerrain || surfaceBody === "moon") { _rf[0] = 1; _rf[1] = u; return _rf; }   // 大気が無い
     const h = Math.asin(Math.max(-1, Math.min(1, u)));
     const h2 = h + refractRad(h), ch = Math.cos(h);
     _rf[0] = ch > 1e-6 ? Math.cos(h2) / ch : 1;
@@ -9671,12 +9671,12 @@
   function groundDsoAt(i, out) {
     const wx = dsoW[i*3], wy = dsoW[i*3+1], wz = dsoW[i*3+2];
     const up = wx*obsU[0]+wy*obsU[1]+wz*obsU[2];
-    if (up < 0.005) return false;
+    if (showTerrain && up < 0.005) return false;
     const east = wx*obsE[0]+wy*obsE[1]+wz*obsE[2];
     const north = wx*obsN[0]+wy*obsN[1]+wz*obsN[2];
     const rf = refractUp(up), hz = rf[0] * SKYR;
     out[0] = east * hz; out[1] = rf[1] * SKYR; out[2] = -north * hz;
-    if (surfaceBody !== "moon") {          // 月面には大気が無い
+    if (showTerrain && surfaceBody !== "moon") { // 空と地形OFFでは大気減光も省く
       const eo = extIdx(up);
       out[3] = EXT_TBL[eo]; out[4] = EXT_TBL[eo+1]; out[5] = EXT_TBL[eo+2];
     }
@@ -9957,7 +9957,7 @@
     _zodi.pole[0] = obsE[1]; _zodi.pole[1] = obsU[1]; _zodi.pole[2] = -obsN[1];
     drawMilkyWay(gVP32, mwEqGround(), SKYR * 1.4,
                  (isMoonSurf ? MW_SPACE_BRIGHT : MW_GROUND_BRIGHT) * starVis,
-                 isMoonSurf ? 0 : 1, isMoonSurf ? null : EXT_K, _zodi);
+                 (isMoonSurf || !showTerrain) ? 0 : 1, (isMoonSurf || !showTerrain) ? null : EXT_K, _zodi);
 
     perfLap("天の川");
     // 星雲・星団。恒星より先に描く (淡いしみの上に星の点が乗る)。
@@ -9978,7 +9978,7 @@
         const e1 = CONST_SEG[i+3]*obsE[0]+CONST_SEG[i+4]*obsE[1]+CONST_SEG[i+5]*obsE[2];
         const u1 = CONST_SEG[i+3]*obsU[0]+CONST_SEG[i+4]*obsU[1]+CONST_SEG[i+5]*obsU[2];
         const n1 = CONST_SEG[i+3]*obsN[0]+CONST_SEG[i+4]*obsN[1]+CONST_SEG[i+5]*obsN[2];
-        if (u0 < -0.03 && u1 < -0.03) continue;      // 両端とも地平線下ならスキップ
+        if (showTerrain && u0 < -0.03 && u1 < -0.03) continue;      // 両端とも地平線下ならスキップ
         let rf = refractUp(u0); const a0 = rf[0] * SKYR, v0 = rf[1] * SKYR;
         rf = refractUp(u1);     const a1 = rf[0] * SKYR, v1 = rf[1] * SKYR;
         constGroundBuf[cn++] = e0 * a0; constGroundBuf[cn++] = v0; constGroundBuf[cn++] = -n0 * a0;
@@ -10005,7 +10005,7 @@
           const bx = ECL_WORLD[b]/ER, by = ECL_WORLD[b+1]/ER, bz = ECL_WORLD[b+2]/ER;
           const e0 = ax*obsE[0]+ay*obsE[1]+az*obsE[2], u0 = ax*obsU[0]+ay*obsU[1]+az*obsU[2], n0 = ax*obsN[0]+ay*obsN[1]+az*obsN[2];
           const e1 = bx*obsE[0]+by*obsE[1]+bz*obsE[2], u1 = bx*obsU[0]+by*obsU[1]+bz*obsU[2], n1 = bx*obsN[0]+by*obsN[1]+bz*obsN[2];
-          if (u0 < -0.03 && u1 < -0.03) continue;
+          if (showTerrain && u0 < -0.03 && u1 < -0.03) continue;
           let rf = refractUp(u0); const a0 = rf[0] * SKYR, v0 = rf[1] * SKYR;
           rf = refractUp(u1);     const a1 = rf[0] * SKYR, v1 = rf[1] * SKYR;
           eclGroundBuf[en++] = e0 * a0; eclGroundBuf[en++] = v0; eclGroundBuf[en++] = -n0 * a0;
@@ -10037,7 +10037,7 @@
         const e1 = GRID_SEG[i+3]*obsE[0]+GRID_SEG[i+4]*obsE[1]+GRID_SEG[i+5]*obsE[2];
         const u1 = GRID_SEG[i+3]*obsU[0]+GRID_SEG[i+4]*obsU[1]+GRID_SEG[i+5]*obsU[2];
         const n1 = GRID_SEG[i+3]*obsN[0]+GRID_SEG[i+4]*obsN[1]+GRID_SEG[i+5]*obsN[2];
-        if (u0 < -0.03 && u1 < -0.03) continue;      // 両端とも地平線下ならスキップ
+        if (showTerrain && u0 < -0.03 && u1 < -0.03) continue;      // 両端とも地平線下ならスキップ
         let rf = refractUp(u0); const a0 = rf[0] * SKYR, v0 = rf[1] * SKYR;
         rf = refractUp(u1);     const a1 = rf[0] * SKYR, v1 = rf[1] * SKYR;
         gridGroundBuf[gn++] = e0 * a0; gridGroundBuf[gn++] = v0; gridGroundBuf[gn++] = -n0 * a0;
@@ -10058,12 +10058,12 @@
     }
 
     perfLap("星座線");
-    // 恒星 (実カタログ, 地平線より上のみ)。ワールド単位方向を観測者フレームへ投影
+    // 恒星 (実カタログ。空と地形OFFでは地平線下も表示)。ワールド単位方向を観測者フレームへ投影
     if (N_CAT) {
       if (!starGVB) starGVB = gl.createBuffer();
       // 大気の無い月面では減光 (EXT_TBL) が効かないので、地上より一段
       // 大きく・明るく描く
-      const extT = isMoonSurf ? null : EXT_TBL;
+      const extT = (isMoonSurf || !showTerrain) ? null : EXT_TBL;
       const szK = isMoonSurf ? 4.9 : 4.0, szMin = isMoonSurf ? 1.6 : 0.9;
       const brK = isMoonSurf ? 1.35 : 1.15, brA = isMoonSurf ? 0.115 : 0.13;
       const brMin = isMoonSurf ? 0.62 : 0.3;
@@ -10071,7 +10071,7 @@
       for (let i = 0; i < N_CAT; i++) {
         const wx = STAR_W[i*3], wy = STAR_W[i*3+1], wz = STAR_W[i*3+2];
         const up = wx*obsU[0]+wy*obsU[1]+wz*obsU[2];      // sinAlt
-        if (up < 0.02) continue;
+        if (showTerrain && up < 0.02) continue;
         const east = wx*obsE[0]+wy*obsE[1]+wz*obsE[2];
         const north = wx*obsN[0]+wy*obsN[1]+wz*obsN[2];
         const rf = refractUp(up), hz = rf[0] * SKYR;
@@ -10551,12 +10551,8 @@
       gl.useProgram(lineP.pr);
       gl.uniformMatrix4fv(lineP.u.uVP, false, gVP32);
       gl.enableVertexAttribArray(lineP.a.aPos);
-      gl.uniform4f(lineP.u.uColor, 0.07, 0.075, 0.085, 1);
-      gl.bindBuffer(gl.ARRAY_BUFFER, groundVB);
-      gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
-      gl.drawArrays(gl.TRIANGLES, 0, groundDomeN);
-      // 水平線 (地面の上端に重ねて縁を鮮明に)
-      gl.uniform4f(lineP.u.uColor, 0.30, 0.38, 0.52, 1);
+      // 空と地形OFF: 下半球も透かし、地平線だけを暖色で示す。
+      gl.uniform4f(lineP.u.uColor, 0.52, 0.36, 0.22, 1);
       gl.bindBuffer(gl.ARRAY_BUFFER, horizonVB);
       gl.vertexAttribPointer(lineP.a.aPos, 3, gl.FLOAT, false, 0, 0);
       gl.drawArrays(gl.LINE_STRIP, 0, horizonN);
@@ -10590,7 +10586,7 @@
       for (const st of NAMED_STARS) {
         if (st.mag > magLim) continue;
         const up = st.wx*obsU[0]+st.wy*obsU[1]+st.wz*obsU[2];
-        if (up < 0.02) continue;
+        if (showTerrain && up < 0.02) continue;
         const east = st.wx*obsE[0]+st.wy*obsE[1]+st.wz*obsE[2];
         const north = st.wx*obsN[0]+st.wy*obsN[1]+st.wz*obsN[2];
         const rf = refractUp(up), hz = rf[0] * SKYR;
@@ -10608,7 +10604,7 @@
         if (!dsoLabelled(i, hf)) continue;
         const wx = dsoW[i*3], wy = dsoW[i*3+1], wz = dsoW[i*3+2];
         const up = wx*obsU[0]+wy*obsU[1]+wz*obsU[2];
-        if (up < 0.02) continue;
+        if (showTerrain && up < 0.02) continue;
         const east = wx*obsE[0]+wy*obsE[1]+wz*obsE[2];
         const north = wx*obsN[0]+wy*obsN[1]+wz*obsN[2];
         const rf = refractUp(up), hz = rf[0] * SKYR;
@@ -10630,7 +10626,7 @@
         for (let i = 0; i + 2 < v.length; i += 3) {
           const wx = v[i], wy = v[i+1], wz = v[i+2];
           const up = wx*obsU[0]+wy*obsU[1]+wz*obsU[2];
-          if (up < 0.03) continue;
+          if (showTerrain && up < 0.03) continue;
           const east = wx*obsE[0]+wy*obsE[1]+wz*obsE[2], north = wx*obsN[0]+wy*obsN[1]+wz*obsN[2];
           const s = projGround([east * SKYR, up * SKYR, -north * SKYR]);
           if (!s || s.x < 0 || s.x > W || s.y < 0 || s.y > H) continue;
@@ -10644,7 +10640,7 @@
       for (let i = 0; i + 2 < ECL_WORLD.length; i += 3) {
         const wx = ECL_WORLD[i]/ER, wy = ECL_WORLD[i+1]/ER, wz = ECL_WORLD[i+2]/ER;
         const up = wx*obsU[0]+wy*obsU[1]+wz*obsU[2];
-        if (up < 0.03) continue;
+        if (showTerrain && up < 0.03) continue;
         const east = wx*obsE[0]+wy*obsE[1]+wz*obsE[2], north = wx*obsN[0]+wy*obsN[1]+wz*obsN[2];
         const s = projGround([east * SKYR, up * SKYR, -north * SKYR]);
         if (!s || s.x < 0 || s.x > W || s.y < 0 || s.y > H) continue;
