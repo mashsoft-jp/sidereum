@@ -1661,3 +1661,8 @@
 
   #immersiveBar { width: max-content; max-width: calc(100% - 24px); box-sizing: border-box; flex-wrap: wrap; justify-content: center; }
   #immersivePause[aria-pressed="true"] { color: var(--accent); border-color: var(--accent-dim); }
+
+  /* タッチ操作の端末ではキーボードの案内を省く。PC は窓幅によらず表示。 */
+  @media (hover: none) and (pointer: coarse) {
+    #immersiveExit .keyboardHint { display: none; }
+  }

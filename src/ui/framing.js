@@ -16,7 +16,7 @@
     frameContextBtn.title = ja ? "天体の周囲を見渡す" : "See the surrounding system";
     frameEnjoyBtn.textContent = ja ? "鑑賞" : "Enjoy";
     frameEnjoyBtn.title = ja ? "見やすい方向へ移動し、天体の周りをゆっくり回って鑑賞" : "Find a scenic angle and slowly orbit the body";
-    immersiveExitBtn.textContent = ja ? "戻る · Esc" : "Return · Esc";
+    immersiveExitBtn.innerHTML = (ja ? "戻る" : "Return") + '<span class="keyboardHint">(Esc)</span>';
     immersivePauseBtn.textContent = enjoymentPaused ? (ja ? "周回を再開" : "Resume orbit") : (ja ? "周回を停止" : "Pause orbit");
     immersivePauseBtn.setAttribute("aria-pressed", String(enjoymentPaused));
     immersiveSaveBtn.textContent = ja ? "画像を保存" : "Save image";
