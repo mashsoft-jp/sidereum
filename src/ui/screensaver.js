@@ -100,7 +100,8 @@
       const d = enjoymentDirection(selected);
       cam.yaw = cam.yawTgt = Math.atan2(d[2], d[0]);
       cam.pitch = cam.pitchTgt = Math.asin(d[1]);
-      frameLayout.mode = "close"; frameLayout.rect = measureFrameRect(); frameLayout.fit = selected;
+      frameLayout.mode = selected === SUN ? "saverSun" : "close";
+      frameLayout.rect = measureFrameRect(); frameLayout.fit = selected;
       fitFrameDistance(selected); cam.dist = cam.distTgt;
     }
     state.kind = kind; state.orbit = orbit; state.title = title;
