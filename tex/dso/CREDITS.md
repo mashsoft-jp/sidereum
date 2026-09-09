@@ -71,3 +71,5 @@ SHA-256: 116107187ef23a6753de27346474a05710b47c9e0d8699930fd0a3dd2d339205
 M31, M42, M57 and M13: center, angular footprint and north angle from the individual source pages. M31 is a mosaic strip; M13 covers only the core, not the whole catalogue diameter.
 
 M45: approximate north-up registration using the visible Alcyone, Atlas and Electra positions. The supplied preview is 1500 x 1424; estimated footprint 2.86 x 2.7151 degrees, center RA 56.661 degrees / Dec 24.204 degrees (J2000). This is visual registration, not an astrometric solution. Source describes DSS2 red/blue data and a computed green channel.
+
+M45 space-view display additionally suppresses photographic background stars and emphasizes diffuse blue reflection nebulosity with a broader feathered mask. This is a display treatment, not a scientific separation of image components. The original JPEG is unchanged.

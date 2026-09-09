@@ -57,7 +57,7 @@
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        p.texture = texture; p.readyAt = performance.now();
+        p.texture = texture; p.texel = [1/canvas.width, 1/canvas.height]; p.readyAt = performance.now();
       } catch (_) { p.failed = true; }
       p.loading = false;
     };
@@ -97,7 +97,7 @@
       if (!p.texture) continue;
       p.alpha = zoom * Math.min(1, (performance.now() - p.readyAt) / 700) * vis;
       if (p.alpha <= 0) continue;
-      p.points = points;
+      p.points = points; p.spaceReflection = p.m === 45 && !ground;
       dsoPhotoVisible.push(p);
     }
   }
@@ -116,6 +116,8 @@
     gl.vertexAttribPointer(attrs.aCol, 3, gl.FLOAT, false, 32, 20);
     for (const p of dsoPhotoVisible) {
       gl.uniform1f(dsoPhotoP.u.uCore, p.m === 13 ? 1 : 0);
+      gl.uniform1f(dsoPhotoP.u.uReflection, p.spaceReflection ? 1 : 0);
+      gl.uniform2f(dsoPhotoP.u.uTexel, p.texel[0], p.texel[1]);
       [0,1,2,2,1,3].forEach((i,k) => {
         const pt=p.points[i], offset=k*8;
         dsoPhotoVertices.set(pt.slice(0,3), offset);
@@ -133,12 +135,12 @@
   }
   let dsoPhotoCreditKey = '';
   function updateDsoPhotoCredit() {
-    const key = lang + ':' + dsoPhotoVisible.map(p=>p.m).join(',');
+    const key = lang + ':' + dsoPhotoVisible.map(p=>p.m+(p.spaceReflection?'s':'')).join(',');
     if (key === dsoPhotoCreditKey) return;
     dsoPhotoCreditKey = key;
     const el = document.getElementById('dsoPhotoCredit');
     el.hidden = !dsoPhotoVisible.length;
-    el.innerHTML = dsoPhotoVisible.length ? '<span>'+(lang==='ja'?'観測画像（肉眼での見え方とは異なります）':'Observation imagery (not a naked-eye view)')+'</span><br>'+dsoPhotoVisible.map(dsoPhotoCreditHTML).join('<br>')+'<br><a href="'+DSO_PHOTO_LICENSE+'" target="_blank" rel="noopener">CC BY 4.0</a> · '+(lang==='ja'?'投影・明るさ・周縁を調整':'Projection, brightness and edges adjusted') : '';
+    el.innerHTML = dsoPhotoVisible.length ? '<span>'+(lang==='ja'?'観測画像（肉眼での見え方とは異なります）':'Observation imagery (not a naked-eye view)')+'</span><br>'+dsoPhotoVisible.map(dsoPhotoCreditHTML).join('<br>')+'<br><a href="'+DSO_PHOTO_LICENSE+'" target="_blank" rel="noopener">CC BY 4.0</a> · '+(lang==='ja'?'投影・明るさ・周縁を調整':'Projection, brightness and edges adjusted')+(dsoPhotoVisible.some(p=>p.spaceReflection) ? (lang==='ja'?'・写真背景を抑制':' · Photo background suppressed') : '') : '';
   }
   // Draw after cropping, so every export ratio retains its complete attribution.
   function drawDsoPhotoExportCredit(x, width, height, scale, photos, footer) {
