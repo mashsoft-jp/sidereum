@@ -104,6 +104,13 @@
         vec3 gras = srgbToLinear(vec3(0.22, 0.27, 0.15));
         col = mix(soil, gras, smoothstep(0.35, 0.65, mottle));
         col *= 0.72 + 0.34 * base + 0.20 * grain;
+        // 緩い地面の起伏を日射方向で照らす。細部は遠方で平均へ戻す。
+        vec2 q = g * 0.18;
+        float relief = noise(q);
+        vec2 slope = vec2(noise(q + vec2(0.12, 0.0)), noise(q + vec2(0.0, 0.12))) - relief;
+        vec3 groundNormal = normalize(vec3(-slope.x * fade, 0.65, -slope.y * fade));
+        float grazing = max(dot(groundNormal, uSun), 0.0);
+        col *= mix(1.0, 0.78 + 0.44 * grazing, uDay);
         col *= mix(0.32, 1.0, uDay);                       // 観察用に夜も模様が読める明るさを残す
         col = mix(col, col * vec3(1.25, 0.95, 0.78), (1.0 - smoothstep(0.0, 0.3, uSun.y)) * uDay * 0.7);
       }
@@ -119,9 +126,16 @@
         vec3 farHill = mix(vec3(0.007, 0.009, 0.012), vec3(0.035, 0.050, 0.060), uSkyF);
         vec3 midHill = mix(vec3(0.006, 0.008, 0.010), vec3(0.024, 0.035, 0.025), uSkyF);
         float layer = smoothstep(mid - 0.0008, mid + 0.0008, d.y);
-        vec3 hills = mix(midHill, mix(farHill, haze, 0.32), layer);
+        // 遠景ほど低コントラスト。尾根の向きに応じた陰影で平板な帯を避ける。
+        float folds = 0.5 + 0.5 * sin(az * 19.0 + 1.4 * sin(az * 7.0));
+        midHill *= 0.85 + 0.30 * folds * uDay;
+        vec3 hills = mix(midHill, mix(farHill, haze, 0.48), layer);
+        float foregroundRidge = -0.045 + 0.011 * sin(az * 3.0 + 2.0) + 0.006 * sin(az * 8.0);
+        vec3 foothill = mix(vec3(0.008, 0.011, 0.010), vec3(0.024, 0.040, 0.021), uSkyF);
+        foothill *= 0.86 + 0.24 * folds;
+        col = mix(col, foothill, smoothstep(foregroundRidge - 0.003, foregroundRidge + 0.003, d.y));
         // 手前ほど地面の色が残り、遠い稜線ほど空の色を帯びる。
-        col = mix(col, haze, (1.0 - exp(-r * 0.00045)) * 0.45);
+        col = mix(col, haze, (1.0 - exp(-r * 0.00065)) * mix(0.18, 0.52, uSkyF));
         col = mix(col, hills, smoothstep(nearRidge - 0.001, nearRidge + 0.001, d.y));
       } else {
         // 月面に霞は足さず、遠いクレーター縁を硬い明暗で残す。
