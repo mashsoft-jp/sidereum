@@ -794,6 +794,16 @@
   #gAltCell .step, #angleCell .step { padding: 2px 8px; font-size: 9px; line-height: 1.4; }
   /* ---- 操作パネルの折りたたみ (下へ引っ込む) ---- */
   #controls { transition: transform 0.25s ease; }
+  #angleCell, #gAltCell { transition: transform 0.25s ease, visibility 0.25s; }
+  #app.ctrlHidden:not(.tourMode) #angleCell,
+  #app.ctrlHidden:not(.tourMode) #gAltCell {
+    transform: translate(calc(100% + var(--vslR) + var(--sar) + 16px), -50%);
+    visibility: hidden;
+    pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #angleCell, #gAltCell { transition: none; }
+  }
   /* 2重 ID なのは、各モードの #controls button の padding 上書きに勝つため。
      復帰用の ⌃ ピルと同じ幅・高さになるよう padding を揃えている */
   #controls #ctrlCollapse {
