@@ -20,15 +20,15 @@
       space_rows: [
         ["回転", "ドラッグ (1本指ドラッグ)"],
         ["ズーム", "ホイール / ピンチ"],
-        ["距離", "Shift+ホイール / 3本指の上下ドラッグ (上で接近)、または「詳細操作」を開いて {dist} の行"],
+        ["距離", "Shift+ホイール / 3本指の上下ドラッグ (上で接近)、またはパネルの {dist} の行"],
         ["平行移動", "右ドラッグ / 2本指ドラッグ"],
         ["天体", "クリック / タップで選択・接近 (再度で枠と説明を隠す・何もない所で解除)"],
-        ["視点", "パネルの {cam} プルダウン・「詳細操作」で表示される右端の縦スライダー"],
+        ["視点", "パネルの {cam} プルダウン・右端の縦のスライダー"],
       ],
       ground_rows: [
         ["見回し", "ドラッグ"],
         ["ズーム", "ホイール / ピンチ"],
-        ["方位・高度", "「詳細操作」を開いて方位・高度を調整"],
+        ["方位・高度", "パネルのスライダー"],
         ["天体", "タップで選択・追尾"],
         ["観測地", "メニュー「観測地」(地上) / パネルの地点選択 (月面)"],
         ["AR", "上部の「AR」(スマホ・タブレット)。端末を空へ向けると、その向きの空が出る。星を実際の位置へドラッグして方位を補正"],
@@ -54,15 +54,15 @@
       space_rows: [
         ["Rotate", "Drag (one-finger drag)"],
         ["Zoom", "Wheel / pinch"],
-        ["Distance", "Shift+wheel / three-finger drag (up to approach), or the {dist} row under More controls"],
+        ["Distance", "Shift+wheel / three-finger drag (up to approach), or the {dist} row in the panel"],
         ["Pan", "Right-drag / two-finger drag"],
         ["Bodies", "Click / tap to select & approach (again hides the ring & panel · empty space deselects)"],
-        ["Viewpoint", "The {cam} dropdown & the right-edge slider under More controls"],
+        ["Viewpoint", "The {cam} dropdown & the vertical slider at the right edge"],
       ],
       ground_rows: [
         ["Look around", "Drag"],
         ["Zoom", "Wheel / pinch"],
-        ["Azimuth / Alt.", "Open More controls to adjust azimuth and altitude"],
+        ["Azimuth / Alt.", "Sliders in the panel"],
         ["Bodies", "Tap to select & track"],
         ["Location", "Menu “Location” (ground) / site picker (Moon)"],
         ["AR", "“AR” at the top (phones & tablets). Point the device at the sky to see that part of it. Drag a star onto its real position to correct the heading"],
@@ -191,7 +191,6 @@
     setCtlLabel("gAltLabelTop", t.gAltLabel);
     ctrlCollapseBtn.title = t.ctrlHide;
     ctrlExpandBtn.title = t.ctrlShow;
-    refreshCtrlDetails();
     refreshObsSiteUI();
     lastGAz = "";   // 方位テープの方角ラベルを言語に合わせて再描画
     document.getElementById("nowBtn").textContent = t.nowBtn;
