@@ -69,3 +69,41 @@ SHA-256: 116107187ef23a6753de27346474a05710b47c9e0d8699930fd0a3dd2d339205
 ## Display scope
 
 M13 covers the core. M31 is a mosaic. Photographs are shown only when opened by the user; the sky uses the separate procedural OpenNGC representation.
+
+## M1 — heic0515a
+
+Retrieved 2026-09-14. Provider screen-size JPEG, unchanged bytes.
+
+NASA, ESA and Allison Loll/Jeff Hester (Arizona State University). Acknowledgement: Davide De Martin (ESA/Hubble)
+
+https://esahubble.org/images/heic0515a/
+
+Download: https://cdn.esahubble.org/archives/images/screen/heic0515a.jpg
+
+SHA-256: 9b9162b9a679c04fe9224dd3338691fa1eb56599e111ebd750f6eafe9d028bdc
+
+## M16 — heic1501a
+
+Retrieved 2026-09-14. Provider screen-size JPEG, unchanged bytes.
+
+NASA, ESA/Hubble and the Hubble Heritage Team
+
+https://esahubble.org/images/heic1501a/
+
+Download: https://cdn.esahubble.org/archives/images/screen/heic1501a.jpg
+
+SHA-256: 285e1f921b1fc258f48532e83dcfd30a7f9bcc704e1af9b0fa2c6468e31bc39d
+
+## M51 — heic0506a
+
+Retrieved 2026-09-14. Provider screen-size JPEG, unchanged bytes.
+
+NASA, ESA, S. Beckwith (STScI), and The Hubble Heritage Team (STScI/AURA)
+
+https://esahubble.org/images/heic0506a/
+
+Download: https://cdn.esahubble.org/archives/images/screen/heic0506a.jpg
+
+SHA-256: 626f7d6ba30d186a87b834c089b449e3b77c8defce4fe85ab7edf2078e3633e2
+
+M16 shows the Pillars of Creation, not the whole nebula. Short bilingual descriptions are paraphrased from the linked ESA/Hubble pages; attribution is displayed in the viewer.

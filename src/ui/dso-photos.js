@@ -50,7 +50,13 @@
     img.src=p.file;
     const credits=document.createElement('p'); credits.className='dsoPhotoCredits';
     credits.innerHTML=dsoPhotoCreditHTML(p)+'<br><a href="'+DSO_PHOTO_LICENSE+'" target="_blank" rel="noopener">CC BY 4.0</a>';
-    dsoPhotoDialog.append(status,img,credits);
+    const caption=document.createElement('p'); caption.className='dsoPhotoCaption';
+    caption.textContent=DSO_PHOTO_NOTES[p.m][ja?0:1];
+    const reference=document.createElement('a'); reference.href=p.source;
+    reference.target='_blank'; reference.rel='noopener';
+    reference.textContent=ja?'解説の出典: ESA/Hubble':'Description source: ESA/Hubble';
+    const source=document.createElement('p'); source.append(reference);
+    dsoPhotoDialog.append(status,img,caption,credits,source);
     dsoPhotoDialog.showModal();
   }
   dsoPhotoDialog.addEventListener('click',e=>{
