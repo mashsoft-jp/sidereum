@@ -1711,9 +1711,22 @@
 #dsoPhotoDialog a { color:#c3d4ee; text-decoration:underline; }
 #dsoPhotoDialog .dsoPhotoClose { position:absolute; right:12px; top:8px; width:32px; height:32px; border:none; background:none; color:var(--text); font-size:24px; }
 @media (max-width:600px) { #dsoPhotoDialog { padding:16px; } #dsoPhotoDialog img { max-height:min(50dvh,calc(100dvh - 220px)); } }
+
+  /* 基本操作は再生・速度とズーム。ツアーでは説明対象をすべて表示する。 */
+  #controls #ctrlDetails {
+    position: absolute; right: 0; bottom: calc(100% + 5px);
+    padding: 5px 10px; font-size: 11px; color: var(--dim);
+    background: rgba(12, 18, 32, 0.94); border: 1px solid var(--line);
+  }
+  #controls #ctrlDetails[aria-expanded="true"] { color: var(--accent); }
+  #app.tourMode #ctrlDetails { display: none; }
+  #app.controlsSimple:not(.tourMode) #controls :is(#zoomLabel, #zoomOut, #zoom, #zoomIn, #zoomVal,
+    #gAzLabel, #gAzLeft, #gAzTape, #gAzRight, #gAzDir, .ctlAdvanced),
+  #app.controlsSimple:not(.tourMode) :is(#angleCell, #gAltCell) { display: none; }
+  #app.controlsSimple:not(.tourMode) #controls :is(#camSelect, #camIcon) { grid-row: 2; }
 </style>
 
-<div id="app">
+<div id="app" class="controlsSimple">
   <canvas id="gl" aria-label="太陽系 3D シミュレーション"></canvas>
   <canvas id="overlay"></canvas>
   <div id="noGL">お使いの環境では WebGL が利用できないため、<br>3D 表示を開始できませんでした。</div>
@@ -1885,6 +1898,7 @@
   </div>
 
   <footer id="controls" class="hud">
+    <button id="ctrlDetails" aria-expanded="false" aria-controls="zoom angleCell gAzTape gAltCell">詳細操作</button>
     <button id="ctrlCollapse" data-ui-icon="down" aria-label="操作パネルを隠す">⌄</button>
     <button id="play" class="primary"><span id="playIcon"><svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="2.4" y="1.8" width="2.6" height="8.4" rx="0.7"/><rect x="7" y="1.8" width="2.6" height="8.4" rx="0.7"/></svg></span><span id="playLabel">停止</span></button>
     <label class="slider" id="speedLabel" for="speed" title="速度"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="6" r="4.5"/><path d="M6 3.3V6.1l2 1.3"/></svg><span class="vh">速度</span></label>
@@ -1926,7 +1940,7 @@
     <button id="gFovIn" data-ui-icon="plus" class="step groundOnly" aria-label="ズームイン">＋</button>
     <span id="gFovVal" class="groundOnly"></span>
 
-    <span class="groundOnly"></span>
+    <span class="groundOnly ctlAdvanced"></span>
     <span class="slider groundOnly" id="gAzLabel" title="方位"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="4.6"/><path d="M6 2.2l1.7 5.6L6 6.6 4.3 7.8z" fill="currentColor" stroke="none"/></svg><span class="vh">方位</span></span>
     <button id="gAzLeft" data-ui-icon="left" class="step groundOnly" aria-label="左へ回す">◀</button>
     <svg id="gAzTape" class="groundOnly" viewBox="-90 -22 180 36" aria-hidden="true"></svg>
@@ -13180,14 +13194,18 @@
       }
       const controlsTop = document.getElementById("controls").getBoundingClientRect().top;
       const collapse = document.getElementById("ctrlCollapse");
-      const top = collapse.getClientRects().length
+      let top = collapse.getClientRects().length
         ? Math.min(controlsTop, collapse.getBoundingClientRect().top) : controlsTop;
+      const details = document.getElementById("ctrlDetails");
+      if (details.getClientRects().length) top = Math.min(top, details.getBoundingClientRect().top);
       // ボタンの上へ広げているタップ領域 (10px) にも余白を残す。
       infoPanel.style.bottom = Math.round(window.innerHeight - top + 12) + "px";
     } else if (window.matchMedia("(max-height: 480px)").matches) {
       infoPanel.style.bottom = "";
       if (ctrlHidden) { infoPanel.style.maxHeight = ""; return; }
-      const ctlTop = document.getElementById("controls").getBoundingClientRect().top;
+      const details = document.getElementById("ctrlDetails");
+      const ctlTop = Math.min(document.getElementById("controls").getBoundingClientRect().top,
+        details.getClientRects().length ? details.getBoundingClientRect().top : Infinity);
       const infoTop = infoPanel.getBoundingClientRect().top;
       infoPanel.style.maxHeight = Math.max(120, Math.round(ctlTop - infoTop - 8)) + "px";
     } else {
@@ -13211,6 +13229,18 @@
   }
   ctrlCollapseBtn.addEventListener("click", () => setCtrlVisible(false));
   ctrlExpandBtn.addEventListener("click", () => setCtrlVisible(true));
+
+  const ctrlDetailsBtn = document.getElementById("ctrlDetails");
+  function refreshCtrlDetails() {
+    const expanded = !document.getElementById("app").classList.contains("controlsSimple");
+    ctrlDetailsBtn.setAttribute("aria-expanded", String(expanded));
+    ctrlDetailsBtn.textContent = lang === "ja" ? (expanded ? "基本操作" : "詳細操作") : (expanded ? "Basic controls" : "More controls");
+  }
+  ctrlDetailsBtn.addEventListener("click", () => {
+    document.getElementById("app").classList.toggle("controlsSimple");
+    refreshCtrlDetails();
+    positionInfoPanel();
+  });
 
   // ---------- 地球からの観測モード (クライアント計算, 近似) ----------
   const ECL = 23.4393 * DEG, RS_RATE = 15.041;   // 黄道傾斜, 時角の進み (度/時)
@@ -15290,15 +15320,15 @@
       space_rows: [
         ["回転", "ドラッグ (1本指ドラッグ)"],
         ["ズーム", "ホイール / ピンチ"],
-        ["距離", "Shift+ホイール / 3本指の上下ドラッグ (上で接近)、またはパネルの {dist} の行"],
+        ["距離", "Shift+ホイール / 3本指の上下ドラッグ (上で接近)、または「詳細操作」を開いて {dist} の行"],
         ["平行移動", "右ドラッグ / 2本指ドラッグ"],
         ["天体", "クリック / タップで選択・接近 (再度で枠と説明を隠す・何もない所で解除)"],
-        ["視点", "パネルの {cam} プルダウン・右端の縦のスライダー"],
+        ["視点", "パネルの {cam} プルダウン・「詳細操作」で表示される右端の縦スライダー"],
       ],
       ground_rows: [
         ["見回し", "ドラッグ"],
         ["ズーム", "ホイール / ピンチ"],
-        ["方位・高度", "パネルのスライダー"],
+        ["方位・高度", "「詳細操作」を開いて方位・高度を調整"],
         ["天体", "タップで選択・追尾"],
         ["観測地", "メニュー「観測地」(地上) / パネルの地点選択 (月面)"],
         ["AR", "上部の「AR」(スマホ・タブレット)。端末を空へ向けると、その向きの空が出る。星を実際の位置へドラッグして方位を補正"],
@@ -15324,15 +15354,15 @@
       space_rows: [
         ["Rotate", "Drag (one-finger drag)"],
         ["Zoom", "Wheel / pinch"],
-        ["Distance", "Shift+wheel / three-finger drag (up to approach), or the {dist} row in the panel"],
+        ["Distance", "Shift+wheel / three-finger drag (up to approach), or the {dist} row under More controls"],
         ["Pan", "Right-drag / two-finger drag"],
         ["Bodies", "Click / tap to select & approach (again hides the ring & panel · empty space deselects)"],
-        ["Viewpoint", "The {cam} dropdown & the vertical slider at the right edge"],
+        ["Viewpoint", "The {cam} dropdown & the right-edge slider under More controls"],
       ],
       ground_rows: [
         ["Look around", "Drag"],
         ["Zoom", "Wheel / pinch"],
-        ["Azimuth / Alt.", "Sliders in the panel"],
+        ["Azimuth / Alt.", "Open More controls to adjust azimuth and altitude"],
         ["Bodies", "Tap to select & track"],
         ["Location", "Menu “Location” (ground) / site picker (Moon)"],
         ["AR", "“AR” at the top (phones & tablets). Point the device at the sky to see that part of it. Drag a star onto its real position to correct the heading"],
@@ -15461,6 +15491,7 @@
     setCtlLabel("gAltLabelTop", t.gAltLabel);
     ctrlCollapseBtn.title = t.ctrlHide;
     ctrlExpandBtn.title = t.ctrlShow;
+    refreshCtrlDetails();
     refreshObsSiteUI();
     lastGAz = "";   // 方位テープの方角ラベルを言語に合わせて再描画
     document.getElementById("nowBtn").textContent = t.nowBtn;

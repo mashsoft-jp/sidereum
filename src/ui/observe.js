@@ -63,14 +63,18 @@
       }
       const controlsTop = document.getElementById("controls").getBoundingClientRect().top;
       const collapse = document.getElementById("ctrlCollapse");
-      const top = collapse.getClientRects().length
+      let top = collapse.getClientRects().length
         ? Math.min(controlsTop, collapse.getBoundingClientRect().top) : controlsTop;
+      const details = document.getElementById("ctrlDetails");
+      if (details.getClientRects().length) top = Math.min(top, details.getBoundingClientRect().top);
       // ボタンの上へ広げているタップ領域 (10px) にも余白を残す。
       infoPanel.style.bottom = Math.round(window.innerHeight - top + 12) + "px";
     } else if (window.matchMedia("(max-height: 480px)").matches) {
       infoPanel.style.bottom = "";
       if (ctrlHidden) { infoPanel.style.maxHeight = ""; return; }
-      const ctlTop = document.getElementById("controls").getBoundingClientRect().top;
+      const details = document.getElementById("ctrlDetails");
+      const ctlTop = Math.min(document.getElementById("controls").getBoundingClientRect().top,
+        details.getClientRects().length ? details.getBoundingClientRect().top : Infinity);
       const infoTop = infoPanel.getBoundingClientRect().top;
       infoPanel.style.maxHeight = Math.max(120, Math.round(ctlTop - infoTop - 8)) + "px";
     } else {
@@ -94,6 +98,18 @@
   }
   ctrlCollapseBtn.addEventListener("click", () => setCtrlVisible(false));
   ctrlExpandBtn.addEventListener("click", () => setCtrlVisible(true));
+
+  const ctrlDetailsBtn = document.getElementById("ctrlDetails");
+  function refreshCtrlDetails() {
+    const expanded = !document.getElementById("app").classList.contains("controlsSimple");
+    ctrlDetailsBtn.setAttribute("aria-expanded", String(expanded));
+    ctrlDetailsBtn.textContent = lang === "ja" ? (expanded ? "基本操作" : "詳細操作") : (expanded ? "Basic controls" : "More controls");
+  }
+  ctrlDetailsBtn.addEventListener("click", () => {
+    document.getElementById("app").classList.toggle("controlsSimple");
+    refreshCtrlDetails();
+    positionInfoPanel();
+  });
 
   // ---------- 地球からの観測モード (クライアント計算, 近似) ----------
   const ECL = 23.4393 * DEG, RS_RATE = 15.041;   // 黄道傾斜, 時角の進み (度/時)

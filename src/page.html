@@ -15,7 +15,7 @@
 @@include:styles.css@@
 </style>
 
-<div id="app">
+<div id="app" class="controlsSimple">
   <canvas id="gl" aria-label="太陽系 3D シミュレーション"></canvas>
   <canvas id="overlay"></canvas>
   <div id="noGL">お使いの環境では WebGL が利用できないため、<br>3D 表示を開始できませんでした。</div>
@@ -187,6 +187,7 @@
   </div>
 
   <footer id="controls" class="hud">
+    <button id="ctrlDetails" aria-expanded="false" aria-controls="zoom angleCell gAzTape gAltCell">詳細操作</button>
     <button id="ctrlCollapse" data-ui-icon="down" aria-label="操作パネルを隠す">⌄</button>
     <button id="play" class="primary"><span id="playIcon"><svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="2.4" y="1.8" width="2.6" height="8.4" rx="0.7"/><rect x="7" y="1.8" width="2.6" height="8.4" rx="0.7"/></svg></span><span id="playLabel">停止</span></button>
     <label class="slider" id="speedLabel" for="speed" title="速度"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="6" r="4.5"/><path d="M6 3.3V6.1l2 1.3"/></svg><span class="vh">速度</span></label>
@@ -228,7 +229,7 @@
     <button id="gFovIn" data-ui-icon="plus" class="step groundOnly" aria-label="ズームイン">＋</button>
     <span id="gFovVal" class="groundOnly"></span>
 
-    <span class="groundOnly"></span>
+    <span class="groundOnly ctlAdvanced"></span>
     <span class="slider groundOnly" id="gAzLabel" title="方位"><svg class="ctlIcon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="4.6"/><path d="M6 2.2l1.7 5.6L6 6.6 4.3 7.8z" fill="currentColor" stroke="none"/></svg><span class="vh">方位</span></span>
     <button id="gAzLeft" data-ui-icon="left" class="step groundOnly" aria-label="左へ回す">◀</button>
     <svg id="gAzTape" class="groundOnly" viewBox="-90 -22 180 36" aria-hidden="true"></svg>

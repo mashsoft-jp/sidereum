@@ -1695,3 +1695,16 @@
 #dsoPhotoDialog a { color:#c3d4ee; text-decoration:underline; }
 #dsoPhotoDialog .dsoPhotoClose { position:absolute; right:12px; top:8px; width:32px; height:32px; border:none; background:none; color:var(--text); font-size:24px; }
 @media (max-width:600px) { #dsoPhotoDialog { padding:16px; } #dsoPhotoDialog img { max-height:min(50dvh,calc(100dvh - 220px)); } }
+
+  /* 基本操作は再生・速度とズーム。ツアーでは説明対象をすべて表示する。 */
+  #controls #ctrlDetails {
+    position: absolute; right: 0; bottom: calc(100% + 5px);
+    padding: 5px 10px; font-size: 11px; color: var(--dim);
+    background: rgba(12, 18, 32, 0.94); border: 1px solid var(--line);
+  }
+  #controls #ctrlDetails[aria-expanded="true"] { color: var(--accent); }
+  #app.tourMode #ctrlDetails { display: none; }
+  #app.controlsSimple:not(.tourMode) #controls :is(#zoomLabel, #zoomOut, #zoom, #zoomIn, #zoomVal,
+    #gAzLabel, #gAzLeft, #gAzTape, #gAzRight, #gAzDir, .ctlAdvanced),
+  #app.controlsSimple:not(.tourMode) :is(#angleCell, #gAltCell) { display: none; }
+  #app.controlsSimple:not(.tourMode) #controls :is(#camSelect, #camIcon) { grid-row: 2; }
