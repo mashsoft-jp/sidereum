@@ -19,6 +19,9 @@
     immersiveExitBtn.innerHTML = (ja ? "戻る" : "Return") + '<span class="keyboardHint">(Esc)</span>';
     immersivePauseBtn.textContent = enjoymentPaused ? (ja ? "周回を再開" : "Resume orbit") : (ja ? "周回を停止" : "Pause orbit");
     if (ringExplore) immersivePauseBtn.textContent = enjoymentPaused ? (ja ? "移動を再開" : "Resume motion") : (ja ? "移動を停止" : "Pause motion");
+    const ringHint = document.getElementById("ringLookHint");
+    ringHint.hidden = !ringExplore || !!ringExplore.saver;
+    ringHint.textContent = ja ? "ドラッグで見回す" : "Drag to look around";
     const ringButton = document.getElementById("frameRing");
     ringButton.hidden = selected?.key !== "saturn" || groundView || tourActive;
     ringButton.textContent = ja ? "環を探る" : "Explore the rings";

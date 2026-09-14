@@ -1724,6 +1724,9 @@
 
   #frameRing { width:100%; margin:0 0 12px; min-height:32px; font-size:11px; }
   #frameRing[hidden], #app.tourMode #frameRing { display:none; }
+
+  #ringLookHint { position:absolute; bottom:calc(100% + 10px); left:0; width:100%; text-align:center; font-size:11px; color:rgba(180,193,207,.8); text-shadow:0 1px 4px #000; pointer-events:none; }
+  #ringLookHint[hidden] { display:none; }
 </style>
 
 <div id="app">
@@ -1876,6 +1879,7 @@
   </aside>
 
   <div id="immersiveBar" class="hud" hidden>
+    <div id="ringLookHint" hidden>ドラッグで見回す</div>
     <button id="immersiveExit">戻る</button>
     <button id="immersivePause" aria-pressed="false">周回を停止</button>
     <button id="immersiveSave">画像を保存</button>
@@ -11924,9 +11928,6 @@
     octx.save();octx.textAlign='center';octx.shadowColor='rgba(0,0,0,.9)';octx.shadowBlur=6;
     octx.fillStyle='rgba(225,232,239,.88)';octx.font='16px sans-serif';
     octx.fillText(lang==='ja'?'土星の環を探る':'Inside Saturn’s rings',W/2,42);
-    octx.font='11px sans-serif';octx.fillStyle='rgba(180,193,207,.8)';
-    octx.fillText(lang==='ja'?'厚さ20m（粒子の形と密度は模式）':'20 m thick · illustrative shapes and density',W/2,64);
-    octx.fillText(lang==='ja'?'環の中央 · ドラッグで見回す':'At the midplane · Drag to look around',W/2,84);
     octx.restore();
   }
   //#endregion
@@ -17416,6 +17417,9 @@
     immersiveExitBtn.innerHTML = (ja ? "戻る" : "Return") + '<span class="keyboardHint">(Esc)</span>';
     immersivePauseBtn.textContent = enjoymentPaused ? (ja ? "周回を再開" : "Resume orbit") : (ja ? "周回を停止" : "Pause orbit");
     if (ringExplore) immersivePauseBtn.textContent = enjoymentPaused ? (ja ? "移動を再開" : "Resume motion") : (ja ? "移動を停止" : "Pause motion");
+    const ringHint = document.getElementById("ringLookHint");
+    ringHint.hidden = !ringExplore || !!ringExplore.saver;
+    ringHint.textContent = ja ? "ドラッグで見回す" : "Drag to look around";
     const ringButton = document.getElementById("frameRing");
     ringButton.hidden = selected?.key !== "saturn" || groundView || tourActive;
     ringButton.textContent = ja ? "環を探る" : "Explore the rings";

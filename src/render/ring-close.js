@@ -127,8 +127,5 @@
     octx.save();octx.textAlign='center';octx.shadowColor='rgba(0,0,0,.9)';octx.shadowBlur=6;
     octx.fillStyle='rgba(225,232,239,.88)';octx.font='16px sans-serif';
     octx.fillText(lang==='ja'?'土星の環を探る':'Inside Saturn’s rings',W/2,42);
-    octx.font='11px sans-serif';octx.fillStyle='rgba(180,193,207,.8)';
-    octx.fillText(lang==='ja'?'厚さ20m（粒子の形と密度は模式）':'20 m thick · illustrative shapes and density',W/2,64);
-    octx.fillText(lang==='ja'?'環の中央 · ドラッグで見回す':'At the midplane · Drag to look around',W/2,84);
     octx.restore();
   }
