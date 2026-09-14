@@ -210,9 +210,9 @@
     const D = Math.hypot(_pv[0], _pv[1], _pv[2]);
     const ra = Math.atan2(_pv[1], _pv[0]), dec = Math.asin(_pv[2] / D);
     const lat = obsLat * DEG, H = lst - ra;
-    // 高度は大気差を入れた「見かけの高度」を返す。地上ビューの描画・照準・
-    // 「地平線下」の判定はすべてこちらを使う (出没時刻は h0 に大気差が
-    // 織り込み済みなので、下の計算は真高度のまま dec と H から解く)
+    // 観測値には大気差を入れた見かけの高度、空と地形OFFの描画・照準には
+    // 真高度を返す。出没時刻は h0 に大気差が織り込み済みなので、
+    // 下の計算は真高度のまま dec と H から解く。
     const altGeo = Math.asin(Math.max(-1, Math.min(1, Math.sin(dec)*Math.sin(lat) + Math.cos(dec)*Math.cos(lat)*Math.cos(H))));
     const alt = altGeo + refractRad(altGeo);
     const A = Math.atan2(Math.sin(H), Math.cos(H)*Math.sin(lat) - Math.tan(dec)*Math.cos(lat));
@@ -248,7 +248,7 @@
     let rise = 0, set = 0, circ = 0;
     if (cosH0 < -1) circ = 1; else if (cosH0 > 1) circ = -1;
     else { const H0 = Math.acos(cosH0)/DEG; rise = transitMs - H0/rate*3600e3; set = transitMs + H0/rate*3600e3; }
-    return { alt: alt/DEG, az, distAU: D, illum, mag, sizeAS, elong, transitMs, rise, set, circ };
+    return { alt: alt/DEG, altGeo: altGeo/DEG, az, distAU: D, illum, mag, sizeAS, elong, transitMs, rise, set, circ };
   }
   const fmtHM = clockHM;   // 時計と同じ基準 (端末/地方時/UTC) で出す
   function fmtGeoDist(au) {

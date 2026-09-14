@@ -14,7 +14,7 @@
                alt: Math.asin(Math.max(-1, Math.min(1, _aa[1]))) / DEG };
     }
     const c = computeObs(body);
-    return { az: c.az, alt: c.alt };
+    return { az: c.az, alt: showTerrain ? c.alt : c.altGeo };
   }
   function aimGroundAt(body, instant) {
     if (!body || body.key === surfaceBody) return false;   // 立っている天体自身は見られない

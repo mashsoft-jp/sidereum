@@ -83,7 +83,7 @@
   // 縦の倍率 = d(見かけ高度)/d(真高度) = 1 + R'(h)。見かけの高度しか持って
   // いないので、真高度へ1回戻してからそこでの傾きを取る (地平でも 0.5′ 以内)
   function flatK(sinAlt) {
-    if (surfaceBody === "moon") return 1;              // 大気が無い
+    if (!showTerrain || surfaceBody === "moon") return 1;              // 大気が無い
     const hA = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
     const h = hA - refractRad(hA);
     const e = 1e-5;
@@ -403,7 +403,9 @@
     // 縮み、「太陽が小さくなっていく」と見えた 2026-09-07)。月面にも同じく掛ける —
     // 塵は同じ場所にあるが、太陽が出ていれば眩しさで見えないのは同じ
     const zAlt = Math.asin(Math.max(-1, Math.min(1, _sunG[1]))) / DEG;
-    _zodi.gain = Math.max(0, Math.min(1, (-zAlt - 8) / 8));
+    // 地平線下も見せるOFFでは、太陽付近の黄道光が白い塊として露出する。
+    // 宇宙ビューと同様に黄道光を止め、日の入りにも連動させない。
+    _zodi.gain = showTerrain ? Math.max(0, Math.min(1, (-zAlt - 8) / 8)) : 0;
     _zodi.sun = _sunG;
     _zodi.pole[0] = obsE[1]; _zodi.pole[1] = obsU[1]; _zodi.pole[2] = -obsN[1];
     drawMilkyWay(gVP32, mwEqGround(), SKYR * 1.4,
@@ -574,9 +576,9 @@
         magV = null;
       } else {
         const c = computeObs(b);
-        altDeg = c.alt; azDeg = c.az; distAU = c.distAU; magV = c.mag;
+        altDeg = showTerrain ? c.alt : c.altGeo; azDeg = c.az; distAU = c.distAU; magV = c.mag;
       }
-      if (altDeg < -1 && b !== selected) continue;   // 選択天体は地平線下でも描画
+      if (showTerrain && altDeg < -1 && b !== selected) continue;   // 選択天体は地平線下でも描画
       // 8等より暗いもの (冥王星・外縁天体・遠くの彗星) は出さない。点の大きさには
       // 下限があるので、出すと 17等の天体が星より目立ってしまう。選択中と
       // ツアーの注目天体だけは、見つけられるよう描く
@@ -587,7 +589,7 @@
       if (surfaceBody !== "moon" && b.parent && b.parent !== "earth" && b !== selected && spherePx < 5) {
         const pc = computeObs(BODY_BY_KEY.get(b.parent));
         const dAz = ((azDeg - pc.az + 540) % 360) - 180;
-        const sepPx = Math.hypot(dAz * Math.cos(altDeg * DEG), altDeg - pc.alt) * DEG / gFov * H;
+        const sepPx = Math.hypot(dAz * Math.cos(altDeg * DEG), altDeg - (showTerrain ? pc.alt : pc.altGeo)) * DEG / gFov * H;
         if (sepPx < 12) continue;
       }
       azAltDir(azDeg, altDeg, _gp);
@@ -609,7 +611,7 @@
         size = magSize(magV == null ? 3.5 : magV); r = b.colA[0]*0.5+0.5; g = b.colA[1]*0.5+0.5; bl = b.colA[2]*0.5+0.5;
       }
       // 恒星と同じく大気減光を掛ける (月面では素通り)
-      if (!isMoonSurf) {
+      if (showTerrain && !isMoonSurf) {
         const eo = extIdx(_gp[1]);
         r *= EXT_TBL[eo]; g *= EXT_TBL[eo+1]; bl *= EXT_TBL[eo+2];
       }
@@ -648,7 +650,7 @@
         }
       }
       if (surfaceBody === "moon") { bodySky(SUN, _fwd); }
-      else { const sc = computeObs(SUN); azAltDir(sc.az, sc.alt, _fwd); }
+      else { const sc = computeObs(SUN); azAltDir(sc.az, showTerrain ? sc.alt : sc.altGeo, _fwd); }
       const sunGx = _fwd[0] * SKYR, sunGy = _fwd[1] * SKYR, sunGz = _fwd[2] * SKYR;
       gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.clear(gl.DEPTH_BUFFER_BIT);
       // 距離100に対して半径が極小のため深度精度が足りず、裏側の半球が
@@ -730,7 +732,7 @@
           }
         }
         bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun, radiusPx: bb.rpx,
-                            eclipse, ext: isMoonSurf ? null : extinct(bb.sa), shine });
+                            eclipse, ext: (isMoonSurf || !showTerrain) ? null : extinct(bb.sa), shine });
         if (b.air) {
           // 行列とやりたいことは本体と同じで、大きさだけ (1 + air) 倍にする。
           // gM64 は次の天体で上書きされるので、ここで取っておく
@@ -784,7 +786,7 @@
         gl.uniform2f(ringP.u.uRingR, RING_IN, 1.0 / (RING_OUT - RING_IN));
         // 大気は本体と同じものを渡す。本体だけに掛けると、地平ぎわで土星が
         // 赤黒くなるのに環だけ白いまま残る
-        const rex = isMoonSurf ? null : extinct(satBB.sa);
+        const rex = (isMoonSurf || !showTerrain) ? null : extinct(satBB.sa);
         gl.uniform3f(ringP.u.uExt, rex ? rex[0] : 1, rex ? rex[1] : 1, rex ? rex[2] : 1);
         gl.uniform3f(ringP.u.uAirSun, _sunG[0], _sunG[1], _sunG[2]);
         gl.uniform1f(ringP.u.uAirFlux, sunFlux);
@@ -814,7 +816,7 @@
       const cAmt = Math.max(0, Math.min(1, (sunCov - 0.985) / 0.015));
       const sBB = bigBodies.find((x) => x.b === SUN);
       const sv = sBB || groundVis.find((v) => v.b === SUN);
-      if (cAmt > 0 && sv && sv.py > 0) {
+      if (cAmt > 0 && sv && (!showTerrain || sv.py > 0)) {
         const cr = sBB ? sBB.wr
                        : SKYR * Math.tan(Math.asin(Math.min(0.9, SUN.rkm / (sunAU * AU_KM))));
         gl.enable(gl.DEPTH_TEST);
@@ -845,7 +847,8 @@
     // Bloom はトーンマップ済みの画面を取り込むので、太陽の円盤は空や雲と同じ
     // 1.0 に潰れていて、Bloom だけでは太陽を特別扱いできない。
     //
-    // 地平線より下では出さない。地形は後から不透明で描くので隠れるが、
+    // 空と地形ONでは地平線より下のグレアを止める。OFFでは大気なしで全天を描く。
+    // 地形は後から不透明で描くので隠れるが、
     // 昇る前から光っていたら嘘になる。地平線近くは大気を長く通って実際に
     // 減光するので、高度で薄くする (月面には大気が無いので、この減衰は
     // 入れない = 昇った瞬間から容赦なく眩しい)
@@ -858,14 +861,14 @@
     if (bloomOn) {
       const sv = groundVis.find((v) => v.b === SUN);
       const sinAlt = sv ? sv.py / SKYR : -1;
-      if (sv && sinAlt > 0) {
+      if (sv && (!showTerrain || sinAlt > 0)) {
         // 日食で隠れているぶんは眩しくない。皆既ではグレアが完全に消え、
         // 空だけが暗く残る
         // 眩しさは届いている光の量そのものなので、大気減光をそのまま使う。
         // 大気を長く通るほど青から抜けて赤くなり (夕日が赤い理由)、量も減る
         // ので、地平ぎわの太陽は直視できるほど暗い。月面には大気が無いので
         // 昇った瞬間から白いまま容赦なく眩しい
-        const ge = surfaceBody === "moon" ? null : extinct(sinAlt);
+        const ge = (surfaceBody === "moon" || !showTerrain) ? null : extinct(sinAlt);
         // ただし透過率をそのまま掛けない。太陽面の輝度は空の 10万倍あり、地平
         // ぎわの 1/100 の減光でも画面では飽和したままなのが実際 — 白から黄・橙へ
         // 色だけ変わり、赤い円盤として見えるのは最後の 1° だけ。そのまま掛けると
@@ -910,7 +913,7 @@
         // 画角が狭いときは板を縮める。角度で決めた板 (裾 3°・芯 0.7°) は、画角 1〜2° まで
         // 寄ると画面ぜんぶを覆って白く飛び、太陽面通過の水星が見えなくなる。
         // 6° より狭い画角では画角に比例させる (6° で継ぎ目なく従来どおり)
-        const wide = (surfaceBody === "moon" ? 1.0 : 0.34) * Math.min(1, gFov / (6 * DEG));
+        const wide = ((surfaceBody === "moon" || !showTerrain) ? 1.0 : 0.34) * Math.min(1, gFov / (6 * DEG));
         gl.uniform1f(billP.u.uFall, 1.6);
         gl.uniform1f(billP.u.uSize, SKYR * GLARE_TAN * wide);
         gl.uniform3f(billP.u.uCol1, 0.55 * fade, 0.32 * fade * gm, 0.12 * fade * bm);
@@ -969,7 +972,7 @@
                     _gp[0] * SKYR, _gp[1] * SKYR, _gp[2] * SKYR,
                     ax, ay, az, SCR.v[0], SCR.v[1], SCR.v[2],
                     gfpx, gV64[0], gV64[4], gV64[8], SKYR / dW,
-                    starVis, isMoonSurf ? null : EXT_K);
+                    starVis, (isMoonSurf || !showTerrain) ? null : EXT_K);
         gl.disable(gl.BLEND);
         gl.depthMask(true);
       }
