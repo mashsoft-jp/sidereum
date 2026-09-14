@@ -45,6 +45,7 @@
   function drawOverlay() {
     octx.setTransform(DPR, 0, 0, DPR, 0, 0);
     octx.clearRect(0, 0, W, H);
+    if (ringExplore) { drawRingExploreCaption(); return; }
     if (immersiveView) {
       // 遠景では実寸の点を探せるよう、必要な場面だけ名前を添える。
       // ユーザーの通常表示用 showLabel は変更しない。
@@ -497,6 +498,7 @@
     } else {
       followKey = null;
     }
+    stepRingExplore(document.hidden || raw > 1 ? 0 : dtc);
     stepEnjoymentOrbit(dtc);
     const k = 1 - Math.exp(-dtc * 5.5);
     stepFraming(k);

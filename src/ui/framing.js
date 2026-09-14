@@ -18,6 +18,10 @@
     frameEnjoyBtn.title = ja ? "見やすい方向へ移動し、天体の周りをゆっくり回って鑑賞" : "Find a scenic angle and slowly orbit the body";
     immersiveExitBtn.innerHTML = (ja ? "戻る" : "Return") + '<span class="keyboardHint">(Esc)</span>';
     immersivePauseBtn.textContent = enjoymentPaused ? (ja ? "周回を再開" : "Resume orbit") : (ja ? "周回を停止" : "Pause orbit");
+    if (ringExplore) immersivePauseBtn.textContent = enjoymentPaused ? (ja ? "移動を再開" : "Resume motion") : (ja ? "移動を停止" : "Pause motion");
+    const ringButton = document.getElementById("frameRing");
+    ringButton.hidden = selected?.key !== "saturn" || groundView || tourActive;
+    ringButton.textContent = ja ? "環を探る" : "Explore the rings";
     immersivePauseBtn.setAttribute("aria-pressed", String(enjoymentPaused));
     immersiveSaveBtn.textContent = ja ? "画像を保存" : "Save image";
     document.getElementById("frameActions").setAttribute("aria-label", ja ? "天体の見せ方" : "Frame the body");
@@ -232,7 +236,7 @@
     window.addEventListener(event, pauseEnjoymentOrbit, { passive: true });
   }
   function stepEnjoymentOrbit(dt) {
-    if (!immersiveView || screensaverRunning() || enjoymentPaused || groundView || tourActive || !(selected || lastCenter) ||
+    if (ringExplore || !immersiveView || screensaverRunning() || enjoymentPaused || groundView || tourActive || !(selected || lastCenter) ||
         matchMedia("(prefers-reduced-motion: reduce)").matches) {
       enjoymentSpeed = 0; return;
     }
@@ -245,6 +249,8 @@
   }
 
   function setImmersive(v) {
+    const leavingRings = !v && !!ringExplore;
+    if (!v && ringExplore) endRingExplore();
     if (v && (groundView || tourActive)) return;
     immersiveView = v;
     enjoymentPaused = false;
@@ -264,7 +270,7 @@
       immersiveExitBtn.focus({ preventScroll: true });
     }
     else {
-      const back = infoPanel.classList.contains("open") ? frameEnjoyBtn : menuBtn;
+      const back = leavingRings ? document.getElementById("frameRing") : infoPanel.classList.contains("open") ? frameEnjoyBtn : menuBtn;
       back.focus({ preventScroll: true });
     }
   }

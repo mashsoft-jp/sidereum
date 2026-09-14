@@ -222,7 +222,7 @@
   // これにより uniform をここ以外から直接触れなくなり、設定漏れが起きない
   let bodyRenderer;
   let guideP, lineP, pointP, billP, ringP, tailP, comaP, terrainP, meshP, meteorP, skyP, dsoP;
-  let threshP, blurP, addP;
+  let threshP, blurP, addP, ringCloseP;
   try {
     bodyRenderer = createBodyRenderer(program(bodyVS, bodyFS));
     skyP = program(skyVS, skyFS);
@@ -231,6 +231,7 @@
     pointP = program(pointVS, pointFS);
     billP = program(billVS, billFS);
     ringP = program(ringVS, ringFS);
+    ringCloseP = program(`@@glsl:ring-close.vert@@`, PRE + `@@glsl:ring-close.frag@@`);
     tailP = program(tailVS, tailFS);
     comaP = program(comaVS, comaFS);
     meteorP = program(meteorVS, meteorFS);

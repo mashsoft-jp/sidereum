@@ -58,6 +58,7 @@ const MANIFEST = [
   "render/ground.js",    // 地上ビュー (観測者フレーム・renderGround)
   "ui/view-mode.js",     // ビュー切替・月面観測地点・月の表側マップ
   "render/space.js",     // hitTestGround・render (宇宙ビュー)
+  "render/ring-close.js", // 土星の環の局所的な氷粒子の模式景
   "render/comet.js",     // 彗星のコマ・尾 (両ビュー共用)
   "render/meteor.js",    // 流星 (地上ビュー)
   "render/intro.js",     // 初回の導入 (太陽系のはるか外から寄る)
@@ -74,6 +75,7 @@ const MANIFEST = [
   "ui/dso-photos.js",   // Tap a deep-sky object to view its photograph
   "ui/search.js",        // 天体名検索
   "ui/framing.js",       // 空き領域への構図合わせ・接近/周辺・鑑賞表示
+  "ui/ring-close.js",  // 土星の環の探索・入退場と見回し
   "ui/screensaver.js",  // ランダムな鑑賞シーンを巡る
   "main.js",             // 起動処理 (必ず最後)
 ];

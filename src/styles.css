@@ -1705,3 +1705,6 @@
 #dsoPhotoDialog a { color:#c3d4ee; text-decoration:underline; }
 #dsoPhotoDialog .dsoPhotoClose { position:absolute; right:12px; top:8px; width:32px; height:32px; border:none; background:none; color:var(--text); font-size:24px; }
 @media (max-width:600px) { #dsoPhotoDialog { padding:16px; } #dsoPhotoDialog img { max-height:min(50dvh,calc(100dvh - 220px)); } }
+
+  #frameRing { width:100%; margin:0 0 12px; min-height:32px; font-size:11px; }
+  #frameRing[hidden], #app.tourMode #frameRing { display:none; }

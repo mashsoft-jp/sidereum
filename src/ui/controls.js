@@ -543,7 +543,7 @@
 
   window.addEventListener("keydown", (e) => {
     // ツアー中は操作パネルを隠しているので、ショートカットだけ効くのは筋が悪い
-    if (e.code === "Space" && e.target === document.body && !tourActive && !screensaverRunning()) {
+    if (e.code === "Space" && e.target === document.body && !tourActive && !screensaverRunning() && !ringExplore) {
       e.preventDefault();
       setPlaying(!playing);
     }
