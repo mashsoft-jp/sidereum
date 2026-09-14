@@ -14,11 +14,37 @@
     uniform vec3 uAirSun;  // エアライト用の太陽方向
     uniform float uAirFlux, uAirGain;
 
+    uniform float uKind; // 0: 土星、1: 天王星、2: 木星
+    uniform float uSoft; // 1画素未満の細環を面積を保って平滑化
+    float narrowRing(float radius, float width, float strength) {
+      float w = sqrt(width * width + uSoft * uSoft);
+      float d = (vR - radius) / w;
+      return strength * width / w * exp(-0.5 * d * d);
+    }
     void main() {
       // ---- 半径ごとの濃さと色 (実測プロファイル) ----
       vec4 prof = texture2D(uProfile, vec2((vR - uRingR.x) * uRingR.y, 0.5));
       float tau = -log(max(prof.a, 0.0015));      // 透過率 → 光学的厚さ
-      if (tau < 0.004) discard;                   // 間隙は完全に素通し
+      // 実半径の配置を基にした鑑賞用の模式表現。幅と光量は可視性のため強調。
+      // NASA Voyager: science.nasa.gov/photojournal/uranus-rings/
+      // NASA Galileo: science.nasa.gov/photojournal/jupiters-main-ring-and-halo/
+      if (uKind > 0.5 && uKind < 1.5) {
+        tau = narrowRing(2.012, 0.004, 0.55)
+            + narrowRing(1.902, 0.002, 0.20)
+            + narrowRing(1.874, 0.002, 0.16)
+            + narrowRing(1.858, 0.002, 0.12)
+            + narrowRing(1.800, 0.003, 0.22)
+            + narrowRing(1.763, 0.003, 0.20)
+            + narrowRing(1.676, 0.002, 0.10)
+            + narrowRing(1.663, 0.002, 0.08)
+            + narrowRing(1.648, 0.002, 0.08);
+        prof.rgb = vec3(0.42, 0.43, 0.44);
+      } else if (uKind > 1.5) {
+        // 木星の主環: 中心から約122,500〜129,000 km。外側は明瞭、内側は拡散。
+        tau = 0.028 * smoothstep(1.745, 1.80, vR) * (1.0 - smoothstep(1.837, 1.849, vR));
+        prof.rgb = vec3(0.46, 0.40, 0.34);
+      }
+      if (tau < (uKind < 0.5 ? 0.004 : 0.001)) discard;                   // 間隙は完全に素通し
 
       vec3 L = normalize(uSun - vW);
       vec3 V = normalize(uCam - vW);
@@ -68,5 +94,7 @@
       c = c * uExt + skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain * alpha;
       // c は透過率込みの光。非線形のトーンマップ後に乗算済みアルファへ戻す。
       // 先に alpha を掛けたまま変換すると、薄い C 環まで白く浮いてしまう。
-      gl_FragColor = vec4(tonemap(c / max(alpha, 1e-4)) * alpha, alpha);
+      // 薄い環を真横から見るときは、サブピクセルの破線が目立たないよう消す。
+      float edgeFade = uKind > 0.5 ? smoothstep(0.008, 0.045, abs(cv)) : 1.0;
+      gl_FragColor = vec4(tonemap(c / max(alpha, 1e-4)) * alpha, alpha) * edgeFade;
     }

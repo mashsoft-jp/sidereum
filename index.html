@@ -6604,11 +6604,37 @@
     uniform vec3 uAirSun;  // エアライト用の太陽方向
     uniform float uAirFlux, uAirGain;
 
+    uniform float uKind; // 0: 土星、1: 天王星、2: 木星
+    uniform float uSoft; // 1画素未満の細環を面積を保って平滑化
+    float narrowRing(float radius, float width, float strength) {
+      float w = sqrt(width * width + uSoft * uSoft);
+      float d = (vR - radius) / w;
+      return strength * width / w * exp(-0.5 * d * d);
+    }
     void main() {
       // ---- 半径ごとの濃さと色 (実測プロファイル) ----
       vec4 prof = texture2D(uProfile, vec2((vR - uRingR.x) * uRingR.y, 0.5));
       float tau = -log(max(prof.a, 0.0015));      // 透過率 → 光学的厚さ
-      if (tau < 0.004) discard;                   // 間隙は完全に素通し
+      // 実半径の配置を基にした鑑賞用の模式表現。幅と光量は可視性のため強調。
+      // NASA Voyager: science.nasa.gov/photojournal/uranus-rings/
+      // NASA Galileo: science.nasa.gov/photojournal/jupiters-main-ring-and-halo/
+      if (uKind > 0.5 && uKind < 1.5) {
+        tau = narrowRing(2.012, 0.004, 0.55)
+            + narrowRing(1.902, 0.002, 0.20)
+            + narrowRing(1.874, 0.002, 0.16)
+            + narrowRing(1.858, 0.002, 0.12)
+            + narrowRing(1.800, 0.003, 0.22)
+            + narrowRing(1.763, 0.003, 0.20)
+            + narrowRing(1.676, 0.002, 0.10)
+            + narrowRing(1.663, 0.002, 0.08)
+            + narrowRing(1.648, 0.002, 0.08);
+        prof.rgb = vec3(0.42, 0.43, 0.44);
+      } else if (uKind > 1.5) {
+        // 木星の主環: 中心から約122,500〜129,000 km。外側は明瞭、内側は拡散。
+        tau = 0.028 * smoothstep(1.745, 1.80, vR) * (1.0 - smoothstep(1.837, 1.849, vR));
+        prof.rgb = vec3(0.46, 0.40, 0.34);
+      }
+      if (tau < (uKind < 0.5 ? 0.004 : 0.001)) discard;                   // 間隙は完全に素通し
 
       vec3 L = normalize(uSun - vW);
       vec3 V = normalize(uCam - vW);
@@ -6658,7 +6684,9 @@
       c = c * uExt + skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain * alpha;
       // c は透過率込みの光。非線形のトーンマップ後に乗算済みアルファへ戻す。
       // 先に alpha を掛けたまま変換すると、薄い C 環まで白く浮いてしまう。
-      gl_FragColor = vec4(tonemap(c / max(alpha, 1e-4)) * alpha, alpha);
+      // 薄い環を真横から見るときは、サブピクセルの破線が目立たないよう消す。
+      float edgeFade = uKind > 0.5 ? smoothstep(0.008, 0.045, abs(cv)) : 1.0;
+      gl_FragColor = vec4(tonemap(c / max(alpha, 1e-4)) * alpha, alpha) * edgeFade;
     }
 `;
 
@@ -8849,6 +8877,16 @@
     return { x: (x / cw * 0.5 + 0.5) * W, y: (1 - (y / cw * 0.5 + 0.5)) * H, w: cw };
   }
 
+
+  // 本体と同じ赤道面に配置する。ring フラグは土星の環影専用なので共有しない。
+  function planetRingKind(b) {
+    return b.key === "saturn" ? 0 : b.key === "uranus" ? 1 : b.key === "jupiter" ? 2 : -1;
+  }
+  function planetRingPole(b) {
+    if (b.key === "saturn") return SATURN_POLE_W;
+    const a = -(b.tilt || 0) * DEG;
+    return [0, Math.cos(a), Math.sin(a)];
+  }
   //#endregion
   //#region src/render/milkyway.js
   // ---------- 天の川 ----------
@@ -10292,7 +10330,6 @@
         cullFace: gl.FRONT, depthTest: true, depthWrite: true,
         airSun: _sunG, airDay: skyF, airFlux: sunFlux, airGain: skyGain,
       });
-      let satLx = 0, satLy = 0, satLz = 0;   // 土星の環の照射方向 (ループ内で確定)
       let airBody = null;                    // 大気シェルを重ねる天体 (地球のみ)
       let airK = 1, airPx = 0, airPy = 1, airPz = 0;   // その天体の扁平 (月面ビューの地球)
       for (const bb of bigBodies) {
@@ -10329,7 +10366,6 @@
           const w = posW.get(b.key);
           _gp[0] = -w[0]; _gp[1] = -w[1]; _gp[2] = -w[2];
           const Ld = worldDirToGround(_gp, _fwd);
-          if (b.key === "saturn") { satLx = Ld[0]; satLy = Ld[1]; satLz = Ld[2]; }
           SCR.sun[0] = Ld[0] * 1e6; SCR.sun[1] = Ld[1] * 1e6; SCR.sun[2] = Ld[2] * 1e6;
         }
         // 食の遮蔽体。ワールドでの「天体 → 遮蔽体」をそのまま地平フレームへ回し、
@@ -10381,10 +10417,10 @@
         bodyRenderer.drawAtmos({ body: airBody, model: SCR.airModel, mvp: airMvp, sunPosition: SCR.airSun });
       }
       bodyRenderer.endPass();
-      // 土星の環 (球として描かれる倍率のときのみ。軸の向きを地上フレームへ変換)
-      const satBB = bigBodies.find((x) => x.b.key === "saturn");
-      if (satBB) {
-        const Ag = worldDirToGround(SATURN_POLE_W, _gp);
+      // 惑星の環 (球として描かれる倍率のときのみ。軸を地上フレームへ変換)
+      for (const satBB of bigBodies) {
+        if (planetRingKind(satBB.b) < 0) continue;
+        const Ag = worldDirToGround(planetRingPole(satBB.b), _gp);
         // y = 環の法線 とする正規直交基底 (環は軸対称なので面内回転は任意)
         let xx = -Ag[2], xy = 0, xz = Ag[0];
         let xl = Math.hypot(xx, xy, xz);
@@ -10396,6 +10432,7 @@
         m[4] = Ag[0] * s; m[5] = Ag[1] * s; m[6] = Ag[2] * s; m[7] = 0;
         m[8] = zx * s; m[9] = zy * s; m[10] = zz * s; m[11] = 0;
         m[12] = satBB.px; m[13] = satBB.py; m[14] = satBB.pz; m[15] = 1;
+        gl.enable(gl.DEPTH_TEST);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         gl.depthMask(false);
@@ -10408,8 +10445,12 @@
         SCR.model.set(m);
         gl.uniformMatrix4fv(ringP.u.uModel, false, SCR.model);
         gl.uniform3f(ringP.u.uAxis, Ag[0], Ag[1], Ag[2]);
-        // 環も本体と同じ「土星 → 実際の太陽」方向の遠方光源で照らす
-        gl.uniform3f(ringP.u.uSun, satLx * 1e6, satLy * 1e6, satLz * 1e6);
+        gl.uniform1f(ringP.u.uKind, planetRingKind(satBB.b));
+        gl.uniform1f(ringP.u.uSoft, Math.min(0.03, 0.6 / satBB.rpx));
+        // 環も本体と同じ「惑星 → 実際の太陽」方向の遠方光源で照らす
+        const rw = posW.get(satBB.b.key);
+        const light = worldDirToGround([-rw[0], -rw[1], -rw[2]], _fwd);
+        gl.uniform3f(ringP.u.uSun, light[0] * 1e6, light[1] * 1e6, light[2] * 1e6);
         gl.uniform3f(ringP.u.uCam, 0.0, 0.0, 0.0);          // 観測者フレームの原点
         gl.uniform3f(ringP.u.uCenter, satBB.px, satBB.py, satBB.pz);
         gl.uniform2f(ringP.u.uRadii, s * satBB.b.rEq / satBB.b.rkm, s * satBB.b.rPol / satBB.b.rkm);
@@ -11557,20 +11598,26 @@
       gl.disable(gl.BLEND);
     }
 
-    // --- 土星の環 ---
-    {
-      const sat = PLANETS[5];
+    // --- 惑星の環 ---
+    for (const sat of PLANETS) {
+      if (planetRingKind(sat) < 0) continue;
       const r = bodyR(sat);
       const sp = posW.get(sat.key);
       SCR.t[0] = sp[0] - eye[0]; SCR.t[1] = sp[1] - eye[1]; SCR.t[2] = sp[2] - eye[2];
-      const model = mTRS(SCR.t, SAT_ROT, r, SCR.model);   // 実際の極方向で環を配置
+      const rot = sat.key === "saturn" ? SAT_ROT : mRotX(-(sat.tilt || 0) * DEG, SCR.rx);
+      const axis = planetRingPole(sat);
+      const model = mTRS(SCR.t, rot, r, SCR.model);   // 実際の極方向で環を配置
+      gl.enable(gl.DEPTH_TEST);
+      gl.disable(gl.CULL_FACE);
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.depthMask(false);
       gl.useProgram(ringP.pr);
       gl.uniformMatrix4fv(ringP.u.uMVP, false, mMul(VP, model, SCR.mvp));
       gl.uniformMatrix4fv(ringP.u.uModel, false, model);
-      gl.uniform3f(ringP.u.uAxis, SATURN_POLE_W[0], SATURN_POLE_W[1], SATURN_POLE_W[2]);
+      gl.uniform3f(ringP.u.uAxis, axis[0], axis[1], axis[2]);
+      gl.uniform1f(ringP.u.uKind, planetRingKind(sat));
+      gl.uniform1f(ringP.u.uSoft, Math.min(0.03, 0.6 * Math.hypot(...SCR.t) / (r * fpx)));
       gl.uniform3f(ringP.u.uSun, -eye[0], -eye[1], -eye[2]);
       gl.uniform3f(ringP.u.uCam, 0.0, 0.0, 0.0);            // カメラ相対座標なので原点
       gl.uniform3f(ringP.u.uCenter, SCR.t[0], SCR.t[1], SCR.t[2]);
@@ -17235,6 +17282,8 @@
   function frameRadius(body, mode) {
     let radius = bodyR(body) * (body.obl ? Math.max(...body.obl) : 1);
     if (body.ring) radius = Math.max(radius, bodyR(body) * RING_OUT);
+    if (body.key === "uranus") radius = Math.max(radius, bodyR(body) * 2.04);
+    if (body.key === "jupiter") radius = Math.max(radius, bodyR(body) * 1.85);
     if (mode === "context") {
       if (body === SUN) return PLANETS[3].a * (1 + PLANETS[3].e) * K_REAL;
       if (body.parent) {

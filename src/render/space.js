@@ -536,20 +536,26 @@
       gl.disable(gl.BLEND);
     }
 
-    // --- 土星の環 ---
-    {
-      const sat = PLANETS[5];
+    // --- 惑星の環 ---
+    for (const sat of PLANETS) {
+      if (planetRingKind(sat) < 0) continue;
       const r = bodyR(sat);
       const sp = posW.get(sat.key);
       SCR.t[0] = sp[0] - eye[0]; SCR.t[1] = sp[1] - eye[1]; SCR.t[2] = sp[2] - eye[2];
-      const model = mTRS(SCR.t, SAT_ROT, r, SCR.model);   // 実際の極方向で環を配置
+      const rot = sat.key === "saturn" ? SAT_ROT : mRotX(-(sat.tilt || 0) * DEG, SCR.rx);
+      const axis = planetRingPole(sat);
+      const model = mTRS(SCR.t, rot, r, SCR.model);   // 実際の極方向で環を配置
+      gl.enable(gl.DEPTH_TEST);
+      gl.disable(gl.CULL_FACE);
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.depthMask(false);
       gl.useProgram(ringP.pr);
       gl.uniformMatrix4fv(ringP.u.uMVP, false, mMul(VP, model, SCR.mvp));
       gl.uniformMatrix4fv(ringP.u.uModel, false, model);
-      gl.uniform3f(ringP.u.uAxis, SATURN_POLE_W[0], SATURN_POLE_W[1], SATURN_POLE_W[2]);
+      gl.uniform3f(ringP.u.uAxis, axis[0], axis[1], axis[2]);
+      gl.uniform1f(ringP.u.uKind, planetRingKind(sat));
+      gl.uniform1f(ringP.u.uSoft, Math.min(0.03, 0.6 * Math.hypot(...SCR.t) / (r * fpx)));
       gl.uniform3f(ringP.u.uSun, -eye[0], -eye[1], -eye[2]);
       gl.uniform3f(ringP.u.uCam, 0.0, 0.0, 0.0);            // カメラ相対座標なので原点
       gl.uniform3f(ringP.u.uCenter, SCR.t[0], SCR.t[1], SCR.t[2]);

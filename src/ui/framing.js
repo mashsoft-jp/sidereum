@@ -79,6 +79,8 @@
   function frameRadius(body, mode) {
     let radius = bodyR(body) * (body.obl ? Math.max(...body.obl) : 1);
     if (body.ring) radius = Math.max(radius, bodyR(body) * RING_OUT);
+    if (body.key === "uranus") radius = Math.max(radius, bodyR(body) * 2.04);
+    if (body.key === "jupiter") radius = Math.max(radius, bodyR(body) * 1.85);
     if (mode === "context") {
       if (body === SUN) return PLANETS[3].a * (1 + PLANETS[3].e) * K_REAL;
       if (body.parent) {

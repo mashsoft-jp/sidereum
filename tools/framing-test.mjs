@@ -95,3 +95,8 @@ for (const [width, height] of [[600, 460], [295, 380], [350, 150]]) {
   assert.ok(projected <= Math.min(width, height) * .36 + 1e-8);
 }
 console.log('framing-test: desktop / portrait / landscape / rings / Earth–Moon / fit passed');
+
+ctx.uranus = {key:'uranus', radius:4};
+ctx.jupiter = {key:'jupiter', radius:10};
+assert.equal(run('frameRadius(uranus, "close")'), 4 * 2.04);
+assert.equal(run('frameRadius(jupiter, "close")'), 10 * 1.85);

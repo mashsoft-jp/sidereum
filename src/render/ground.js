@@ -662,7 +662,6 @@
         cullFace: gl.FRONT, depthTest: true, depthWrite: true,
         airSun: _sunG, airDay: skyF, airFlux: sunFlux, airGain: skyGain,
       });
-      let satLx = 0, satLy = 0, satLz = 0;   // 土星の環の照射方向 (ループ内で確定)
       let airBody = null;                    // 大気シェルを重ねる天体 (地球のみ)
       let airK = 1, airPx = 0, airPy = 1, airPz = 0;   // その天体の扁平 (月面ビューの地球)
       for (const bb of bigBodies) {
@@ -699,7 +698,6 @@
           const w = posW.get(b.key);
           _gp[0] = -w[0]; _gp[1] = -w[1]; _gp[2] = -w[2];
           const Ld = worldDirToGround(_gp, _fwd);
-          if (b.key === "saturn") { satLx = Ld[0]; satLy = Ld[1]; satLz = Ld[2]; }
           SCR.sun[0] = Ld[0] * 1e6; SCR.sun[1] = Ld[1] * 1e6; SCR.sun[2] = Ld[2] * 1e6;
         }
         // 食の遮蔽体。ワールドでの「天体 → 遮蔽体」をそのまま地平フレームへ回し、
@@ -751,10 +749,10 @@
         bodyRenderer.drawAtmos({ body: airBody, model: SCR.airModel, mvp: airMvp, sunPosition: SCR.airSun });
       }
       bodyRenderer.endPass();
-      // 土星の環 (球として描かれる倍率のときのみ。軸の向きを地上フレームへ変換)
-      const satBB = bigBodies.find((x) => x.b.key === "saturn");
-      if (satBB) {
-        const Ag = worldDirToGround(SATURN_POLE_W, _gp);
+      // 惑星の環 (球として描かれる倍率のときのみ。軸を地上フレームへ変換)
+      for (const satBB of bigBodies) {
+        if (planetRingKind(satBB.b) < 0) continue;
+        const Ag = worldDirToGround(planetRingPole(satBB.b), _gp);
         // y = 環の法線 とする正規直交基底 (環は軸対称なので面内回転は任意)
         let xx = -Ag[2], xy = 0, xz = Ag[0];
         let xl = Math.hypot(xx, xy, xz);
@@ -766,6 +764,7 @@
         m[4] = Ag[0] * s; m[5] = Ag[1] * s; m[6] = Ag[2] * s; m[7] = 0;
         m[8] = zx * s; m[9] = zy * s; m[10] = zz * s; m[11] = 0;
         m[12] = satBB.px; m[13] = satBB.py; m[14] = satBB.pz; m[15] = 1;
+        gl.enable(gl.DEPTH_TEST);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         gl.depthMask(false);
@@ -778,8 +777,12 @@
         SCR.model.set(m);
         gl.uniformMatrix4fv(ringP.u.uModel, false, SCR.model);
         gl.uniform3f(ringP.u.uAxis, Ag[0], Ag[1], Ag[2]);
-        // 環も本体と同じ「土星 → 実際の太陽」方向の遠方光源で照らす
-        gl.uniform3f(ringP.u.uSun, satLx * 1e6, satLy * 1e6, satLz * 1e6);
+        gl.uniform1f(ringP.u.uKind, planetRingKind(satBB.b));
+        gl.uniform1f(ringP.u.uSoft, Math.min(0.03, 0.6 / satBB.rpx));
+        // 環も本体と同じ「惑星 → 実際の太陽」方向の遠方光源で照らす
+        const rw = posW.get(satBB.b.key);
+        const light = worldDirToGround([-rw[0], -rw[1], -rw[2]], _fwd);
+        gl.uniform3f(ringP.u.uSun, light[0] * 1e6, light[1] * 1e6, light[2] * 1e6);
         gl.uniform3f(ringP.u.uCam, 0.0, 0.0, 0.0);          // 観測者フレームの原点
         gl.uniform3f(ringP.u.uCenter, satBB.px, satBB.py, satBB.pz);
         gl.uniform2f(ringP.u.uRadii, s * satBB.b.rEq / satBB.b.rkm, s * satBB.b.rPol / satBB.b.rkm);

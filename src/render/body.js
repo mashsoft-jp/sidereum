@@ -407,3 +407,13 @@
     return { x: (x / cw * 0.5 + 0.5) * W, y: (1 - (y / cw * 0.5 + 0.5)) * H, w: cw };
   }
 
+
+  // 本体と同じ赤道面に配置する。ring フラグは土星の環影専用なので共有しない。
+  function planetRingKind(b) {
+    return b.key === "saturn" ? 0 : b.key === "uranus" ? 1 : b.key === "jupiter" ? 2 : -1;
+  }
+  function planetRingPole(b) {
+    if (b.key === "saturn") return SATURN_POLE_W;
+    const a = -(b.tilt || 0) * DEG;
+    return [0, Math.cos(a), Math.sin(a)];
+  }
