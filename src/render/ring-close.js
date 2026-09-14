@@ -11,15 +11,20 @@
       [0,-1,-phi],[0,1,-phi],[phi,0,-1],[phi,0,1],[-phi,0,-1],[-phi,0,1]].map(unit);
     const faces = [[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],
       [10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]];
-    const verts = original.slice(), triangles = [], midpoints = new Map();
+    const verts = original.slice(), midpoints = new Map();
     const midpoint = (a,b) => {
       const key = [Math.min(a,b),Math.max(a,b)].join(':');
       if (!midpoints.has(key)) { midpoints.set(key, verts.length); verts.push(unit(verts[a].map((v,i)=>(v+verts[b][i])/2))); }
       return midpoints.get(key);
     };
-    for (const [a,b,c] of faces) {
-      const ab=midpoint(a,b),bc=midpoint(b,c),ca=midpoint(c,a);
-      triangles.push([a,ab,ca],[b,bc,ab],[c,ca,bc],[ab,bc,ca]);
+    const levels=[faces];
+    for(let level=1;level<=3;level++) {
+      const next=[];
+      for(const [a,b,c] of levels[level-1]) {
+        const ab=midpoint(a,b),bc=midpoint(b,c),ca=midpoint(c,a);
+        next.push([a,ab,ca],[b,bc,ab],[c,ca,bc],[ab,bc,ca]);
+      }
+      levels.push(next);
     }
     const data = [], pieces = [];
     for (let n=0;n<count;n++) {
@@ -27,22 +32,31 @@
       const center = [(random()-.5)*44, -.25 + random()*.45, (random()-.5)*96];
       const stretch = [.65+random()*.95, .25+random()*.50, .55+random()*.95];
       const angle=random()*Math.PI*2, ca=Math.cos(angle),sa=Math.sin(angle), tint=random();
-      const shape = verts.map(v => {
-        const r = size*(.72+random()*.48);
+      // 大きい粒ほど輪郭を細かくする。粒子ごとに連続した形状場を使い、
+      // 頂点単位の乱数で三角形を尖らせない。
+      const triangles=levels[size>.45?3:size>.18?2:1];
+      const vertexCount=Math.max(...triangles.flat())+1;
+      const phase=random()*6.28,cut=unit([random()-.5,random()-.5,random()-.5]);
+      const shape = verts.slice(0,vertexCount).map(v => {
+        let radius=.94+.10*Math.sin(v[0]*4+phase)*Math.sin(v[2]*3-phase)
+          +.055*Math.sin(v[1]*7+phase)*Math.cos(v[0]*5);
+        const facing=v.reduce((sum,q,i)=>sum+q*cut[i],0);
+        radius=Math.min(radius,.79/Math.max(.1,facing)); // 大きな欠け面を一つ残す
+        const r=size*radius;
         const x=v[0]*stretch[0]*r,z=v[2]*stretch[2]*r;
         return [x*ca-z*sa,v[1]*stretch[1]*r,x*sa+z*ca];
       });
       pieces.push({center,size,shape});
-      for (const face of triangles) {
+      // 隣接面の面積で重み付けした共有法線。三角形の境界に陰影の段差を作らない。
+      const normals=shape.map(()=>[0,0,0]);
+      for(const face of triangles) {
         const [a,b,c]=face.map(i=>shape[i]);
         const u=b.map((v,i)=>v-a[i]),v=c.map((q,i)=>q-a[i]);
-        const normal=unit([u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]]);
-        for (const p of [a,b,c]) {
-          const radial=unit(p);
-          const worn=unit(normal.map((v,i)=>v*.72+radial[i]*.28));
-          data.push(...p,...worn,...center,tint);
-        }
+        const normal=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+        for(const index of face)for(let axis=0;axis<3;axis++)normals[index][axis]+=normal[axis];
       }
+      for(const face of triangles)for(const index of face)
+        data.push(...shape[index],...unit(normals[index]),...center,tint);
     }
     return {data:new Float32Array(data),pieces};
   }
