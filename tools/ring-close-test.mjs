@@ -12,9 +12,16 @@ assert.ok(first.data.length>100*80*3*10, "近くで目立つ大粒は輪郭を�
 assert.ok(first.data.every(Number.isFinite));
 for(const p of first.pieces){
  const radii=p.shape.map(v=>Math.hypot(...v));
- assert.ok(Math.max(...radii)/Math.min(...radii)>1.3,'粒子は等半径の球ではない');
- for(const v of p.shape)assert.ok(v[1]+p.center[1]<1.7,'最も低いカメラ位置を粒子が貫かない');
+ assert.ok(Math.max(...radii)/Math.min(...radii)>1.1,'粒子は等半径の球ではない');
+ for(const v of p.shape)assert.ok(Math.abs(v[0]+p.center[0])>1.1,'カメラの移動経路を粒子が貫かない');
 }
+assert.ok(first.pieces.some(p=>p.center[1]>4), '頭上にも氷塊がある');
+assert.ok(first.pieces.some(p=>p.center[1]<-3), '足元にも氷塊がある');
+const thickness=first.pieces.map(p=>{
+ const extent=axis=>Math.max(...p.shape.map(v=>v[axis]))-Math.min(...p.shape.map(v=>v[axis]));
+ return extent(1)/Math.max(extent(0),extent(2));
+});
+assert.ok(thickness.reduce((a,b)=>a+b,0)/thickness.length>.65,'扁平な板ばかりにしない');
 // 同じ頂点を共有する面では法線も一致し、三角形の継ぎ目に陰影の段差が出ない。
 const shared = new Map();
 for(let i=0;i<first.data.length;i+=10) {

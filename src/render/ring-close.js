@@ -2,7 +2,7 @@
   // NASA: https://science.nasa.gov/mission/cassini/science/rings/
   let ringExplore = null, ringCloseMesh = null;
 
-  function makeRingFragments(count = 680) {
+  function makeRingFragments(count = 3080) {
     let seed = 61723;
     const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
     const unit = p => { const n = Math.hypot(...p); return p.map(v => v / n); };
@@ -28,13 +28,17 @@
     }
     const data = [], pieces = [];
     for (let n=0;n<count;n++) {
-      const size = .09 + Math.pow(random(), 2.6) * .90;
-      const center = [(random()-.5)*44, -.25 + random()*.45, (random()-.5)*96];
-      const stretch = [.65+random()*.95, .25+random()*.50, .55+random()*.95];
+      // 大小の氷塊と細粒を混ぜ、薄い床ではなく厚みのある局所的な層にする。
+      const size = n < 680 ? .09 + Math.pow(random(), 2.6) * .90 : .018 + random()*.075;
+      const center = [(random()-.5)*44, (random()+random()-1)*12+1.5, (random()-.5)*96];
+      const stretch = [.65+random()*.80, .65+random()*.80, .65+random()*.80];
+      // 移動経路の左右に余裕を残す。高さを変えても氷塊の内部へ入らない。
+      const clearance=1.2+size*1.7;
+      if(Math.abs(center[0])<clearance)center[0]=(center[0]<0?-1:1)*clearance;
       const angle=random()*Math.PI*2, ca=Math.cos(angle),sa=Math.sin(angle), tint=random();
       // 大きい粒ほど輪郭を細かくする。粒子ごとに連続した形状場を使い、
       // 頂点単位の乱数で三角形を尖らせない。
-      const triangles=levels[size>.45?3:size>.18?2:1];
+      const triangles=levels[size>.45?3:size>.18?2:size>.09?1:0];
       const vertexCount=Math.max(...triangles.flat())+1;
       const phase=random()*6.28,cut=unit([random()-.5,random()-.5,random()-.5]);
       const shape = verts.slice(0,vertexCount).map(v => {
@@ -66,11 +70,7 @@
     const fragments=makeRingFragments();
     const buffer=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
     gl.bufferData(gl.ARRAY_BUFFER,fragments.data,gl.STATIC_DRAW);
-    const floor=gl.createBuffer(), data=[];
-    for(const p of [[-160,-.45,-160],[160,-.45,-160],[-160,-.45,160],[-160,-.45,160],[160,-.45,-160],[160,-.45,160]])
-      data.push(...p,0,1,0,0,0,0,0);
-    gl.bindBuffer(gl.ARRAY_BUFFER,floor);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);
-    ringCloseMesh={buffer,floor,count:fragments.data.length/10};
+    ringCloseMesh={buffer,count:fragments.data.length/10};
   }
 
   function stepRingExplore(dt) {
@@ -93,7 +93,7 @@
     const sat=BODY_BY_KEY.get('saturn');
     const model=mTRS([-35,0,-105],mRotX(0),55);
     bodyRenderer.beginPass({time:0,cameraPosition:eye,depthTest:true,depthWrite:true});
-    bodyRenderer.draw({body:sat,model,mvp:mMul(vp,model),sunPosition:[-500,800,350],radiusPx:H*.55});
+    bodyRenderer.draw({body:sat,model,mvp:mMul(vp,model),sunPosition:[-600,500,-150],radiusPx:H*.55});
     bodyRenderer.endPass();
     gl.useProgram(ringCloseP.pr);
     gl.uniformMatrix4fv(ringCloseP.u.uVP,false,vp);
@@ -107,8 +107,7 @@
         gl.enableVertexAttribArray(ringCloseP.a[name]);gl.vertexAttribPointer(ringCloseP.a[name],size,gl.FLOAT,false,40,offset);
       }
     };
-    bind(ringCloseMesh.floor);gl.uniform1f(ringCloseP.u.uFloor,1);gl.drawArrays(gl.TRIANGLES,0,6);
-    gl.depthMask(true);bind(ringCloseMesh.buffer);gl.uniform1f(ringCloseP.u.uFloor,0);
+    gl.depthMask(true);bind(ringCloseMesh.buffer);
     gl.drawArrays(gl.TRIANGLES,0,ringCloseMesh.count);
     gl.disable(gl.BLEND);gl.depthMask(true);
   }

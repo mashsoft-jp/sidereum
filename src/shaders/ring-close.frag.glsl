@@ -1,5 +1,4 @@
     uniform vec3 uEye;
-    uniform float uFloor;
     varying vec3 vNormal, vLocal, vPosition;
     varying float vSeed;
     float grain(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
@@ -12,15 +11,7 @@
     }
     void main() {
       float distanceToEye = length(vPosition - uEye);
-      if (uFloor > 0.5) {
-        // 遠方だけ、分離できない氷粒子の層へ溶かす。近景に平板を残さない。
-        float opacity = smoothstep(9.0, 38.0, distanceToEye) * 0.85;
-        float lanes = 0.72 + 0.20 * sin(vPosition.x * 1.7) + 0.08 * sin(vPosition.x * 9.1);
-        vec3 c = vec3(0.16, 0.17, 0.18) * lanes;
-        gl_FragColor = vec4(c * opacity, opacity);
-        return;
-      }
-      vec3 N = normalize(vNormal), L = normalize(vec3(-0.5, 0.8, 0.35));
+      vec3 N = normalize(vNormal), L = normalize(vec3(-0.6, 0.5, -0.15));
       vec3 V = normalize(uEye - vPosition);
       // 模様を面の明暗にだけ載せず、霜の凹凸を画素単位の法線へ反映する。
       vec3 p=vLocal*24.0+vSeed*71.0;
