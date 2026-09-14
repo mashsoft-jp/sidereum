@@ -11208,7 +11208,7 @@
   }
 
   function render(nowSec) {
-    if (ringExplore) { renderRingExplore(); drawOverlay(); return; }
+    if (ringExplore && !ringSpaceView()) { renderRingExplore(); drawOverlay(); return; }
     if (groundView) { renderGround(nowSec); return; }
     // --- カメラ (注視点 = focus + パンの平行移動分) ---
     const fx = cam.focus[0] + cam.panOff[0],
@@ -11873,6 +11873,7 @@
 
   function stepRingExplore(dt) {
     if (!ringExplore || document.hidden || snapPending || snapDlgEl.classList.contains('open')) return;
+    if(ringExplore.phase && ringExplore.phase!=="inside")return;
     if(enjoymentPaused && !ringExplore.saver)return;
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) ringExplore.travel=(ringExplore.travel+dt*.65)%96;
   }
@@ -11917,6 +11918,9 @@
 
   function drawRingExploreCaption() {
     if (ringExplore.saver) return;
+    if (ringExplore.phase && ringExplore.phase!=='inside') {
+      octx.save();octx.fillStyle='rgba(4,6,14,'+ringExplore.shade+')';octx.fillRect(0,0,W,H);octx.restore();return;
+    }
     octx.save();octx.textAlign='center';octx.shadowColor='rgba(0,0,0,.9)';octx.shadowBlur=6;
     octx.fillStyle='rgba(225,232,239,.88)';octx.font='16px sans-serif';
     octx.fillText(lang==='ja'?'土星の環を探る':'Inside Saturn’s rings',W/2,42);
@@ -13330,6 +13334,7 @@
     cam.yaw += dyaw * k;
     cam.pitch += (cam.pitchTgt - cam.pitch) * k;
     stepCameraFlight(dtc);
+    stepRingTransition(document.hidden || raw > 1 ? 0 : dtc);
     // 地上ビューのカメラ緩和 (目標方位は aimGroundAt で現在値の近傍に正規化済み)
     if (groundView) {
       buildObsFrame();   // 追尾計算 (surfaceAltAz) が現在フレームの観測者基底を使えるように
@@ -17641,6 +17646,7 @@
   }
 
   function setImmersive(v) {
+    if (!v && requestRingExit()) return;
     const leavingRings = !v && !!ringExplore;
     if (!v && ringExplore) endRingExplore();
     if (v && (groundView || tourActive)) return;
@@ -17712,7 +17718,17 @@
     Object.assign(cam,copyRingCamera(saved.cam));
     camZoom=saved.zoom;camZoomTgt=saved.zoomTgt;
     frameLayout.fit=null;
-    ringExplore={saved,travel:0,yaw:0,pitch:-.13,pointer:null};
+    const radius=bodyR(selected), center=posW.get('saturn'), pole=planetRingPole(selected);
+    const direction=[Math.cos(cam.pitch)*Math.cos(cam.yaw),Math.sin(cam.pitch),Math.cos(cam.pitch)*Math.sin(cam.yaw)];
+    const dot=direction.reduce((sum,v,i)=>sum+v*pole[i],0);
+    let radial=direction.map((v,i)=>v-dot*pole[i]);
+    let length=Math.hypot(...radial);
+    if(length<.01){radial=[SAT_ROT[0],SAT_ROT[1],SAT_ROT[2]];length=Math.hypot(...radial);}
+    const near=copyRingCamera(cam);
+    near.focus=near.focusTgt=center.map((v,i)=>v+radial[i]/length*radius*1.9);
+    near.panOff=near.panOffTgt=[0,0,0]; near.dist=near.distTgt=radius*1.3;
+    ringExplore={saved,near,travel:0,yaw:0,pitch:-.13,pointer:null,
+      phase:matchMedia('(prefers-reduced-motion: reduce)').matches?'inside':'approach',elapsed:0,shade:0};
     setPlaying(false);
     syncFramingUI();
   }
@@ -17725,6 +17741,48 @@
     Object.assign(frameLayout,saved.layout);
     cameraFlight=null;
     setPlaying(saved.playing);
+  }
+  function requestRingExit() {
+    if(!ringExplore || ringExplore.saver)return false;
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches)return false;
+    if(ringExplore.phase==='exitFade' || ringExplore.phase==='retreat')return true;
+    ringExplore.exitFromSpace=ringExplore.phase==='approach';
+    if(ringExplore.exitFromSpace)ringExplore.near=copyRingCamera(cam);
+    ringExplore.exitShade=ringExplore.shade;
+    ringExplore.phase='exitFade';ringExplore.elapsed=0;
+    return true;
+  }
+  function ringSpaceView() {
+    return ringExplore && (ringExplore.phase==='approach' || ringExplore.phase==='retreat' || (ringExplore.phase==='exitFade' && ringExplore.exitFromSpace));
+  }
+  function stepRingTransition(dt) {
+    const s=ringExplore;
+    if(!s || s.saver || s.phase==='inside')return;
+    s.elapsed+=dt;
+    const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
+    if(s.phase==='approach' || s.phase==='retreat') {
+      const entering=s.phase==='approach',t=Math.min(1,s.elapsed/2.8),e=smooth(entering?t:1-t);
+      cam.dist=cam.distTgt=1/((1-e)/s.saved.cam.dist+e/s.near.dist);
+      const offset=s.saved.cam.focus.map((v,i)=>v-s.near.focus[i]);
+      const span=Math.hypot(...offset.map((v,i)=>v+s.saved.cam.panOff[i]));
+      const residual=span>1e-12?cam.dist*Math.tan(Math.atan2(span,s.saved.cam.dist)*(1-e))/span:(1-e)*cam.dist/s.saved.cam.dist;
+      cam.focus=s.near.focus.map((v,i)=>v+offset[i]*residual);cam.focusTgt=cam.focus.slice();
+      cam.panOff=s.saved.cam.panOff.map(v=>v*residual);cam.panOffTgt=cam.panOff.slice();
+      cam.yaw=cam.yawTgt=s.saved.cam.yaw;cam.pitch=cam.pitchTgt=s.saved.cam.pitch;
+      camZoom=camZoomTgt=s.saved.zoom+(1-s.saved.zoom)*e;
+      s.shade=entering?smooth((t-.75)/.25):1-smooth(s.elapsed/.65);
+      if(t===1) {
+        if(entering){s.phase='reveal';s.elapsed=0;}
+        else {endRingExplore();setImmersive(false);frameRingBtn.focus({preventScroll:true});}
+      }
+    } else if(s.phase==='reveal') {
+      s.shade=1-smooth(s.elapsed/.75);
+      if(s.elapsed>=.75){s.phase='inside';s.shade=0;}
+    } else if(s.phase==='exitFade') {
+      if(s.exitFromSpace)Object.assign(cam,copyRingCamera(s.near));
+      s.shade=s.exitShade+(1-s.exitShade)*smooth(s.elapsed/.5);
+      if(s.elapsed>=.5){s.phase='retreat';s.elapsed=0;}
+    }
   }
   frameRingBtn.addEventListener('click',beginRingExplore);
   const ringCanvasEvent=e=>ringExplore && (e.target===glc || e.target===ovl);

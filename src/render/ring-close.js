@@ -76,6 +76,7 @@
 
   function stepRingExplore(dt) {
     if (!ringExplore || document.hidden || snapPending || snapDlgEl.classList.contains('open')) return;
+    if(ringExplore.phase && ringExplore.phase!=="inside")return;
     if(enjoymentPaused && !ringExplore.saver)return;
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) ringExplore.travel=(ringExplore.travel+dt*.65)%96;
   }
@@ -120,6 +121,9 @@
 
   function drawRingExploreCaption() {
     if (ringExplore.saver) return;
+    if (ringExplore.phase && ringExplore.phase!=='inside') {
+      octx.save();octx.fillStyle='rgba(4,6,14,'+ringExplore.shade+')';octx.fillRect(0,0,W,H);octx.restore();return;
+    }
     octx.save();octx.textAlign='center';octx.shadowColor='rgba(0,0,0,.9)';octx.shadowBlur=6;
     octx.fillStyle='rgba(225,232,239,.88)';octx.font='16px sans-serif';
     octx.fillText(lang==='ja'?'土星の環を探る':'Inside Saturn’s rings',W/2,42);

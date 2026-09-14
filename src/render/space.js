@@ -92,7 +92,7 @@
   }
 
   function render(nowSec) {
-    if (ringExplore) { renderRingExplore(); drawOverlay(); return; }
+    if (ringExplore && !ringSpaceView()) { renderRingExplore(); drawOverlay(); return; }
     if (groundView) { renderGround(nowSec); return; }
     // --- カメラ (注視点 = focus + パンの平行移動分) ---
     const fx = cam.focus[0] + cam.panOff[0],

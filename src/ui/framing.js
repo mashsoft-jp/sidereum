@@ -249,6 +249,7 @@
   }
 
   function setImmersive(v) {
+    if (!v && requestRingExit()) return;
     const leavingRings = !v && !!ringExplore;
     if (!v && ringExplore) endRingExplore();
     if (v && (groundView || tourActive)) return;

@@ -518,6 +518,7 @@
     cam.yaw += dyaw * k;
     cam.pitch += (cam.pitchTgt - cam.pitch) * k;
     stepCameraFlight(dtc);
+    stepRingTransition(document.hidden || raw > 1 ? 0 : dtc);
     // 地上ビューのカメラ緩和 (目標方位は aimGroundAt で現在値の近傍に正規化済み)
     if (groundView) {
       buildObsFrame();   // 追尾計算 (surfaceAltAz) が現在フレームの観測者基底を使えるように
