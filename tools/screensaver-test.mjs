@@ -46,7 +46,8 @@ for (const clip of clips) {
   if (clip[0] === 'cassini') {
     assert.equal(scene.ride,'saturn');assert.equal(scene.on,'cassini');
     assert.equal(scene.dot,false);assert.ok(scene.spd<1);
-    assert.equal(scene.until,'2006-04-14');
+    assert.equal(scene.until,'2006-03-27');
+    assert.equal(scene.spd,.6);
   }
   if (scene.until) assert.ok(Date.parse(scene.until + 'Z') > Date.parse(scene.d + 'Z'));
 }

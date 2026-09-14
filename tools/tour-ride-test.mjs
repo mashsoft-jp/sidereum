@@ -69,7 +69,7 @@ for(const [w,h] of [[390,844],[1280,720]]) {
 // 同じ機体位置でも撮影位置が移り、画面内の機体が固定されない。
 c.W=1280;c.H=720;c.posW.set('cassini',[3,0,0]);
 const screenPositions=[];
-for(const day of [0,15,30]) {
+for(const day of [0,6,12]) {
  c.simDays=day;vm.runInContext('tourRideCam()',c);
  const {dist:d,yaw,pitch}=c.cam;
  const eye=[d*Math.cos(pitch)*Math.cos(yaw),d*Math.sin(pitch),d*Math.cos(pitch)*Math.sin(yaw)];

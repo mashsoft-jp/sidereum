@@ -4374,12 +4374,12 @@
           },
         },
         {
-          // 13年を圧縮せず、周回中の1か月を機体の外側から追走する。
+          // 13年を圧縮せず、周回中の12日間を約20秒で機体の外側から追走する。
           // 機体を前景に残し、衛星の公転が極端な早回しにならない速度にする。
           sel: "saturn", ride: "saturn", on: "cassini", rideEye: false,
           mag: .5, lit: false, orbits: false, path: false,
           stay: 0, slow: 1, warm: 0, dot: false, spot: null,
-          d: "2006-03-15", spd: .6, play: true, until: "2006-04-14",
+          d: "2006-03-15", spd: .6, play: true, until: "2006-03-27",
           text: {
             ja: "13年の周回。エンケラドスの氷の裂け目から水が噴き出しているのを見つけ、" +
                 "その海に生命の条件が揃っている可能性を示しました。" +
@@ -16446,7 +16446,7 @@
     // 縦持ちは狭い横幅を基準にする。高さだけで決めると機体が左右へ見切れる。
     const portrait = W < H;
     const cassiniOrbit = pr.key === "cassini" && tb.key === "saturn" && tourRideStay === 0;
-    const orbitProgress = cassiniOrbit ? Math.max(0, Math.min(1, (simDays-tourRideT0)/30)) : 0;
+    const orbitProgress = cassiniOrbit ? Math.max(0, Math.min(1, (simDays-tourRideT0)/12)) : 0;
     const off = Math.tan(eFov() * 0.5 * 0.42) * Math.min(1, W / H);
     let lx = -off * 0.80 * rx + off * 0.55 * ux;
     let ly =                    off * 0.55 * uy;
@@ -16458,7 +16458,7 @@
       lz += (_rq[2] - bz * vb) * off * 1.2;
     }
     if (cassiniOrbit) {
-      // 機体と同じ構図に固定せず、30日の鑑賞中にカメラを左右へ回り込ませる。
+      // 機体と同じ構図に固定せず、12日間の鑑賞中にカメラを左右へ回り込ませる。
       // 経過日から決めるので、停止・再開やフレームレートで動きが変わらない。
       const across = -1.35 * Math.cos(Math.PI * orbitProgress);
       const above = .55 + .25 * Math.sin(Math.PI * orbitProgress);
@@ -17881,7 +17881,7 @@
     else {
       // ひとつの見せ場が約38秒に収まるよう、元の開始〜終了を通して見せる。
       if (clip[0] === "eclipses" && clip[1] === 0) scene.until = "2025-09-07T19:45";
-      scene.spd = (Date.parse(scene.until + "Z") - Date.parse(scene.d + "Z")) / DAY_MS / 38;
+      scene.spd = (Date.parse(scene.until + "Z") - Date.parse(scene.d + "Z")) / DAY_MS / (clip[0] === "cassini" ? 20 : 38);
     }
     return { source, scene, title: { ja: clip[2], en: clip[3] } };
   }
@@ -18026,7 +18026,7 @@
       fitFrameDistance(selected); cam.dist = cam.distTgt;
     }
     state.kind = kind; state.orbit = orbit; state.title = title;
-    state.elapsed = 0; state.duration = clip ? 39 : 35 + Math.random() * 15;
+    state.elapsed = 0; state.duration = kind === "cassini" ? 21 : clip ? 39 : 35 + Math.random() * 15;
     // 地点や日付が変わったことを、短い場面名と実際の表示日時で伝える。
     syncSaverDate();
     refreshObsSiteUI(); syncScreensaverUI(); frameLayout.dirty = true;

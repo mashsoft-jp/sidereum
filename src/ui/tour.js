@@ -590,7 +590,7 @@
     // 縦持ちは狭い横幅を基準にする。高さだけで決めると機体が左右へ見切れる。
     const portrait = W < H;
     const cassiniOrbit = pr.key === "cassini" && tb.key === "saturn" && tourRideStay === 0;
-    const orbitProgress = cassiniOrbit ? Math.max(0, Math.min(1, (simDays-tourRideT0)/30)) : 0;
+    const orbitProgress = cassiniOrbit ? Math.max(0, Math.min(1, (simDays-tourRideT0)/12)) : 0;
     const off = Math.tan(eFov() * 0.5 * 0.42) * Math.min(1, W / H);
     let lx = -off * 0.80 * rx + off * 0.55 * ux;
     let ly =                    off * 0.55 * uy;
@@ -602,7 +602,7 @@
       lz += (_rq[2] - bz * vb) * off * 1.2;
     }
     if (cassiniOrbit) {
-      // 機体と同じ構図に固定せず、30日の鑑賞中にカメラを左右へ回り込ませる。
+      // 機体と同じ構図に固定せず、12日間の鑑賞中にカメラを左右へ回り込ませる。
       // 経過日から決めるので、停止・再開やフレームレートで動きが変わらない。
       const across = -1.35 * Math.cos(Math.PI * orbitProgress);
       const above = .55 + .25 * Math.sin(Math.PI * orbitProgress);

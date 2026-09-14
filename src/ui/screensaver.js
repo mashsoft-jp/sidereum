@@ -33,7 +33,7 @@
     else {
       // ひとつの見せ場が約38秒に収まるよう、元の開始〜終了を通して見せる。
       if (clip[0] === "eclipses" && clip[1] === 0) scene.until = "2025-09-07T19:45";
-      scene.spd = (Date.parse(scene.until + "Z") - Date.parse(scene.d + "Z")) / DAY_MS / 38;
+      scene.spd = (Date.parse(scene.until + "Z") - Date.parse(scene.d + "Z")) / DAY_MS / (clip[0] === "cassini" ? 20 : 38);
     }
     return { source, scene, title: { ja: clip[2], en: clip[3] } };
   }
@@ -178,7 +178,7 @@
       fitFrameDistance(selected); cam.dist = cam.distTgt;
     }
     state.kind = kind; state.orbit = orbit; state.title = title;
-    state.elapsed = 0; state.duration = clip ? 39 : 35 + Math.random() * 15;
+    state.elapsed = 0; state.duration = kind === "cassini" ? 21 : clip ? 39 : 35 + Math.random() * 15;
     // 地点や日付が変わったことを、短い場面名と実際の表示日時で伝える。
     syncSaverDate();
     refreshObsSiteUI(); syncScreensaverUI(); frameLayout.dirty = true;
