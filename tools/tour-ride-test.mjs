@@ -53,7 +53,7 @@ console.log('tour-ride-test: onboard camera position passed');
 c.tourRideEye=false;c.tourRideStay=0;c.tourRide='saturn';c.tourRideOn='cassini';
 probe.key='cassini';target.key='saturn';target.ring=true;
 c.BODY_BY_KEY=new Map([['cassini',probe],['saturn',target]]);
-c.camZoom=c.tourRideZoom=1;
+c.camZoom=c.tourRideZoom=1;c.simDays=c.tourRideT0=0;
 for(const [w,h] of [[390,844],[1280,720]]) {
  c.W=w;c.H=h;
  for(let phase=0;phase<6.28;phase+=.2) {
@@ -65,3 +65,18 @@ for(const [w,h] of [[390,844],[1280,720]]) {
   assert.ok(focal*Math.tan(Math.asin(2.4/c.cam.dist))<=Math.min(w,h)*.38+1e-8);
  }
 }
+
+// 同じ機体位置でも撮影位置が移り、画面内の機体が固定されない。
+c.W=1280;c.H=720;c.posW.set('cassini',[3,0,0]);
+const screenPositions=[];
+for(const day of [0,15,30]) {
+ c.simDays=day;vm.runInContext('tourRideCam()',c);
+ const {dist:d,yaw,pitch}=c.cam;
+ const eye=[d*Math.cos(pitch)*Math.cos(yaw),d*Math.sin(pitch),d*Math.cos(pitch)*Math.sin(yaw)];
+ const delta=[3-eye[0],-eye[1],-eye[2]];
+ const depth=-delta.reduce((s,v,i)=>s+v*eye[i],0)/d;
+ const x=delta.reduce((s,v,i)=>s+v*[Math.sin(yaw),0,-Math.cos(yaw)][i],0)*(c.H/2/Math.tan(c.eFov()/2))/depth;
+ screenPositions.push(x);
+ assert.ok(Math.abs(x)+44*c.tourRideMag<c.W/2);
+}
+assert.ok(Math.abs(screenPositions[2]-screenPositions[0])>80,'機体が左右に動いて見える');
