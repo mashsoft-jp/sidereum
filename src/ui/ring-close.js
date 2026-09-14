@@ -1,7 +1,9 @@
   const copyRingCamera = source => Object.fromEntries(Object.entries(source).map(([k,v])=>[k,Array.isArray(v)?v.slice():v]));
+  let ringReturnFade = null;
+  const ringReturnVeil = document.getElementById('ringReturnVeil');
   const frameRingBtn = document.getElementById('frameRing');
   function beginRingExplore() {
-    if (groundView || tourActive || selected?.key !== 'saturn' || ringExplore) return;
+    if (groundView || tourActive || selected?.key !== 'saturn' || ringExplore || ringReturnFade) return;
     const saved = {cam: copyRingCamera(cam),
       zoom:camZoom,zoomTgt:camZoomTgt,playing,layout:{...frameLayout}};
     setImmersive(true);
@@ -36,7 +38,7 @@
   function requestRingExit() {
     if(!ringExplore || ringExplore.saver)return false;
     if(matchMedia('(prefers-reduced-motion: reduce)').matches)return false;
-    if(ringExplore.phase==='exitFade' || ringExplore.phase==='retreat')return true;
+    if(ringExplore.phase==='exitFade')return true;
     ringExplore.exitFromSpace=ringExplore.phase==='approach';
     if(ringExplore.exitFromSpace)ringExplore.near=copyRingCamera(cam);
     ringExplore.exitShade=ringExplore.shade;
@@ -44,15 +46,23 @@
     return true;
   }
   function ringSpaceView() {
-    return ringExplore && (ringExplore.phase==='approach' || ringExplore.phase==='retreat' || (ringExplore.phase==='exitFade' && ringExplore.exitFromSpace));
+    return ringExplore && (ringExplore.phase==='approach' || (ringExplore.phase==='exitFade' && ringExplore.exitFromSpace));
   }
   function stepRingTransition(dt) {
+    if(ringReturnFade) {
+      ringReturnFade.elapsed+=dt;
+      const t=Math.min(1,ringReturnFade.elapsed/.65);
+      Object.assign(cam,copyRingCamera(ringReturnFade.cam));
+      ringReturnVeil.style.opacity=String(1-t*t*(3-2*t));
+      if(t===1){ringReturnFade=null;ringReturnVeil.hidden=true;}
+      return;
+    }
     const s=ringExplore;
     if(!s || s.saver || s.phase==='inside')return;
     s.elapsed+=dt;
     const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
-    if(s.phase==='approach' || s.phase==='retreat') {
-      const entering=s.phase==='approach',t=Math.min(1,s.elapsed/2.8),e=smooth(entering?t:1-t);
+    if(s.phase==='approach') {
+      const t=Math.min(1,s.elapsed/2.8),e=smooth(t);
       cam.dist=cam.distTgt=1/((1-e)/s.saved.cam.dist+e/s.near.dist);
       const offset=s.saved.cam.focus.map((v,i)=>v-s.near.focus[i]);
       const span=Math.hypot(...offset.map((v,i)=>v+s.saved.cam.panOff[i]));
@@ -61,18 +71,20 @@
       cam.panOff=s.saved.cam.panOff.map(v=>v*residual);cam.panOffTgt=cam.panOff.slice();
       cam.yaw=cam.yawTgt=s.saved.cam.yaw;cam.pitch=cam.pitchTgt=s.saved.cam.pitch;
       camZoom=camZoomTgt=s.saved.zoom+(1-s.saved.zoom)*e;
-      s.shade=entering?smooth((t-.75)/.25):1-smooth(s.elapsed/.65);
-      if(t===1) {
-        if(entering){s.phase='reveal';s.elapsed=0;}
-        else {endRingExplore();setImmersive(false);frameRingBtn.focus({preventScroll:true});}
-      }
+      s.shade=smooth((t-.75)/.25);
+      if(t===1){s.phase='reveal';s.elapsed=0;}
     } else if(s.phase==='reveal') {
       s.shade=1-smooth(s.elapsed/.75);
       if(s.elapsed>=.75){s.phase='inside';s.shade=0;}
     } else if(s.phase==='exitFade') {
       if(s.exitFromSpace)Object.assign(cam,copyRingCamera(s.near));
       s.shade=s.exitShade+(1-s.exitShade)*smooth(s.elapsed/.5);
-      if(s.elapsed>=.5){s.phase='retreat';s.elapsed=0;}
+      if(s.elapsed>=.5){
+        ringReturnVeil.hidden=false;ringReturnVeil.style.opacity='1';
+        endRingExplore();setImmersive(false);
+        ringReturnFade={elapsed:0,cam:copyRingCamera(cam)};
+        frameRingBtn.focus({preventScroll:true});
+      }
     }
   }
   frameRingBtn.addEventListener('click',beginRingExplore);

@@ -1711,3 +1711,6 @@
 
   #ringLookHint { position:absolute; bottom:calc(100% + 10px); left:0; width:100%; text-align:center; font-size:11px; color:rgba(180,193,207,.8); text-shadow:0 1px 4px #000; pointer-events:none; }
   #ringLookHint[hidden] { display:none; }
+
+  #ringReturnVeil { position:absolute; inset:0; z-index:100; background:#04060e; }
+  #ringReturnVeil[hidden] { display:none; }

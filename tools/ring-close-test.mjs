@@ -38,7 +38,7 @@ for(let i=0;i<first.data.length;i+=10) {
 // 専用の鑑賞景を終了したら、カメラと再生状態を復元する。
 const ui=read('ui/ring-close.js');
 const uiCtx=vm.createContext({Object,Array,groundView:false,tourActive:false,selected:{key:'saturn'},ringExplore:null,
- document:{getElementById:()=>({focus(){}})},cam:{dist:42,focus:[1,2,3],panOff:[0,0,0],yaw:0,pitch:0},camZoom:2,camZoomTgt:3,playing:true,
+ document:{getElementById:()=>({focus(){},style:{}})},cam:{dist:42,focus:[1,2,3],panOff:[0,0,0],yaw:0,pitch:0},camZoom:2,camZoomTgt:3,playing:true,
  bodyR:()=>1,posW:new Map([['saturn',[1,2,3]]]),planetRingPole:()=>[0,1,0],
  matchMedia:()=>({matches:false}),frameLayout:{fit:'saturn'},cameraFlight:{},setImmersive(){},syncFramingUI(){}});
 uiCtx.setPlaying=v=>uiCtx.playing=v;
@@ -68,7 +68,7 @@ ctx.ringExplore.phase='inside';
 vm.runInContext('stepRingExplore(.5)',ctx);
 assert.ok(Math.abs(ctx.ringExplore.travel-1.3)<1e-10);
 
-// 接近→暗転→環内、終了→暗転→後退の順序と復元を検証。
+// 接近→暗転→環内、終了→暗転→元の画面のフェードインの順序と復元を検証。
 uiCtx.setImmersive=()=>{};
 vm.runInContext('beginRingExplore(); stepRingTransition(2.8)',uiCtx);
 assert.equal(uiCtx.ringExplore.phase,'reveal');
@@ -77,8 +77,11 @@ vm.runInContext('stepRingTransition(.75)',uiCtx);
 assert.equal(uiCtx.ringExplore.phase,'inside');
 assert.equal(vm.runInContext('requestRingExit()',uiCtx),true);
 vm.runInContext('stepRingTransition(.5)',uiCtx);
-assert.equal(uiCtx.ringExplore.phase,'retreat');
-vm.runInContext('stepRingTransition(2.8)',uiCtx);
+assert.equal(uiCtx.ringExplore,null,'暗転中に元の画面へ戻す');
+assert.equal(uiCtx.cam.dist,42,'後退せず元の距離へ復元する');
+vm.runInContext('stepRingTransition(.3)',uiCtx);
+assert.equal(uiCtx.cam.dist,42,'フェードイン中もカメラを動かさない');
+vm.runInContext('stepRingTransition(.36)',uiCtx);
 assert.equal(uiCtx.ringExplore,null);
 assert.equal(uiCtx.cam.dist,42);
 
