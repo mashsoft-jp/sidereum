@@ -11873,7 +11873,7 @@
 
   function stepRingExplore(dt) {
     if (!ringExplore || document.hidden || snapPending || snapDlgEl.classList.contains('open')) return;
-    if(ringExplore.phase && ringExplore.phase!=="inside")return;
+    if(ringExplore.phase && ringExplore.phase!=="inside" && ringExplore.phase!=="reveal")return;
     if(enjoymentPaused && !ringExplore.saver)return;
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) ringExplore.travel=(ringExplore.travel+dt*.65)%96;
   }

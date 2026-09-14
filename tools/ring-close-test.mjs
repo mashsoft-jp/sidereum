@@ -59,6 +59,15 @@ ctx.ringExplore.saver=false;
 vm.runInContext('stepRingExplore(1)',ctx);
 assert.equal(ctx.ringExplore.travel,.65);
 
+// フェードイン中から到着後まで、移動を途切れさせない。
+ctx.enjoymentPaused=false;
+ctx.ringExplore.phase='reveal';
+vm.runInContext('stepRingExplore(.5)',ctx);
+assert.ok(Math.abs(ctx.ringExplore.travel-.975)<1e-10);
+ctx.ringExplore.phase='inside';
+vm.runInContext('stepRingExplore(.5)',ctx);
+assert.ok(Math.abs(ctx.ringExplore.travel-1.3)<1e-10);
+
 // 接近→暗転→環内、終了→暗転→後退の順序と復元を検証。
 uiCtx.setImmersive=()=>{};
 vm.runInContext('beginRingExplore(); stepRingTransition(2.8)',uiCtx);
