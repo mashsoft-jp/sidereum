@@ -567,7 +567,17 @@
     const pr = tourRideOn ? BODY_BY_KEY.get(tourRideOn) : null;
     const tb = BODY_BY_KEY.get(tourRide);
     if (!pr || !tb || !pr.live) return;
-    const p = posW.get(pr.key), f = posW.get(tb.key);
+    const cassiniOrbit = pr.key === "cassini" && tb.key === "saturn" && tourRideStay === 0;
+    const f = posW.get(tb.key);
+    let p = posW.get(pr.key);
+    if (cassiniOrbit) {
+      // 周回開始時の位置を撮影位置の基準にし、機体の公転を相殺しない。
+      const initial=[0,0,0], origin=[0,0,0];
+      if(probeAU(pr,tourRideT0,initial)) {
+        toWorld(initial,initial);toWorld(wayAU(tb.key,tourRideT0,origin),origin);
+        p=f.map((v,i)=>v+initial[i]-origin[i]);
+      }
+    }
     let bx = p[0] - f[0], by = p[1] - f[1], bz = p[2] - f[2];
     const bd = Math.hypot(bx, by, bz);
     if (bd < 1e-12) return;
@@ -589,26 +599,16 @@
     // 履歴ではなく現在の位置関係だけで決まるので、時計が止まればカメラも止まる
     // 縦持ちは狭い横幅を基準にする。高さだけで決めると機体が左右へ見切れる。
     const portrait = W < H;
-    const cassiniOrbit = pr.key === "cassini" && tb.key === "saturn" && tourRideStay === 0;
-    const orbitProgress = cassiniOrbit ? Math.max(0, Math.min(1, (simDays-tourRideT0)/12)) : 0;
+
     const off = Math.tan(eFov() * 0.5 * 0.42) * Math.min(1, W / H);
     let lx = -off * 0.80 * rx + off * 0.55 * ux;
     let ly =                    off * 0.55 * uy;
     let lz = -off * 0.80 * rz + off * 0.55 * uz;
-    if (rideVel(pr, tb, _rq)) {
+    if (!cassiniOrbit && rideVel(pr, tb, _rq)) {
       const vb = _rq[0] * bx + _rq[1] * by + _rq[2] * bz;
       lx += (_rq[0] - bx * vb) * off * 1.2;
       ly += (_rq[1] - by * vb) * off * 1.2;
       lz += (_rq[2] - bz * vb) * off * 1.2;
-    }
-    if (cassiniOrbit) {
-      // 機体と同じ構図に固定せず、12日間の鑑賞中にカメラを左右へ回り込ませる。
-      // 経過日から決めるので、停止・再開やフレームレートで動きが変わらない。
-      const across = -1.35 * Math.cos(Math.PI * orbitProgress);
-      const above = .55 + .25 * Math.sin(Math.PI * orbitProgress);
-      lx=off*(across*rx+above*ux);
-      ly=off*(across*ry+above*uy);
-      lz=off*(across*rz+above*uz);
     }
     // 画面の外へ出ないよう頭打ち (実効画角の 2/3 まで)
     const ll = Math.hypot(lx, ly, lz), lim = off * 1.6;
@@ -621,7 +621,6 @@
     tourRideMag = (tourRideRef > 0
       ? Math.min(3.2, Math.max(1, Math.sqrt(tourRideRef / bd))) : 1) / tourRideZoom;
     let back = bd * 0.06;
-    if (cassiniOrbit) tourRideMag *= 2.4;
     if ((portrait || cassiniOrbit) && !tourRideEye) {
       // 実際の機体の軌道は変えず、カメラだけ引く。環を含む天体の直径を
       // 横幅の76%以内に収め、前景の機体にも余白を残す。
@@ -631,7 +630,6 @@
       // ここでの機体サイズは投影半径。縦長の画面では成長の上限も横幅で決める。
       tourRideMag = Math.min(tourRideMag, W * 0.12 / (PROBE_PX * camZoom));
     }
-    if (cassiniOrbit) back *= 1 + .12 * Math.sin(Math.PI * orbitProgress);
     const e = [p[0] + back * (bx - lx),
                p[1] + back * (by - ly),
                p[2] + back * (bz - lz)];

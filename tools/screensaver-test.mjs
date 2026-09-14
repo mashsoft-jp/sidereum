@@ -45,7 +45,7 @@ for (const clip of clips) {
   assert.ok(scene.ride || scene.aim || scene.radiant || clip[0] === 'cassini');
   if (clip[0] === 'cassini') {
     assert.equal(scene.ride,'saturn');assert.equal(scene.on,'cassini');
-    assert.equal(scene.dot,false);assert.ok(scene.spd<1);
+    assert.equal(scene.dot,true);assert.ok(scene.spd<1);
     assert.equal(scene.until,'2006-03-27');
     assert.equal(scene.spd,.6);
   }

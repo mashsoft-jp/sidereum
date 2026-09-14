@@ -113,8 +113,8 @@
       tourProbe = tourProbes?.[0] || null; tourRideOn = s.on || tourProbe;
       tourRide = s.ride || null; tourRideEye = !!s.rideEye;
       tourRideStay = (s.stay || 0) * KM2W; tourRideSlow = 1; tourRideWarm = 0;
-      tourProbeHold = false; tourProbeDot = false;
-      tourSpot = null;
+      tourProbeHold = false; tourProbeDot = !!s.dot;
+      tourSpot = s.spot || null;
       tourMeteorRealtime = kind === "meteorTour";
     }
     if (clip) { /* ツアーから取り出したシーンを使う */ }

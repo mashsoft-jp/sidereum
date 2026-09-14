@@ -49,34 +49,22 @@ for (const [w,h] of [[390,844],[1280,720]]) {
 }
 console.log('tour-ride-test: onboard camera position passed');
 
-// カッシーニの周回はPCでも環全体を収め、外側のカメラから追い続ける。
+// カッシーニの位置が変わっても、撮影位置を追従させない。
 c.tourRideEye=false;c.tourRideStay=0;c.tourRide='saturn';c.tourRideOn='cassini';
 probe.key='cassini';target.key='saturn';target.ring=true;
 c.BODY_BY_KEY=new Map([['cassini',probe],['saturn',target]]);
 c.camZoom=c.tourRideZoom=1;c.simDays=c.tourRideT0=0;
+c.probeAU=(pr,t,out)=>{out.splice(0,3,3,0,0);return true;};
+c.wayAU=(key,t,out)=>{out.splice(0,3,0,0,0);return out;};
+c.toWorld=(a,b)=>{b.splice(0,3,...a);return b;};
 for(const [w,h] of [[390,844],[1280,720]]) {
- c.W=w;c.H=h;
- for(let phase=0;phase<6.28;phase+=.2) {
-  const p=[3*Math.cos(phase),.2,3*Math.sin(phase)];
-  c.posW.set('saturn',[0,0,0]);c.posW.set('cassini',p);
+ c.W=w;c.H=h;let first;
+ for(const phase of [0,.1,.2]) {
+  c.posW.set('saturn',[0,0,0]);c.posW.set('cassini',[3*Math.cos(phase),0,3*Math.sin(phase)]);
   vm.runInContext('tourRideCam()',c);
-  assert.ok(c.cam.dist>Math.hypot(...p));
+  const view=[c.cam.dist,c.cam.yaw,c.cam.pitch];
+  if(first)assert.deepEqual(view,first,'機体の移動をカメラで相殺しない');else first=view;
   const focal=h/2/Math.tan(c.eFov()/2);
   assert.ok(focal*Math.tan(Math.asin(2.4/c.cam.dist))<=Math.min(w,h)*.38+1e-8);
  }
 }
-
-// 同じ機体位置でも撮影位置が移り、画面内の機体が固定されない。
-c.W=1280;c.H=720;c.posW.set('cassini',[3,0,0]);
-const screenPositions=[];
-for(const day of [0,6,12]) {
- c.simDays=day;vm.runInContext('tourRideCam()',c);
- const {dist:d,yaw,pitch}=c.cam;
- const eye=[d*Math.cos(pitch)*Math.cos(yaw),d*Math.sin(pitch),d*Math.cos(pitch)*Math.sin(yaw)];
- const delta=[3-eye[0],-eye[1],-eye[2]];
- const depth=-delta.reduce((s,v,i)=>s+v*eye[i],0)/d;
- const x=delta.reduce((s,v,i)=>s+v*[Math.sin(yaw),0,-Math.cos(yaw)][i],0)*(c.H/2/Math.tan(c.eFov()/2))/depth;
- screenPositions.push(x);
- assert.ok(Math.abs(x)+44*c.tourRideMag<c.W/2);
-}
-assert.ok(Math.abs(screenPositions[2]-screenPositions[0])>80,'機体が左右に動いて見える');

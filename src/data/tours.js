@@ -1124,11 +1124,11 @@
           },
         },
         {
-          // 13年を圧縮せず、周回中の12日間を約20秒で機体の外側から追走する。
-          // 機体を前景に残し、衛星の公転が極端な早回しにならない速度にする。
+          // 13年を圧縮せず、周回中の12日間を約20秒で外側の固定視点から見せる。
+          // 機体は点と目印で示し、衛星の公転が極端な早回しにならない速度にする。
           sel: "saturn", ride: "saturn", on: "cassini", rideEye: false,
           mag: .5, lit: false, orbits: false, path: false,
-          stay: 0, slow: 1, warm: 0, dot: false, spot: null,
+          stay: 0, slow: 1, warm: 0, dot: true, spot: "cassini",
           d: "2006-03-15", spd: .6, play: true, until: "2006-03-27",
           text: {
             ja: "13年の周回。エンケラドスの氷の裂け目から水が噴き出しているのを見つけ、" +
