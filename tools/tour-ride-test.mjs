@@ -56,7 +56,7 @@ c.BODY_BY_KEY=new Map([['cassini',probe],['saturn',target]]);
 c.camZoom=c.tourRideZoom=1;c.simDays=c.tourRideT0=0;
 c.probeAU=(pr,t,out)=>{out.splice(0,3,3,0,0);return true;};
 c.wayAU=(key,t,out)=>{out.splice(0,3,0,0,0);return out;};
-c.toWorld=(a,b)=>{b.splice(0,3,...a);return b;};
+c.toWorld=(a,b)=>{assert.notEqual(a,b,"座標変換の入力を上書きしない");b.splice(0,3,...a);return b;};
 for(const [w,h] of [[390,844],[1280,720]]) {
  c.W=w;c.H=h;let first;
  for(const phase of [0,.1,.2]) {
@@ -67,4 +67,20 @@ for(const [w,h] of [[390,844],[1280,720]]) {
   const focal=h/2/Math.tan(c.eFov()/2);
   assert.ok(focal*Math.tan(Math.asin(2.4/c.cam.dist))<=Math.min(w,h)*.38+1e-8);
  }
+}
+
+// 10から進んでも直接11を開いても、基準時刻は11の開始日にする。
+const applyStart=source.indexOf('  function applyTourScene(s)');
+const applyEnd=source.indexOf('    // 探査機視点の減速に使う基準距離',applyStart);
+const dateContext=vm.createContext({Date,Math,isFinite,
+ J2000:Date.UTC(2000,0,1,12),DAY_MS:86400000,
+ exitGround(){},setPlaying(){},select(){},updatePositions(){},
+ BODY_BY_KEY:new Map([['saturn',target]]),posW:new Map([['saturn',[0,0,0]]]),
+ infoPanel:{classList:{remove(){}}},cam:{focusTgt:[0,0,0]}});
+vm.runInContext(source.slice(applyStart,applyEnd)+'}',dateContext);
+for(const previous of [Date.UTC(2005,0,14),Date.UTC(2026,8,14)]) {
+ dateContext.simDays=(previous-dateContext.J2000)/dateContext.DAY_MS;
+ dateContext.tourRideT0=dateContext.simDays;
+ vm.runInContext('applyTourScene({d:"2006-03-15",sel:"saturn"})',dateContext);
+ assert.equal(dateContext.tourRideT0,(Date.UTC(2006,2,15)-dateContext.J2000)/dateContext.DAY_MS);
 }

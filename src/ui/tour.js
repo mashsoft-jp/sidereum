@@ -376,7 +376,6 @@
     tourRideEye = !!s.rideEye;
     tourRideSlow = isFinite(s.slow) ? s.slow : 0.06;
     tourRideWarm = isFinite(s.warm) ? s.warm : 0;
-    tourRideT0 = simDays;
     tourPath = !!s.path;
     tourTouched = false;
     tourResumeBtn.hidden = true;
@@ -427,6 +426,7 @@
       cam.focusTgt[0] = 0; cam.focusTgt[1] = 0; cam.focusTgt[2] = 0;
       lastCenter = null;             // 注視点が太陽へ戻るのでズーム下限も太陽サイズに
     }
+    tourRideT0 = simDays; // このステップの日時を適用してから撮影の基準時刻を記録する
     // 探査機視点の減速に使う基準距離 (このステップの開始時点の距離)
     tourRideSpd = 0;
     tourRideRef = 0;
@@ -574,7 +574,7 @@
       // 周回開始時の位置を撮影位置の基準にし、機体の公転を相殺しない。
       const initial=[0,0,0], origin=[0,0,0];
       if(probeAU(pr,tourRideT0,initial)) {
-        toWorld(initial,initial);toWorld(wayAU(tb.key,tourRideT0,origin),origin);
+        toWorld(initial.slice(),initial);toWorld(wayAU(tb.key,tourRideT0,[0,0,0]),origin);
         p=f.map((v,i)=>v+initial[i]-origin[i]);
       }
     }
