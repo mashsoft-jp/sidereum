@@ -6886,7 +6886,7 @@
       vSeed = aSeed;
       gl_Position = uVP * vec4(vPosition, 1.0);
     }
-`, PRE + `    uniform vec3 uEye;
+`, PRE + `    uniform vec3 uEye, uLightDir;
     varying vec3 vNormal, vLocal, vPosition;
     varying float vSeed;
     float grain(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
@@ -6899,7 +6899,7 @@
     }
     void main() {
       float distanceToEye = length(vPosition - uEye);
-      vec3 N = normalize(vNormal), L = normalize(vec3(-0.6, 0.5, -0.15));
+      vec3 N = normalize(vNormal), L = normalize(uLightDir);
       vec3 V = normalize(uEye - vPosition);
       // 模様を面の明暗にだけ載せず、霜の凹凸を画素単位の法線へ反映する。
       vec3 p=vLocal*24.0+vSeed*71.0;
@@ -11806,6 +11806,8 @@
   // 土星主環の局所的な鑑賞用模式景。粒子の個体形状は実測復元ではない。
   // NASA: https://science.nasa.gov/mission/cassini/science/rings/
   let ringExplore = null, ringCloseMesh = null;
+  // 観察者側の斜め上から照らし、土星の縞と氷塊の凹凸を同じ光で見せる。
+  const RING_CLOSE_LIGHT = [-.6, .45, .7];
 
   function makeRingFragments(count = 4400) {
     let seed = 61723;
@@ -11904,12 +11906,13 @@
     const model=mTRS([-Math.sin(azimuth)*distance,0,-Math.cos(azimuth)*distance],mRotX(0),sat.rkm*1000);
     const distantVP=mMul(mPersp(58*DEG,W/H,1000,300000000),view);
     bodyRenderer.beginPass({time:0,cameraPosition:eye,depthTest:true,depthWrite:true});
-    bodyRenderer.draw({body:sat,model,mvp:mMul(distantVP,model),sunPosition:[-6e12,5e12,-1.5e12],radiusPx:H*.55});
+    bodyRenderer.draw({body:sat,model,mvp:mMul(distantVP,model),sunPosition:RING_CLOSE_LIGHT.map(v=>v*1e13),radiusPx:H*.55});
     bodyRenderer.endPass();
     gl.depthMask(true);gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.useProgram(ringCloseP.pr);
     gl.uniformMatrix4fv(ringCloseP.u.uVP,false,vp);
     gl.uniform3f(ringCloseP.u.uEye,...eye);
+    gl.uniform3f(ringCloseP.u.uLightDir,...RING_CLOSE_LIGHT);
     gl.uniform1f(ringCloseP.u.uTravel,s.travel);
     gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);
     gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);

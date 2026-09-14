@@ -1,4 +1,4 @@
-    uniform vec3 uEye;
+    uniform vec3 uEye, uLightDir;
     varying vec3 vNormal, vLocal, vPosition;
     varying float vSeed;
     float grain(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
@@ -11,7 +11,7 @@
     }
     void main() {
       float distanceToEye = length(vPosition - uEye);
-      vec3 N = normalize(vNormal), L = normalize(vec3(-0.6, 0.5, -0.15));
+      vec3 N = normalize(vNormal), L = normalize(uLightDir);
       vec3 V = normalize(uEye - vPosition);
       // 模様を面の明暗にだけ載せず、霜の凹凸を画素単位の法線へ反映する。
       vec3 p=vLocal*24.0+vSeed*71.0;
