@@ -2,7 +2,7 @@
   let saverState = null;
   const saverBar = document.getElementById("saverBar"), saverFade = document.getElementById("saverFade");
   const saverHint = document.getElementById("saverHint");
-  const SAVER_KINDS = ["body", "cometSpace", "cometGround", "cometMoon", "overview", "earthSky", "moonSky", "voyager", "cassini", "paleDot", "meteorTour", "eclipseTour"];
+  const SAVER_KINDS = ["body", "cometSpace", "cometGround", "cometMoon", "overview", "earthSky", "moonSky", "voyager", "cassini", "paleDot", "meteorTour", "eclipseTour", "saturnRings"];
   // ステップ番号は0始まり。ガイドの日時・照準を共有し、説明UIや進捗は動かさない。
   const SAVER_TOUR_CLIPS = {
     voyager: [
@@ -106,6 +106,7 @@
     const base = { view: "space", sel: null, d: "2026-09-08T12:00", play: true, spd: 1 / 86400, mag: 1, cut: true };
     restoreSaverTourVisuals(state.tourVisuals);
     let s = { ...base }, title, orbit = false, clip = null;
+    if (ringExplore?.saver) ringExplore = null;
     if (SAVER_TOUR_CLIPS[kind]) {
       clip = saverTourScene(pick(SAVER_TOUR_CLIPS[kind])); s = clip.scene; title = clip.title;
       if (s.site) { [obsLat, obsLon] = s.site; delete s.site; }
@@ -118,7 +119,10 @@
       tourMeteorRealtime = kind === "meteorTour";
     }
     if (clip) { /* ツアーから取り出したシーンを使う */ }
-    else if (kind === "body") {
+    else if (kind === "saturnRings") {
+      s.sel = "saturn"; s.play = false;
+      title = { ja: "土星の環の中 · 氷粒子を巡る", en: "Inside Saturn’s rings · among the ice" };
+    } else if (kind === "body") {
       const b = BODY_BY_KEY.get(pick(["sun", "mercury", "venus", "earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"]));
       s.sel = b.key; s.lit = true; orbit = true;
       title = { ja: b.name + "を巡る", en: b.en + " · orbit" };
@@ -149,6 +153,7 @@
     showConst = kind === "earthSky" || kind === "moonSky" || kind === "meteorTour"; showGrid = false; showTerrain = true; showSelMark = false;
     for (const b of ORBIT_BODIES) b.showOrbit = kind === "overview" && !b.parent && !b.ast && !b.comet && (!b.tno || b.key === "pluto");
     applyTourScene(s);
+    if (kind === "saturnRings") ringExplore = { saver: true, travel: 0, yaw: 0, pitch: -.13, pointer: null };
     if (s.view === "moon" && !clip) {
       findSaverMoonNight(kind === "cometMoon" ? selected : null);
       if (kind === "cometMoon") {
@@ -187,6 +192,7 @@
     return saverState.bag.pop();
   }
   function syncSaverDate() {
+    document.getElementById("saverDate").hidden = saverState.kind === "saturnRings";
     const minute = Math.floor(simDays * 1440);
     if (saverState.minute === minute) return;
     saverState.minute = minute;
@@ -210,6 +216,7 @@
   function stopScreensaver() {
     if (!saverState) return;
     const { saved, extra } = saverState;
+    if (ringExplore?.saver) ringExplore = null;
     restoreSaverTourVisuals(saverState.tourVisuals);
     hideModals();
     obsLat = saved.obsLat; obsLon = saved.obsLon; geoZone = extra.geoZone;

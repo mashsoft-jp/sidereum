@@ -12,11 +12,15 @@ assert.ok(first.data.length>100*80*3*10, "近くで目立つ大粒は輪郭を�
 assert.ok(first.data.every(Number.isFinite));
 for(const p of first.pieces){
  const radii=p.shape.map(v=>Math.hypot(...v));
+ assert.ok(Math.max(...radii)<1.1,'大きな粒子の最大半径を抑える');
  assert.ok(Math.max(...radii)/Math.min(...radii)>1.1,'粒子は等半径の球ではない');
- for(const v of p.shape)assert.ok(Math.abs(v[0]+p.center[0])>1.1,'カメラの移動経路を粒子が貫かない');
+ for(const v of p.shape){
+ assert.ok(Math.abs(v[1]+p.center[1])<=10.000001,'粒子の表面まで厚さ20mの中に収める');
+ }
 }
-assert.ok(first.pieces.some(p=>p.center[1]>4), '頭上にも氷塊がある');
-assert.ok(first.pieces.some(p=>p.center[1]<-3), '足元にも氷塊がある');
+assert.ok(first.pieces.some(p=>Math.abs(p.center[0])<1), '中央にも粒子を分布させ、通路を作らない');
+assert.ok(first.pieces.some(p=>p.center[1]>2), '頭上にも氷塊がある');
+assert.ok(first.pieces.some(p=>p.center[1]<-2), '足元にも氷塊がある');
 const thickness=first.pieces.map(p=>{
  const extent=axis=>Math.max(...p.shape.map(v=>v[axis]))-Math.min(...p.shape.map(v=>v[axis]));
  return extent(1)/Math.max(extent(0),extent(2));
@@ -41,4 +45,15 @@ vm.runInContext(ui.slice(0,ui.indexOf("  frameRingBtn.addEventListener")),uiCtx)
 vm.runInContext('beginRingExplore(); cam.focus[0]=999; cam.dist=5; endRingExplore();',uiCtx);
 assert.equal(uiCtx.cam.focus[0],1);assert.equal(uiCtx.cam.dist,42);assert.equal(uiCtx.playing,true);
 assert.equal(uiCtx.camZoom,2);assert.equal(uiCtx.ringExplore,null);
-console.log('ring-close: deterministic irregular fragments, camera clearance and state restoration passed');
+console.log('ring-close: deterministic irregular fragments, continuous distribution and state restoration passed');
+
+// 鑑賞の一時停止設定が残っていても、スクリーンセーバーの環は動く。
+Object.assign(ctx,{ringExplore:{saver:true,travel:0},enjoymentPaused:true,
+ document:{hidden:false},snapPending:false,snapDlgEl:{classList:{contains:()=>false}},
+ matchMedia:()=>({matches:false})});
+vm.runInContext(source.slice(source.indexOf('  function stepRingExplore'),source.indexOf('  function renderRingExplore')),ctx);
+vm.runInContext('stepRingExplore(1)',ctx);
+assert.equal(ctx.ringExplore.travel,.65);
+ctx.ringExplore.saver=false;
+vm.runInContext('stepRingExplore(1)',ctx);
+assert.equal(ctx.ringExplore.travel,.65);

@@ -26,6 +26,9 @@
       float sheen = pow(max(0.0, dot(N, normalize(L + V))), 26.0) * .08;
       float scatter=pow(max(0.0,dot(-L,V)),3.0)*.045;
       vec3 color=tonemap(ice*(.024+light*.58+scatter)+sheen);
-      float fade = 1.0 - smoothstep(32.0, 47.0, abs(vPosition.z));
+      // 遠方まで通路を空けず、視点の直近だけを滑らかに消す。
+      float fade = (1.0 - smoothstep(32.0, 47.0, abs(vPosition.z)))
+        * smoothstep(.15, .65, distanceToEye);
+      if (fade < .001) discard;
       gl_FragColor = vec4(color * fade, fade);
     }

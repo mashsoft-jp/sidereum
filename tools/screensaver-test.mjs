@@ -21,13 +21,13 @@ run(`saverState = { bag: [], kind: 'body', phase: 'show', fade: 0, age: 0, elaps
 let previous = 'body';
 for (let round = 0; round < 100; round++) {
   const seen = new Set();
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 13; i++) {
     const kind = run('nextSaverKind()');
     assert.notEqual(kind, previous);
     seen.add(kind); previous = kind;
     run(`saverState.kind = ${JSON.stringify(kind)}`);
   }
-  assert.equal(seen.size, 12);
+  assert.equal(seen.size, 13);
 }
 run(`saverState.kind = 'body'`);
 // 元ツアーを変更せず、全抜粋が有効な日時と照準を持つ。
@@ -56,6 +56,8 @@ run('restoreSaverTourVisuals(savedVisuals)');
 for (const [i, key] of visualKeys.entries()) assert.equal(ctx[key], i, key + ' restored');
 
 
+const realApplySaverScene = run("applySaverScene");
+const realStopScreensaver = run("stopScreensaver");
 const scenes = [];
 ctx.applyTourScene = () => {};
 ctx.recordScene = kind => scenes.push({ kind, opacity: Number(element('saverFade').style.opacity) });
@@ -135,3 +137,25 @@ for(const kind of ['body','cometSpace','voyager','cassini','earthSky']) {
 run('saverState=null');assert.equal(run('screensaverLabelBodies().length'),0);
 assert.equal(ctx.PLANETS[0].showLabel,false,'normal visibility preferences stay unchanged');
 console.log('screensaver labels: Pale Blue Dot, overview, other scenes and preserved preferences passed');
+
+// 環の場面を実際に適用し、次の景色と終了の両方で専用描画を解除する。
+Object.assign(ctx, {
+ ringExplore:null, frameLayout:{}, ORBIT_BODIES:[],
+ refreshObsSiteUI(){}, hideModals(){}, restoreTourState(){}, syncInfoMore(){},
+ applyNavVisible(){}, syncFramingUI(){}, moonSiteEl:{},
+ frameApp:{classList:{remove(){},toggle(){}}}, immersiveBar:{}, menuBtn:{focus(){}},
+});
+run('saverState={tourVisuals:savedVisuals};');
+realApplySaverScene('saturnRings');
+assert.equal(ctx.ringExplore.saver,true);
+assert.equal(element('saverDate').hidden,true);
+assert.equal(run('saverState.kind'),'saturnRings');
+realApplySaverScene('overview');
+assert.equal(ctx.ringExplore,null,'次の景色に環の描画が残らない');
+assert.equal(element('saverDate').hidden,false);
+realApplySaverScene('saturnRings');
+run('saverState.saved={}; saverState.extra={frame:{}};');
+realStopScreensaver();
+assert.equal(ctx.ringExplore,null,'終了時も環の描画を解除する');
+assert.equal(run('saverState'),null);
+console.log('screensaver rings: entry, next scene and exit passed');

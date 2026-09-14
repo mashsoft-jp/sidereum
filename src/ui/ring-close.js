@@ -9,7 +9,7 @@
     Object.assign(cam,copyRingCamera(saved.cam));
     camZoom=saved.zoom;camZoomTgt=saved.zoomTgt;
     frameLayout.fit=null;
-    ringExplore={saved,travel:0,yaw:0,pitch:-.13,height:2.2,pointer:null};
+    ringExplore={saved,travel:0,yaw:0,pitch:-.13,pointer:null};
     setPlaying(false);
     syncFramingUI();
   }
@@ -48,5 +48,4 @@
   frameApp.addEventListener('wheel',e=>{
     if(!ringCanvasEvent(e))return;
     e.preventDefault();e.stopImmediatePropagation();
-    ringExplore.height=Math.max(1.7,Math.min(6,ringExplore.height+e.deltaY*.003));
   },{capture:true,passive:false});

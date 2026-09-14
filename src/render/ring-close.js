@@ -2,7 +2,7 @@
   // NASA: https://science.nasa.gov/mission/cassini/science/rings/
   let ringExplore = null, ringCloseMesh = null;
 
-  function makeRingFragments(count = 3080) {
+  function makeRingFragments(count = 4400) {
     let seed = 61723;
     const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
     const unit = p => { const n = Math.hypot(...p); return p.map(v => v / n); };
@@ -29,12 +29,10 @@
     const data = [], pieces = [];
     for (let n=0;n<count;n++) {
       // 大小の氷塊と細粒を混ぜ、薄い床ではなく厚みのある局所的な層にする。
-      const size = n < 680 ? .09 + Math.pow(random(), 2.6) * .90 : .018 + random()*.075;
-      const center = [(random()-.5)*44, (random()+random()-1)*12+1.5, (random()-.5)*96];
+      const size = n < 1000 ? .09 + Math.pow(random(), 2.6) * .60 : .018 + random()*.075;
+      const center = [(random()-.5)*44, (random()+random()-1)*10, (random()-.5)*96];
       const stretch = [.65+random()*.80, .65+random()*.80, .65+random()*.80];
-      // 移動経路の左右に余裕を残す。高さを変えても氷塊の内部へ入らない。
-      const clearance=1.2+size*1.7;
-      if(Math.abs(center[0])<clearance)center[0]=(center[0]<0?-1:1)*clearance;
+      // 視線の中央も同じ密度にする。左右へ押し出すと人工的な通路と壁になる。
       const angle=random()*Math.PI*2, ca=Math.cos(angle),sa=Math.sin(angle), tint=random();
       // 大きい粒ほど輪郭を細かくする。粒子ごとに連続した形状場を使い、
       // 頂点単位の乱数で三角形を尖らせない。
@@ -50,6 +48,9 @@
         const x=v[0]*stretch[0]*r,z=v[2]*stretch[2]*r;
         return [x*ca-z*sa,v[1]*stretch[1]*r,x*sa+z*ca];
       });
+      // 1単位 = 1m。粒子の表面まで含めて厚さ20m（中心面±10m）に収める。
+      const bottom=Math.min(...shape.map(v=>v[1])),top=Math.max(...shape.map(v=>v[1]));
+      center[1]=Math.max(-10-bottom,Math.min(10-top,center[1]));
       pieces.push({center,size,shape});
       // 隣接面の面積で重み付けした共有法線。三角形の境界に陰影の段差を作らない。
       const normals=shape.map(()=>[0,0,0]);
@@ -74,13 +75,14 @@
   }
 
   function stepRingExplore(dt) {
-    if (!ringExplore || enjoymentPaused || document.hidden || snapPending || snapDlgEl.classList.contains('open')) return;
+    if (!ringExplore || document.hidden || snapPending || snapDlgEl.classList.contains('open')) return;
+    if(enjoymentPaused && !ringExplore.saver)return;
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) ringExplore.travel=(ringExplore.travel+dt*.65)%96;
   }
 
   function renderRingExplore() {
     initRingCloseMesh();
-    const s=ringExplore,eye=[0,s.height,0];
+    const s=ringExplore,eye=[0,0,0];
     const cp=Math.cos(s.pitch),direction=[Math.sin(s.yaw)*cp,Math.sin(s.pitch),-Math.cos(s.yaw)*cp];
     const view=mLookAt(eye,eye.map((v,i)=>v+direction[i]),UP3);
     const projection=mPersp(58*DEG,W/H,.06,450);
@@ -89,12 +91,16 @@
     gl.depthMask(true);gl.clearColor(.008,.011,.018,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST);gl.depthMask(false);gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
     drawMilkyWay(vp,mwEqSpace(),200,.07,0);
-    // 背景の土星は角直径を環内の観測者に合わせる。粒子の距離スケールとは分離。
+    // 中心から120,000kmの主環内を観測地点とする。土星もメートル単位。
+    // 遠景だけ別の投影範囲で描き、深度精度を確保する（角度・位置は同じ）。
     const sat=BODY_BY_KEY.get('saturn');
-    const model=mTRS([-35,0,-105],mRotX(0),55);
+    const distance=120000000,azimuth=Math.atan2(35,105);
+    const model=mTRS([-Math.sin(azimuth)*distance,0,-Math.cos(azimuth)*distance],mRotX(0),sat.rkm*1000);
+    const distantVP=mMul(mPersp(58*DEG,W/H,1000,300000000),view);
     bodyRenderer.beginPass({time:0,cameraPosition:eye,depthTest:true,depthWrite:true});
-    bodyRenderer.draw({body:sat,model,mvp:mMul(vp,model),sunPosition:[-600,500,-150],radiusPx:H*.55});
+    bodyRenderer.draw({body:sat,model,mvp:mMul(distantVP,model),sunPosition:[-6e12,5e12,-1.5e12],radiusPx:H*.55});
     bodyRenderer.endPass();
+    gl.depthMask(true);gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.useProgram(ringCloseP.pr);
     gl.uniformMatrix4fv(ringCloseP.u.uVP,false,vp);
     gl.uniform3f(ringCloseP.u.uEye,...eye);
@@ -113,11 +119,12 @@
   }
 
   function drawRingExploreCaption() {
+    if (ringExplore.saver) return;
     octx.save();octx.textAlign='center';octx.shadowColor='rgba(0,0,0,.9)';octx.shadowBlur=6;
     octx.fillStyle='rgba(225,232,239,.88)';octx.font='16px sans-serif';
     octx.fillText(lang==='ja'?'土星の環を探る':'Inside Saturn’s rings',W/2,42);
     octx.font='11px sans-serif';octx.fillStyle='rgba(180,193,207,.8)';
-    octx.fillText(lang==='ja'?'氷粒子の形・大きさ・間隔を強調したイメージ':'Illustration · particle shapes, sizes and spacing enhanced',W/2,64);
-    octx.fillText(lang==='ja'?'ドラッグで見回す':'Drag to look around',W/2,84);
+    octx.fillText(lang==='ja'?'厚さ20m（粒子の形と密度は模式）':'20 m thick · illustrative shapes and density',W/2,64);
+    octx.fillText(lang==='ja'?'環の中央 · ドラッグで見回す':'At the midplane · Drag to look around',W/2,84);
     octx.restore();
   }
