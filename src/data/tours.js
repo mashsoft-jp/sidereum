@@ -1124,15 +1124,12 @@
           },
         },
         {
-          // 機体は点で描く (dot)。土星を大きく写す回では、記号として一定の大きさで
-          // 描く機体が土星に対して大きすぎ、立体なので土星に埋まって見える
-          // 角度は固定。lit だと開始時 (2005年) の太陽向きで決まってしまい、
-          // 13年で土星が 150°進むぶん終わりが逆光になる。中間 (2011年) の
-          // 太陽向きに合わせておくと、両端とも半分ほど陽が当たった形になる。
-          // 周回の位相 (probes.js) は、最後にカッシーニが土星の右下へ来るよう合わせた
-          sel: "saturn", ride: null, on: null, km: 350000, lit: false, a: 0.177, y: 0.247,
-          orbits: false, path: false, stay: 0, dot: true, spot: "cassini",
-          spd: 90, play: true, until: "2017-09-08",
+          // 13年を圧縮せず、周回中の1か月を機体の外側から追走する。
+          // 機体を前景に残し、衛星の公転が極端な早回しにならない速度にする。
+          sel: "saturn", ride: "saturn", on: "cassini", rideEye: false,
+          mag: .5, lit: false, orbits: false, path: false,
+          stay: 0, slow: 1, warm: 0, dot: false, spot: null,
+          d: "2006-03-15", spd: .6, play: true, until: "2006-04-14",
           text: {
             ja: "13年の周回。エンケラドスの氷の裂け目から水が噴き出しているのを見つけ、" +
                 "その海に生命の条件が揃っている可能性を示しました。" +

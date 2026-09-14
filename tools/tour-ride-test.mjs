@@ -48,3 +48,20 @@ for (const [w,h] of [[390,844],[1280,720]]) {
   eye.forEach((v,i)=>assert.ok(Math.abs(v-position[i])<1e-9));
 }
 console.log('tour-ride-test: onboard camera position passed');
+
+// カッシーニの周回はPCでも環全体を収め、外側のカメラから追い続ける。
+c.tourRideEye=false;c.tourRideStay=0;c.tourRide='saturn';c.tourRideOn='cassini';
+probe.key='cassini';target.key='saturn';target.ring=true;
+c.BODY_BY_KEY=new Map([['cassini',probe],['saturn',target]]);
+c.camZoom=c.tourRideZoom=1;
+for(const [w,h] of [[390,844],[1280,720]]) {
+ c.W=w;c.H=h;
+ for(let phase=0;phase<6.28;phase+=.2) {
+  const p=[3*Math.cos(phase),.2,3*Math.sin(phase)];
+  c.posW.set('saturn',[0,0,0]);c.posW.set('cassini',p);
+  vm.runInContext('tourRideCam()',c);
+  assert.ok(c.cam.dist>Math.hypot(...p));
+  const focal=h/2/Math.tan(c.eFov()/2);
+  assert.ok(focal*Math.tan(Math.asin(2.4/c.cam.dist))<=Math.min(w,h)*.38+1e-8);
+ }
+}

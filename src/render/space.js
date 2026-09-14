@@ -390,7 +390,8 @@
         const rideMag = tourRide && pr.key === tourRideOn ? tourRideMag : 1;
         // 縦持ちの追走は構図のためカメラを引くので、その距離で主役を点にしない。
         // 機体の成長・着陸時の縮小は tourRideMag 側で引き続き制御する。
-        const portraitRide = W < H && tourRide && pr.key === tourRideOn;
+        const portraitRide = tourRide && pr.key === tourRideOn && (W < H ||
+          (pr.key === "cassini" && tourRide === "saturn" && tourRideStay === 0));
         const px = PROBE_PX * camZoom * rideMag *
                    (portraitRide ? 1 : Math.min(1, near / (Math.hypot(dx, dy, dz) || 1)));
         if (px < 3) continue;

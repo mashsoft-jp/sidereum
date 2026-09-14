@@ -610,11 +610,13 @@
     tourRideMag = (tourRideRef > 0
       ? Math.min(3.2, Math.max(1, Math.sqrt(tourRideRef / bd))) : 1) / tourRideZoom;
     let back = bd * 0.06;
-    if (portrait && !tourRideEye) {
+    const cassiniOrbit = pr.key === "cassini" && tb.key === "saturn" && tourRideStay === 0;
+    if (cassiniOrbit) tourRideMag *= 2.4;
+    if ((portrait || cassiniOrbit) && !tourRideEye) {
       // 実際の機体の軌道は変えず、カメラだけ引く。環を含む天体の直径を
       // 横幅の76%以内に収め、前景の機体にも余白を残す。
       const radius = bodyR(tb) * (tb.ring ? RING_OUT : tb.obl ? Math.max(...tb.obl) : 1);
-      const fit = radius / Math.sin(Math.atan(Math.tan(eFov() / 2) * W / H * 0.76));
+      const fit = radius / Math.sin(Math.atan(Math.tan(eFov() / 2) * Math.min(1, W / H) * 0.76));
       back = Math.max(back, fit - bd);
       // ここでの機体サイズは投影半径。縦長の画面では成長の上限も横幅で決める。
       tourRideMag = Math.min(tourRideMag, W * 0.12 / (PROBE_PX * camZoom));

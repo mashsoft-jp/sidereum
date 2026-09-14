@@ -43,6 +43,11 @@ for (const clip of clips) {
   assert.ok(Number.isFinite(Date.parse(scene.d + 'Z')));
   assert.ok(scene.spd > 0 && Number.isFinite(scene.spd));
   assert.ok(scene.ride || scene.aim || scene.radiant || clip[0] === 'cassini');
+  if (clip[0] === 'cassini') {
+    assert.equal(scene.ride,'saturn');assert.equal(scene.on,'cassini');
+    assert.equal(scene.dot,false);assert.ok(scene.spd<1);
+    assert.equal(scene.until,'2006-04-14');
+  }
   if (scene.until) assert.ok(Date.parse(scene.until + 'Z') > Date.parse(scene.d + 'Z'));
 }
 assert.equal(run('JSON.stringify(TOURS)'), originals);

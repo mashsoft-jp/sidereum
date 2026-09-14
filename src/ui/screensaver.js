@@ -32,7 +32,6 @@
     if (clip[0] === "voyager1" && clip[1] === 7) { delete scene.until; scene.spd = 1 / 86400; }
     else {
       // ひとつの見せ場が約38秒に収まるよう、元の開始〜終了を通して見せる。
-      if (clip[0] === "cassini") { scene.d = "2006-03-15"; scene.until = "2007-03-15"; }
       if (clip[0] === "eclipses" && clip[1] === 0) scene.until = "2025-09-07T19:45";
       scene.spd = (Date.parse(scene.until + "Z") - Date.parse(scene.d + "Z")) / DAY_MS / 38;
     }
@@ -115,7 +114,7 @@
       tourRide = s.ride || null; tourRideEye = !!s.rideEye;
       tourRideStay = (s.stay || 0) * KM2W; tourRideSlow = 1; tourRideWarm = 0;
       tourProbeHold = false; tourProbeDot = false;
-      tourSpot = kind === "cassini" ? "cassini" : null;
+      tourSpot = null;
       tourMeteorRealtime = kind === "meteorTour";
     }
     if (clip) { /* ツアーから取り出したシーンを使う */ }
@@ -166,7 +165,7 @@
       gTrack = false; gRadTrack = "";
       gAz = gAzTgt = Math.random() * Math.PI * 2; gAlt = gAltTgt = 35 * DEG;
     }
-    if (kind === "cassini") {
+    if (kind === "cassini" && !s.ride) {
       frameLayout.mode = "close"; frameLayout.rect = measureFrameRect(); frameLayout.fit = selected;
       fitFrameDistance(selected); cam.dist = cam.distTgt;
     }
