@@ -204,3 +204,19 @@ realStopScreensaver();
 assert.equal(element('saverPhoto').hidden,true);
 assert.equal(element('saverPhotoImage').onload,null);
 console.log('screensaver photos: coverage, credits, loading, motion, errors and cleanup passed');
+
+// 縦・横・正方形の写真と長いクレジットでも全体が収まり、説明が直下に続く。
+for (const [width,height] of [[390,844],[844,390],[1134,899],[320,568]]) {
+ for (const [iw,ih] of [[2000,1000],[1000,2000],[1500,1500]]) {
+  for (const caption of [50,110]) {
+   ctx.layoutArgs=[width,height,iw,ih,caption,24,32];
+   const r=run('saverPhotoLayout(...layoutArgs)');
+   assert.ok(r.width<=width-24+.001);
+   assert.ok(r.top>=24);
+   assert.ok(r.captionTop+caption<=height-32+.001);
+   assert.ok(Math.abs(r.width/r.height-iw/ih)<1e-9);
+   assert.equal(r.captionTop-r.top-r.height,12);
+  }
+ }
+}
+console.log('screensaver photos: aspect ratios, caption spacing and portrait/landscape bounds passed');

@@ -1731,9 +1731,9 @@
   #ringReturnVeil { position:absolute; inset:0; z-index:100; background:#04060e; }
   #ringReturnVeil[hidden] { display:none; }
 
-  #saverPhoto { position: absolute; inset: 0; z-index: 24; background: #04060e; overflow: hidden; pointer-events: none; }
+  #saverPhoto { padding-top: calc(16px + env(safe-area-inset-top, 0px)); padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); position: absolute; inset: 0; z-index: 24; background: #04060e; overflow: hidden; pointer-events: none; }
   #saverPhoto[hidden], #saverPhotoCredit[hidden] { display: none; }
-  #saverPhotoImage { position: absolute; inset: 8% 5% 20%; width: 90%; height: 72%; object-fit: contain; }
+  #saverPhotoImage { position: absolute; left: 50%; object-fit: contain; transform-origin: center; }
   #saverPhotoCredit { max-width: 760px; font-size: 10px; line-height: 1.5; color: #a2aebf; margin-top: 6px; overflow-wrap: anywhere; }
   #saverPhotoCredit a { color: inherit; }
 </style>
@@ -18055,6 +18055,7 @@
     saverHint.textContent = ja ? (touch ? "画面をタップすると終了します" : "画面をクリック、または Esc キーで終了します")
       : (touch ? "Tap the screen to exit" : "Click the screen or press Esc to exit");
     if (saverState?.title) document.getElementById("saverTitle").textContent = saverState.title[ja ? "ja" : "en"];
+    if (saverState?.kind === "dsoPhoto") layoutSaverPhoto();
   }
   function saverMoonPlace(index) {
     const site = MOON_SITES[index]; moonLat = site.lat; moonLon = site.lon; moonSiteEl.value = String(index);
@@ -18081,7 +18082,27 @@
     saverPhoto.hidden = saverPhotoCredit.hidden = true;
     saverPhotoImage.onload = saverPhotoImage.onerror = null;
     saverPhotoImage.removeAttribute("src");
+    saverBar.style.top = saverBar.style.bottom = "";
   }
+  function saverPhotoLayout(width, height, imageWidth, imageHeight, captionHeight, topInset, bottomInset) {
+    const gap = 12, side = 12;
+    const availableHeight = Math.max(1, height-topInset-bottomInset-captionHeight-gap);
+    const scale = Math.min(Math.max(1,width-side*2)/imageWidth, availableHeight/imageHeight);
+    const w = imageWidth*scale, h = imageHeight*scale;
+    const top = topInset + Math.max(0,(height-topInset-bottomInset-h-captionHeight-gap)/2);
+    return {width:w,height:h,top,captionTop:top+h+gap};
+  }
+  function layoutSaverPhoto() {
+    if (saverState?.kind !== "dsoPhoto" || !saverPhotoImage.naturalWidth) return;
+    const padding = getComputedStyle(saverPhoto);
+    const layout = saverPhotoLayout(W,H,saverPhotoImage.naturalWidth,saverPhotoImage.naturalHeight,
+      saverBar.getBoundingClientRect().height,parseFloat(padding.paddingTop)||16,parseFloat(padding.paddingBottom)||16);
+    saverPhotoImage.style.width = layout.width+"px";
+    saverPhotoImage.style.height = layout.height+"px";
+    saverPhotoImage.style.top = layout.top+"px";
+    saverBar.style.top = layout.captionTop+"px"; saverBar.style.bottom = "auto";
+  }
+  window.addEventListener("resize", layoutSaverPhoto);
   function applySaverPhoto(state) {
     if (!state.photos?.length) {
       state.photos = DSO_PHOTOS.slice();
@@ -18101,13 +18122,14 @@
     state.photoReady = false; state.photoFailed = false; state.photoWait = 0;
     setPlaying(false);
     saverPhoto.hidden = saverPhotoCredit.hidden = false;
-    saverPhotoImage.style.transform = "scale(1)";
+    saverPhotoImage.style.transform = "translateX(-50%) scale(.96)";
     saverPhotoImage.alt = name;
     saverPhotoCredit.innerHTML = dsoPhotoCreditHTML(photo) + '<br><a href="'+DSO_PHOTO_LICENSE+'" target="_blank" rel="noopener">CC BY 4.0</a> · '+DSO_PHOTO_CHANGES;
-    saverPhotoImage.onload = () => { if (saverState === state && state.kind === "dsoPhoto") state.photoReady = true; };
+    saverPhotoImage.onload = () => { if (saverState === state && state.kind === "dsoPhoto") { state.photoReady = true; layoutSaverPhoto(); } };
     saverPhotoImage.onerror = () => { if (saverState === state && state.kind === "dsoPhoto") state.photoFailed = true; };
     saverPhotoImage.src = photo.file;
     syncSaverDate(); syncScreensaverUI();
+    layoutSaverPhoto();
   }
   function applySaverScene(kind) {
     const state = saverState, pick = a => a[Math.floor(Math.random() * a.length)];
@@ -18248,7 +18270,7 @@
     if (!s || document.hidden || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     if (s.kind === "dsoPhoto" && s.photoReady) {
       s.photoMotion = Math.min(34, s.photoMotion + dt);
-      saverPhotoImage.style.transform = "scale(" + (1 + s.photoMotion * .002) + ")";
+      saverPhotoImage.style.transform = "translateX(-50%) scale(" + (.96 + s.photoMotion * .04/34) + ")";
     }
     else if (s.orbit) cam.yawTgt += dt * Math.PI / 120;
     else if (s.kind === "overview") cam.yawTgt += dt * .006;
