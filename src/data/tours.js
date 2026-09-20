@@ -515,7 +515,7 @@
           text: {
             ja: "地球を中心に据えて、5月16日から1週間を進めてみましょう。彗星が地球と太陽のあいだを" +
                 "横切り、太陽と反対 — つまり地球の側 — へ伸びた尾の中を、19日から20日にかけて" +
-                "地球が通り抜けていきます。当時は尾に含まれるシアンで人類が滅ぶという噂が流れ、" +
+                "地球が通り抜けていきます。当時は尾に含まれるシアンで人類が滅ぶという噂が流れましたが、" +
                 "実際には何も起きませんでした。",
             en: "Centred on Earth, let a week run from 16 May. The comet crosses between Earth and the Sun, " +
                 "and on the 19th and 20th Earth passes right through the tail streaming away from the Sun — " +
