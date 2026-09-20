@@ -212,7 +212,7 @@
       }
     }
     lblEnd();
-    drawHuygensOverview();
+    drawSaturnOverview();
   }
 
   // ---------- 日時の表示 & 入力 ----------
