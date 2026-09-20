@@ -1001,7 +1001,7 @@
           d: "1997-10-15T00:05", play: false, constel: false, spot: "cassini",
           probeIn: true,
           text: {
-            ja: "1997年10月15日打ち上げ。打ち上げに使うロケットだけでは、5.7トンの探査機を土星まで直接送れないため、" +
+            ja: "1997年10月15日にカッシーニは打ち上げられました。打ち上げに使うロケットだけでは、5.7トンの探査機を土星まで直接送れないため、" +
                 "内側の惑星で重力アシスト（スイングバイ）を重ねて加速する計画です。",
             en: "Launched 15 October 1997. The launch vehicle alone cannot send 5.7 tonnes straight to Saturn, " +
                 "so the mission uses gravity-assist swing-bys of the inner planets to accelerate.",
@@ -1082,7 +1082,7 @@
           spot: "cassini", d: "2000-12-30T10:05",
           spd: 130, play: true, until: "2004-06-20",
           text: {
-            ja: "木星で最後のスイングバイを終え、いよいよ土星へ向かいます。到着までは、あと3年半です。" +
+            ja: "木星で最後のスイングバイを終え、いよいよ土星へ向かいます。到着まで、3年半かかります。" +
                 "土星に着くまでの道のりは、打ち上げから約35億km、7年近くに及びます。",
             en: "After its final swing-by at Jupiter, Cassini heads for Saturn, still three and a half years away. " +
                 "By arrival, it will have travelled 3.5 billion km over nearly seven years since launch.",

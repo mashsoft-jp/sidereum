@@ -63,6 +63,7 @@ const MANIFEST = [
   "render/meteor.js",    // 流星 (地上ビュー)
   "render/intro.js",     // 初回の導入 (太陽系のはるか外から寄る)
   "runtime/perf.js",     // 描画負荷の表示 (?perf=1 のときだけ)
+  "render/huygens-overview.js", // ホイヘンスの航路俯瞰図
   "runtime/frame.js",    // オーバーレイ・時刻表示・メインループ
   "ui/icons.js",         // 共通の操作アイコン
   "ui/observe.js",       // 選択・観測モード・観測地・天体リスト

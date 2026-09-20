@@ -212,6 +212,7 @@
       }
     }
     lblEnd();
+    drawHuygensOverview();
   }
 
   // ---------- 日時の表示 & 入力 ----------
