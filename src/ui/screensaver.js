@@ -2,7 +2,7 @@
   let saverState = null;
   const saverBar = document.getElementById("saverBar"), saverFade = document.getElementById("saverFade");
   const saverHint = document.getElementById("saverHint");
-  const SAVER_KINDS = ["body", "cometSpace", "cometGround", "cometMoon", "overview", "earthSky", "moonSky", "voyager", "cassini", "paleDot", "meteorTour", "eclipseTour", "saturnRings"];
+  const SAVER_KINDS = ["body", "cometSpace", "cometGround", "cometMoon", "overview", "earthSky", "moonSky", "voyager", "cassini", "paleDot", "meteorTour", "eclipseTour", "saturnRings", "dsoPhoto"];
   // ステップ番号は0始まり。ガイドの日時・照準を共有し、説明UIや進捗は動かさない。
   const SAVER_TOUR_CLIPS = {
     voyager: [
@@ -100,12 +100,49 @@
     simDays = choice.days; moonLat = choice.lat; moonLon = choice.lon;
     updatePositions(); buildObsFrame();
   }
+  const saverPhoto = document.getElementById("saverPhoto");
+  const saverPhotoImage = document.getElementById("saverPhotoImage");
+  const saverPhotoCredit = document.getElementById("saverPhotoCredit");
+  function clearSaverPhoto() {
+    saverPhoto.hidden = saverPhotoCredit.hidden = true;
+    saverPhotoImage.onload = saverPhotoImage.onerror = null;
+    saverPhotoImage.removeAttribute("src");
+  }
+  function applySaverPhoto(state) {
+    if (!state.photos?.length) {
+      state.photos = DSO_PHOTOS.slice();
+      for (let i = state.photos.length-1; i > 0; i--) {
+        const j = Math.floor(Math.random()*(i+1));
+        [state.photos[i],state.photos[j]] = [state.photos[j],state.photos[i]];
+      }
+      if (state.photos.length > 1 && state.photos.at(-1).m === state.lastPhoto) state.photos.reverse();
+    }
+    const photo = state.photos.pop();
+    state.lastPhoto = photo.m;
+    const d = DSO.findIndex(d => d[0] === photo.m);
+    const name = d >= 0 ? dsoName(d) : "M"+photo.m;
+    state.kind = "dsoPhoto"; state.orbit = false;
+    state.title = {ja: "M"+photo.m+" · "+name+" · 観測写真", en: "M"+photo.m+" · "+name+" · observation image"};
+    state.elapsed = 0; state.duration = 32; state.photoMotion = 0;
+    state.photoReady = false; state.photoFailed = false; state.photoWait = 0;
+    setPlaying(false);
+    saverPhoto.hidden = saverPhotoCredit.hidden = false;
+    saverPhotoImage.style.transform = "scale(1)";
+    saverPhotoImage.alt = name;
+    saverPhotoCredit.innerHTML = dsoPhotoCreditHTML(photo) + '<br><a href="'+DSO_PHOTO_LICENSE+'" target="_blank" rel="noopener">CC BY 4.0</a> · '+DSO_PHOTO_CHANGES;
+    saverPhotoImage.onload = () => { if (saverState === state && state.kind === "dsoPhoto") state.photoReady = true; };
+    saverPhotoImage.onerror = () => { if (saverState === state && state.kind === "dsoPhoto") state.photoFailed = true; };
+    saverPhotoImage.src = photo.file;
+    syncSaverDate(); syncScreensaverUI();
+  }
   function applySaverScene(kind) {
     const state = saverState, pick = a => a[Math.floor(Math.random() * a.length)];
     const base = { view: "space", sel: null, d: "2026-09-08T12:00", play: true, spd: 1 / 86400, mag: 1, cut: true };
     restoreSaverTourVisuals(state.tourVisuals);
     let s = { ...base }, title, orbit = false, clip = null;
     if (ringExplore?.saver) ringExplore = null;
+    clearSaverPhoto();
+    if (kind === "dsoPhoto") { applySaverPhoto(state); return; }
     if (SAVER_TOUR_CLIPS[kind]) {
       clip = saverTourScene(pick(SAVER_TOUR_CLIPS[kind])); s = clip.scene; title = clip.title;
       if (s.site) { [obsLat, obsLon] = s.site; delete s.site; }
@@ -191,7 +228,7 @@
     return saverState.bag.pop();
   }
   function syncSaverDate() {
-    document.getElementById("saverDate").hidden = saverState.kind === "saturnRings";
+    document.getElementById("saverDate").hidden = saverState.kind === "saturnRings" || saverState.kind === "dsoPhoto";
     const minute = Math.floor(simDays * 1440);
     if (saverState.minute === minute) return;
     saverState.minute = minute;
@@ -214,6 +251,7 @@
   }
   function stopScreensaver() {
     if (!saverState) return;
+    clearSaverPhoto();
     const { saved, extra } = saverState;
     if (ringExplore?.saver) ringExplore = null;
     restoreSaverTourVisuals(saverState.tourVisuals);
@@ -234,7 +272,11 @@
   function moveSaverCamera(dt) {
     const s = saverState;
     if (!s || document.hidden || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    if (s.orbit) cam.yawTgt += dt * Math.PI / 120;
+    if (s.kind === "dsoPhoto" && s.photoReady) {
+      s.photoMotion = Math.min(34, s.photoMotion + dt);
+      saverPhotoImage.style.transform = "scale(" + (1 + s.photoMotion * .002) + ")";
+    }
+    else if (s.orbit) cam.yawTgt += dt * Math.PI / 120;
     else if (s.kind === "overview") cam.yawTgt += dt * .006;
     else if (s.kind === "cometSpace") {
       // 尾を横から見る向きから、約40秒で32°回り込み、距離も約1.6倍にする。
@@ -248,6 +290,15 @@
   function stepScreensaver(dt) {
     const s = saverState;
     if (!s || document.hidden) return;
+    // Keep the transition dark until the local image is ready; skip failures.
+    if (s.kind === "dsoPhoto" && !s.photoReady) {
+      s.photoWait += dt;
+      saverFade.style.opacity = "1";
+      if (s.photoFailed || s.photoWait > 8) {
+        applySaverScene(nextSaverKind()); s.phase = "in"; s.fade = 0;
+      }
+      return;
+    }
     syncSaverDate();
     moveSaverCamera(dt);
     s.age += dt;

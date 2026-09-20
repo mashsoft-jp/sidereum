@@ -1714,3 +1714,9 @@
 
   #ringReturnVeil { position:absolute; inset:0; z-index:100; background:#04060e; }
   #ringReturnVeil[hidden] { display:none; }
+
+  #saverPhoto { position: absolute; inset: 0; z-index: 24; background: #04060e; overflow: hidden; pointer-events: none; }
+  #saverPhoto[hidden], #saverPhotoCredit[hidden] { display: none; }
+  #saverPhotoImage { position: absolute; inset: 8% 5% 20%; width: 90%; height: 72%; object-fit: contain; }
+  #saverPhotoCredit { max-width: 760px; font-size: 10px; line-height: 1.5; color: #a2aebf; margin-top: 6px; overflow-wrap: anywhere; }
+  #saverPhotoCredit a { color: inherit; }

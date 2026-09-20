@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 const elements = new Map();
 const element = id => {
-  if (!elements.has(id)) elements.set(id, { style: {}, addEventListener(type, fn) { this[type] = fn; }, setAttribute() {} });
+  if (!elements.has(id)) elements.set(id, { style: {}, addEventListener(type, fn) { this[type] = fn; }, setAttribute() {}, removeAttribute() {} });
   return elements.get(id);
 };
 const listeners = {};
@@ -21,13 +21,13 @@ run(`saverState = { bag: [], kind: 'body', phase: 'show', fade: 0, age: 0, elaps
 let previous = 'body';
 for (let round = 0; round < 100; round++) {
   const seen = new Set();
-  for (let i = 0; i < 13; i++) {
+  for (let i = 0; i < 14; i++) {
     const kind = run('nextSaverKind()');
     assert.notEqual(kind, previous);
     seen.add(kind); previous = kind;
     run(`saverState.kind = ${JSON.stringify(kind)}`);
   }
-  assert.equal(seen.size, 13);
+  assert.equal(seen.size, 14);
 }
 run(`saverState.kind = 'body'`);
 // 元ツアーを変更せず、全抜粋が有効な日時と照準を持つ。
@@ -165,3 +165,42 @@ realStopScreensaver();
 assert.equal(ctx.ringExplore,null,'終了時も環の描画を解除する');
 assert.equal(run('saverState'),null);
 console.log('screensaver rings: entry, next scene and exit passed');
+
+// 写真は全8枚を重複なく巡り、ロード完了前にフェードを開かない。
+run(readFileSync(new URL('../src/data/dso-photos.js', import.meta.url), 'utf8'));
+ctx.DSO = run('DSO_PHOTOS.map(p=>[p.m])');
+ctx.dsoName = i => 'Object '+ctx.DSO[i][0];
+ctx.dsoPhotoCreditHTML = p => p.credit;
+run('saverState={tourVisuals:savedVisuals,bag:[],phase:"in",fade:0,age:0};');
+const photos = new Set();
+for(let i=0;i<8;i++) {
+ realApplySaverScene('dsoPhoto');
+ photos.add(element('saverPhotoImage').src);
+ assert.equal(element('saverDate').hidden,true);
+ assert.equal(element('saverPhoto').hidden,false);
+ assert.match(element('saverPhotoCredit').innerHTML,/CC BY 4.0/);
+}
+assert.equal(photos.size,8);
+run('stepScreensaver(.2)');
+assert.equal(element('saverFade').style.opacity,'1');
+assert.equal(run('saverState.elapsed'),0);
+element('saverPhotoImage').onload();
+run('stepScreensaver(.2)');
+assert.ok(Number(element('saverFade').style.opacity)<1);
+assert.notEqual(element('saverPhotoImage').style.transform,'scale(1)');
+ctx.matchMedia=()=>({matches:true});
+const transform=element('saverPhotoImage').style.transform;
+run('moveSaverCamera(2)');assert.equal(element('saverPhotoImage').style.transform,transform);
+ctx.matchMedia=()=>({matches:false});
+realApplySaverScene('dsoPhoto');
+element('saverPhotoImage').onerror();
+run('stepScreensaver(.1)');assert.notEqual(run('saverState.kind'),'dsoPhoto');
+realApplySaverScene('overview');
+assert.equal(element('saverPhoto').hidden,true);
+assert.equal(element('saverPhotoCredit').hidden,true);
+realApplySaverScene('dsoPhoto');
+run('saverState.saved={}; saverState.extra={frame:{}};');
+realStopScreensaver();
+assert.equal(element('saverPhoto').hidden,true);
+assert.equal(element('saverPhotoImage').onload,null);
+console.log('screensaver photos: coverage, credits, loading, motion, errors and cleanup passed');
