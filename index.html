@@ -8602,11 +8602,15 @@
     if (alpha <= 0.02) return;
     let L = lblQPool[lblQ.length];
     if (!L) L = lblQPool[lblQ.length] = { txt: "", x: 0, y: 0, pri: 0, col: "", f: null };
-    L.txt = txt; L.x = x; L.y = y; L.pri = pri; L.col = col; L.f = f || LF11; L.alpha = alpha;
+    L.txt = txt; L.x = x; L.y = y; L.pri = pri; L.col = col; L.f = pri === LBL_SEL ? LF12 : (f || LF11); L.alpha = alpha;
     lblQ.push(L);
   }
   function lblEnd() {
     lblQ.sort((a, b) => a.pri - b.pri);
+    const focusLabels = lblQ.filter(L => L.pri === LBL_SEL);
+    octx.save();
+    octx.shadowColor = "rgba(3,8,18,.9)";
+    octx.shadowBlur = 3;
     for (const L of lblQ) {
       const key = L.f.px + " " + L.txt;
       let w = lblWCache.get(key);
@@ -8617,7 +8621,7 @@
       }
       // 高さは実測せず px から見積もる (measureText の ascent/descent は文字に
       // よって変わるので、同じ大きさの文字が不揃いな箱を持つことになる)
-      const hw = w * 0.5 + 5;
+      const hw = w * 0.5 + 8;
       const top = L.f.px * 0.85 + 2, bottom = L.f.px * 0.3 + 2;
       let x = L.x, y = L.y, placed = false;
       // 選択・注目名は画面内へ収め、衝突時には近い上段から空きを探す。
@@ -8626,7 +8630,7 @@
       const attempts = important ? 9 : 1;
       for (let i = 0; i < attempts; i++) {
         x = important ? Math.max(hw + 4, Math.min(W - hw - 4, L.x)) : L.x;
-        const row = Math.ceil(i / 2), dy = row * (top + bottom + 3);
+        const row = Math.ceil(i / 2), dy = row * (top + bottom + 9);
         y = L.y + (i % 2 ? -dy : dy);
         if (important) y = Math.max(top + 4, Math.min(H - bottom - 4, y));
         const x0 = x - hw, x1 = x + hw, y0 = y - top, y1 = y + bottom;
@@ -8636,7 +8640,11 @@
           if (L.pri >= box[4] && x0 < box[2] && x1 > box[0] && y0 < box[3] && y1 > box[1]) { hit = true; break; }
         }
         if (hit) continue;
-        lblRect(x0, y0, x1, y1, 0);
+        // Reserve breathing room as well as the glyph bounds. Background names
+        // yield first; important names can move to the next row.
+        const gapX = important ? 12 : L.pri >= LBL_SAT ? 6 : 2;
+        const gapY = important ? 5 : L.pri >= LBL_SAT ? 4 : 2;
+        lblRect(x0-gapX, y0-gapY, x1+gapX, y1+gapY, 0);
         placed = true;
         break;
       }
@@ -8651,10 +8659,19 @@
       }
       octx.font = L.f.s;
       octx.fillStyle = L.col;
-      octx.globalAlpha = L.alpha;
+      let emphasis = 1;
+      if (!important && L.pri >= LBL_PROBE) {
+        for (const focus of focusLabels) {
+          const distance = Math.hypot(x-focus.x, y-focus.y);
+          const u = Math.min(1, distance/140);
+          emphasis = Math.min(emphasis, .55 + .45*u*u*(3-2*u));
+        }
+      }
+      octx.globalAlpha = L.alpha * emphasis;
       octx.fillText(L.txt, x, y);
       octx.globalAlpha = 1;
     }
+    octx.restore();
   }
 
   // ---------- 描画 ----------
@@ -10877,7 +10894,7 @@
       }
       if (v.rpx < H * 0.3) lblBlock(s.x, s.y, v.rpx);   // 円盤の上に星座名などを置かせない
       if (!v.b.showLabel) continue;
-      lblPut(bName(v.b), s.x, s.y - Math.max(v.rpx, 3) - 8, hit ? LBL_SEL : lblPri(v.b),
+      lblPut(bName(v.b), s.x, s.y - Math.max(v.rpx, 3) - 8, (hit || selected === v.b) ? LBL_SEL : lblPri(v.b),
              hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.82)", LF11);
     }
     // AR: 選択天体が画面の外なら、その方向へ矢印を出す。追尾でカメラを向けられない
@@ -13014,7 +13031,7 @@
       }
       lblBlock(s.x, s.y, s.r);   // 円盤の上に星座名などを置かせない
       if (b.showLabel) {
-        lblPut(bName(b), s.x, s.y - Math.max(s.r, 3) - 9, hit ? LBL_SEL : spaceLabelPriority(b),
+        lblPut(bName(b), s.x, s.y - Math.max(s.r, 3) - 9, (hit || selected === b) ? LBL_SEL : spaceLabelPriority(b),
                hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.75)", LF10, spaceLabelAlpha(b));
       }
     }
@@ -13029,7 +13046,7 @@
       const hit = marked === s || spotB === s;
       lblBlock(sp.x, sp.y, sp.r);
       if (s.showLabel && (hit || sp.r > 2 || away)) {
-        lblPut(bName(s), sp.x, sp.y - Math.max(sp.r, 3) - 8, hit ? LBL_SEL : spaceLabelPriority(s),
+        lblPut(bName(s), sp.x, sp.y - Math.max(sp.r, 3) - 8, (hit || selected === s) ? LBL_SEL : spaceLabelPriority(s),
                hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.6)", LF10, spaceLabelAlpha(s));
       }
       if (hit) {
@@ -13046,7 +13063,7 @@
       const hit = marked === pr || spotB === pr;
       if (marked === pr || (tourProbeDot && spotB === pr))
         drawSpaceSelection({ x: sp.x, y: sp.y, r: Math.max(3, (pr.px || 0) * 0.5) }, pr);
-      lblPut(bName(pr), sp.x, sp.y - (pr.px ? pr.px * 0.5 : 4) - 8, hit ? LBL_SEL : LBL_PROBE,
+      lblPut(bName(pr), sp.x, sp.y - (pr.px ? pr.px * 0.5 : 4) - 8, (hit || selected === pr || tourRideOn === pr.key) ? LBL_SEL : LBL_PROBE,
              hit ? "rgba(242,178,62,0.95)" : "rgba(180,205,240,0.85)", LF10);
     }
 

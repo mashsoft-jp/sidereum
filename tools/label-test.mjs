@@ -7,7 +7,7 @@ const labels = source.slice(source.indexOf('  const LBL_SEL'), source.indexOf(' 
 const drawn = [];
 const ctx = vm.createContext({ W: 390, H: 844, octx: {
   measureText: text => ({ width: text.length * 11 }),
-  fillText: (text, x, y) => drawn.push({ text, x, y }),
+  fillText(text, x, y) { drawn.push({ text, x, y, alpha: this.globalAlpha, font: this.font }); },
   save() {}, restore() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {},
 }});
 vm.runInContext(labels, ctx);
@@ -28,3 +28,16 @@ assert.equal(drawn.length, 0);
 run(`lblBlock(100,100,30); lblPut('constellation',100,100,LBL_SKY,'white');`);
 assert.equal(drawn.length, 0);
 console.log('labels: priorities, selected-label separation, viewport edges and disc avoidance passed');
+
+run(`lblPut('focus',100,100,LBL_SEL,'white');
+     lblPut('nearby',100,126,LBL_SKY,'white');
+     lblPut('far',300,400,LBL_SKY,'white');`);
+assert.equal(drawn.length,3);
+assert.equal(drawn[0].alpha,1);
+assert.ok(drawn[1].alpha < .8);
+assert.equal(drawn[2].alpha,1);
+assert.match(drawn[0].font,/12px/);
+run(`lblPut('focus',100,100,LBL_SEL,'white');
+     lblPut('crowded',100,117,LBL_SKY,'white');`);
+assert.deepEqual(drawn.map(x=>x.text),['focus']);
+console.log('labels: focus spacing, emphasis and readable focus font passed');

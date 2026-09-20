@@ -87,7 +87,7 @@
       }
       lblBlock(s.x, s.y, s.r);   // 円盤の上に星座名などを置かせない
       if (b.showLabel) {
-        lblPut(bName(b), s.x, s.y - Math.max(s.r, 3) - 9, hit ? LBL_SEL : spaceLabelPriority(b),
+        lblPut(bName(b), s.x, s.y - Math.max(s.r, 3) - 9, (hit || selected === b) ? LBL_SEL : spaceLabelPriority(b),
                hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.75)", LF10, spaceLabelAlpha(b));
       }
     }
@@ -102,7 +102,7 @@
       const hit = marked === s || spotB === s;
       lblBlock(sp.x, sp.y, sp.r);
       if (s.showLabel && (hit || sp.r > 2 || away)) {
-        lblPut(bName(s), sp.x, sp.y - Math.max(sp.r, 3) - 8, hit ? LBL_SEL : spaceLabelPriority(s),
+        lblPut(bName(s), sp.x, sp.y - Math.max(sp.r, 3) - 8, (hit || selected === s) ? LBL_SEL : spaceLabelPriority(s),
                hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.6)", LF10, spaceLabelAlpha(s));
       }
       if (hit) {
@@ -119,7 +119,7 @@
       const hit = marked === pr || spotB === pr;
       if (marked === pr || (tourProbeDot && spotB === pr))
         drawSpaceSelection({ x: sp.x, y: sp.y, r: Math.max(3, (pr.px || 0) * 0.5) }, pr);
-      lblPut(bName(pr), sp.x, sp.y - (pr.px ? pr.px * 0.5 : 4) - 8, hit ? LBL_SEL : LBL_PROBE,
+      lblPut(bName(pr), sp.x, sp.y - (pr.px ? pr.px * 0.5 : 4) - 8, (hit || selected === pr || tourRideOn === pr.key) ? LBL_SEL : LBL_PROBE,
              hit ? "rgba(242,178,62,0.95)" : "rgba(180,205,240,0.85)", LF10);
     }
 

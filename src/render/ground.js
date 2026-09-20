@@ -1142,7 +1142,7 @@
       }
       if (v.rpx < H * 0.3) lblBlock(s.x, s.y, v.rpx);   // 円盤の上に星座名などを置かせない
       if (!v.b.showLabel) continue;
-      lblPut(bName(v.b), s.x, s.y - Math.max(v.rpx, 3) - 8, hit ? LBL_SEL : lblPri(v.b),
+      lblPut(bName(v.b), s.x, s.y - Math.max(v.rpx, 3) - 8, (hit || selected === v.b) ? LBL_SEL : lblPri(v.b),
              hit ? "rgba(242,178,62,0.95)" : "rgba(201,213,234,0.82)", LF11);
     }
     // AR: 選択天体が画面の外なら、その方向へ矢印を出す。追尾でカメラを向けられない
