@@ -262,11 +262,17 @@
   // ときとで言い方を変える (後者は利用者が何かしたわけではない)。
   // 次へ進むのは自動送りが ON のときだけ — OFF なら着いた場面のまま待つ。
   // 最後のステップでは進めない (自動送りでツアーが勝手に終わってしまう)
+  function tourCompletionText() {
+    if (tourDoneKind !== "played") return T().tourGood;
+    return tour && (tour.id === "basics-desktop" || tour.id === "basics-touch")
+      ? T().tourPlayed : "";
+  }
   function tourAdvance(showDone) {
     tourDoneKind = showDone ? "good" : "played";
-    tourDoneEl.textContent = showDone ? T().tourGood : T().tourPlayed;
+    tourDoneEl.textContent = tourCompletionText();
     tourBar.classList.remove("pending");
-    tourBar.classList.add("done", "ready");
+    tourBar.classList.toggle("done", !!tourDoneEl.textContent);
+    tourBar.classList.add("ready");
     if (!tourAuto || tourIdx >= tour.steps.length - 1) return;
     tourDoneTimer = setTimeout(() => tourGo(tourIdx + 1), 900);
   }
@@ -722,7 +728,7 @@
     tourAutoBtn.classList.toggle("on", tourAuto);
     tourResumeBtn.textContent = t.tourResume;
     tourCloseBtn.title = t.tourExit;
-    tourDoneEl.textContent = tourDoneKind === "played" ? t.tourPlayed : t.tourGood;
+    tourDoneEl.textContent = tourCompletionText();
   }
 
   function tourGo(i) {
@@ -976,4 +982,3 @@
     startTour(t, isFinite(n) ? n - 1 : 0);
     return true;
   }
-
