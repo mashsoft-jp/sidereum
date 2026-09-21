@@ -734,6 +734,7 @@
   function tourGo(i) {
     if (!tour) return;
     if (i >= tour.steps.length) { endTour(); return; }
+    resetTourOverview();
     tourIdx = Math.max(0, i);
     // 最後のシーンまで来たら視聴済みに (✕ で閉じても「見終えた」と扱う)
     if (tourIdx === tour.steps.length - 1) markTourSeen(tour);
@@ -821,6 +822,7 @@
     tourGo(Math.max(0, Math.min(t.steps.length - 1, step | 0)));
   }
   function endTour() {
+    resetTourOverview();
     clearTourTimer();
     clearTimeout(tourDoneTimer);
     tourDoneTimer = 0;

@@ -1,44 +1,63 @@
-  // Saturn-relative, Titan-orbit-plane schematic. Uses the same approximate
+  // Planet-relative route schematic. Uses the same approximate
   // ephemeris and simulation clock as the main view, never a second animation.
   const saturnOverviewCache = new Map();
-  function saturnOverviewPoint(key, days) {
+  const overviewClose = document.getElementById("overviewClose");
+  let overviewDismissed = false;
+  function resetTourOverview() { overviewDismissed = false; overviewClose.hidden = true; }
+  overviewClose.addEventListener("click", e => {
+    e.stopPropagation(); overviewDismissed = true; overviewClose.hidden = true;
+  });
+  overviewClose.addEventListener("pointerdown", e => e.stopPropagation());
+  function tourOverviewScene() {
+    if (!tourActive || !tour || overviewDismissed) return null;
+    const scene = tour.steps[tourIdx];
+    if (tour.id === "cassini" && (tourIdx === 9 || tourIdx === 10))
+      return {key: tourIdx === 9 ? "huygens" : "cassini", center: "saturn", plane: true, scene};
+    if ((tour.id === "voyager1" || tour.id === "voyager2") &&
+        ["jupiter","saturn","uranus","neptune"].includes(scene.ride) && scene.d && scene.until)
+      return {key: tour.id, center: scene.ride, plane: false, scene};
+    return null;
+  }
+  function saturnOverviewPoint(key, days, center = "saturn", plane = true) {
     const titan = BODY_BY_KEY.get("titan"), M = titan.M;
-    const p = key === "huygens" || key === "cassini"
+    const p = BODY_BY_KEY.get(key)?.pts
       ? probeAU(BODY_BY_KEY.get(key), days, [0, 0, 0])
       : wayAU(key, days, [0, 0, 0]);
     if (!p) return null;
-    const s = wayAU("saturn", days, [0, 0, 0]);
+    const s = wayAU(center, days, [0, 0, 0]);
+    if (!plane) return [(p[0]-s[0])*AU_KM, (p[1]-s[1])*AU_KM];
     const x = (p[0] - s[0]) * AU_KM;
     const y = (p[2] - s[2]) * AU_KM;
     const z = -(p[1] - s[1]) * AU_KM;
     return [x*M[0] + y*M[1] + z*M[2], x*M[8] + y*M[9] + z*M[10]];
   }
   // Direction comes from the projected ephemeris, not the camera or playback speed.
-  function saturnOverviewHeading(key, days, start, end) {
-    const before = saturnOverviewPoint(key, Math.max(start, days-.005));
-    const after = saturnOverviewPoint(key, Math.min(end, days+.005));
+  function saturnOverviewHeading(key, days, start, end, center, plane) {
+    const before = saturnOverviewPoint(key, Math.max(start, days-.005), center, plane);
+    const after = saturnOverviewPoint(key, Math.min(end, days+.005), center, plane);
     if (!before || !after) return null;
     const dx = after[0]-before[0], dy = -(after[1]-before[1]);
     return Math.hypot(dx,dy) > 1e-6 ? Math.atan2(dy,dx) : null;
   }
   function drawSaturnOverview() {
-    if (!tourActive || !tour || tour.id !== "cassini" || (tourIdx !== 9 && tourIdx !== 10)) return;
-    const key = tourIdx === 9 ? "huygens" : "cassini";
-    if (!saturnOverviewCache.has(key)) {
-      const scene = tour.steps[tourIdx];
+    const config = tourOverviewScene();
+    if (!config) { overviewClose.hidden = true; return; }
+    const {key, center, plane, scene} = config;
+    const cacheKey = tour.id+":"+tourIdx;
+    if (!saturnOverviewCache.has(cacheKey)) {
       const start = wayDays(scene.d), end = wayDays(scene.until);
       const points = [];
       let extent = key === "huygens" ? BODY_BY_KEY.get("titan").aKm : 0;
       const pathEnd = key === "cassini" ? start + 360 : end;
       for (let i = 0; i <= 240; i++) {
-        const t = start + (pathEnd-start)*i/240, p = saturnOverviewPoint(key, t);
+        const t = start + (pathEnd-start)*i/240, p = saturnOverviewPoint(key, t, center, plane);
         if (p) { points.push({t, p}); extent = Math.max(extent, Math.hypot(...p)); }
       }
-      saturnOverviewCache.set(key, {start, end, points, extent});
+      saturnOverviewCache.set(cacheKey, {start, end, points, extent});
     }
-    const data = saturnOverviewCache.get(key);
+    const data = saturnOverviewCache.get(cacheKey);
     const days = Math.max(data.start, Math.min(data.end, simDays));
-    const h = saturnOverviewPoint(key, days), titan = saturnOverviewPoint("titan", days);
+    const h = saturnOverviewPoint(key, days, center, plane), titan = saturnOverviewPoint("titan", days);
     if (!h || !titan) return;
     const portrait = H > W;
     const width = Math.min(portrait ? 220 : 280, W - 24);
@@ -47,7 +66,10 @@
     const left = W - width - 12, top = Math.max(64, clockBottom + 12);
     // On very short displays leave room for the narration and main view.
     if (top + height + 16 > tourBar.getBoundingClientRect().top) return;
-    const cx = left + width/2, cy = top + 34 + (height-60)/2;
+    overviewClose.hidden = false;
+    overviewClose.style.left = (left+width-32)+"px"; overviewClose.style.top = (top+4)+"px";
+    overviewClose.setAttribute("aria-label",lang === "ja" ? "航路図を閉じる" : "Hide route map");
+    const cx = left + width/2, cy = top + 20 + (height-46)/2;
     const scale = Math.min(width-76, height-72) / (2*data.extent);
     const screen = p => [cx+p[0]*scale, cy-p[1]*scale];
     const ctx = octx;
@@ -57,10 +79,6 @@
     ctx.beginPath(); ctx.roundRect(left, top, width, height, 8); ctx.fill(); ctx.stroke();
     ctx.textAlign = "left"; ctx.textBaseline = "middle";
     ctx.font = "11px sans-serif"; ctx.fillStyle = "#bcc9dc";
-    const title = key === "huygens"
-      ? (lang === "ja" ? "タイタンへの航路" : "Route to Titan")
-      : (lang === "ja" ? "カッシーニの土星周回" : "Cassini around Saturn");
-    ctx.fillText(title, left+12, top+17);
     ctx.strokeStyle = "rgba(158,181,213,.48)"; ctx.setLineDash([3,4]);
     ctx.beginPath();
     if (key === "huygens") {
@@ -85,7 +103,7 @@
       ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke();
       behind += length;
     }
-    const heading = saturnOverviewHeading(key, days, data.start, data.end);
+    const heading = saturnOverviewHeading(key, days, data.start, data.end, center, plane);
     const labels = [];
     const marker = (p, radius, color, label, above, shape = "dot") => {
       const [x,y] = screen(p);
@@ -116,9 +134,9 @@
       labels.push({x:tx,y:ty,w:labelWidth});
       ctx.fillText(label, tx, ty);
     };
-    marker([0,0],5,"#ddc89a",lang === "ja" ? "土星" : "Saturn",false,"saturn");
+    marker([0,0],5,"#ddc89a",bName(BODY_BY_KEY.get(center)),false,center === "saturn" ? "saturn" : "dot");
     if (key === "huygens") marker(titan,3,"#c2d7f5",lang === "ja" ? "タイタン" : "Titan",true);
-    marker(h,3,"#ffc35d",key === "huygens" ? (lang === "ja" ? "ホイヘンス" : "Huygens") : (lang === "ja" ? "カッシーニ" : "Cassini"),false,"probe");
+    marker(h,3,"#ffc35d",bName(BODY_BY_KEY.get(key)),false,"probe");
     ctx.fillStyle = "#8695ab"; ctx.font = "10px sans-serif";
     ctx.fillText(lang === "ja" ? "模式図 · 点の大きさは実寸ではありません" : "Schematic · markers not to scale",left+10,top+height-13);
     ctx.restore();
