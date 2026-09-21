@@ -1048,10 +1048,10 @@
           text: {
             ja: "1999年8月18日、地球でスイングバイを行います。高度 1,171km — " +
                 "国際宇宙ステーションの3倍ほどの高さを、秒速19kmで駆け抜けます。" +
-                "ここで太陽に対する速度を秒速約5.5km増し、木星へ届く軌道に乗りました。",
+                "このスイングバイでさらに加速し、いよいよ木星へ向かいます。",
             en: "18 August 1999: Cassini performs a swing-by of Earth. It tore past 1,171 km up — about " +
-                "three times the altitude of the Space Station — at 19 km/s. The flyby increased its " +
-                "speed relative to the Sun by about 5.5 km/s, putting it on a trajectory to Jupiter.",
+                "three times the altitude of the Space Station — at 19 km/s. This swing-by gives it " +
+                "another boost, sending it on toward Jupiter.",
           },
         },
         {
