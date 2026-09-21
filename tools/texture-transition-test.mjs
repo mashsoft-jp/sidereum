@@ -16,3 +16,16 @@ now=649;vm.runInContext('finishTextureFades()',ctx);assert.equal(deleted.length,
 now=651;vm.runInContext('finishTextureFades()',ctx);assert.deepEqual(deleted,['original']);
 ctx.tex=texByKey.get('earth');vm.runInContext('loadTexInto(tex,"earth")',ctx);images[2].onerror();assert.equal(texByKey.get('earth'),ctx.tex,'failure preserves existing texture');
 console.log('texture transitions: stale response, previous image, cleanup and failure passed');
+// 8K取得失敗でも旧画像を維持し、4Kを同じリクエストとして読み直す。
+ctx.texURL=()=> 'tex/8k/earth.jpg'; ctx.TEX_DIR='tex/';ctx.earth8kFailed=false;
+ctx.tex=texByKey.get('earth');
+vm.runInContext('loadTexInto(tex,"earth")',ctx);
+images[3].onerror();assert.equal(images[3].src,'tex/4k/earth.jpg');assert.equal(ctx.earth8kFailed,true);
+assert.equal(texByKey.get('earth'),ctx.tex);
+images[3].onload();assert.notEqual(texByKey.get('earth'),ctx.tex);
+// WebGLは例外でなくエラーコードを返すこともある。
+ctx.gl.getError=()=>1285;ctx.gl.NO_ERROR=0;
+vm.runInContext('loadTexInto(tex,"earth")',ctx);
+images[4].onload();assert.equal(images[4].src,'tex/4k/earth.jpg');
+images[4].onload();assert.notEqual(texByKey.get('earth'),ctx.tex);
+console.log('texture transitions: 8K download and GPU failure fall back to 4K');

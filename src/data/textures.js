@@ -49,7 +49,17 @@
     mars:    "mars-nrm.jpg",
     mercury: "mercury-nrm.jpg",
   };
-  // 解像度は2組を同名で持つ。2K が tex/ 直下、4K が tex/4k/。
+  // 通常2K、高解像度4K。対応PCの地球地表だけ8Kにする。
+  // iPadのデスクトップUAも除外。画面幅では判定しない (PCの小窓を含む)。
+  function earth8kCapable(nav, finePointer, maxTextureSize) {
+    const ua = nav.userAgent || "";
+    const handheld = nav.userAgentData?.mobile || /Android|iPhone|iPad|iPod|Mobile/i.test(ua)
+      || (/Macintosh|MacIntel/.test(ua + (nav.platform || "")) && nav.maxTouchPoints > 1);
+    return !handheld && finePointer && maxTextureSize >= 8192;
+  }
+  const earth8kSupported = earth8kCapable(navigator,
+    matchMedia("(hover: hover) and (pointer: fine)").matches, gl.getParameter(gl.MAX_TEXTURE_SIZE));
+  let earth8kFailed = false;
   //
   // 既定は端末によらず 2K。4K は 1枚あたり 4096×2048×4バイト×1.33 (ミップ込み) =
   // 約 45MB で、常駐する 14枚ぶんでは 625MB になる。通る端末でも初回の転送量が
@@ -65,6 +75,7 @@
   // 法線図かどうかは接頭辞だけで見る。NORMALS を先に引くと、法線図も持つ天体
   // (月・火星・水星) の地表テクスチャが法線図に化ける
   const texURL = (key) => {
+    if (key === "earth" && texHiRes && earth8kSupported && !earth8kFailed) return TEX_DIR + "8k/earth.jpg";
     if (key.indexOf("nrm:") === 0) return TEX_DIR + (texHiRes ? "4k/" : "") + NORMALS[key.slice(4)];
     return TEX_DIR + (texHiRes ? "4k/" : "") + (TEXTURES[key] || TEXTURES_EXTRA[key]);
   };

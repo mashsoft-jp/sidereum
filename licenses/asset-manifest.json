@@ -41,7 +41,7 @@
       "source": "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57752/land_shallow_topo_8192.tif",
       "credit": "NASA Earth Observatory; Reto Stöckli (NASA/GSFC), Robert Simmon",
       "terms": "NASA画像利用方針",
-      "changes": "縮小、JPEG化",
+      "changes": "2K/4K: 縮小、JPEG化。8K: 元の8192×4096を維持しJPEG化 (2026-09-22再取得)",
       "files": [
         {
           "path": "tex/earth.jpg",
@@ -50,6 +50,10 @@
         {
           "path": "tex/4k/earth.jpg",
           "sha256": "0934faffb83074305edac7b77e84233ceae55cab6a78b3955acda15a0497c238"
+        },
+        {
+          "path": "tex/8k/earth.jpg",
+          "sha256": "d9a16d87423514e27717a84019fd3f3fdbd0367d03beff326ea68061c46d74af"
         }
       ]
     },

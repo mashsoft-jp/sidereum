@@ -73,3 +73,7 @@
 ## その他
 
 観測写真8件は [DSO記録](tex/dso/CREDITS.md)、ベガ写真は [恒星写真記録](tex/stars/CREDITS.md)、OpenNGC・星座線・書体は [第三者表示](THIRD_PARTY_NOTICES.md) を参照。惑星・小天体の個別物理量と平均軌道要素はREADME記載のNASA/JPL公表値。説明文の執筆資料に関する不足は [文章監査](COPYRIGHT_AUDIT.md) に残しています。
+
+### 地球の8K画像 (2026-09-22)
+
+`tex/8k/earth.jpg` は上記と同じNASA Blue Marble地表TIFFを再取得し、8192×4096のままJPEG化したものです。既存の地球画像と同じ出典・クレジット・利用方針を適用します。原本SHA-256: `fec3cb8e729347d1c57807cf66b7867c1f3c669bb2f1fc3a8ad1625562591b36`。

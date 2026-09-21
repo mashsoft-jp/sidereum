@@ -7097,7 +7097,17 @@
     mars:    "mars-nrm.jpg",
     mercury: "mercury-nrm.jpg",
   };
-  // 解像度は2組を同名で持つ。2K が tex/ 直下、4K が tex/4k/。
+  // 通常2K、高解像度4K。対応PCの地球地表だけ8Kにする。
+  // iPadのデスクトップUAも除外。画面幅では判定しない (PCの小窓を含む)。
+  function earth8kCapable(nav, finePointer, maxTextureSize) {
+    const ua = nav.userAgent || "";
+    const handheld = nav.userAgentData?.mobile || /Android|iPhone|iPad|iPod|Mobile/i.test(ua)
+      || (/Macintosh|MacIntel/.test(ua + (nav.platform || "")) && nav.maxTouchPoints > 1);
+    return !handheld && finePointer && maxTextureSize >= 8192;
+  }
+  const earth8kSupported = earth8kCapable(navigator,
+    matchMedia("(hover: hover) and (pointer: fine)").matches, gl.getParameter(gl.MAX_TEXTURE_SIZE));
+  let earth8kFailed = false;
   //
   // 既定は端末によらず 2K。4K は 1枚あたり 4096×2048×4バイト×1.33 (ミップ込み) =
   // 約 45MB で、常駐する 14枚ぶんでは 625MB になる。通る端末でも初回の転送量が
@@ -7113,6 +7123,7 @@
   // 法線図かどうかは接頭辞だけで見る。NORMALS を先に引くと、法線図も持つ天体
   // (月・火星・水星) の地表テクスチャが法線図に化ける
   const texURL = (key) => {
+    if (key === "earth" && texHiRes && earth8kSupported && !earth8kFailed) return TEX_DIR + "8k/earth.jpg";
     if (key.indexOf("nrm:") === 0) return TEX_DIR + (texHiRes ? "4k/" : "") + NORMALS[key.slice(4)];
     return TEX_DIR + (texHiRes ? "4k/" : "") + (TEXTURES[key] || TEXTURES_EXTRA[key]);
   };
@@ -7176,9 +7187,16 @@
     const request = (texRequests.get(key) || 0) + 1;
     texRequests.set(key, request);
     const img = new Image();
+    let url = texURL(key);
+    const retryEarth4k = () => {
+      if (!url.includes("/8k/") || texRequests.get(key) !== request) return false;
+      earth8kFailed = true;
+      url = TEX_DIR + "4k/earth.jpg";
+      img.src = url;
+      return true;
+    };
     img.onload = () => {
-      texSettled();
-      if (texRequests.get(key) !== request) return; // 素早く解像度を切り替えた場合は最新だけ採用
+      if (texRequests.get(key) !== request) { texSettled(); return; } // 素早く解像度を切り替えた場合は最新だけ採用
       const surface = Object.prototype.hasOwnProperty.call(TEXTURES, key);
       const next = surface ? gl.createTexture() : tex;
       // file:// で開くと画像自体は読めても不透明オリジン扱いになり、ここが
@@ -7190,15 +7208,22 @@
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+        if (url.includes("/8k/") && gl.getError() !== gl.NO_ERROR) throw new Error("8K upload failed");
       } catch (e) {
         if (surface) gl.deleteTexture(next);
-        texWarn(key, e.message);
+        if (retryEarth4k()) return;
+        texSettled(); texWarn(key, e.message);
         return;
       }
       // MIN_FILTER をミップマップ付きにするのは生成した後 (先に変えると不完全な
       // テクスチャ扱いになり、真っ黒で描かれる)
       if (useMipmap && isPOT(img.width) && isPOT(img.height)) {
         gl.generateMipmap(gl.TEXTURE_2D);
+        if (url.includes("/8k/") && gl.getError() !== gl.NO_ERROR) {
+          gl.deleteTexture(next);
+          if (retryEarth4k()) return;
+          texSettled(); return;
+        }
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
         if (anisoMax > 1) gl.texParameterf(gl.TEXTURE_2D, anisoExt.TEXTURE_MAX_ANISOTROPY_EXT, anisoMax);
       }
@@ -7208,10 +7233,15 @@
         texPrevious.set(key, { tex: texByKey.get(key) || tex, time: performance.now() });
         texByKey.set(key, next);
       }
+      texSettled();
     };
     // tex/ を index.html と一緒に置き忘れた場合にここへ来る
-    img.onerror = () => { texSettled(); texWarn(key, "取得できませんでした"); };
-    img.src = texURL(key);
+    img.onerror = () => {
+      if (retryEarth4k()) return;
+      texSettled();
+      if (texRequests.get(key) === request) texWarn(key, "取得できませんでした");
+    };
+    img.src = url;
     return tex;
   }
   function loadTex(key) {

@@ -32,3 +32,8 @@ jobs:
         run: node tools/meteor-test.mjs
       - name: 恒星カタログと名前・星座線の対応を確かめる
         run: node tools/catalog-integrity-test.mjs
+
+      - name: 地球8Kの端末判定と読み込み失敗時の復帰を確かめる
+        run: |
+          node tools/earth-8k-test.mjs
+          node tools/texture-transition-test.mjs

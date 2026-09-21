@@ -42,9 +42,16 @@
     const request = (texRequests.get(key) || 0) + 1;
     texRequests.set(key, request);
     const img = new Image();
+    let url = texURL(key);
+    const retryEarth4k = () => {
+      if (!url.includes("/8k/") || texRequests.get(key) !== request) return false;
+      earth8kFailed = true;
+      url = TEX_DIR + "4k/earth.jpg";
+      img.src = url;
+      return true;
+    };
     img.onload = () => {
-      texSettled();
-      if (texRequests.get(key) !== request) return; // 素早く解像度を切り替えた場合は最新だけ採用
+      if (texRequests.get(key) !== request) { texSettled(); return; } // 素早く解像度を切り替えた場合は最新だけ採用
       const surface = Object.prototype.hasOwnProperty.call(TEXTURES, key);
       const next = surface ? gl.createTexture() : tex;
       // file:// で開くと画像自体は読めても不透明オリジン扱いになり、ここが
@@ -56,15 +63,22 @@
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+        if (url.includes("/8k/") && gl.getError() !== gl.NO_ERROR) throw new Error("8K upload failed");
       } catch (e) {
         if (surface) gl.deleteTexture(next);
-        texWarn(key, e.message);
+        if (retryEarth4k()) return;
+        texSettled(); texWarn(key, e.message);
         return;
       }
       // MIN_FILTER をミップマップ付きにするのは生成した後 (先に変えると不完全な
       // テクスチャ扱いになり、真っ黒で描かれる)
       if (useMipmap && isPOT(img.width) && isPOT(img.height)) {
         gl.generateMipmap(gl.TEXTURE_2D);
+        if (url.includes("/8k/") && gl.getError() !== gl.NO_ERROR) {
+          gl.deleteTexture(next);
+          if (retryEarth4k()) return;
+          texSettled(); return;
+        }
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
         if (anisoMax > 1) gl.texParameterf(gl.TEXTURE_2D, anisoExt.TEXTURE_MAX_ANISOTROPY_EXT, anisoMax);
       }
@@ -74,10 +88,15 @@
         texPrevious.set(key, { tex: texByKey.get(key) || tex, time: performance.now() });
         texByKey.set(key, next);
       }
+      texSettled();
     };
     // tex/ を index.html と一緒に置き忘れた場合にここへ来る
-    img.onerror = () => { texSettled(); texWarn(key, "取得できませんでした"); };
-    img.src = texURL(key);
+    img.onerror = () => {
+      if (retryEarth4k()) return;
+      texSettled();
+      if (texRequests.get(key) === request) texWarn(key, "取得できませんでした");
+    };
+    img.src = url;
     return tex;
   }
   function loadTex(key) {
