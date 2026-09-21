@@ -13,6 +13,14 @@
     const z = -(p[1] - s[1]) * AU_KM;
     return [x*M[0] + y*M[1] + z*M[2], x*M[8] + y*M[9] + z*M[10]];
   }
+  // Direction comes from the projected ephemeris, not the camera or playback speed.
+  function saturnOverviewHeading(key, days, start, end) {
+    const before = saturnOverviewPoint(key, Math.max(start, days-.005));
+    const after = saturnOverviewPoint(key, Math.min(end, days+.005));
+    if (!before || !after) return null;
+    const dx = after[0]-before[0], dy = -(after[1]-before[1]);
+    return Math.hypot(dx,dy) > 1e-6 ? Math.atan2(dy,dx) : null;
+  }
   function drawSaturnOverview() {
     if (!tourActive || !tour || tour.id !== "cassini" || (tourIdx !== 9 && tourIdx !== 10)) return;
     const key = tourIdx === 9 ? "huygens" : "cassini";
@@ -64,19 +72,40 @@
       });
     }
     ctx.stroke();
-    ctx.setLineDash([]); ctx.strokeStyle = "#eab45e"; ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    let first = true;
-    for (const point of data.points) {
-      if (point.t > days) break;
-      const [x,y] = screen(point.p);
-      if (first) {ctx.moveTo(x,y); first=false;} else ctx.lineTo(x,y);
+    ctx.setLineDash([]); ctx.lineWidth = 1.6; ctx.lineCap = "round";
+    const trail = data.points.filter(point => point.t < days).map(point => screen(point.p));
+    const hp = screen(h); trail.push(hp);
+    // The last 22 screen pixels are brighter; the older trail remains visible.
+    let behind = 0;
+    for (let i = trail.length-1; i > 0; i--) {
+      const a = trail[i-1], b = trail[i];
+      const length = Math.hypot(b[0]-a[0],b[1]-a[1]);
+      const glow = Math.max(0,1-behind/22);
+      ctx.strokeStyle = glow > 0 ? "rgba(255,205,116,"+(.4+.55*glow)+")" : "rgba(211,156,72,.4)";
+      ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke();
+      behind += length;
     }
-    const hp = screen(h); ctx.lineTo(...hp); ctx.stroke();
+    const heading = saturnOverviewHeading(key, days, data.start, data.end);
     const labels = [];
-    const marker = (p, radius, color, label, above) => {
+    const marker = (p, radius, color, label, above, shape = "dot") => {
       const [x,y] = screen(p);
-      ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = color;
+      if (shape === "probe" && heading !== null) {
+        ctx.save(); ctx.translate(x,y); ctx.rotate(heading);
+        ctx.beginPath(); ctx.moveTo(6,0); ctx.lineTo(-4,-3.5);
+        ctx.lineTo(-2,0); ctx.lineTo(-4,3.5); ctx.closePath();
+        ctx.strokeStyle = "#111b2a"; ctx.lineWidth = 2.5; ctx.stroke(); ctx.fill(); ctx.restore();
+      } else {
+        if (shape === "saturn") {
+          ctx.strokeStyle = "#a58c60"; ctx.lineWidth = 1.4;
+          ctx.beginPath(); ctx.ellipse(x,y,10,3.6,-.4,0,Math.PI*2); ctx.stroke();
+        }
+        ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2); ctx.fill();
+        if (shape === "saturn") {
+          ctx.strokeStyle = "#e6cea0";
+          ctx.beginPath(); ctx.ellipse(x,y,10,3.6,-.4,0,Math.PI); ctx.stroke();
+        }
+      }
       const labelWidth = ctx.measureText(label).width;
       const tx = Math.max(left+8, Math.min(left+width-8-labelWidth, x+7));
       let ty = y+(above ? -12 : 13);
@@ -87,9 +116,9 @@
       labels.push({x:tx,y:ty,w:labelWidth});
       ctx.fillText(label, tx, ty);
     };
-    marker([0,0],5,"#ddc89a",lang === "ja" ? "土星" : "Saturn",false);
+    marker([0,0],5,"#ddc89a",lang === "ja" ? "土星" : "Saturn",false,"saturn");
     if (key === "huygens") marker(titan,3,"#c2d7f5",lang === "ja" ? "タイタン" : "Titan",true);
-    marker(h,3,"#ffc35d",key === "huygens" ? (lang === "ja" ? "ホイヘンス" : "Huygens") : (lang === "ja" ? "カッシーニ" : "Cassini"),false);
+    marker(h,3,"#ffc35d",key === "huygens" ? (lang === "ja" ? "ホイヘンス" : "Huygens") : (lang === "ja" ? "カッシーニ" : "Cassini"),false,"probe");
     ctx.fillStyle = "#8695ab"; ctx.font = "10px sans-serif";
     ctx.fillText(lang === "ja" ? "模式図 · 点の大きさは実寸ではありません" : "Schematic · markers not to scale",left+10,top+height-13);
     ctx.restore();
