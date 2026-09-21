@@ -67,12 +67,46 @@
     if (screensaverOverview()) return [SUN, ...PLANETS.filter(b => !b.ast && !b.comet && (!b.tno || b.key === "pluto"))];
     return [];
   }
-  function shuffledSaverKinds(random = Math.random) {
-    const bag = SAVER_KINDS.slice();
+  function saverSceneGroup(kind) {
+    if (["body", "voyager", "cassini", "saturnRings"].includes(kind)) return "close";
+    if (["earthSky", "moonSky", "cometGround", "cometMoon", "meteorTour", "eclipseTour"].includes(kind)) return "sky";
+    if (kind === "dsoPhoto") return "photo";
+    return "wide";
+  }
+  function shuffleSaverItems(items, random) {
+    const bag = items.slice();
     for (let i = bag.length - 1; i > 0; i--) {
       const j = Math.floor(random() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]];
     }
     return bag;
+  }
+  function shuffledSaverKinds(random = Math.random, previous = null) {
+    // 全種類を一度ずつ巡りながら、近景・星空・遠景・写真の連続を避ける。
+    // 袋の境界も含め、彗星の別ビューだけが続かないようにする。
+    const arrange = (remaining, last) => {
+      if (!remaining.length) return [];
+      for (let i = 0; i < remaining.length; i++) {
+        const kind = remaining[i];
+        if (last && (saverSceneGroup(kind) === saverSceneGroup(last) ||
+            (kind.startsWith("comet") && last.startsWith("comet")))) continue;
+        const tail = arrange(remaining.filter((_, n) => n !== i), kind);
+        if (tail) return [kind, ...tail];
+      }
+      return null;
+    };
+    return arrange(shuffleSaverItems(SAVER_KINDS, random), previous).reverse();
+  }
+  function pickSaverBody(state, random = Math.random) {
+    if (!state.bodies?.length) {
+      state.bodies = shuffleSaverItems(["sun", "mercury", "venus", "earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"], random);
+      if (state.bodies.at(-1) === state.lastBody) state.bodies.reverse();
+    }
+    return state.lastBody = state.bodies.pop();
+  }
+  function saverSceneDuration(kind) {
+    // 地形や星座を追う景色は長め、動きの単調な周回・俯瞰は短めに。
+    return {body:32, saturnRings:30, overview:30, earthSky:40, moonSky:40,
+      cometSpace:38, cometGround:38, cometMoon:38}[kind] || 35;
   }
   function syncScreensaverUI() {
     const ja = lang === "ja";
@@ -194,7 +228,7 @@
       s.sel = "saturn"; s.play = false;
       title = { ja: "土星の環の中 · 氷粒子を巡る", en: "Inside Saturn’s rings · among the ice" };
     } else if (kind === "body") {
-      const b = BODY_BY_KEY.get(pick(["sun", "mercury", "venus", "earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"]));
+      const b = BODY_BY_KEY.get(pickSaverBody(state));
       s.sel = b.key; s.lit = true; orbit = true;
       title = { ja: b.name + "を巡る", en: b.en + " · orbit" };
     } else if (kind.startsWith("comet")) {
@@ -250,15 +284,14 @@
       fitFrameDistance(selected); cam.dist = cam.distTgt;
     }
     state.kind = kind; state.orbit = orbit; state.title = title;
-    state.elapsed = 0; state.duration = kind === "cassini" ? 21 : clip ? 39 : 35 + Math.random() * 15;
+    state.elapsed = 0; state.duration = kind === "cassini" ? 21 : clip ? 39 : saverSceneDuration(kind);
     // 地点や日付が変わったことを、短い場面名と実際の表示日時で伝える。
     syncSaverDate();
     refreshObsSiteUI(); syncScreensaverUI(); frameLayout.dirty = true;
   }
   function nextSaverKind() {
     if (!saverState.bag.length) {
-      saverState.bag = shuffledSaverKinds();
-      if (saverState.bag.at(-1) === saverState.kind) saverState.bag.reverse();
+      saverState.bag = shuffledSaverKinds(Math.random, saverState.kind);
     }
     return saverState.bag.pop();
   }

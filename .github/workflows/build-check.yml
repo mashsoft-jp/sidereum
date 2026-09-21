@@ -43,3 +43,5 @@ jobs:
         run: |
           node tools/enjoyment-test.mjs
           node tools/enjoyment-orbit-test.mjs
+      - name: スクリーンセーバーの順序と切替を確かめる
+        run: node tools/screensaver-test.mjs

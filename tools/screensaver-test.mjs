@@ -24,6 +24,9 @@ for (let round = 0; round < 100; round++) {
   for (let i = 0; i < 14; i++) {
     const kind = run('nextSaverKind()');
     assert.notEqual(kind, previous);
+    ctx.kind=kind;ctx.previous=previous;
+    assert.notEqual(run('saverSceneGroup(kind)'),run('saverSceneGroup(previous)'));
+    assert.ok(!(kind.startsWith('comet')&&previous.startsWith('comet')));
     seen.add(kind); previous = kind;
     run(`saverState.kind = ${JSON.stringify(kind)}`);
   }
@@ -234,3 +237,22 @@ ctx.layoutArgs=[3000,2000,600,400,100,16,16,2];
 const capped=run('saverPhotoLayout(...layoutArgs)');
 assert.ok(capped.width*2<=600 && capped.height*2<=400);
 console.log('screensaver photos: motion stays in frame and respects source resolution');
+
+// 全天体を一巡するまで重複させず、巡回の境界も同じ天体を続けない。
+ctx.bodyBag={};let lastBody=null;
+for(let round=0;round<20;round++){
+ const bodies=new Set();
+ for(let i=0;i<11;i++){
+  const key=run('pickSaverBody(bodyBag)');
+  assert.notEqual(key,lastBody);bodies.add(key);lastBody=key;
+ }
+ assert.equal(bodies.size,11);
+}
+// 極端な乱数でも順序が組める。
+for(const random of [0,.5,.999999]){
+ ctx.fixed=random;
+ const bag=run('shuffledSaverKinds(()=>fixed,"cometGround")');
+ assert.equal(new Set(bag).size,14);
+}
+assert.ok(run('saverSceneDuration("earthSky") > saverSceneDuration("overview")'));
+console.log('screensaver: visual variety, comet spacing, all-body rotation and pacing passed');
