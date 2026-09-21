@@ -20,7 +20,7 @@
 
   // 宇宙のガイドは、注視天体が円盤として見えるほど背景へ退く。
   // 距離そのものではなく投影半径を使い、微小衛星・望遠・小画面でも同じ判断にする。
-  const spaceGuide = { body: null, close: 0, sky: 1, time: null, weights: new Map() };
+  const spaceGuide = { body: null, close: 0, sky: 1, backdrop: 1, time: null, weights: new Map() };
   // 星座は広い星空の案内。対象未選択でも、望遠で画角が狭くなれば控えめにする。
   // 30度以上は従来の濃さ、8度以下は8%。境目は連続で、引けば元に戻る。
   function skyGuideVisibility(fov) {
@@ -55,6 +55,9 @@
       spaceGuide.weights.set(body.key, previous + (target - previous) * blend);
     }
     spaceGuide.sky = (1 - spaceGuide.close) * skyGuideVisibility(eFov());
+    // 鑑賞で円盤に接近したときだけ露光を控える。星空・俯瞰の場面は元の濃さ。
+    const backdrop = 1 - (immersiveView ? .55 : 0) * spaceGuide.close;
+    spaceGuide.backdrop += (backdrop - spaceGuide.backdrop) * blend;
   }
   function spaceRelated(b) {
     const focus = spaceGuide.body;
@@ -149,7 +152,7 @@
     gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    drawMilkyWay(VP, mwEqSpace(), MW_R, MW_SPACE_BRIGHT, 0);
+    drawMilkyWay(VP, mwEqSpace(), MW_R, MW_SPACE_BRIGHT * spaceGuide.backdrop, 0);
 
     // --- 星雲・星団 (天の川の上、恒星より先) ---
     // 板は画面を向くので、ビュー行列からカメラの右・上をワールドで取る。
