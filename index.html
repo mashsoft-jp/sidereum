@@ -5787,7 +5787,7 @@
         // 円盤に重なる視線は地表で止まる。外れる視線は大気を貫いて反対側へ抜ける
         float path = b < 1.0 ? outer - inner : 2.0 * outer;
         // 実際の大気は上へ行くほど薄い。指数で落として縁に張り付く輪にする
-        float tau = path * 5.5 * exp(-max(b - 1.0, 0.0) / 0.006);
+        float tau = path * 4.8 * exp(-max(b - 1.0, 0.0) / 0.0048);
         // 円盤の内側は本体側でもエアライトを足しているので、二重に乗らないよう薄く
         tau *= mix(0.30, 1.0, smoothstep(0.97, 1.02, b));
 
@@ -5797,7 +5797,7 @@
         vec3 col = mix(vec3(0.055, 0.145, 0.400),     // レイリー (青)
                        vec3(0.520, 0.220, 0.080),     // 前方散乱 (朝焼け色)
                        fwd * 0.7)
-                 * (1.0 - exp(-tau)) * sun * 0.62;
+                 * (1.0 - exp(-tau)) * sun * 0.44;
         gl_FragColor = vec4(tonemap(col * uExt), 0.0);   // 乗算済みアルファでの加算
         return;
       }
@@ -6039,7 +6039,8 @@
 
           // 地表と同じ色へ混ぜず、雲の光を後で合成する。
           // 雲の照明は地表より緩やかに落とし、薄い雲から地表が透ける。
-          cloudLight = sqrt(max(mu0, 0.0)) * 0.68;
+          // 斜光では白さを少し早く落とし、雲の明暗が昼夜境界まで残るようにする。
+          cloudLight = pow(max(mu0, 0.0), 0.7) * 0.64;
           alb *= 1.0 - cloud;
         }
       } else if (uType < 1.5) {
@@ -6106,19 +6107,19 @@
         float ndl = dot(N, L);
         // 雲の直射光も食の遮蔽を受ける。夜側は環境光だけを残す。
         float cloudVisibility = mu0 > 1e-4 ? clamp(dif / mu0, 0.0, 1.0) : 0.0;
-        vec3 cloudTint = mix(vec3(1.0, 0.72, 0.48), vec3(1.0), smoothstep(0.0, 0.22, ndl));
+        vec3 cloudTint = mix(vec3(1.0, 0.79, 0.61), vec3(1.0), smoothstep(0.0, 0.18, ndl));
         c += cloud * (vec3(0.68 * ambient) + cloudTint * cloudLight * cloudVisibility * direct);
         // ---- 大気 ----
         // 縁ほど大気を長く見通すので青みが強い。太陽が向こう側にあるとき
         // (視線と太陽が同じ側 = 前方散乱) は明け方の空のように暖色へ振れる
-        float limb = pow(1.0 - max(dot(N, V), 0.0), 3.2);
+        float limb = pow(1.0 - max(dot(N, V), 0.0), 3.8);
         float fwd = pow(max(dot(-V, L), 0.0), 6.0);
         vec3 air = mix(vec3(0.052, 0.135, 0.360),    // レイリー (青)
                        vec3(0.420, 0.180, 0.070),    // 前方散乱 (夕焼け色)
                        fwd * 0.75);
         float airPath = limb * smoothstep(-0.18, 0.25, ndl) * (1.0 - uAirDay);
         // 加算だけだと地表と青い縁が白く飽和する。透過した地表光と散乱光を合わせる。
-        c = c * exp(-vec3(0.32, 0.55, 0.95) * airPath) + air * airPath * 0.48;
+        c = c * exp(-vec3(0.32, 0.55, 0.95) * airPath) + air * airPath * 0.40;
 
         // ---- 夜景 ----
         // 昼夜境界の内側だけ。雲の下は遮られ、地上ビューの昼空では見えない
