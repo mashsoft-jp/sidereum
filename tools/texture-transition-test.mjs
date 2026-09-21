@@ -16,16 +16,21 @@ now=649;vm.runInContext('finishTextureFades()',ctx);assert.equal(deleted.length,
 now=651;vm.runInContext('finishTextureFades()',ctx);assert.deepEqual(deleted,['original']);
 ctx.tex=texByKey.get('earth');vm.runInContext('loadTexInto(tex,"earth")',ctx);images[2].onerror();assert.equal(texByKey.get('earth'),ctx.tex,'failure preserves existing texture');
 console.log('texture transitions: stale response, previous image, cleanup and failure passed');
-// 8K取得失敗でも旧画像を維持し、4Kを同じリクエストとして読み直す。
+// Workerが使えない場合もメインスレッドへ戻さず4Kへフォールバック。
 ctx.texURL=()=> 'tex/8k/earth.jpg'; ctx.TEX_DIR='tex/';ctx.detail8kFailed.clear();
+ctx.uploadDetailTexture=async()=>{throw new Error('worker unavailable')};
 ctx.tex=texByKey.get('earth');
 vm.runInContext('loadTexInto(tex,"earth")',ctx);
-images[3].onerror();assert.equal(images[3].src,'tex/4k/earth.jpg');assert.equal(ctx.detail8kFailed.has("earth"),true);
+await new Promise(resolve=>setImmediate(resolve));
+assert.equal(images[3].src,'tex/4k/earth.jpg');
+assert.equal(ctx.detail8kFailed.has('earth'),true);
 assert.equal(texByKey.get('earth'),ctx.tex);
-images[3].onload();assert.notEqual(texByKey.get('earth'),ctx.tex);
-// WebGLは例外でなくエラーコードを返すこともある。
+await images[3].onload();assert.notEqual(texByKey.get('earth'),ctx.tex);
+// Worker完了後のGPUエラーも4Kへ戻す。
+ctx.uploadDetailTexture=async()=>({width:8192,height:4096});
 ctx.gl.getError=()=>1285;ctx.gl.NO_ERROR=0;
 vm.runInContext('loadTexInto(tex,"earth")',ctx);
-images[4].onload();assert.equal(images[4].src,'tex/4k/earth.jpg');
-images[4].onload();assert.notEqual(texByKey.get('earth'),ctx.tex);
-console.log('texture transitions: 8K download and GPU failure fall back to 4K');
+await new Promise(resolve=>setImmediate(resolve));
+assert.equal(images[4].src,'tex/4k/earth.jpg');
+await images[4].onload();assert.notEqual(texByKey.get('earth'),ctx.tex);
+console.log('texture transitions: Worker and GPU failures fall back to 4K');

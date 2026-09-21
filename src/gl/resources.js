@@ -2,6 +2,7 @@
   const texPrevious = new Map(), texRequests = new Map();
   const TEX_FADE_MS = 650;
   const texLoaded = new Map(), detailBase = new Map();
+  let detailUploadCancel = null;
   let detailCandidate = null, detailCandidatePx = 0, detailWanted = null, detailWantedAt = 0, detailRetireAt = 0;
   function noteDetailTexture(body, radiusPx) {
     if (!texHiRes || !detail8kSupported || !DETAIL_TEXTURES.has(body.key) || detail8kFailed.has(body.key)) return;
@@ -14,6 +15,7 @@
     const key = detailTextureKey;
     if (!key) return;
     detailTextureKey = null;
+    if (detailUploadCancel) detailUploadCancel();
     // 完了が遅れた8K画像をGPUへ載せない。
     texRequests.set(key, (texRequests.get(key) || 0) + 1);
     const base = detailBase.get(key);
@@ -76,31 +78,71 @@
   // 8Kのデコードと転送を分離し、1フレームに画像全体を転送しない。
   // 完成するまでこのテクスチャは描画に使わない。途中で対象を離れたら破棄する。
   const textureFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
-  async function uploadDetailTexture(tex, img, current) {
+  // Blob化して配信HTMLと同じ版のWorkerを使う。画像全体の展開・切り出しはWorker内だけ。
+  function detailDecodeWorker() {
     let bitmap;
+    self.onmessage = async ({data}) => {
+      try {
+        if (data.url) {
+          const response = await fetch(data.url);
+          if (!response.ok) throw new Error("8K download failed");
+          bitmap = await createImageBitmap(await response.blob());
+          self.postMessage({width:bitmap.width, height:bitmap.height});
+        } else {
+          const strip = await createImageBitmap(bitmap, 0, data.y, bitmap.width, data.height);
+          self.postMessage({strip}, [strip]);
+        }
+      } catch (error) { self.postMessage({error:error.message}); }
+    };
+  }
+  async function uploadDetailTexture(tex, url, current) {
+    let worker, workerURL, pendingReject;
+    const cancel = () => {
+      if (worker) worker.terminate();
+      if (pendingReject) pendingReject(new Error("8K cancelled"));
+    };
     try {
-      bitmap = await createImageBitmap(img);
+      workerURL = URL.createObjectURL(new Blob(["(" + detailDecodeWorker.toString() + ")()"], {type:"text/javascript"}));
+      worker = new Worker(workerURL);
+      detailUploadCancel = cancel;
+      const request = data => new Promise((resolve, reject) => {
+        pendingReject = reject;
+        worker.onmessage = ({data:reply}) => {
+          pendingReject = null;
+          if (reply.error) reject(new Error(reply.error)); else resolve(reply);
+        };
+        worker.onerror = () => { pendingReject = null; reject(new Error("8K worker failed")); };
+        worker.postMessage(data);
+      });
+      const size = await request({url:new URL(url, location.href).href});
       await textureFrame();
-      if (!current()) return false;
+      if (!current()) return null;
       gl.bindTexture(gl.TEXTURE_2D, tex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, bitmap.width, bitmap.height, 0, gl.RGB, gl.UNSIGNED_BYTE, null);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, size.width, size.height, 0, gl.RGB, gl.UNSIGNED_BYTE, null);
       if (gl.getError() !== gl.NO_ERROR) throw new Error("8K allocation failed");
-      for (let y = 0; y < bitmap.height; y += 128) {
-        if (!current()) return false;
-        const strip = await createImageBitmap(bitmap, 0, y, bitmap.width, Math.min(128, bitmap.height - y));
+      for (let y = 0; y < size.height; y += 128) {
+        if (!current()) return null;
+        const {strip} = await request({y, height:Math.min(128, size.height - y)});
         try {
           await textureFrame();
-          if (!current()) return false;
+          if (!current()) return null;
           gl.bindTexture(gl.TEXTURE_2D, tex);
           gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, y, gl.RGB, gl.UNSIGNED_BYTE, strip);
         } finally { strip.close(); }
       }
       await textureFrame();
-      if (!current()) return false;
+      if (!current()) return null;
       gl.bindTexture(gl.TEXTURE_2D, tex);
       if (gl.getError() !== gl.NO_ERROR) throw new Error("8K upload failed");
-      return true;
-    } finally { if (bitmap) bitmap.close(); }
+      return size;
+    } catch (error) {
+      if (!current()) return null;
+      throw error;
+    } finally {
+      if (detailUploadCancel === cancel) detailUploadCancel = null;
+      if (worker) worker.terminate();
+      if (workerURL) URL.revokeObjectURL(workerURL);
+    }
   }
   function loadTexInto(tex, key) {
     texPending++;
@@ -118,6 +160,7 @@
     img.decoding = "async";
     img.onload = async () => {
       if (texRequests.get(key) !== request) { texSettled(); return; } // 素早く解像度を切り替えた場合は最新だけ採用
+      let width = img.width, height = img.height;
       const surface = Object.prototype.hasOwnProperty.call(TEXTURES, key);
       const next = surface ? gl.createTexture() : tex;
       // file:// で開くと画像自体は読めても不透明オリジン扱いになり、ここが
@@ -128,10 +171,12 @@
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        if (url.includes("/8k/") && typeof createImageBitmap === "function") {
-          if (!await uploadDetailTexture(next, img, () => texRequests.get(key) === request)) {
+        if (url.includes("/8k/")) {
+          const size = await uploadDetailTexture(next, url, () => texRequests.get(key) === request);
+          if (!size) {
             gl.deleteTexture(next); texSettled(); return;
           }
+          width = size.width; height = size.height;
         } else {
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
         }
@@ -144,7 +189,7 @@
       }
       // MIN_FILTER をミップマップ付きにするのは生成した後 (先に変えると不完全な
       // テクスチャ扱いになり、真っ黒で描かれる)
-      if (useMipmap && isPOT(img.width) && isPOT(img.height)) {
+      if (useMipmap && isPOT(width) && isPOT(height)) {
         gl.generateMipmap(gl.TEXTURE_2D);
         if (url.includes("/8k/") && gl.getError() !== gl.NO_ERROR) {
           gl.deleteTexture(next);
@@ -170,7 +215,8 @@
       texSettled();
       if (texRequests.get(key) === request) texWarn(key, "取得できませんでした");
     };
-    img.src = url;
+    if (url.includes("/8k/")) img.onload(); // Workerが取得する。主スレッドでは8KのImageを展開しない
+    else img.src = url;
     return tex;
   }
   function loadTex(key) {
