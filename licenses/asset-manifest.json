@@ -1,0 +1,339 @@
+{
+  "checked": "2026-09-21",
+  "scope": "Current distributed derivatives; hashes do not assert identity to historic download originals.",
+  "textures": [
+    {
+      "name": "mercury",
+      "source": "https://astrogeology.usgs.gov/search/map/mercury_messenger_mdis_basemap_md3_color_global_mosaic_665m",
+      "credit": "Applied Coherent Technology Corporation; NASA/JHUAPL/ASU/Carnegie",
+      "terms": "USGS掲載製品: Access None / Use Please cite authors",
+      "changes": "縮小、JPEG化",
+      "files": [
+        {
+          "path": "tex/mercury.jpg",
+          "sha256": "ac8be9ef01d7d1ecf6405398123dec1c0d776f6d26ae20a9581082c6b7d56fa9"
+        },
+        {
+          "path": "tex/4k/mercury.jpg",
+          "sha256": "ff108bf0cb8ef6759f633baa251d0121b991bd951ce6af2d0ee565e5978c4c5d"
+        }
+      ]
+    },
+    {
+      "name": "venus",
+      "source": "https://astrogeology.usgs.gov/search/map/venus_magellan_global_c3_mdir_synthetic_color_mosaic_4641m",
+      "credit": "USGS / NASA/JPL",
+      "terms": "製品明記: Public domain / Use None",
+      "changes": "縮小、JPEG化",
+      "files": [
+        {
+          "path": "tex/venus.jpg",
+          "sha256": "5d332af4e396f14de13c985c56fe9b6003078733c5f4a122139703fa6a3eb12c"
+        },
+        {
+          "path": "tex/4k/venus.jpg",
+          "sha256": "e7ea9d70eceb96b8457a4ce6fad0e4f8792ccac25f4d2c78d139e9ddb4ce3c84"
+        }
+      ]
+    },
+    {
+      "name": "earth",
+      "source": "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57752/land_shallow_topo_8192.tif",
+      "credit": "NASA Earth Observatory; Reto Stöckli (NASA/GSFC), Robert Simmon",
+      "terms": "NASA画像利用方針",
+      "changes": "縮小、JPEG化",
+      "files": [
+        {
+          "path": "tex/earth.jpg",
+          "sha256": "5b54cc586c6cbf2b28762ef4d4011f6cf4227a8b93a637b818a0c54090ce6c2c"
+        },
+        {
+          "path": "tex/4k/earth.jpg",
+          "sha256": "0934faffb83074305edac7b77e84233ceae55cab6a78b3955acda15a0497c238"
+        }
+      ]
+    },
+    {
+      "name": "earth-clouds",
+      "source": "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57747/cloud_combined_8192.tif",
+      "credit": "NASA Earth Observatory",
+      "terms": "NASA画像利用方針",
+      "changes": "雲マスク、縮小、JPEG化",
+      "files": [
+        {
+          "path": "tex/earth-clouds.jpg",
+          "sha256": "c3be0cf82d2c2ed3661d9621e0e099cb295fb4a2da0b1175047da07a1ec0998b"
+        },
+        {
+          "path": "tex/4k/earth-clouds.jpg",
+          "sha256": "d07162896c0ae5d15448c6f85ae115b10689ca76b94f917ecac29b515a05fdee"
+        }
+      ]
+    },
+    {
+      "name": "earth-night",
+      "source": "https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144898/BlackMarble_2016_3km_geo.tif",
+      "credit": "NASA Earth Observatory",
+      "terms": "NASA画像利用方針",
+      "changes": "グレースケール化、黒レベル20%除去、縮小、JPEG化",
+      "files": [
+        {
+          "path": "tex/earth-night.jpg",
+          "sha256": "b16fdc8c9911dad0e86b8d2c262cebe28ea0cba80b57e7cd553bbd53990754ad"
+        },
+        {
+          "path": "tex/4k/earth-night.jpg",
+          "sha256": "676436ab6ea41e49653e6685c4838ffed85eb2de90af18680ecb8af004bad943"
+        }
+      ]
+    },
+    {
+      "name": "moon",
+      "source": "https://svs.gsfc.nasa.gov/4720/",
+      "credit": "NASA/GSFC/Arizona State University; NASA Scientific Visualization Studio",
+      "terms": "SVS公開利用方針",
+      "changes": "縮小、JPEG化",
+      "files": [
+        {
+          "path": "tex/moon.jpg",
+          "sha256": "7360f3648bc440cd3084d35059ad2804fd18f41c250c04a7d95b6e44fedcb609"
+        },
+        {
+          "path": "tex/4k/moon.jpg",
+          "sha256": "dc8363e9599aeffc997d960d9512761cbc9baa20c7c751e3f92ce4ff3c2f2bf1"
+        }
+      ]
+    },
+    {
+      "name": "mars",
+      "source": "https://astrogeology.usgs.gov/search/map/mars_viking_colorized_global_mosaic_232m",
+      "credit": "USGS / NASA Ames",
+      "terms": "製品明記: Public domain / Use None",
+      "changes": "1km版を縮小、JPEG化",
+      "files": [
+        {
+          "path": "tex/mars.jpg",
+          "sha256": "fbaaf12fbcdd3e5fe3fe1b20b8414c402706a64cb2270f0d20effc98cbcb3ca7"
+        },
+        {
+          "path": "tex/4k/mars.jpg",
+          "sha256": "582ff1fc57a05ecedfc3ba43fab5b09183559a9faf27224e476f5b61c7433d1a"
+        }
+      ]
+    },
+    {
+      "name": "jupiter",
+      "source": "https://science.nasa.gov/resource/cassinis-best-maps-of-jupiter-cylindrical-map-2/",
+      "credit": "NASA/JPL/Space Science Institute",
+      "terms": "JPL画像利用方針・NASA画像利用方針",
+      "changes": "縮小/拡大、JPEG化",
+      "files": [
+        {
+          "path": "tex/jupiter.jpg",
+          "sha256": "1520fb27c3dee00d18651c846ef2678f71748e0c0b196a58d92248e1e7d050d9"
+        },
+        {
+          "path": "tex/4k/jupiter.jpg",
+          "sha256": "cf6eee0e57472f88107f27ce86624233518184825112ae006b0a00b96dcdc21b"
+        }
+      ]
+    },
+    {
+      "name": "io",
+      "source": "https://astrogeology.usgs.gov/search/map/io_galileo_ssi_voyager_color_merged_global_mosaic_1km",
+      "credit": "USGS / NASA/JPL",
+      "terms": "製品明記: Public domain / Use None",
+      "changes": "縮小、JPEG化",
+      "files": [
+        {
+          "path": "tex/io.jpg",
+          "sha256": "ec2ac6241c90f3ec2d5da1fecc86cf938eddaba311c2e1cc510a04d0128f7047"
+        },
+        {
+          "path": "tex/4k/io.jpg",
+          "sha256": "85967fb0a5e1759cd79a8d09757caea2f5bceb98576ba22028360d75d91036d3"
+        }
+      ]
+    },
+    {
+      "name": "europa",
+      "source": "https://astrogeology.usgs.gov/search/map/europa_voyager_galileo_ssi_global_mosaic_500m",
+      "credit": "USGS (Tammy Becker; Archinal, Colvin, Davies, Gitlin, Kirk, Weller); NASA/JPL",
+      "terms": "USGS制作物方針; 製品 Access None / Use None",
+      "changes": "グレースケール図に着色、縮小、JPEG化",
+      "files": [
+        {
+          "path": "tex/europa.jpg",
+          "sha256": "b47902b406f66f93c65fc95d26a2166d17648c579718f75817567be80e876a25"
+        },
+        {
+          "path": "tex/4k/europa.jpg",
+          "sha256": "512e38be784ee157a53060407a50960e6687c3075e9556c52bdf284472e39574"
+        }
+      ]
+    },
+    {
+      "name": "ganymede",
+      "source": "https://astrogeology.usgs.gov/search/map/ganymede_voyager_galileo_ssi_color_global_mosaic_1_4km",
+      "credit": "USGS / NASA/JPL",
+      "terms": "製品明記: Public domain / Use None",
+      "changes": "縮小、JPEG化",
+      "files": [
+        {
+          "path": "tex/ganymede.jpg",
+          "sha256": "d0a1d527ee965e9cd5c61a136ddc5676df5b2fd9e90bd8cea8c3eb1825b3fee4"
+        },
+        {
+          "path": "tex/4k/ganymede.jpg",
+          "sha256": "d10c0ab3f03884441d9e4fae163e4b1708f9ecefa35e70fb112af60f20343aee"
+        }
+      ]
+    },
+    {
+      "name": "callisto",
+      "source": "https://astrogeology.usgs.gov/search/map/callisto_galileo_voyager_global_mosaic_1km",
+      "credit": "USGS / NASA/JPL",
+      "terms": "製品明記: Public domain / Use None",
+      "changes": "グレースケール図に着色、縮小、JPEG化",
+      "files": [
+        {
+          "path": "tex/callisto.jpg",
+          "sha256": "6ddda463fb6a5648ec814d6656db6d5ae1c19a929d25c4cff2c283f57bcf7b6d"
+        },
+        {
+          "path": "tex/4k/callisto.jpg",
+          "sha256": "22f44ab3750d02ca9855bed959c19ee81c6906bd3f268c8d5f6e2a718d2797ef"
+        }
+      ]
+    },
+    {
+      "name": "pluto",
+      "source": "https://science.nasa.gov/photojournal/pluto-color-map/",
+      "credit": "NASA/Johns Hopkins University Applied Physics Laboratory/Southwest Research Institute",
+      "terms": "JPL画像利用方針・NASA画像利用方針",
+      "changes": "縮小、JPEG化",
+      "files": [
+        {
+          "path": "tex/pluto.jpg",
+          "sha256": "1c480e64891c7aea21ab3c3989a695b90a570b53e0736ed2e755ee5a5de0c37d"
+        },
+        {
+          "path": "tex/4k/pluto.jpg",
+          "sha256": "eb6a3bf1012b97f1c770637bc35ae86536bd59c770aeec4e7854c17cf4634ac6"
+        }
+      ]
+    },
+    {
+      "name": "ceres",
+      "source": "https://astrogeology.usgs.gov/search/map/ceres_dawn_fc_global_mosaic_400m",
+      "credit": "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA",
+      "terms": "USGS掲載製品: Access None / Use Please cite authors",
+      "changes": "縮小、JPEG化",
+      "files": [
+        {
+          "path": "tex/ceres.jpg",
+          "sha256": "d27bb444bc29bf13cbed2c9cdad828dd4acdb20d7178b9b6f3310a1dd1491e3f"
+        },
+        {
+          "path": "tex/4k/ceres.jpg",
+          "sha256": "6073b233b1b4869994fba43bc5c74fe4207f58d2f06999a9539b50c3fba56312"
+        }
+      ]
+    },
+    {
+      "name": "vesta",
+      "source": "https://astrogeology.usgs.gov/search/map/vesta_dawn_fc_hamo_global_mosaic_60m",
+      "credit": "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA",
+      "terms": "USGS掲載製品: Access None / Use Please cite authors",
+      "changes": "縮小、JPEG化",
+      "files": [
+        {
+          "path": "tex/vesta.jpg",
+          "sha256": "2bead38b9123b1b2036cebd8fe1b20fe7291de335e56c14087833eff5bc2a5ff"
+        },
+        {
+          "path": "tex/4k/vesta.jpg",
+          "sha256": "f4bb95c9867010fb15c6c18e5a0da183f89f79e8bbc00e0b4784b21bf6656427"
+        }
+      ]
+    },
+    {
+      "name": "moon-nrm",
+      "source": "https://svs.gsfc.nasa.gov/4720/",
+      "credit": "NASA/GSFC; NASA Scientific Visualization Studio",
+      "terms": "SVS公開利用方針",
+      "changes": "標高から傾きを計算し法線図化、解像度別gain、JPEG化",
+      "files": [
+        {
+          "path": "tex/moon-nrm.jpg",
+          "sha256": "04e8a398850b9ecd4ba3008abe1e2c74c89311b9393b4b47570816468385e67b"
+        },
+        {
+          "path": "tex/4k/moon-nrm.jpg",
+          "sha256": "f92361ea4a7d365438a68b89e37cca37a35bfd796aab14fad0cb45feb4de2079"
+        }
+      ]
+    },
+    {
+      "name": "mars-nrm",
+      "source": "https://pds-geosciences.wustl.edu/missions/mgs/megdr.html",
+      "credit": "NASA/GSFC MGS MOLA Science Team",
+      "terms": "NASA主導ミッション公開データ利用方針",
+      "changes": "標高から傾きを計算し法線図化、解像度別gain、JPEG化",
+      "files": [
+        {
+          "path": "tex/mars-nrm.jpg",
+          "sha256": "afdd2f9a8faa5a578a512c0f909afaf8da9afb8efce98508eb71d56974308307"
+        },
+        {
+          "path": "tex/4k/mars-nrm.jpg",
+          "sha256": "a3682dd79913cb35dac19f6e2907aba14f67bb0e5669534827259fe6820ec0e3"
+        }
+      ]
+    },
+    {
+      "name": "mercury-nrm",
+      "source": "https://astrogeology.usgs.gov/search/map/mercury_messenger_global_dem_665m",
+      "credit": "USGS / Kris Becker; NASA/ASU/JHUAPL/Carnegie",
+      "terms": "USGS制作物方針; 製品 Access None / Use Please cite authors",
+      "changes": "標高から傾きを計算し法線図化、解像度別gain、JPEG化",
+      "files": [
+        {
+          "path": "tex/mercury-nrm.jpg",
+          "sha256": "9271728db103ab4aff0ed137ef656c7257e865ae22dd03e225390eaa05d53ebf"
+        },
+        {
+          "path": "tex/4k/mercury-nrm.jpg",
+          "sha256": "9a0d9544a402c7986347e9cb8be04f7bbf1c2e3289c7391e26e8d821312bfa28"
+        }
+      ]
+    },
+    {
+      "name": "milkyway",
+      "source": "https://svs.gsfc.nasa.gov/4851/",
+      "credit": "NASA/Goddard Space Flight Center Scientific Visualization Studio; Gaia DR2: ESA/Gaia/DPAC",
+      "terms": "SVS公開利用方針",
+      "changes": "milkyway_2020_4k.exrのみ。平滑化、黒レベル除去、sRGB化、JPEG化。星・星座図形レイヤーは不使用",
+      "files": [
+        {
+          "path": "tex/milkyway.jpg",
+          "sha256": "00e23df7223181d850c059df1e3914c9fd4ac7e9c11c480d28245695c46d0262"
+        },
+        {
+          "path": "tex/4k/milkyway.jpg",
+          "sha256": "0c0ee28542eecc460aea77de595b56c656477c000c60f9a981c7e703b961b1b6"
+        }
+      ]
+    }
+  ],
+  "source_files": [
+    {
+      "path": "src/data/models.js",
+      "sha256": "9be9f20f41ae9d471da60e083c1632e87e951d9b3248ed49f0c1dfce9ba807c6"
+    },
+    {
+      "path": "third_party/erfa/moon98.c",
+      "sha256": "8633f78b8ec33132743596700fd3ecfbb2ebcb4e886894e377556de9655d1237"
+    }
+  ]
+}

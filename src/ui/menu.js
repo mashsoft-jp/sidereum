@@ -617,7 +617,7 @@
       imgBody: "以下は天体表面に使っている画像の提供元です。権利・利用条件は各提供元の資料を参照してください。",
       proc: "太陽・土星 (環を含む)・天王星・海王星・パラス・ジュノーは、シェーダによる生成テクスチャです (実写ではありません)。",
       data: "データと精度",
-      dataBody: "軌道間隔・天体の大きさとも実寸比で表示しています。天体位置は J2000 平均軌道要素 (NASA JPL 公表値) にもとづくケプラー軌道の近似計算です。教育・可視化目的であり、天文計算・観測用途の精度はありません。小惑星の軌道上の位相は概略です。恒星 (宇宙ビューの背景・地上ビューとも) は Yale Bright Star Catalogue 第5改訂版 (Hoffleit & Warren 1991) の実位置・実等級 (6.5等まで・約8,400星)、色は B-V 色指数にもとづく近似です。星座線は d3-celestial (Olaf Frohn, BSD-3-Clause) を使用しています。星雲・星団・銀河 (メシエ天体109個と二重星団) は OpenNGC (Mattia Verga, CC-BY-SA-4.0) の位置・等級・視直径によるもので、面輝度として描いています。天の川は Deep Star Maps 2020 の拡散光版 (NASA/Goddard Space Flight Center Scientific Visualization Studio。Gaia DR2: ESA/Gaia/DPAC) を天球に貼ったものです。月の向きはカシニの法則 (自転周期 = 公転周期、極は黄道から 1.54° 傾き、交点は軌道と共通) で組んでいるので、光学秤動 — 経度 ±8.0°・緯度 ±6.8° の首振り — は出ます。物理秤動 (数分角) と日周秤動は省略しています。",
+      dataBody: "軌道間隔・天体の大きさとも実寸比で表示しています。天体位置は J2000 平均軌道要素 (NASA JPL 公表値) にもとづくケプラー軌道の近似計算です。教育・可視化目的であり、天文計算・観測用途の精度はありません。小惑星の軌道上の位相は概略です。恒星 (宇宙ビューの背景・地上ビューとも) は HYG 4.2 (David Nash / Astronomy Nexus, CC BY-SA 4.0) の実位置・実等級 (6.5等まで・8,920星)、色は B-V 色指数にもとづく近似です。星座線は d3-celestial (Olaf Frohn, BSD-3-Clause) を使用しています。星雲・星団・銀河 (メシエ天体109個と二重星団) は OpenNGC (Mattia Verga, CC-BY-SA-4.0) の位置・等級・視直径によるもので、面輝度として描いています。天の川は Deep Star Maps 2020 の拡散光版 (NASA/Goddard Space Flight Center Scientific Visualization Studio。Gaia DR2: ESA/Gaia/DPAC) を天球に貼ったものです。月の向きはカシニの法則 (自転周期 = 公転周期、極は黄道から 1.54° 傾き、交点は軌道と共通) で組んでいるので、光学秤動 — 経度 ±8.0°・緯度 ±6.8° の首振り — は出ます。物理秤動 (数分角) と日周秤動は省略しています。",
       disc: "本アプリは NASA・USGS とは無関係であり、両機関による承認・推奨を意味するものではありません。",
     } : {
       lic: "License",
@@ -629,7 +629,7 @@
       imgBody: "The following sources provide the surface imagery. Refer to the source materials for rights and usage conditions.",
       proc: "The Sun, Saturn (incl. rings), Uranus, Neptune, Pallas and Juno use procedurally generated textures (not actual imagery).",
       data: "Data & accuracy",
-      dataBody: "Orbital spacing and body sizes are displayed to actual scale. Positions are approximated with Keplerian orbits based on J2000 mean orbital elements published by NASA JPL. This app is for education and visualization; it is not suitable for astronomical or observational use. Orbital phases of the asteroids are approximate. Stars (both the space-view background and the ground view) use real positions and magnitudes (mag ≤ 6.5, ~8,400 stars) from the Yale Bright Star Catalogue, 5th Revised Ed. (Hoffleit & Warren 1991); colors are approximated from the B-V index. Constellation lines are from d3-celestial (Olaf Frohn, BSD-3-Clause). Deep-sky objects (109 Messier objects and the Double Cluster) use positions, magnitudes and apparent sizes from OpenNGC (Mattia Verga, CC-BY-SA-4.0), rendered as surface brightness. The Milky Way is the diffuse-only layer of Deep Star Maps 2020 (NASA/Goddard Space Flight Center Scientific Visualization Studio; Gaia DR2: ESA/Gaia/DPAC), mapped onto the celestial sphere. The Moon's orientation follows Cassini's laws (rotation period = orbital period; pole tilted 1.54° from the ecliptic, sharing the orbit's node), so optical libration — the ±8.0° / ±6.8° nodding of the disc — is reproduced. Physical libration (a few arcminutes) and diurnal libration are omitted.",
+      dataBody: "Orbital spacing and body sizes are displayed to actual scale. Positions are approximated with Keplerian orbits based on J2000 mean orbital elements published by NASA JPL. This app is for education and visualization; it is not suitable for astronomical or observational use. Orbital phases of the asteroids are approximate. Stars (both the space-view background and the ground view) use real positions and magnitudes (mag ≤ 6.5, 8,920 stars) from HYG 4.2 (David Nash / Astronomy Nexus, CC BY-SA 4.0); colors are approximated from the B-V index. Constellation lines are from d3-celestial (Olaf Frohn, BSD-3-Clause). Deep-sky objects (109 Messier objects and the Double Cluster) use positions, magnitudes and apparent sizes from OpenNGC (Mattia Verga, CC-BY-SA-4.0), rendered as surface brightness. The Milky Way is the diffuse-only layer of Deep Star Maps 2020 (NASA/Goddard Space Flight Center Scientific Visualization Studio; Gaia DR2: ESA/Gaia/DPAC), mapped onto the celestial sphere. The Moon's orientation follows Cassini's laws (rotation period = orbital period; pole tilted 1.54° from the ecliptic, sharing the orbit's node), so optical libration — the ±8.0° / ±6.8° nodding of the disc — is reproduced. Physical libration (a few arcminutes) and diurnal libration are omitted.",
       disc: "This app is not affiliated with, nor endorsed by, NASA or USGS.",
     };
     aboutEl.innerHTML =
@@ -639,13 +639,22 @@
       `<h3>${c.img}</h3><p>${c.imgBody}</p>` +
       `<table><tbody>${rows}</tbody></table>` +
       `<p>${c.proc}</p>` +
+      `<p><a href="ASSET_RIGHTS.md" target="_blank" rel="noopener">${lang === "ja" ? "雲・夜景・標高図を含む素材の出典・加工・利用条件" : "Sources, adaptations and terms, including clouds, night lights and elevation maps"}</a></p>` +
       `<h3>${lang === "ja" ? "星雲・星団・銀河の観測画像" : "Deep-sky observation imagery"}</h3>` +
       `<p>${DSO_PHOTOS.map(dsoPhotoCreditHTML).join("<br>")}</p>` +
       `<p><a href="${DSO_PHOTO_LICENSE}" target="_blank" rel="noopener">CC BY 4.0</a> · ${DSO_PHOTO_CHANGES}. ${lang === "ja" ? "肉眼での見え方とは異なる観測合成画像です。天体をタップすると写真を開けます。M13は中心部、M31はモザイク写真です。ESA/Hubbleによる本アプリの承認・推奨を意味しません。" : "Observation composites, not naked-eye views. Tap an object to open its photograph. M13 shows the core; M31 is a mosaic. No ESA/Hubble endorsement is implied."}</p>` +
       `<h3>${lang === "ja" ? "恒星の観測写真" : "Stellar observation photography"}</h3>` +
       `<p>${Object.values(STAR_PHOTOS).map(starPhotoCreditHTML).join("<br>")}</p>` +
       `<p>${lang === "ja" ? "縮小・JPEG変換。長時間露光の観測写真で、肉眼での見え方とは異なります。" : "Resized and converted to JPEG. Long-exposure photography, not a naked-eye view."}</p>` +
+      `<h3>${lang === "ja" ? "探査機モデル" : "Spacecraft models"}</h3>` +
+      `<p><a href="https://science.nasa.gov/3d-resources/voyager-probe-a/" target="_blank" rel="noopener">Voyager Probe (A) — NASA/Christopher R. Meaney</a><br>` +
+      `<a href="https://science.nasa.gov/3d-resources/cassini-huygens-b/" target="_blank" rel="noopener">Cassini-Huygens (B) — NASA/JPL/Solar System Simulator, Michael Oberle</a><br>` +
+      `${lang === "ja" ? "形状を簡略化・座標を量子化。ホイヘンスは本アプリで作成した模式モデルです。" : "Meshes simplified and coordinates quantized. Huygens is a schematic model created for this app."}</p>` +
       `<h3>${c.data}</h3><p>${c.dataBody}</p>` +
+      `<p><a href="https://www.astronexus.com/projects/hyg" target="_blank" rel="noopener">HYG 4.2 — David Nash / Astronomy Nexus</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a><br>` +
+      `${lang === "ja" ? "6.5等までを抜粋し、位置・等級・色指数を量子化しています。加工後の恒星データもCC BY-SA 4.0で提供します。" : "Selected to magnitude 6.5; positions, magnitudes and colour indices quantized. The adapted stellar data is also available under CC BY-SA 4.0."}</p>` +
+      `<p><a href="https://github.com/liberfa/erfa" target="_blank" rel="noopener">ERFA lunar coefficients — © 2013–2023 NumFOCUS Foundation</a> · <a href="licenses/ERFA.txt" target="_blank" rel="noopener">License</a><br>` +
+      `${lang === "ja" ? "SOFAに由来するERFAの数値表から、一部の周期項を抜粋・単位変換しています。SOFAそのものではなく、IAU等の承認を意味しません。" : "Selected and unit-converted coefficients from ERFA, which is derived from SOFA. This is not SOFA itself and implies no IAU endorsement."}</p>` +
       `<p><a href="https://github.com/ofrohn/d3-celestial" target="_blank" rel="noopener">d3-celestial</a> · <a href="licenses/d3-celestial-BSD-3-Clause.txt" target="_blank" rel="noopener">BSD-3-Clause</a><br>` +
       `<a href="https://github.com/mattiaverga/OpenNGC" target="_blank" rel="noopener">OpenNGC — Mattia Verga</a> · <a href="licenses/OpenNGC-CC-BY-SA-4.0.txt" target="_blank" rel="noopener">CC BY-SA 4.0</a><br>` +
       `${lang === "ja" ? "OpenNGC由来の数値を抜粋・再構成したデータは、同じCC BY-SA 4.0で提供します。" : "The selected and reformatted OpenNGC data remains under CC BY-SA 4.0."}</p>` +

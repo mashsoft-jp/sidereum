@@ -110,23 +110,25 @@ http://localhost:8934/index.html?perf=1
 
 - 惑星位置は J2000 平均軌道要素による二体問題のケプラー軌道です(惑星間摂動は無視)
 - 小惑星(ケレス/ベスタ/パラス/ジュノー)の軌道上の位相(初期平均黄経)は概略です
-- 月の位置は ELP-2000 の主要周期項による短縮理論(Meeus 由来、黄経誤差 約0.01°・位相時刻 約数分)+ 測心視差補正で計算しています。楕円軌道・出没・満ち欠け・距離変化(約36〜41万km)を再現しますが、暦計算用途の精度はありません
+- 月の位置は ELP-2000 の主要周期項による短縮理論(数表はERFAの許諾付きソースから生成、黄経誤差 約0.01°・位相時刻 約数分)+ 測心視差補正で計算しています。楕円軌道・出没・満ち欠け・距離変化(約36〜41万km)を再現しますが、暦計算用途の精度はありません
 - 出没・南中は、J2000 から**その日の平均分点への歳差** (IAU1976 の ζ・z・θ) を掛けて求めています。時角の進みは天体ごとに決めます — 恒星時の進み (15.041°/時) から、その天体自身の赤経の動きを引いたもの。太陽ではこれがちょうど 15.000°/時 (平均太陽日の定義) になり、月では 14.5°/時 前後になります。東京の日の入り・日の出・南中は実際との差が1分以内です。ただし赤経赤緯はその瞬間の値で固定して解いている (反復しない) ため、動きの速い月では1分ほど残ります。章動 (±9″) は入れていません
 - 大気差 (地平で 34′、高度5°で 9′、天頂で 0。Sæmundsson の式) を入れています。情報パネルの「高度」は大気差込みの**見かけの高度**で、地上ビューの描画・照準もこれに揃えてあります。天体だけに掛けると地平ぎわで星座線と星がずれるので、恒星・星座線・黄道・経緯線・天の川にも同じだけ掛けます。これで、地上ビューで太陽の円盤が沈み切る瞬間と一覧の「入」が一致します
 - 食 (日食・月食) は上記の惑星・月の位置から幾何を解いて描いています。起きる・起きないは正しく出ますが、**時刻はずれます**。月食の接触時刻 (半影入り・本影入り・皆既の始まり終わり) は実際と3分以内ですが、日食は月の位置のわずかなずれが地表に落ちる影の位置へ増幅されて効くため、特定の観測地での時刻はこれより大きく外れます。食の予報には使えません
 - 天文カレンダーの衝・最大離角・留も同じ位置計算から求めています。日付は実際とほぼ一致します。二至二分は 15分以内、地球の近日点・遠日点は 2時間ほど、水星の太陽面通過は 1時間ほどずれます (太陽面に入る・入らないの判定は 1900〜2199年で実際と一致。ただし 1937年5月の縁をかすめる回だけは拾えません)。月による惑星の掩蔽は観測地から見た離角で判定していますが、月の位置の誤差 (約0.01°) が縁ぎりぎりの回に効くことがあります。小惑星は軌道上の位相が概略なので、衝を一覧に載せていません
 - 空の明るさは大気散乱の積分から決めています。単散乱だけでは、視線上の大気がすべて地球の影に入った時点 (天頂で太陽高度 −8°) で薄明が終わってしまうため、本影へにじむ多重散乱を減衰長 20km の指数で足しています。**薄明が見えなくなるのは太陽高度 −13.5° あたりで、実際の天文薄明の終わり (−18°) より早い** (東京の8月なら日没から66分。実際は91分)。また、実際の薄明は5桁ぶん暗くなるのに対して画面は2桁ほどしか出せないので、暗いところほど感度を上げて描いています (目の順応にあたるもの。生の輝度で出すと市民薄明のうちに真っ黒になります)
 - 天の川は実測の全天マップ (拡散光のみ) を天球に貼ったものです。恒星カタログとは別の層なので、明るい星が二重に出ることはありません
-- 恒星 (宇宙ビューの背景・地上ビューとも) はヨール輝星星表 (視等級6.5以下・約8,400星 ≒ 肉眼で見える全ての星) の実位置・実等級です。色は B-V 色指数にもとづく近似です
+- 恒星 (宇宙ビューの背景・地上ビューとも) はHYG 4.2 (視等級6.5以下・8,920星、太陽を除く) の実位置・実等級です。色は B-V 色指数にもとづく近似です
 
 ## 画像クレジット
+
+個別製品の利用条件・作者・加工履歴は [素材の確認記録](ASSET_RIGHTS.md)、配布ファイルの識別値は [一覧](licenses/asset-manifest.json) を参照してください。
 
 天体表面のテクスチャの提供元は以下のとおりです。機関名だけでは利用条件を断定できないため、権利確認の状況は [監査記録](COPYRIGHT_AUDIT.md) に分けて記録しています。
 
 | 天体 | 元データ | クレジット |
 |---|---|---|
-| 水星 | MESSENGER MDIS Basemap MD3Color 全球モザイク (32 ppd) | NASA/Johns Hopkins University APL/Carnegie Institution of Washington |
-| 金星 | Magellan レーダー全球図 (地表) | NASA/JPL |
+| 水星 | MESSENGER MDIS Basemap MD3Color 全球モザイク (32 ppd) | Applied Coherent Technology Corporation; NASA/JHUAPL/ASU/Carnegie |
+| 金星 | Magellan レーダー全球図 (地表) | USGS / NASA/JPL |
 | 地球 | Blue Marble: Land Surface, Shallow Water, and Shaded Topography ([57752](https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57752/land_shallow_topo_8192.tif), 8192×4096) | NASA Earth Observatory (Reto Stöckli, NASA/GSFC / Robert Simmon) |
 | 地球 (雲) | Blue Marble: Clouds ([57747](https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57747/cloud_combined_8192.tif), 8192×4096) | NASA Earth Observatory |
 | 地球 (夜景) | Black Marble 2016 (VIIRS DNB) ([144898](https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144898/BlackMarble_2016_3km_geo.tif), 13500×6750) | NASA Earth Observatory |
@@ -175,11 +177,11 @@ ON にしたときは、**先に適用してから「保存してよいか」を
 
 - 惑星の軌道要素・物理諸元: NASA JPL Solar System Dynamics / NASA Planetary Fact Sheet の公表値にもとづく J2000 平均軌道要素
 - 小惑星・冥王星の軌道要素: JPL Small-Body Database の公表値(位相は概略)
-- 恒星: Yale Bright Star Catalogue, 5th Revised Edition (Hoffleit & Warren 1991、CDS V/50)。数値データを利用。カタログ全体のパブリックドメイン宣言は未確認（[監査記録](COPYRIGHT_AUDIT.md)参照）
-- 月の理論: ELP-2000 の主要周期項 (J. Meeus, "Astronomical Algorithms" 2nd ed., Ch.47 の短縮版)
+- 恒星: [HYG 4.2](https://www.astronexus.com/projects/hyg)、David Nash / Astronomy Nexus、CC BY-SA 4.0。位置・等級・B-Vを抜粋・量子化した `src/data/star-catalog.js` も同じ条件で提供。[変換と出典の記録](ASSET_RIGHTS.md)
+- 月の理論: ELP-2000の短縮近似。周期項の数表は [ERFA moon98.c](third_party/erfa/moon98.c) から抜粋・単位変換。[ERFAライセンス](licenses/ERFA.txt)を同梱。ERFA全体の実装・精度を再現するものではありません
 - 星座線: [d3-celestial](https://github.com/ofrohn/d3-celestial) (Olaf Frohn, BSD-3-Clause) の constellations.lines を座標ベースで再編集
 - 天の川: NASA SVS [Deep Star Maps 2020](https://svs.gsfc.nasa.gov/4851/) の拡散光版 (Gaia DR2 由来)
-- 星雲・星団・銀河: [OpenNGC](https://github.com/mattiaverga/OpenNGC) (Mattia Verga) から、メシエ天体 109個 + 二重星団 (NGC 869 / 884) の位置・等級・視直径・種別を抜き出したもの (`src/data/dso.js`)。**このデータだけ CC-BY-SA-4.0** — 表示義務と継承条件があるので、差し替えるときは出典と一緒に扱うこと。和名は一般に通用しているものを手で当てた
+- 星雲・星団・銀河: [OpenNGC](https://github.com/mattiaverga/OpenNGC) (Mattia Verga) から、メシエ天体 109個 + 二重星団 (NGC 869 / 884) の位置・等級・視直径・種別を抜き出したもの (`src/data/dso.js`)。**このデータは CC-BY-SA-4.0** — 表示義務と継承条件があるので、差し替えるときは出典と一緒に扱うこと。和名は一般に通用しているものを手で当てた
 - 月の向き: カシニの法則 (自転周期 = 公転周期、極は黄道から 1.54° 傾き、交点は軌道と共通)。光学秤動 (経度 ±8.0°・緯度 ±6.8°) は出るが、物理秤動 (数分角) と日周秤動は省略
 
 ## フォント

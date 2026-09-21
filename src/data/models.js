@@ -1,5 +1,5 @@
   // ============================================================
-  // 探査機の 3D モデル (NASA 3D Resources / 個別の権利確認状況は COPYRIGHT_AUDIT.md)
+  // 探査機の 3D モデル (NASA 3D Resources / NASAの公式利用許諾・作者・加工記録は ASSET_RIGHTS.md)
   // ============================================================
   // 出典: https://github.com/nasa/NASA-3D-Resources
   //   voyager: "Voyager Probe (A)"  cassini: "Cassini-Huygens (B)"
