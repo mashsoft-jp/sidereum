@@ -18845,19 +18845,32 @@
     saverPhotoImage.removeAttribute("src");
     saverBar.style.top = saverBar.style.bottom = "";
   }
-  function saverPhotoLayout(width, height, imageWidth, imageHeight, captionHeight, topInset, bottomInset) {
+  function saverPhotoLayout(width, height, imageWidth, imageHeight, captionHeight, topInset, bottomInset, pixelRatio = 1) {
     const gap = 12, side = 12;
     const availableHeight = Math.max(1, height-topInset-bottomInset-captionHeight-gap);
-    const scale = Math.min(Math.max(1,width-side*2)/imageWidth, availableHeight/imageHeight);
+    const scale = Math.min(1 / Math.max(1, pixelRatio), Math.max(1,width-side*2)/imageWidth, availableHeight/imageHeight);
     const w = imageWidth*scale, h = imageHeight*scale;
     const top = topInset + Math.max(0,(height-topInset-bottomInset-h-captionHeight-gap)/2);
     return {width:w,height:h,top,captionTop:top+h+gap};
+  }
+  // 全体を見せたまま余白の中だけを移動する。拡大後も枠を越えない。
+  function saverPhotoPose(seconds, messier) {
+    const t = Math.max(0, Math.min(1, seconds / 34));
+    const scale = .92 + .065 * t;
+    const directions = {31:[1,.2],42:[.35,-1],57:[0,0],13:[0,0],45:[-.7,.4],1:[.3,-.6],16:[0,-1],51:[-.6,-.4]};
+    const d = directions[messier] || [0,0];
+    const room = (1 - scale) * 45;
+    return {scale, x:d[0] * (2*t-1) * room, y:d[1] * (2*t-1) * room};
+  }
+  function paintSaverPhotoMotion(state) {
+    const p = saverPhotoPose(state.photoMotion, state.lastPhoto);
+    saverPhotoImage.style.transform = `translateX(-50%) translate(${p.x}%, ${p.y}%) scale(${p.scale})`;
   }
   function layoutSaverPhoto() {
     if (saverState?.kind !== "dsoPhoto" || !saverPhotoImage.naturalWidth) return;
     const padding = getComputedStyle(saverPhoto);
     const layout = saverPhotoLayout(W,H,saverPhotoImage.naturalWidth,saverPhotoImage.naturalHeight,
-      saverBar.getBoundingClientRect().height,parseFloat(padding.paddingTop)||16,parseFloat(padding.paddingBottom)||16);
+      saverBar.getBoundingClientRect().height,parseFloat(padding.paddingTop)||16,parseFloat(padding.paddingBottom)||16, window.devicePixelRatio || 1);
     saverPhotoImage.style.width = layout.width+"px";
     saverPhotoImage.style.height = layout.height+"px";
     saverPhotoImage.style.top = layout.top+"px";
@@ -18883,7 +18896,7 @@
     state.photoReady = false; state.photoFailed = false; state.photoWait = 0;
     setPlaying(false);
     saverPhoto.hidden = saverPhotoCredit.hidden = false;
-    saverPhotoImage.style.transform = "translateX(-50%) scale(.96)";
+    paintSaverPhotoMotion(state);
     saverPhotoImage.alt = name;
     saverPhotoCredit.innerHTML = dsoPhotoCreditHTML(photo) + '<br><a href="'+DSO_PHOTO_LICENSE+'" target="_blank" rel="noopener">CC BY 4.0</a> · '+DSO_PHOTO_CHANGES+'<br>'+dsoTextCreditHTML(photo);
     saverPhotoImage.onload = () => { if (saverState === state && state.kind === "dsoPhoto") { state.photoReady = true; layoutSaverPhoto(); } };
@@ -19031,7 +19044,7 @@
     if (!s || document.hidden || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     if (s.kind === "dsoPhoto" && s.photoReady) {
       s.photoMotion = Math.min(34, s.photoMotion + dt);
-      saverPhotoImage.style.transform = "translateX(-50%) scale(" + (.96 + s.photoMotion * .04/34) + ")";
+      paintSaverPhotoMotion(s);
     }
     else if (s.orbit) cam.yawTgt += dt * Math.PI / 120;
     else if (s.kind === "overview") cam.yawTgt += dt * .006;

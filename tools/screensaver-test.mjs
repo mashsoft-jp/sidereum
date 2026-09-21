@@ -221,3 +221,16 @@ for (const [width,height] of [[390,844],[844,390],[1134,899],[320,568]]) {
  }
 }
 console.log('screensaver photos: aspect ratios, caption spacing and portrait/landscape bounds passed');
+
+// 写真は移動中も領域からはみ出さず、高密度画面でも原画像以上に引き伸ばさない。
+for (const m of [31,42,57,13,45,1,16,51]) for (let seconds=0;seconds<=40;seconds++) {
+ ctx.poseArgs=[seconds,m];
+ const p=run('saverPhotoPose(...poseArgs)');
+ assert.ok(p.scale<=1 && p.scale>0);
+ assert.ok(Math.abs(p.x)/100+p.scale/2<=.5);
+ assert.ok(Math.abs(p.y)/100+p.scale/2<=.5);
+}
+ctx.layoutArgs=[3000,2000,600,400,100,16,16,2];
+const capped=run('saverPhotoLayout(...layoutArgs)');
+assert.ok(capped.width*2<=600 && capped.height*2<=400);
+console.log('screensaver photos: motion stays in frame and respects source resolution');
