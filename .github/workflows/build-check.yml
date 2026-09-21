@@ -39,3 +39,7 @@ jobs:
           node tools/earth-8k-test.mjs
           node tools/texture-transition-test.mjs
           node tools/texture-upload-test.mjs
+      - name: 鑑賞の照明・特徴の向きと周回を確かめる
+        run: |
+          node tools/enjoyment-test.mjs
+          node tools/enjoyment-orbit-test.mjs

@@ -176,6 +176,18 @@
     frameLayout.dirty = true;
   }
 
+  // 使用中の全球写真で確認した特徴の位置 (u,v)。天体の向き・日時は変えない。
+  // 火星: 峡谷と火山群の間、木星: 大赤斑。夜側にある場合は照明を優先する。
+  function enjoymentFeature(body) {
+    const uv = { mars: [.28, .54], jupiter: [.365, .61] }[body.key];
+    if (!uv) return null;
+    const lon = (.5 - uv[0]) * Math.PI * 2, lat = uv[1] * Math.PI;
+    const local = [Math.sin(lat) * Math.cos(lon), Math.cos(lat), Math.sin(lat) * Math.sin(lon)];
+    const model = bodyModel(body, 1);
+    const world = [0, 1, 2].map(i => model[i] * local[0] + model[4+i] * local[1] + model[8+i] * local[2]);
+    const length = Math.hypot(...world);
+    return world.map(v => v / length);
+  }
   // 太陽から約40度ずれた方向なら、明るい面と明暗の境目を一緒に見せられる。
   // 同じ照明条件の候補から現在の視点に近いものを選び、無駄な大回りを避ける。
   function enjoymentDirection(body) {
@@ -196,12 +208,15 @@
     const up = [side[1] * light[2] - side[2] * light[1],
       side[2] * light[0] - side[0] * light[2], side[0] * light[1] - side[1] * light[0]];
     let best = current, bestScore = -Infinity;
-    const phase = (body.key === "moon" ? 55 : 40) * Math.PI / 180;
+    const phase = ({ moon:55, mercury:50, mars:45, jupiter:25, venus:30, uranus:35, neptune:35 }[body.key] || 40) * Math.PI / 180;
+    const feature = enjoymentFeature(body);
+    const featureLit = feature && dot(feature, light) > .15;
     for (let n = 0; n < 72; n++) {
       const angle = n * Math.PI / 36;
       const d = light.map((v, i) => v * Math.cos(phase) +
         (side[i] * Math.cos(angle) + up[i] * Math.sin(angle)) * Math.sin(phase));
       let score = dot(d, current);
+      if (featureLit) score += 3 * dot(d, feature);
       if (body.key === "saturn") {
         const opening = dot(d, SATURN_POLE_W), litSide = dot(light, SATURN_POLE_W);
         // 環が線にならず、できるだけ太陽に照らされた側が見える候補を優先。
