@@ -190,7 +190,13 @@
         float el = length(e);
         if (el > 0.02) {
           e /= el;
-          N = normalize(N + (e * t.x + cross(p, e) * t.y) * uNrmAmt);
+          // 接基底は天体ローカル。照明と同じワールド座標へ回してから足す。
+          vec3 east = normalize(mat3(uModel) * e);
+          vec3 north = normalize(mat3(uModel) * cross(p, e));
+          // 極の基底と輪郭の微細な陰影を滑らかに減衰させる。
+          float relief = uNrmAmt * smoothstep(0.02, 0.12, el)
+            * smoothstep(0.02, 0.22, max(dot(N, V), 0.0));
+          N = normalize(N + (east * t.x + north * t.y) * relief);
         }
       }
 
