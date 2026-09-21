@@ -447,7 +447,7 @@
     },
     {
       id: "halley1910",
-      ver: 5,
+      ver: 6,
       title: { ja: "ハレー彗星 1910年の大接近", en: "Halley's Comet: the 1910 Approach" },
       lead: {
         ja: "太陽系の外から落ちてきて、地球のすぐ横をかすめ、また去っていくまでを辿ります。",
@@ -553,11 +553,11 @@
           d: "1910-08-08", spd: 30, play: true, until: "1911-06-01", spot: "halley",
           text: {
             ja: "太陽から離れるにつれて活動が止まり、尾は縮んで消えていきます。" +
-                "次に戻ってきたのは1986年 — このときは 0.42 au までしか近づかず条件が悪く、" +
-                "「見えなかった彗星」として記憶されました。その次は2061年です。",
+                "次に戻ってきたのは1986年です。この回帰では探査機が接近し、" +
+                "彗星の核を間近から観測しました。次の回帰は2061年です。",
             en: "As it recedes the activity shuts down and the tail shrinks away. " +
-                "It returned in 1986, but only came within 0.42 au in poor viewing geometry — " +
-                "remembered as the apparition nobody could see. The next is 2061.",
+                "Spacecraft approached it during its 1986 return and observed the nucleus at close range. " +
+                "Its next return is in 2061.",
           },
         },
       ],
@@ -844,7 +844,7 @@
     {
       id: "voyager2",
       probe: "voyager2",
-      ver: 2,
+      ver: 3,
       title: { ja: "ボイジャー2号の旅", en: "The Voyage of Voyager 2" },
       lead: {
         ja: "176年に一度の惑星配列を使い、木星・土星・天王星・海王星を続けて訪れた唯一の機体です。",
@@ -976,11 +976,11 @@
           text: {
             ja: "12年で4つの惑星。この並びが次に揃うのは 2150年代です。" +
                 "ボイジャー2号はいま秒速15kmで南の空へ遠ざかり、" +
-                "約4万年後にはこいぬ座のロス248から 1.7光年のところを通ります。" +
+                "約4万年後にはアンドロメダ座のロス248から 1.7光年のところを通ります。" +
                 "1号とはまったく別の方角へ、2機の旅は続きます。",
             en: "Four planets in twelve years — the alignment will not come round again until the " +
                 "2150s. Voyager 2 is now receding southward at 15 km/s; in about 40,000 years it " +
-                "will pass within 1.7 light years of Ross 248. Two craft, two entirely different " +
+                "will pass within 1.7 light years of Ross 248 in Andromeda. Two craft, two entirely different " +
                 "directions, both still going.",
           },
         },
@@ -1319,7 +1319,7 @@
     },
     {
       id: "eclipses",
-      ver: 3,
+      ver: 4,
       title: { ja: "日食と月食", en: "Eclipses" },
       lead: {
         ja: "太陽・地球・月が一直線に並ぶと何が起きるか。始まりから終わりまでを早回しで、影に入る側と落とす側の両方から眺めます。",
@@ -1454,14 +1454,14 @@
           spd: 0.0038, until: "2025-09-07T19:30",
           text: {
             ja: "最後に、最初の月食を月面から。太陽は地球の真後ろで、地球による皆既日食のさなかです。" +
-                "黒い地球の縁を細い赤い輪が囲んでいます — 世界じゅうの朝焼けと夕焼けを一度に見ている姿で、" +
-                "この光が影の中へ回り込んで、地球から見た月を赤く染めていました。" +
+                "地球の縁では、大気を通った太陽光が赤い輪のように見えます。" +
+                "その光が月面に届くため、地球からは月が赤く見えていました。" +
                 "そのまま太陽が地球の陰から現れるところまで。月食と日食は別々の現象ではなく、" +
                 "同じ影を裏表から見たものです。",
             en: "Finally, that first lunar eclipse seen from the Moon. The Sun is directly behind Earth — " +
-                "a total solar eclipse, by Earth. A thin red ring outlines the black disc: that is every sunrise " +
-                "and sunset on the planet at once, and it is this light, bent into the shadow, that was " +
-                "reddening the Moon for everyone watching from Earth. The run carries on until the Sun " +
+                "a total solar eclipse, by Earth. Sunlight passing through the atmosphere makes a reddish rim " +
+                "around Earth. Some of that light reaches the lunar surface, giving the eclipsed Moon " +
+                "its red appearance to observers on Earth. The run carries on until the Sun " +
                 "reappears from behind Earth. A lunar eclipse and a solar eclipse are not two phenomena — " +
                 "they are one shadow, from either side.",
           },

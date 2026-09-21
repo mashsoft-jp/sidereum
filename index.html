@@ -2056,12 +2056,12 @@
       tilt:3.13, rot:0.414, rkm:69911, rEq:71492, rPol:66854, type:5,
       colA:[0.83,0.72,0.57], colB:[0.58,0.44,0.32], colC:[0.94,0.90,0.82], rim:[0.85,0.7,0.5], params:[9.0,0.55,1.0,0],
       rows:[["直径","139,820 km"],["質量","1.90×10²⁷ kg"],["平均距離","5.20 au"],["公転周期","11.86 年"],["自転周期","9.9 時間"],["平均温度","−108 ℃"],["衛星","95+"]],
-      fact:"太陽系最大の惑星。他の全惑星を合わせた2倍以上の質量を持ち、大赤斑は300年以上続く巨大な嵐です。" },
+      fact:"太陽系で最も重い惑星で、ほかの惑星をすべて合わせても木星の質量の半分に届きません。大気には大赤斑と呼ばれる大きな渦があり、長年観測されています。" },
     { key:"saturn", name:"土星", en:"SATURN", a:9.5549, e:0.0542, T:10759.22, i:2.489, node:113.666, peri:92.43, L0:49.94,
       tilt:26.73, rot:0.446, rkm:58232, rEq:60268, rPol:54364, type:5, ring:true,
       colA:[0.89,0.82,0.63], colB:[0.72,0.63,0.46], colC:[0.95,0.92,0.80], rim:[0.9,0.82,0.6], params:[7.0,0.35,0.0,0],
       rows:[["直径","116,460 km"],["質量","5.68×10²⁶ kg"],["平均距離","9.55 au"],["公転周期","29.4 年"],["自転周期","10.7 時間"],["平均温度","−139 ℃"],["衛星","270+"]],
-      fact:"氷の粒でできた壮大な環を持つ惑星。平均密度は水よりも小さく、理論上は水に浮きます。" },
+      fact:"環を作っている粒子の主成分は氷です。惑星全体の平均密度は約0.7 g/cm³で、水よりも小さい値です。" },
     { key:"uranus", name:"天王星", en:"URANUS", a:19.2184, e:0.0472, T:30688.5, i:0.773, node:74.006, peri:170.96, L0:313.23,
       tilt:97.77, rot:0.718, rkm:25362, rEq:25559, rPol:24973, type:6,    // 逆行自転は tilt>90° で表現 (rot は正)
       colA:[0.62,0.85,0.87], colB:[0.51,0.75,0.79], colC:[0.8,0.95,0.95], rim:[0.6,0.9,0.9], params:[5.0,0.15,0,0],
@@ -2193,7 +2193,7 @@
     { key:"deimos", name:"ダイモス", en:"DEIMOS", parent:"mars", aKm:23463, T:1.2624, rkm:6.2, tilt:0, rot:1.2624, type:1, ph:3.9,
       colA:[0.46,0.44,0.41], colB:[0.31,0.29,0.27], colC:[0,0,0], rim:[0,0,0], params:[0,0,0,0],
       rows:[["直径","約 12 km"],["軌道半径","23,463 km"],["公転周期","30.3 時間"],["自転","同期 (潮汐固定)"]],
-      fact:"火星の外側を回る小さな衛星。フォボスと同じく、捕獲された小惑星と考えられています。" },
+      fact:"フォボスより外側を回る小さな衛星です。火星に捕獲された小惑星という説がありますが、二つの衛星がどのように生まれたかは、まだ確定していません。" },
     { key:"io", name:"イオ", en:"IO", parent:"jupiter", aKm:421800, T:1.7691, rkm:1821.6, tilt:0, rot:1.7691, type:1, ph:0.0,
       colA:[0.85,0.75,0.38], colB:[0.62,0.48,0.22], colC:[0,0,0], rim:[0.6,0.55,0.3], params:[0,0,0,0],
       rows:[["直径","3,643 km"],["軌道半径","421,800 km"],["公転周期","1.77 日"],["自転","同期 (潮汐固定)"]],
@@ -2214,7 +2214,7 @@
     { key:"mimas", name:"ミマス", en:"MIMAS", parent:"saturn", aKm:185539, T:0.9424, rkm:198.2, tilt:0, rot:0.9424, type:1, ph:0.4,
       colA:[0.72,0.72,0.74], colB:[0.50,0.50,0.52], colC:[0,0,0], rim:[0,0,0], params:[0,0,0,0],
       rows:[["直径","396 km"],["軌道半径","185,539 km"],["公転周期","22.6 時間"],["自転","同期 (潮汐固定)"]],
-      fact:"直径の3分の1に達する巨大なハーシェル・クレーターを持ち、映画の宇宙要塞に似ていると言われる衛星。土星の環の隙間 (カッシーニの間隙) を作っているのもミマスの重力です。" },
+      fact:"表面には幅約130 kmのハーシェル・クレーターがあります。ミマスの重力は環の粒子の運動にも影響し、カッシーニの間隙の形成に関わっています。" },
     { key:"enceladus", name:"エンケラドス", en:"ENCELADUS", parent:"saturn", aKm:238042, T:1.3702, rkm:252.1, tilt:0, rot:1.3702, type:1, ph:2.9,
       colA:[0.95,0.95,0.97], colB:[0.70,0.70,0.74], colC:[0,0,0], rim:[0.6,0.6,0.65], params:[0,0,0,0],
       rows:[["直径","504 km"],["軌道半径","238,042 km"],["公転周期","1.37 日"],["自転","同期 (潮汐固定)"]],
@@ -3113,10 +3113,10 @@
       fact:"The 'Red Planet', covered in iron-oxide dust. Home to Olympus Mons, the largest volcano in the Solar System (about 22 km high)." },
     jupiter: {
       rows:[["Diameter","139,820 km"],["Mass","1.90×10²⁷ kg"],["Mean distance","5.20 au"],["Orbital period","11.86 yr"],["Rotation period","9.9 hours"],["Mean temp.","−108 ℃"],["Moons","95+"]],
-      fact:"The largest planet — more than twice as massive as all the others combined. The Great Red Spot is a storm that has raged for over 300 years." },
+      fact:"All the other planets together have less than half of Jupiter’s mass. Its atmosphere contains the Great Red Spot, a large vortex observed for many years." },
     saturn: {
       rows:[["Diameter","116,460 km"],["Mass","5.68×10²⁶ kg"],["Mean distance","9.55 au"],["Orbital period","29.4 yr"],["Rotation period","10.7 hours"],["Mean temp.","−139 ℃"],["Moons","270+"]],
-      fact:"Famous for its magnificent rings of ice particles. Its mean density is lower than water — in theory, it would float." },
+      fact:"Ice is the main material in its ring particles. Averaged over the whole planet, its density is about 0.7 g/cm³, below that of water." },
     uranus: {
       rows:[["Diameter","50,724 km"],["Mass","8.68×10²⁵ kg"],["Mean distance","19.2 au"],["Orbital period","84.0 yr"],["Rotation period","17.2 hours (retrograde)"],["Mean temp.","−197 ℃"],["Moons","28"]],
       fact:"Its axis is tilted about 98°, so it orbits the Sun on its side. Methane in the atmosphere absorbs red light, giving it a pale cyan hue." },
@@ -3173,7 +3173,7 @@
       fact:"Orbits faster than Mars rotates, so it rises in the west and sets in the east. It is slowly spiraling inward and will eventually crash into Mars." },
     deimos: {
       rows:[["Diameter","~12 km"],["Orbital radius","23,463 km"],["Orbital period","30.3 hours"],["Rotation","synchronous"]],
-      fact:"The small outer moon of Mars. Like Phobos, it is thought to be a captured asteroid." },
+      fact:"This small moon orbits farther from Mars than Phobos does. Capture of an asteroid is one proposed origin, but how the two moons formed remains unsettled." },
     io: {
       rows:[["Diameter","3,643 km"],["Orbital radius","421,800 km"],["Orbital period","1.77 days"],["Rotation","synchronous"]],
       fact:"The most volcanically active body in the Solar System, heated by Jupiter's immense tides — home to over 400 active volcanoes." },
@@ -3188,7 +3188,7 @@
       fact:"The outermost Galilean moon, and one of the most heavily cratered bodies in the Solar System." },
     mimas: {
       rows:[["Diameter","396 km"],["Orbital radius","185,539 km"],["Orbital period","22.6 hours"],["Rotation","synchronous"]],
-      fact:"Bears the giant Herschel crater, a third of its own diameter — hence the comparisons with a certain film's space station. Its gravity also clears the Cassini Division in Saturn's rings." },
+      fact:"Herschel crater spans about 130 km of its surface. The moon also affects the motion of ring particles through gravity, helping to form the Cassini Division." },
     enceladus: {
       rows:[["Diameter","504 km"],["Orbital radius","238,042 km"],["Orbital period","1.37 days"],["Rotation","synchronous"]],
       fact:"The whitest body in the Solar System (albedo close to 1). Jets of water vapour and ice erupt from cracks near its south pole, fed by a salty ocean underneath; the ice feeds Saturn's E ring." },
@@ -3713,7 +3713,7 @@
     },
     {
       id: "halley1910",
-      ver: 5,
+      ver: 6,
       title: { ja: "ハレー彗星 1910年の大接近", en: "Halley's Comet: the 1910 Approach" },
       lead: {
         ja: "太陽系の外から落ちてきて、地球のすぐ横をかすめ、また去っていくまでを辿ります。",
@@ -3819,11 +3819,11 @@
           d: "1910-08-08", spd: 30, play: true, until: "1911-06-01", spot: "halley",
           text: {
             ja: "太陽から離れるにつれて活動が止まり、尾は縮んで消えていきます。" +
-                "次に戻ってきたのは1986年 — このときは 0.42 au までしか近づかず条件が悪く、" +
-                "「見えなかった彗星」として記憶されました。その次は2061年です。",
+                "次に戻ってきたのは1986年です。この回帰では探査機が接近し、" +
+                "彗星の核を間近から観測しました。次の回帰は2061年です。",
             en: "As it recedes the activity shuts down and the tail shrinks away. " +
-                "It returned in 1986, but only came within 0.42 au in poor viewing geometry — " +
-                "remembered as the apparition nobody could see. The next is 2061.",
+                "Spacecraft approached it during its 1986 return and observed the nucleus at close range. " +
+                "Its next return is in 2061.",
           },
         },
       ],
@@ -4110,7 +4110,7 @@
     {
       id: "voyager2",
       probe: "voyager2",
-      ver: 2,
+      ver: 3,
       title: { ja: "ボイジャー2号の旅", en: "The Voyage of Voyager 2" },
       lead: {
         ja: "176年に一度の惑星配列を使い、木星・土星・天王星・海王星を続けて訪れた唯一の機体です。",
@@ -4242,11 +4242,11 @@
           text: {
             ja: "12年で4つの惑星。この並びが次に揃うのは 2150年代です。" +
                 "ボイジャー2号はいま秒速15kmで南の空へ遠ざかり、" +
-                "約4万年後にはこいぬ座のロス248から 1.7光年のところを通ります。" +
+                "約4万年後にはアンドロメダ座のロス248から 1.7光年のところを通ります。" +
                 "1号とはまったく別の方角へ、2機の旅は続きます。",
             en: "Four planets in twelve years — the alignment will not come round again until the " +
                 "2150s. Voyager 2 is now receding southward at 15 km/s; in about 40,000 years it " +
-                "will pass within 1.7 light years of Ross 248. Two craft, two entirely different " +
+                "will pass within 1.7 light years of Ross 248 in Andromeda. Two craft, two entirely different " +
                 "directions, both still going.",
           },
         },
@@ -4585,7 +4585,7 @@
     },
     {
       id: "eclipses",
-      ver: 3,
+      ver: 4,
       title: { ja: "日食と月食", en: "Eclipses" },
       lead: {
         ja: "太陽・地球・月が一直線に並ぶと何が起きるか。始まりから終わりまでを早回しで、影に入る側と落とす側の両方から眺めます。",
@@ -4720,14 +4720,14 @@
           spd: 0.0038, until: "2025-09-07T19:30",
           text: {
             ja: "最後に、最初の月食を月面から。太陽は地球の真後ろで、地球による皆既日食のさなかです。" +
-                "黒い地球の縁を細い赤い輪が囲んでいます — 世界じゅうの朝焼けと夕焼けを一度に見ている姿で、" +
-                "この光が影の中へ回り込んで、地球から見た月を赤く染めていました。" +
+                "地球の縁では、大気を通った太陽光が赤い輪のように見えます。" +
+                "その光が月面に届くため、地球からは月が赤く見えていました。" +
                 "そのまま太陽が地球の陰から現れるところまで。月食と日食は別々の現象ではなく、" +
                 "同じ影を裏表から見たものです。",
             en: "Finally, that first lunar eclipse seen from the Moon. The Sun is directly behind Earth — " +
-                "a total solar eclipse, by Earth. A thin red ring outlines the black disc: that is every sunrise " +
-                "and sunset on the planet at once, and it is this light, bent into the shadow, that was " +
-                "reddening the Moon for everyone watching from Earth. The run carries on until the Sun " +
+                "a total solar eclipse, by Earth. Sunlight passing through the atmosphere makes a reddish rim " +
+                "around Earth. Some of that light reaches the lunar surface, giving the eclipsed Moon " +
+                "its red appearance to observers on Earth. The run carries on until the Sun " +
                 "reappears from behind Earth. A lunar eclipse and a solar eclipse are not two phenomena — " +
                 "they are one shadow, from either side.",
           },

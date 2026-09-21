@@ -293,10 +293,10 @@
       fact:"The 'Red Planet', covered in iron-oxide dust. Home to Olympus Mons, the largest volcano in the Solar System (about 22 km high)." },
     jupiter: {
       rows:[["Diameter","139,820 km"],["Mass","1.90×10²⁷ kg"],["Mean distance","5.20 au"],["Orbital period","11.86 yr"],["Rotation period","9.9 hours"],["Mean temp.","−108 ℃"],["Moons","95+"]],
-      fact:"The largest planet — more than twice as massive as all the others combined. The Great Red Spot is a storm that has raged for over 300 years." },
+      fact:"All the other planets together have less than half of Jupiter’s mass. Its atmosphere contains the Great Red Spot, a large vortex observed for many years." },
     saturn: {
       rows:[["Diameter","116,460 km"],["Mass","5.68×10²⁶ kg"],["Mean distance","9.55 au"],["Orbital period","29.4 yr"],["Rotation period","10.7 hours"],["Mean temp.","−139 ℃"],["Moons","270+"]],
-      fact:"Famous for its magnificent rings of ice particles. Its mean density is lower than water — in theory, it would float." },
+      fact:"Ice is the main material in its ring particles. Averaged over the whole planet, its density is about 0.7 g/cm³, below that of water." },
     uranus: {
       rows:[["Diameter","50,724 km"],["Mass","8.68×10²⁵ kg"],["Mean distance","19.2 au"],["Orbital period","84.0 yr"],["Rotation period","17.2 hours (retrograde)"],["Mean temp.","−197 ℃"],["Moons","28"]],
       fact:"Its axis is tilted about 98°, so it orbits the Sun on its side. Methane in the atmosphere absorbs red light, giving it a pale cyan hue." },
@@ -353,7 +353,7 @@
       fact:"Orbits faster than Mars rotates, so it rises in the west and sets in the east. It is slowly spiraling inward and will eventually crash into Mars." },
     deimos: {
       rows:[["Diameter","~12 km"],["Orbital radius","23,463 km"],["Orbital period","30.3 hours"],["Rotation","synchronous"]],
-      fact:"The small outer moon of Mars. Like Phobos, it is thought to be a captured asteroid." },
+      fact:"This small moon orbits farther from Mars than Phobos does. Capture of an asteroid is one proposed origin, but how the two moons formed remains unsettled." },
     io: {
       rows:[["Diameter","3,643 km"],["Orbital radius","421,800 km"],["Orbital period","1.77 days"],["Rotation","synchronous"]],
       fact:"The most volcanically active body in the Solar System, heated by Jupiter's immense tides — home to over 400 active volcanoes." },
@@ -368,7 +368,7 @@
       fact:"The outermost Galilean moon, and one of the most heavily cratered bodies in the Solar System." },
     mimas: {
       rows:[["Diameter","396 km"],["Orbital radius","185,539 km"],["Orbital period","22.6 hours"],["Rotation","synchronous"]],
-      fact:"Bears the giant Herschel crater, a third of its own diameter — hence the comparisons with a certain film's space station. Its gravity also clears the Cassini Division in Saturn's rings." },
+      fact:"Herschel crater spans about 130 km of its surface. The moon also affects the motion of ring particles through gravity, helping to form the Cassini Division." },
     enceladus: {
       rows:[["Diameter","504 km"],["Orbital radius","238,042 km"],["Orbital period","1.37 days"],["Rotation","synchronous"]],
       fact:"The whitest body in the Solar System (albedo close to 1). Jets of water vapour and ice erupt from cracks near its south pole, fed by a salty ocean underneath; the ice feeds Saturn's E ring." },
