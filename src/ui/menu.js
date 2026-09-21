@@ -642,6 +642,9 @@
       `<h3>${lang === "ja" ? "星雲・星団・銀河の観測画像" : "Deep-sky observation imagery"}</h3>` +
       `<p>${DSO_PHOTOS.map(dsoPhotoCreditHTML).join("<br>")}</p>` +
       `<p><a href="${DSO_PHOTO_LICENSE}" target="_blank" rel="noopener">CC BY 4.0</a> · ${DSO_PHOTO_CHANGES}. ${lang === "ja" ? "肉眼での見え方とは異なる観測合成画像です。天体をタップすると写真を開けます。M13は中心部、M31はモザイク写真です。ESA/Hubbleによる本アプリの承認・推奨を意味しません。" : "Observation composites, not naked-eye views. Tap an object to open its photograph. M13 shows the core; M31 is a mosaic. No ESA/Hubble endorsement is implied."}</p>` +
+      `<h3>${lang === "ja" ? "恒星の観測写真" : "Stellar observation photography"}</h3>` +
+      `<p>${Object.values(STAR_PHOTOS).map(starPhotoCreditHTML).join("<br>")}</p>` +
+      `<p>${lang === "ja" ? "縮小・JPEG変換。長時間露光の観測写真で、肉眼での見え方とは異なります。" : "Resized and converted to JPEG. Long-exposure photography, not a naked-eye view."}</p>` +
       `<h3>${c.data}</h3><p>${c.dataBody}</p><p>${c.disc}</p>`;
   }
   menuAboutBtn.addEventListener("click", () => {

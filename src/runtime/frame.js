@@ -193,7 +193,7 @@
         const y = (VP[1] * X + VP[5] * Y + VP[9] * Z + VP[13]) / w;
         const px = (x * 0.5 + 0.5) * W, py = (1 - (y * 0.5 + 0.5)) * H;
         if (px < 0 || px > W || py < 0 || py > H) continue;
-        lblPut(lang === "ja" ? st.ja : st.en, px, py + 13, LBL_DSO, "rgba(190,205,235,0.6)", LF11, spaceGuide.sky);
+        lblPut(lang === "ja" ? st.ja : st.en, px, py + 13, LBL_DSO, "rgba(190,205,235,0.6)", LF11, spaceGuide.sky, st);
       }
       // 黄道ラベル: 画面中央に最も近い可視点に1つ
       let bx = 0, by = 0, bd = Infinity;

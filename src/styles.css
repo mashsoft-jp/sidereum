@@ -1724,3 +1724,6 @@
   #overviewClose { position: absolute; z-index: 20; width: 28px; height: 28px; padding: 0; border: 0; background: transparent; color: #a6b5cb; font-size: 20px; cursor: pointer; }
   #overviewClose[hidden] { display: none; }
   #overviewClose:hover, #overviewClose:focus-visible { color: #fff; background: rgba(129,151,185,.2); border-radius: 5px; }
+
+#dsoPhotoDialog .starInfoDescription { font-size:14px; line-height:1.85; margin-top:16px; }
+#dsoPhotoDialog .starInfoFacts { color:var(--accent); }

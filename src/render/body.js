@@ -45,6 +45,7 @@
     "jupiter", "saturn", "uranus", "neptune", "pluto"]);
   const lblPri = (b) => LBL_MAJOR.has(b.key) ? LBL_BODY : LBL_SAT;
 
+  const namedStarHits = []; // Screen-space targets from labels actually drawn this frame.
   const lblQ = [], lblQPool = [];        // 積んだ文字 (スロットは使い回す)
   const lblBox = [], lblBoxPool = [];    // 確保済みの矩形 [x0,y0,x1,y1,弾く優先度]
   const lblWCache = new Map();           // 幅は言語を切り替えた時しか変わらない
@@ -54,18 +55,18 @@
     b[0] = x0; b[1] = y0; b[2] = x1; b[3] = y1; b[4] = minPri;
     lblBox.push(b);
   }
-  function lblBegin() { lblQ.length = 0; lblBox.length = 0; }
+  function lblBegin() { lblQ.length = 0; lblBox.length = 0; namedStarHits.length = 0; }
   // 文字を置かせない場所を先に取る (天体の円盤)。背景側の文字だけを弾く —
   // 木星面を通過中の衛星など、円盤の上にあること自体が意味を持つ名前は通す
   function lblBlock(x, y, r) {
     if (r >= 8) lblRect(x - r, y - r, x + r, y + r, LBL_MET);
   }
   // (x, y) は fillText と同じ。textAlign="center" の中央と、ベースライン
-  function lblPut(txt, x, y, pri, col, f, alpha = 1) {
+  function lblPut(txt, x, y, pri, col, f, alpha = 1, star = null) {
     if (alpha <= 0.02) return;
     let L = lblQPool[lblQ.length];
     if (!L) L = lblQPool[lblQ.length] = { txt: "", x: 0, y: 0, pri: 0, col: "", f: null };
-    L.txt = txt; L.x = x; L.y = y; L.pri = pri; L.col = col; L.f = pri === LBL_SEL ? LF12 : (f || LF11); L.alpha = alpha;
+    L.txt = txt; L.x = x; L.y = y; L.pri = pri; L.col = col; L.f = pri === LBL_SEL ? LF12 : (f || LF11); L.alpha = alpha; L.star = star;
     lblQ.push(L);
   }
   function lblEnd() {
@@ -132,6 +133,8 @@
       }
       octx.globalAlpha = L.alpha * emphasis;
       octx.fillText(L.txt, x, y);
+      if (L.star) namedStarHits.push({ star: L.star, x: L.x, y: L.y - 13,
+        left: x - hw, right: x + hw, top: y - top - 4, bottom: y + bottom + 4 });
       octx.globalAlpha = 1;
     }
     octx.restore();

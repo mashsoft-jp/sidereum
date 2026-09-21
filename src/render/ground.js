@@ -1049,7 +1049,7 @@
         const rf = refractUp(up), hz = rf[0] * SKYR;
         const sp = projGround([east * hz, rf[1] * SKYR, -north * hz]);
         if (!sp || sp.x < 0 || sp.x > W || sp.y < 0 || sp.y > H) continue;
-        lblPut(lang === "ja" ? st.ja : st.en, sp.x, sp.y + 13, LBL_DSO, sCol, LF11);
+        lblPut(lang === "ja" ? st.ja : st.en, sp.x, sp.y + 13, LBL_DSO, sCol, LF11, 1, st);
       }
     }
     // 星雲・星団の名前。淡くて小さいものまで全部出すと画面が名前で埋まるので、

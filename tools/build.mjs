@@ -53,6 +53,7 @@ const MANIFEST = [
   "data/showers.js",     // 流星群の放射点・出現数
   "data/dso.js",         // 星雲・星団・銀河 (メシエ天体, OpenNGC 由来)
   "data/starnames.js",   // 明るい星の固有名 (カタログの星へ寄せる)
+  "data/star-info.js",   // Named-star descriptions and public-domain photographs
   "data/dso-photos.js", // Licensed observation imagery
   "render/dso.js",       // 星雲・星団の描画 (両ビュー共用)
   "render/ground.js",    // 地上ビュー (観測者フレーム・renderGround)
@@ -74,6 +75,7 @@ const MANIFEST = [
   "ui/tour.js",          // ガイドツアーの実行・ナレーションバー・一覧
   "ui/calendar.js",      // 天文カレンダー (イベント一覧とその日時への移動)・今夜の空
   "ui/dso-photos.js",   // Tap a deep-sky object to view its photograph
+  "ui/star-info.js",     // Tap a visible star or its name to read its description
   "ui/search.js",        // 天体名検索
   "ui/framing.js",       // 空き領域への構図合わせ・接近/周辺・鑑賞表示
   "ui/ring-close.js",  // 土星の環の探索・入退場と見回し
