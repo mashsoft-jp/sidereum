@@ -107,3 +107,7 @@ Download: https://cdn.esahubble.org/archives/images/screen/heic0506a.jpg
 SHA-256: 626f7d6ba30d186a87b834c089b449e3b77c8defce4fe85ab7edf2078e3633e2
 
 M16 shows the Pillars of Creation, not the whole nebula. Short bilingual descriptions are paraphrased from the linked ESA/Hubble pages; attribution is displayed in the viewer.
+
+## Description text
+
+The eight bilingual descriptions in `src/data/dso-photos.js` are summaries/adaptations of the corresponding ESA/Hubble pages linked above, with Japanese translation. They are provided under CC BY 4.0. Credit: ESA/Hubble; adaptation and translation: Sidereum. The viewer and screensaver display the source, adaptation notice and license link separately from the full image credits. See https://esahubble.org/copyright/ (checked 2026-09-21).

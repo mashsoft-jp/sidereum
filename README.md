@@ -121,7 +121,7 @@ http://localhost:8934/index.html?perf=1
 
 ## 画像クレジット
 
-天体表面のテクスチャには、以下のパブリックドメイン画像(米国政府著作物)を使用しています。
+天体表面のテクスチャの提供元は以下のとおりです。機関名だけでは利用条件を断定できないため、権利確認の状況は [監査記録](COPYRIGHT_AUDIT.md) に分けて記録しています。
 
 | 天体 | 元データ | クレジット |
 |---|---|---|
@@ -175,33 +175,27 @@ ON にしたときは、**先に適用してから「保存してよいか」を
 
 - 惑星の軌道要素・物理諸元: NASA JPL Solar System Dynamics / NASA Planetary Fact Sheet の公表値にもとづく J2000 平均軌道要素
 - 小惑星・冥王星の軌道要素: JPL Small-Body Database の公表値(位相は概略)
-- 恒星: Yale Bright Star Catalogue, 5th Revised Edition (Hoffleit & Warren 1991、CDS V/50)。事実データの編纂物でありパブリックドメインとして扱われる
+- 恒星: Yale Bright Star Catalogue, 5th Revised Edition (Hoffleit & Warren 1991、CDS V/50)。数値データを利用。カタログ全体のパブリックドメイン宣言は未確認（[監査記録](COPYRIGHT_AUDIT.md)参照）
 - 月の理論: ELP-2000 の主要周期項 (J. Meeus, "Astronomical Algorithms" 2nd ed., Ch.47 の短縮版)
-- 星座線: [d3-celestial](https://github.com/ofrohn/d3-celestial) (Olaf Frohn, BSD-2-Clause) の constellations.lines を座標ベースで再編集
-- 天の川: NASA SVS [Deep Star Maps 2020](https://svs.gsfc.nasa.gov/4851/) の拡散光版 (Gaia DR2 由来。米国政府著作物)
+- 星座線: [d3-celestial](https://github.com/ofrohn/d3-celestial) (Olaf Frohn, BSD-3-Clause) の constellations.lines を座標ベースで再編集
+- 天の川: NASA SVS [Deep Star Maps 2020](https://svs.gsfc.nasa.gov/4851/) の拡散光版 (Gaia DR2 由来)
 - 星雲・星団・銀河: [OpenNGC](https://github.com/mattiaverga/OpenNGC) (Mattia Verga) から、メシエ天体 109個 + 二重星団 (NGC 869 / 884) の位置・等級・視直径・種別を抜き出したもの (`src/data/dso.js`)。**このデータだけ CC-BY-SA-4.0** — 表示義務と継承条件があるので、差し替えるときは出典と一緒に扱うこと。和名は一般に通用しているものを手で当てた
 - 月の向き: カシニの法則 (自転周期 = 公転周期、極は黄道から 1.54° 傾き、交点は軌道と共通)。光学秤動 (経度 ±8.0°・緯度 ±6.8°) は出るが、物理秤動 (数分角) と日周秤動は省略
 
 ## フォント
 
-ロゴ (ワードマーク) は [Jura](https://github.com/ossobuffo/jura) Light から `SIDEREUM` の7文字 (S I D E R E U M) だけを切り出し、`src/fonts/jura-logo.woff2` (1.1KB) として `@font-face` の `data:` URL で埋め込んでいます。外部リクエストを増やさないためで、7文字しか入っていないので他の文字は自動的に `--font-ui` へ落ちます。
+ロゴは [Megrim](https://fonts.google.com/specimen/Megrim) から、`SIDEREUM` に使う7種類の文字を抜き出した `src/fonts/megrim-logo.woff2` を埋め込んでいます。
 
-© 2019 The Jura Project Authors — [SIL Open Font License 1.1](https://scripts.sil.org/OFL)。著作権表示とライセンスはフォント自身の name テーブルにも入れてあります。
-
-作り直すときは、Google Fonts の latin サブセットから further subset する:
-
-```
-python3 -m fontTools.subset jura-latin.woff2 --text="SIDEREUM" --flavor=woff2 \
-  --layout-features='' --no-hinting --desubroutinize --name-IDs=0,1,2,13,14 \
-  --output-file=src/fonts/jura-logo.woff2
-```
+© 2009, 2010, 2011 Daniel Johnson。書体とそのサブセットは [SIL Open Font License 1.1](src/fonts/Megrim-OFL.txt) に従います。ライセンス原文を同梱し、アプリのクレジットからも参照できます。
 
 ## ライセンス
 
 © 2026 [Mashsoft Inc.](https://www.mashsoft.co.jp)
 
-コードは [MIT License](LICENSE) です。天体表面の政府機関由来画像はパブリックドメインで、コードの MIT ライセンスとは別に扱います。
+コードは [MIT License](LICENSE) です。画像・フォント・外部データはMITの対象に含めず、それぞれの権利と利用条件を維持します。[第三者素材・文章の出典一覧](THIRD_PARTY_NOTICES.md)と[著作権監査記録](COPYRIGHT_AUDIT.md)を参照してください。提供機関の名前だけを根拠にパブリックドメインと判断しないでください。
 
-`tex/dso/` の M31・M42・M45・M57・M13 の観測画像は **CC BY 4.0** です。パブリックドメインではありません。画像ごとの完全なクレジット・出典・取得元・加工内容は [tex/dso/CREDITS.md](tex/dso/CREDITS.md) に記録しています。アプリの画像表示時と共有画像にもクレジットを保持してください。[ESA/Hubble の利用条件](https://esahubble.org/copyright/) に従い、提供元による承認・推奨を示唆しないでください。
+`tex/dso/` の M1・M13・M16・M31・M42・M45・M51・M57 の観測画像と、ESA/Hubble資料を要約・再構成した解説は **CC BY 4.0** です。パブリックドメインではありません。画像ごとの完全なクレジット・出典・取得元・加工内容は [tex/dso/CREDITS.md](tex/dso/CREDITS.md) に記録しています。アプリの画像表示時と共有画像にもクレジットを保持してください。[ESA/Hubble の利用条件](https://esahubble.org/copyright/) に従い、提供元による承認・推奨を示唆しないでください。
 
 通常の空では従来の面輝度表示を使います。星雲・星団をタップするか、検索結果を選ぶと、枠付きの写真ウィンドウを開きます。画像の取得はその時だけ行い、原画像を縦横比を保って表示します。完全なクレジットとライセンスのリンクは写真のすぐ下に表示します。M13 は中心部、M31 はモザイク写真です。肉眼での見え方とは異なる観測画像として扱います。通常のビューやその共有画像には写真が含まれないため、写真のクレジットを重ねません。
+
+恒星の説明には、IAU WGSN等で確認した事実を用いた短文を収録しています。参照先の文章の転載許諾を意味するものではありません。ベガの観測写真はChuck AyoubによるCC0作品です。[記録](tex/stars/CREDITS.md)を参照してください。

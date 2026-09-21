@@ -24,6 +24,11 @@
   function dsoPhotoCreditHTML(p) {
     return '<a href="'+p.source+'" target="_blank" rel="noopener">M'+p.m+' — '+p.credit.replace(/&/g,'&amp;')+'</a>';
   }
+  function dsoTextCreditHTML(p) {
+    return '<a href="'+p.source+'" target="_blank" rel="noopener">'+
+      (lang === 'ja' ? '解説：ESA/Hubble資料を要約・再構成（日本語訳）' : 'Text adapted and summarised from ESA/Hubble')+'</a> · '+
+      '<a href="'+DSO_PHOTO_LICENSE+'" target="_blank" rel="noopener">CC BY 4.0</a>';
+  }
   const dsoPhotoDialog = document.getElementById('dsoPhotoDialog');
   function closeDsoPhoto() { if (dsoPhotoDialog.open) dsoPhotoDialog.close(); }
   function openDsoPhoto(i) {
@@ -52,10 +57,7 @@
     credits.innerHTML=dsoPhotoCreditHTML(p)+'<br><a href="'+DSO_PHOTO_LICENSE+'" target="_blank" rel="noopener">CC BY 4.0</a>';
     const caption=document.createElement('p'); caption.className='dsoPhotoCaption';
     caption.textContent=DSO_PHOTO_NOTES[p.m][ja?0:1];
-    const reference=document.createElement('a'); reference.href=p.source;
-    reference.target='_blank'; reference.rel='noopener';
-    reference.textContent=ja?'解説の出典: ESA/Hubble':'Description source: ESA/Hubble';
-    const source=document.createElement('p'); source.append(reference);
+    const source=document.createElement('p'); source.innerHTML=dsoTextCreditHTML(p);
     dsoPhotoDialog.append(status,img,caption,credits,source);
     dsoPhotoDialog.showModal();
   }

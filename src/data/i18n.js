@@ -383,7 +383,7 @@
       fact:"Saturn's second-largest moon: a heavily cratered ice world of low density, thought to be about three-quarters ice." },
     iapetus: {
       rows:[["Diameter","1,469 km"],["Orbital radius","3,560,854 km"],["Orbital period","79.3 days"],["Rotation","synchronous"]],
-      fact:"The two-faced moon: its leading hemisphere is as dark as coal, the trailing one as bright as snow. A ridge 13 km high runs around its equator, giving it a walnut shape. Its real orbit is tilted 15°; here it sits in Saturn's equatorial plane." },
+      fact:"The surface is much darker on the leading hemisphere than on the trailing hemisphere. An equatorial ridge reaches a height of 13 km. Its real orbit is tilted 15°; here it sits in Saturn's equatorial plane." },
     ariel: {
       rows:[["Diameter","1,158 km"],["Orbital radius","190,900 km"],["Orbital period","2.52 days"],["Rotation","synchronous"]],
       fact:"The brightest of Uranus's moons and the youngest-looking, criss-crossed by valleys and faults that point to a warm, geologically active past." },

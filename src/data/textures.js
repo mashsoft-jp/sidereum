@@ -1,4 +1,4 @@
-  // ---------- 天体テクスチャ (パブリックドメインの実全球マップ) ----------
+  // ---------- 天体テクスチャ (実全球マップ。提供元・権利確認状況は THIRD_PARTY_NOTICES.md) ----------
   //   出典: 水星 MESSENGER (USGS) / 金星 Magellan レーダー地形 (NASA) / 地球 Blue Marble (NASA) /
   //         月 LRO (NASA SVS) / 火星 Viking (USGS) / 木星 Cassini PIA07782 (NASA/JPL) /
   //         イオ・ガニメデ Voyager + Galileo SSI 合成 (USGS) /

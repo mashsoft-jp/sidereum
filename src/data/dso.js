@@ -1,3 +1,6 @@
+  // SPDX-License-Identifier: CC-BY-SA-4.0
+  // Adaptation: selected numerical fields, reformatted arrays and Japanese common names.
+  // Source and retained license: THIRD_PARTY_NOTICES.md; licenses/OpenNGC-CC-BY-SA-4.0.txt.
   // ---------- 星雲・星団・銀河 (メシエ天体 + 二重星団) ----------
   // 出典: OpenNGC (Mattia Verga, CC-BY-SA-4.0)
   //   https://github.com/mattiaverga/OpenNGC

@@ -171,6 +171,7 @@ run(readFileSync(new URL('../src/data/dso-photos.js', import.meta.url), 'utf8'))
 ctx.DSO = run('DSO_PHOTOS.map(p=>[p.m])');
 ctx.dsoName = i => 'Object '+ctx.DSO[i][0];
 ctx.dsoPhotoCreditHTML = p => p.credit;
+ctx.dsoTextCreditHTML = () => "Text adapted from ESA/Hubble · CC BY 4.0";
 run('saverState={tourVisuals:savedVisuals,bag:[],phase:"in",fade:0,age:0};');
 const photos = new Set();
 for(let i=0;i<8;i++) {

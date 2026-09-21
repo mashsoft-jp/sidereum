@@ -150,7 +150,7 @@
     saverPhoto.hidden = saverPhotoCredit.hidden = false;
     saverPhotoImage.style.transform = "translateX(-50%) scale(.96)";
     saverPhotoImage.alt = name;
-    saverPhotoCredit.innerHTML = dsoPhotoCreditHTML(photo) + '<br><a href="'+DSO_PHOTO_LICENSE+'" target="_blank" rel="noopener">CC BY 4.0</a> · '+DSO_PHOTO_CHANGES;
+    saverPhotoCredit.innerHTML = dsoPhotoCreditHTML(photo) + '<br><a href="'+DSO_PHOTO_LICENSE+'" target="_blank" rel="noopener">CC BY 4.0</a> · '+DSO_PHOTO_CHANGES+'<br>'+dsoTextCreditHTML(photo);
     saverPhotoImage.onload = () => { if (saverState === state && state.kind === "dsoPhoto") { state.photoReady = true; layoutSaverPhoto(); } };
     saverPhotoImage.onerror = () => { if (saverState === state && state.kind === "dsoPhoto") state.photoFailed = true; };
     saverPhotoImage.src = photo.file;

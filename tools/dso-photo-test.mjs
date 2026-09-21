@@ -22,11 +22,13 @@ for(const p of run('DSO_PHOTOS')){
  ctx.m=p.m;run('openDsoPhoto(DSO.findIndex(d=>d[0]===m))');
  assert.ok(dialog.open);
  assert.ok(dialog.children.some(el=>el.textContent===run('DSO_PHOTO_NOTES[m][0]')));
+ assert.ok(dialog.children.some(el=>el.innerHTML?.includes('解説：ESA/Hubble資料を要約・再構成（日本語訳）') && el.innerHTML.includes(p.source) && el.innerHTML.includes(run('DSO_PHOTO_LICENSE'))));
  assert.ok(dialog.children.some(el=>el.url===p.file));
  assert.ok(dialog.children.some(el=>el.innerHTML?.includes(p.credit.replace(/&/g,'&amp;'))));
  assert.ok(dialog.children.some(el=>el.innerHTML?.includes(run('DSO_PHOTO_LICENSE'))));
  run('lang="en"; openDsoPhoto(DSO.findIndex(d=>d[0]===m))');
  assert.ok(dialog.children.some(el=>el.textContent===run('DSO_PHOTO_NOTES[m][1]')));
+ assert.ok(dialog.children.some(el=>el.innerHTML?.includes('Text adapted and summarised from ESA/Hubble') && el.innerHTML.includes(p.source) && el.innerHTML.includes(run('DSO_PHOTO_LICENSE'))));
  run('lang="ja"; closeDsoPhoto()');assert.equal(dialog.open,false);
 }
 assert.equal(requests,16);

@@ -15,6 +15,8 @@
   }
   ["NASA, ESA, B. Williams (University of Washington)", "NASA, ESA, M. Robberto ( Space Telescope Science Institute/ESA) and the Hubble Space Telescope Orion Treasury Project Team", "NASA, ESA, and C. Robert O’Dell (Vanderbilt University).", "NASA, ESA, and the Hubble Heritage Team (STScI/AURA)", "Davide De Martin & the ESA/ESO/NASA Photoshop FITS Liberator"].forEach((credit, i) => { DSO_PHOTOS[i].credit = credit; });
 
+  // ESA/Hubble-based summaries/adaptations; Japanese translation. CC BY 4.0.
+  // See tex/dso/CREDITS.md for source pages and retained credits.
   const DSO_PHOTO_NOTES = {
   "31": [
     "アンドロメダ銀河を多くの観測画像からつないだモザイクです。明るい中心部を囲む、暗い塵の帯に注目してください。",
