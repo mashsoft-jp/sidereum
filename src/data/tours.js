@@ -1159,7 +1159,7 @@
           d: "2017-09-15", path: true, orbits: TOUR_PLANET_ORBITS,
           text: {
             ja: "たどってきた道のりです。太陽の方へ3回落ちてから外へ — " +
-                "遠回りに見えるこの形が、5.7トンを土星まで運ぶ唯一の道でした。" +
+                "一見遠回りに見えますが、これこそがカッシーニが土星までたどり着ける唯一の道でした。" +
                 "ボイジャーが通り過ぎた星に、カッシーニは13年住みつき、" +
                 "294周して 45万枚の写真を送りました。そしていま、その一部として土星の中にいます。",
             en: "The route it took: three falls back toward the Sun before heading out — a detour " +
