@@ -18,9 +18,11 @@ for(const [nav,fine,max,expected] of [
  [{userAgent:'Windows NT'},false,16384,false],
 ]) {
  const ctx=context(nav,fine,max);
+ assert.ok(!vm.runInContext('texAllURLs()',ctx).some(u=>u.includes('/8k/')),'起動時の8K先読みなし');
+ vm.runInContext('detailTextureKey="earth"',ctx);
  assert.equal(vm.runInContext('texURL("earth")',ctx),expected?'tex/8k/earth.jpg':'tex/4k/earth.jpg');
  for(const key of ['cloud','night','jupiter','nrm:moon']) assert.match(vm.runInContext(`texURL('${key}')`,ctx),/^tex\/4k\//);
- vm.runInContext('earth8kFailed=true',ctx);
+ vm.runInContext('detail8kFailed.add("earth")',ctx);
  assert.equal(vm.runInContext('texURL("earth")',ctx),'tex/4k/earth.jpg');
  assert.ok(!vm.runInContext('texAllURLs()',ctx).some(u=>u.includes('/8k/')));
  vm.runInContext('texHiRes=false',ctx);

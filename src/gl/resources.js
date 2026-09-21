@@ -1,10 +1,46 @@
   const texByKey = new Map();
   const texPrevious = new Map(), texRequests = new Map();
   const TEX_FADE_MS = 650;
+  const texLoaded = new Map(), detailBase = new Map();
+  let detailCandidate = null, detailCandidatePx = 0, detailWanted = null, detailWantedAt = 0, detailRetireAt = 0;
+  function noteDetailTexture(body, radiusPx) {
+    if (!texHiRes || !detail8kSupported || !DETAIL_TEXTURES.has(body.key) || detail8kFailed.has(body.key)) return;
+    const threshold = body.key === detailTextureKey ? 80 : 120;
+    if (radiusPx >= threshold && radiusPx > detailCandidatePx) {
+      detailCandidate = body.key; detailCandidatePx = radiusPx;
+    }
+  }
+  function releaseDetailTexture() {
+    const key = detailTextureKey;
+    if (!key) return;
+    detailTextureKey = null;
+    // 完了が遅れた8K画像をGPUへ載せない。
+    texRequests.set(key, (texRequests.get(key) || 0) + 1);
+    const base = detailBase.get(key);
+    if (base) {
+      const current = texByKey.get(key), previous = texPrevious.get(key);
+      if (previous && previous.tex !== base && previous.tex !== current) gl.deleteTexture(previous.tex);
+      texByKey.set(key, base); detailBase.delete(key);
+      texLoaded.set(key, TEX_DIR + "4k/" + TEXTURES[key]);
+      texPrevious.set(key, {tex:current, time:performance.now()});
+      detailRetireAt = performance.now() + TEX_FADE_MS;
+    }
+  }
+  function stepDetailTextures(now) {
+    const wanted = texHiRes && detail8kSupported ? detailCandidate : null;
+    if (detailTextureKey && detailTextureKey !== wanted) releaseDetailTexture();
+    if (wanted !== detailWanted) { detailWanted = wanted; detailWantedAt = now; }
+    // 接近途中の短い通過では取得しない。前の8Kを解放してから次の1枚を読む。
+    if (!wanted || detailTextureKey || now - detailWantedAt < 350 || now < detailRetireAt) return;
+    if (texLoaded.get(wanted) !== TEX_DIR + "4k/" + TEXTURES[wanted] || texPrevious.has(wanted)) return;
+    detailTextureKey = wanted;
+    loadTexInto(texByKey.get(wanted), wanted);
+  }
   function finishTextureFades() {
     const now = performance.now();
     for (const [key, old] of texPrevious) if (now - old.time >= TEX_FADE_MS) {
-      gl.deleteTexture(old.tex); texPrevious.delete(key);
+      if (detailBase.get(key) !== old.tex) gl.deleteTexture(old.tex);
+      texPrevious.delete(key);
     }
   }
   const noTex = gl.createTexture();
@@ -43,10 +79,10 @@
     texRequests.set(key, request);
     const img = new Image();
     let url = texURL(key);
-    const retryEarth4k = () => {
+    const retryDetail4k = () => {
       if (!url.includes("/8k/") || texRequests.get(key) !== request) return false;
-      earth8kFailed = true;
-      url = TEX_DIR + "4k/earth.jpg";
+      detail8kFailed.add(key);
+      url = TEX_DIR + "4k/" + TEXTURES[key];
       img.src = url;
       return true;
     };
@@ -66,7 +102,7 @@
         if (url.includes("/8k/") && gl.getError() !== gl.NO_ERROR) throw new Error("8K upload failed");
       } catch (e) {
         if (surface) gl.deleteTexture(next);
-        if (retryEarth4k()) return;
+        if (retryDetail4k()) return;
         texSettled(); texWarn(key, e.message);
         return;
       }
@@ -76,7 +112,7 @@
         gl.generateMipmap(gl.TEXTURE_2D);
         if (url.includes("/8k/") && gl.getError() !== gl.NO_ERROR) {
           gl.deleteTexture(next);
-          if (retryEarth4k()) return;
+          if (retryDetail4k()) return;
           texSettled(); return;
         }
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
@@ -84,7 +120,9 @@
       }
       if (surface) {
         const old = texPrevious.get(key);
-        if (old) gl.deleteTexture(old.tex);
+        if (old && detailBase.get(key) !== old.tex) gl.deleteTexture(old.tex);
+        if (url.includes("/8k/")) detailBase.set(key, texByKey.get(key) || tex);
+        texLoaded.set(key, url);
         texPrevious.set(key, { tex: texByKey.get(key) || tex, time: performance.now() });
         texByKey.set(key, next);
       }
@@ -92,7 +130,7 @@
     };
     // tex/ を index.html と一緒に置き忘れた場合にここへ来る
     img.onerror = () => {
-      if (retryEarth4k()) return;
+      if (retryDetail4k()) return;
       texSettled();
       if (texRequests.get(key) === request) texWarn(key, "取得できませんでした");
     };
@@ -127,6 +165,7 @@
   // 解像度を切り替えたときの読み直し。差し替わるまでは前の解像度で描き続ける
   // (仮色へ戻すと、切り替えのたびに全天体が一瞬グレーになる)
   function reloadTextures() {
+    releaseDetailTexture();
     for (const [key, tex] of texByKey) loadTexInto(tex, key);
     loadTexInto(cloudTex, "cloud");
     loadTexInto(nightTex, "night");

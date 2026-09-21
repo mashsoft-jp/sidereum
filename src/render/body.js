@@ -338,6 +338,8 @@
       // shine は暗い側を照らすもの {dir, col} (地球照)。月以外は null
       draw({ body, model, mvp, sunPosition, radiusPx, eclipse, ext = null, shine = null }) {
         if (!inPass) throw new Error("bodyRenderer: beginPass より前に draw が呼ばれました");
+        if (mvp[15] > 0 && Math.abs(mvp[12] / mvp[15]) < 1 + 2 * radiusPx / W &&
+            Math.abs(mvp[13] / mvp[15]) < 1 + 2 * radiusPx / H) noteDetailTexture(body, radiusPx);
         const tx = texByKey.get(body.key);
         const old = texPrevious.get(body.key);
         const fade = old ? Math.min(1, Math.max(0, (performance.now() - old.time) / TEX_FADE_MS)) : 1;

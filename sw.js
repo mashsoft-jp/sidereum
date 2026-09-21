@@ -20,7 +20,7 @@
 //   上げると古い組を丸ごと捨てるので、差し替えた1枚だけでなく全部を引き直す
 //   ことになる (画像の差し替えは滅多に無いので、この単純さを採る)。
 
-const TEX_VER = 1;
+const TEX_VER = 2;
 const TEX_CACHE = "sidereum-tex-" + TEX_VER;
 const SHELL_CACHE = "sidereum-shell";
 

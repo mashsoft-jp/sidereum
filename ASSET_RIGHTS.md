@@ -25,7 +25,7 @@
 | earth | [Blue Marble 57752](https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57752/land_shallow_topo_8192.tif) | NASA Earth Observatory; Reto Stöckli (NASA/GSFC), Robert Simmon | NASA画像利用方針 | 縮小、JPEG化 |
 | earth-clouds | [Blue Marble clouds 57747](https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57747/cloud_combined_8192.tif) | NASA Earth Observatory | NASA画像利用方針 | 雲マスク、縮小、JPEG化 |
 | earth-night | [Black Marble 2016 VIIRS DNB 144898](https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144898/BlackMarble_2016_3km_geo.tif) | NASA Earth Observatory | NASA画像利用方針 | グレースケール化、黒レベル20%除去、縮小、JPEG化 |
-| moon | [LROC WAC CGI Moon Kit (2019)](https://svs.gsfc.nasa.gov/4720/) | NASA/GSFC/Arizona State University; NASA Scientific Visualization Studio | SVS公開利用方針 | 縮小、JPEG化 |
+| moon | [LROC WAC CGI Moon Kit (2025)](https://svs.gsfc.nasa.gov/4720/) | NASA/GSFC/Arizona State University; NASA Scientific Visualization Studio | SVS公開利用方針 | 縮小、JPEG化 |
 | mars | [Viking MDIM 2.1 color mosaic](https://astrogeology.usgs.gov/search/map/mars_viking_colorized_global_mosaic_232m) | USGS / NASA Ames | 製品明記: Public domain / Use None | 1km版を縮小、JPEG化 |
 | jupiter | [Cassini PIA07782](https://science.nasa.gov/resource/cassinis-best-maps-of-jupiter-cylindrical-map-2/) | NASA/JPL/Space Science Institute | JPL画像利用方針・NASA画像利用方針 | 縮小/拡大、JPEG化 |
 | io | [Galileo SSI/Voyager merged 1km](https://astrogeology.usgs.gov/search/map/io_galileo_ssi_voyager_color_merged_global_mosaic_1km) | USGS / NASA/JPL | 製品明記: Public domain / Use None | 縮小、JPEG化 |
@@ -77,3 +77,11 @@
 ### 地球の8K画像 (2026-09-22)
 
 `tex/8k/earth.jpg` は上記と同じNASA Blue Marble地表TIFFを再取得し、8192×4096のままJPEG化したものです。既存の地球画像と同じ出典・クレジット・利用方針を適用します。原本SHA-256: `fec3cb8e729347d1c57807cf66b7867c1f3c669bb2f1fc3a8ad1625562591b36`。
+
+### 月・火星・水星の8K画像 (2026-09-22)
+
+既存製品ページの利用条件・クレジットを継承します。月の2K/4Kも2025年版に更新しました。加工手順は `tools/prepare-detail-textures.py` に収録しています。
+
+- 月: [取得原本](https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_16bit_srgb_8k.tif)。8192×4096、16bit sRGB。8bit化し、アプリ内の照明に合わせRGBを0.80倍。2K/4K/8KをJPEG化。 原本SHA-256: `db7808e878b6a55eb409bb231eab8deb477f84b5c9d7396d76ff73e5d54992d9`。
+- 火星: [取得原本](https://astrogeology.usgs.gov/ckan/dataset/7131d503-cdc9-45a5-8f83-5126c0fd397e/resource/5ea881c6-01b3-41fa-a7af-42d2131b54f1/download/mars_viking_mdim21_clrmosaic_1km.jpg)。21339×10670の1km版を8192×4096に縮小しJPEG化。 原本SHA-256: `fdfcd335559c3dc67052b7e8a9565d850e336ac0d1f3ea7f5eb7826ffb44ecb2`。
+- 水星: [取得原本](https://planetarymaps.usgs.gov/mosaic/Mercury_MESSENGER_MDIS_Basemap_MD3Color_Mosaic_Global_665m.tif)。23040×11520を8192×4096に縮小。従来の見た目を保つためグレースケール化し、既存4Kの平均明度に合わせて約1.050倍、JPEG化。 原本SHA-256: `1f7af8fe53a02e46d9dca74b68b4eead8a451bf2578845a5a303a695bfd1c666`。

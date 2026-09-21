@@ -90,7 +90,7 @@ await t("画像は初回だけ取りに行き、2回目はキャッシュから�
   assert.equal(b.body, "BODY " + ORIGIN + "/tex/earth.jpg");
   assert.equal(fetchLog.length, 1, "2回目にネットワークへ出た");
   const names = await caches.keys();
-  assert.deepEqual(names, ["sidereum-tex-1"]);
+  assert.deepEqual(names, ["sidereum-tex-2"]);
 });
 
 await t("4K も同じ扱い (別 URL なので別に貯まる)", async () => {
@@ -170,13 +170,13 @@ await t("keep: 妙な中身は無視する", async () => {
 
 await t("TEX_VER を上げると古い組だけ捨てる (shell は残す)", async () => {
   const { fire, req, caches } = load();
-  await caches.open("sidereum-tex-0");      // 前の版
+  await caches.open("sidereum-tex-1");      // 前の版
   await caches.open("sidereum-shell");
   await fire("install"); await fire("activate");
   // 新しい組は使うまで作られないので、消えたことと残ったことだけ見る
   assert.deepEqual((await caches.keys()).sort(), ["sidereum-shell"]);
   await fire("fetch", { request: req("/tex/earth.jpg") });
-  assert.deepEqual((await caches.keys()).sort(), ["sidereum-shell", "sidereum-tex-1"]);
+  assert.deepEqual((await caches.keys()).sort(), ["sidereum-shell", "sidereum-tex-2"]);
 });
 
 await t("キャッシュが使えない環境でも、素通しで表示できる", async () => {
@@ -193,7 +193,7 @@ await t("キャッシュが使えない環境でも、素通しで表示でき�
 await t("控えの書き込みに失敗しても、取れたものはそのまま返す (容量切れ)", async () => {
   const { fire, req, caches } = load();
   await fire("install"); await fire("activate");
-  const c = await caches.open("sidereum-tex-1");
+  const c = await caches.open("sidereum-tex-2");
   c.put = async () => { throw new Error("QuotaExceededError"); };
   const r = await fire("fetch", { request: req("/tex/earth.jpg") });
   assert.equal(r.body, "BODY " + ORIGIN + "/tex/earth.jpg");

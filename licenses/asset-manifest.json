@@ -1,5 +1,5 @@
 {
-  "checked": "2026-09-21",
+  "checked": "2026-09-22",
   "scope": "Current distributed derivatives; hashes do not assert identity to historic download originals.",
   "textures": [
     {
@@ -7,7 +7,7 @@
       "source": "https://astrogeology.usgs.gov/search/map/mercury_messenger_mdis_basemap_md3_color_global_mosaic_665m",
       "credit": "Applied Coherent Technology Corporation; NASA/JHUAPL/ASU/Carnegie",
       "terms": "USGS掲載製品: Access None / Use Please cite authors",
-      "changes": "縮小、JPEG化",
+      "changes": "2K/4K: 縮小、JPEG化。8K: 665m版を縮小、グレースケール化、既存4Kに平均明度を合わせてJPEG化",
       "files": [
         {
           "path": "tex/mercury.jpg",
@@ -16,6 +16,10 @@
         {
           "path": "tex/4k/mercury.jpg",
           "sha256": "ff108bf0cb8ef6759f633baa251d0121b991bd951ce6af2d0ee565e5978c4c5d"
+        },
+        {
+          "path": "tex/8k/mercury.jpg",
+          "sha256": "6f66343a8a81bebcb3f0c319a96d3475a31de493f52ea0eb4bf0e6c50afc05b6"
         }
       ]
     },
@@ -96,15 +100,19 @@
       "source": "https://svs.gsfc.nasa.gov/4720/",
       "credit": "NASA/GSFC/Arizona State University; NASA Scientific Visualization Studio",
       "terms": "SVS公開利用方針",
-      "changes": "縮小、JPEG化",
+      "changes": "2025年版LROCカラー地図。全解像度でRGB明度を0.80倍、2K/4Kは縮小、8Kは元解像度、JPEG化",
       "files": [
         {
           "path": "tex/moon.jpg",
-          "sha256": "7360f3648bc440cd3084d35059ad2804fd18f41c250c04a7d95b6e44fedcb609"
+          "sha256": "39d25bcdb1ea10f61a6028e63600567bcc975af9cfd80f6ac45a57e609f5d13c"
         },
         {
           "path": "tex/4k/moon.jpg",
-          "sha256": "dc8363e9599aeffc997d960d9512761cbc9baa20c7c751e3f92ce4ff3c2f2bf1"
+          "sha256": "f7505a9a24204e4512d02f0ee9542ea99c1ce3b617246ee1897dfd8f7968ffcd"
+        },
+        {
+          "path": "tex/8k/moon.jpg",
+          "sha256": "ba35e04ae97b68f3fe2c52fea7b9e4f5ef7024e8cc90819c668bf50b53aa1cf6"
         }
       ]
     },
@@ -122,6 +130,10 @@
         {
           "path": "tex/4k/mars.jpg",
           "sha256": "582ff1fc57a05ecedfc3ba43fab5b09183559a9faf27224e476f5b61c7433d1a"
+        },
+        {
+          "path": "tex/8k/mars.jpg",
+          "sha256": "954100396f5a7092b906e8e3d26084c16f4f712020cd52ea833e098a8de22b70"
         }
       ]
     },
