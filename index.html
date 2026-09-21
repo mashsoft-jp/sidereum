@@ -11767,14 +11767,14 @@
 
   // 宇宙のガイドは、注視天体が円盤として見えるほど背景へ退く。
   // 距離そのものではなく投影半径を使い、微小衛星・望遠・小画面でも同じ判断にする。
-  const spaceGuide = { body: null, close: 0, sky: 1 };
+  const spaceGuide = { body: null, close: 0, sky: 1, time: null, weights: new Map() };
   // 星座は広い星空の案内。対象未選択でも、望遠で画角が狭くなれば控えめにする。
   // 30度以上は従来の濃さ、8度以下は8%。境目は連続で、引けば元に戻る。
   function skyGuideVisibility(fov) {
     const t = Math.max(0, Math.min(1, (fov * 180 / Math.PI - 8) / 22));
     return .08 + .92 * t * t * (3 - 2 * t);
   }
-  function updateSpaceGuide() {
+  function updateSpaceGuide(nowSec) {
     const b = selected || lastCenter;
     const p = b && posW.get(b.key);
     const sp = p && project(p);
@@ -11789,8 +11789,19 @@
       close = t * t * (3 - 2 * t) * visible;
     }
     spaceGuide.body = b;
-    spaceGuide.close = close;
-    spaceGuide.sky = (1 - close) * skyGuideVisibility(eFov());
+    const dt = spaceGuide.time === null ? 1 : Math.max(0, Math.min(.1, nowSec - spaceGuide.time));
+    spaceGuide.time = nowSec;
+    const blend = 1 - Math.exp(-dt / .45);
+    spaceGuide.close += (close - spaceGuide.close) * blend;
+    // 選択直後も線と名前を瞬時に消さず、同じ重みで徐々に整理する。
+    for (const body of [...PLANETS, ...SATELLITES]) {
+      const important = spaceRelated(body) || body.key === tourSpot || body.key === tourSight;
+      const minor = body.H !== undefined && body.key !== "pluto";
+      const target = important ? 1 : (selected && selected !== SUN ? .42 : minor ? .48 : 1);
+      const previous = spaceGuide.weights.get(body.key) ?? 1;
+      spaceGuide.weights.set(body.key, previous + (target - previous) * blend);
+    }
+    spaceGuide.sky = (1 - spaceGuide.close) * skyGuideVisibility(eFov());
   }
   function spaceRelated(b) {
     const focus = spaceGuide.body;
@@ -11800,7 +11811,7 @@
   }
   function spaceLabelAlpha(b) {
     return spaceRelated(b) || b.key === tourSpot || b.key === tourSight || b.mesh
-      ? 1 : 1 - spaceGuide.close;
+      ? 1 : (1 - spaceGuide.close) * (spaceGuide.weights.get(b.key) ?? 1);
   }
   // 0 (必ず出す選択名) と 1 (通常の惑星名) の間で家族を優先する。
   // 必ず出す扱いにはしないので、衛星どうしの衝突回避は維持される。
@@ -11830,7 +11841,7 @@
     const focus = spaceGuide.body;
     const keep = spaceRelated(b)
       ? (b === focus ? (b.parent ? 0.9 : 0.28) : (focus && focus.parent ? 0.3 : 0.65)) : 0.025;
-    gl.uniform1f(guideP.u.uFade, 0.85 * (1 - spaceGuide.close * (1 - keep)) * satelliteOrbitReadability(b));
+    gl.uniform1f(guideP.u.uFade, 0.85 * (spaceGuide.weights.get(b.key) ?? 1) * (1 - spaceGuide.close * (1 - keep)) * satelliteOrbitReadability(b));
     const center = b.parent ? posW.get(b.parent) : ZERO3;
     const dx = center[0] - EYE[0], dy = center[1] - EYE[1], dz = center[2] - EYE[2];
     const depth = VP[3] * dx + VP[7] * dy + VP[11] * dz + VP[15];
@@ -11864,7 +11875,7 @@
     SCR.tgt[2] = fz - eye[2];
     mLookAt(ZERO3, SCR.tgt, UP3, Vm);
     mMul(P, Vm, VP);
-    updateSpaceGuide();
+    updateSpaceGuide(nowSec);
     // 軌道線アンカー: カメラが離れすぎると頂点の f32 誤差が画面に出るため焼き直す
     {
       const dx = eye[0] - ORB_ANCHOR[0], dy = eye[1] - ORB_ANCHOR[1], dz = eye[2] - ORB_ANCHOR[2];
