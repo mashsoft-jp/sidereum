@@ -38,3 +38,4 @@ jobs:
           node tools/detail-texture-test.mjs
           node tools/earth-8k-test.mjs
           node tools/texture-transition-test.mjs
+          node tools/texture-upload-test.mjs
