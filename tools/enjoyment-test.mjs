@@ -19,7 +19,7 @@ for (const key of ['earth','moon','saturn']) {
       const d = vm.runInContext('enjoymentDirection(body)',ctx);
       assert.ok(d.every(Number.isFinite));
       assert.ok(Math.abs(Math.hypot(...d)-1)<1e-12);
-      assert.ok(Math.abs(dot(d,light)-Math.cos(40*Math.PI/180))<1e-12,'明るい面と明暗の境目を見せる');
+      assert.ok(Math.abs(dot(d,light)-Math.cos((key === "moon" ? 55 : 40)*Math.PI/180))<1e-12,'明るい面と明暗の境目を見せる');
       if(key==='saturn') {
         assert.ok(Math.abs(dot(d,pole))>.40,'環が線にならない');
         if(Math.abs(dot(light,pole))>.05) assert.ok(dot(d,pole)*dot(light,pole)>0,'照らされた環の側を選ぶ');

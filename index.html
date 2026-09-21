@@ -18486,7 +18486,7 @@
     const up = [side[1] * light[2] - side[2] * light[1],
       side[2] * light[0] - side[0] * light[2], side[0] * light[1] - side[1] * light[0]];
     let best = current, bestScore = -Infinity;
-    const phase = 40 * Math.PI / 180;
+    const phase = (body.key === "moon" ? 55 : 40) * Math.PI / 180;
     for (let n = 0; n < 72; n++) {
       const angle = n * Math.PI / 36;
       const d = light.map((v, i) => v * Math.cos(phase) +
@@ -18522,8 +18522,9 @@
   // 鑑賞の周回はシミュレーションの再生速度から独立した実時間。
   // 一周約4分。接近の完了後と手動操作のあとに間を置き、徐々に動き出す。
   let enjoymentWait = 0, enjoymentSpeed = 0, enjoymentPaused = false;
+  let enjoymentMotion = 0;
   function pauseEnjoymentOrbit() {
-    if (immersiveView) { enjoymentWait = 3; enjoymentSpeed = 0; }
+    if (immersiveView) { enjoymentWait = 3; enjoymentSpeed = 0; enjoymentMotion = 0; }
   }
   for (const event of ["pointerdown", "pointerup", "pointercancel", "wheel", "keydown"]) {
     window.addEventListener(event, pauseEnjoymentOrbit, { passive: true });
@@ -18539,6 +18540,16 @@
     if (enjoymentWait > 0) { enjoymentWait = Math.max(0, enjoymentWait - dt); return; }
     enjoymentSpeed += (Math.PI / 120 - enjoymentSpeed) * (1 - Math.exp(-dt / 2));
     cam.yawTgt += enjoymentSpeed * dt;
+    // 周回と同じ加速率で構図も動かす。距離は最大6%引く方向なので画面から切れない。
+    // 差分を足すことでドラッグ後の位置を尊重し、基準の構図へ引き戻さない。
+    const previous = enjoymentMotion;
+    enjoymentMotion += dt * enjoymentSpeed / (Math.PI / 120);
+    const body = selected || lastCenter;
+    const pitchAmount = (body.key === "saturn" ? 3 : 5) * Math.PI / 180;
+    const pitchDelta = pitchAmount * (Math.cos(previous * Math.PI / 60) - Math.cos(enjoymentMotion * Math.PI / 60));
+    cam.pitchTgt = Math.max(-1.35, Math.min(1.35, cam.pitchTgt + pitchDelta));
+    const breathing = t => 1 + .03 * (1 - Math.cos(t * Math.PI / 45));
+    cam.distTgt *= breathing(enjoymentMotion) / breathing(previous);
   }
 
   function setImmersive(v) {
@@ -18549,7 +18560,7 @@
     immersiveView = v;
     enjoymentPaused = false;
     syncFramingUI();
-    enjoymentWait = 3; enjoymentSpeed = 0;
+    enjoymentWait = 3; enjoymentSpeed = 0; enjoymentMotion = 0;
     frameApp.classList.toggle("immersive", v);
     immersiveBar.hidden = !v;
     frameLayout.dirty = true;
@@ -18576,7 +18587,9 @@
     enjoymentPaused = !enjoymentPaused;
     enjoymentSpeed = 0; enjoymentWait = 0;
     // 接近中はその移動を完了させ、周回中なら緩和の残りも止める。
-    if (enjoymentPaused && !cameraFlight) cam.yawTgt = cam.yaw;
+    if (enjoymentPaused && !cameraFlight) {
+      cam.yawTgt = cam.yaw; cam.pitchTgt = cam.pitch; cam.distTgt = cam.dist;
+    }
     syncFramingUI();
   });
   immersiveSaveBtn.addEventListener("click", () => { snapPending = true; });
