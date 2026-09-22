@@ -595,6 +595,9 @@
 
     // --- 太陽コロナ (加算) ---
     {
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthMask(false);
+      gl.enable(gl.BLEND);
       gl.blendFunc(gl.ONE, gl.ONE);
       gl.useProgram(billP.pr);
       gl.uniformMatrix4fv(billP.u.uVP, false, VP);
@@ -624,6 +627,11 @@
       // ごと飲み込んでしまう (海王星軌道の外から見ても木星軌道まで真っ白)。
       // (Bloom = カメラ・目のグレアの模擬なので、切っているときは素の絵に戻す)
       if (bloomOn) {
+        // 近傍の小天体に接近するとニア面が小さくなり、遠方の太陽面と
+        // グレアの深度差が量子化で消える。グレアだけ数段手前にずらす。
+        // 深度テストは残すので、手前の惑星による遮蔽は維持する。
+        gl.enable(gl.POLYGON_OFFSET_FILL);
+        gl.polygonOffset(0, -4);
         const dSun = Math.hypot(eye[0], eye[1], eye[2]);
         // 基準は 1 au で 9°。近づく側は 2.5倍 (22°) で頭打ちにする —
         // 光球のすぐ上まで寄れるので、伸ばしきると画面が白一色になる。
@@ -658,6 +666,8 @@
         gl.uniform3f(billP.u.uCol1, 1.0, 0.80, 0.45);
         gl.uniform3f(billP.u.uCol2, 1.0, 1.0, 1.0);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.disable(gl.POLYGON_OFFSET_FILL);
+        gl.polygonOffset(0, 0);
       }
     }
 
