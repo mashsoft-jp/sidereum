@@ -2,7 +2,7 @@
   let saverState = null;
   const saverBar = document.getElementById("saverBar"), saverFade = document.getElementById("saverFade");
   const saverHint = document.getElementById("saverHint");
-  const SAVER_KINDS = ["body", "cometSpace", "cometGround", "cometMoon", "overview", "earthSky", "moonSky", "voyager", "cassini", "paleDot", "meteorTour", "eclipseTour", "saturnRings", "dsoPhoto"];
+  const SAVER_KINDS = ["body", "cometSpace", "cometGround", "cometMoon", "overview", "earthSky", "moonSky", "voyager", "cassini", "paleDot", "meteorTour", "eclipseTour", "saturnRings", "dsoPhoto", "moonPair"];
   // ステップ番号は0始まり。ガイドの日時・照準を共有し、説明UIや進捗は動かさない。
   const SAVER_TOUR_CLIPS = {
     voyager: [
@@ -68,7 +68,7 @@
     return [];
   }
   function saverSceneGroup(kind) {
-    if (["body", "voyager", "cassini", "saturnRings"].includes(kind)) return "close";
+    if (["body", "voyager", "cassini", "saturnRings", "moonPair"].includes(kind)) return "close";
     if (["earthSky", "moonSky", "cometGround", "cometMoon", "meteorTour", "eclipseTour"].includes(kind)) return "sky";
     if (kind === "dsoPhoto") return "photo";
     return "wide";
@@ -227,6 +227,11 @@
     else if (kind === "saturnRings") {
       s.sel = "saturn"; s.play = false;
       title = { ja: "土星の環の中 · 氷粒子を巡る", en: "Inside Saturn’s rings · among the ice" };
+    } else if (kind === "moonPair") {
+      const key = pick(["io", "europa", "ganymede", "callisto", "titan"]);
+      const moon = BODY_BY_KEY.get(key), planet = BODY_BY_KEY.get(moon.parent);
+      s.sel = key; s.spd = 1 / 86400;
+      title = {ja: moon.name + "と" + planet.name, en: moon.en + " and " + planet.en};
     } else if (kind === "body") {
       const b = BODY_BY_KEY.get(pickSaverBody(state));
       s.sel = b.key; s.lit = true; orbit = true;
@@ -283,6 +288,20 @@
       frameLayout.rect = measureFrameRect(); frameLayout.fit = selected;
       fitFrameDistance(selected); cam.dist = cam.distTgt;
     }
+    if (kind === "moonPair") {
+      // 母惑星側を向いた景色でも夜側ばかりにならない日時を選ぶ。
+      const start = simDays; let bestDay = start, best = -Infinity;
+      for (let day = 0; day < 30; day++) {
+        simDays = start + day; updatePositions();
+        const m = posW.get(selected.key), p = posW.get(selected.parent), sun = posW.get("sun");
+        const a = m.map((v,i)=>v-p[i]), light = sun.map((v,i)=>v-m[i]);
+        const score = a.reduce((n,v,i)=>n+v*light[i],0)/(Math.hypot(...a)*Math.hypot(...light));
+        if (score > best) { best = score; bestDay = simDays; }
+      }
+      simDays = bestDay; updatePositions();
+      state.pairMotion = 0; frameLayout.fit = null;
+      placeSaverMoonPair(0, true);
+    }
     state.kind = kind; state.orbit = orbit; state.title = title;
     state.elapsed = 0; state.duration = kind === "cassini" ? 21 : clip ? 39 : saverSceneDuration(kind);
     // 地点や日付が変わったことを、短い場面名と実際の表示日時で伝える。
@@ -337,6 +356,36 @@
     saverState = null; saverHint.hidden = true; saverBar.hidden = true; saverFade.hidden = true; immersiveBar.hidden = !immersiveView;
     syncFramingUI(); menuBtn.focus({ preventScroll: true });
   }
+  // 衛星の先から母惑星を見る。位置・半径はそのまま、画角に合わせて両者を収める。
+  function scenicPairPose(moon, planet, moonRadius, planetRadius, fov, aspect, seconds) {
+    const v = moon.map((n,i) => n - planet[i]), separation = Math.hypot(...v);
+    const axis = v.map(n => n / separation);
+    const ref = Math.abs(axis[1]) < .9 ? [0,1,0] : [1,0,0];
+    let side = [axis[1]*ref[2]-axis[2]*ref[1], axis[2]*ref[0]-axis[0]*ref[2], axis[0]*ref[1]-axis[1]*ref[0]];
+    const length = Math.hypot(...side); side = side.map(n => n/length);
+    // 縦画面では横幅に合わせる。ゆっくり横切るが、母惑星と重ならない範囲。
+    const half = Math.min(fov/2, Math.atan(Math.tan(fov/2)*aspect));
+    const distance = moonRadius / Math.sin(half*.22);
+    const angle = Math.min(half*.95, Math.asin(Math.min(.8,planetRadius/separation)) + half*(.35+.04*Math.sin(seconds*.045)));
+    const direction = axis.map((n,i)=>n*Math.cos(angle)+side[i]*Math.sin(angle));
+    const offset = side.map(n => n * distance * Math.tan(angle) * .45);
+    return {direction, distance, offset};
+  }
+  function placeSaverMoonPair(seconds, immediate = false) {
+    if (!selected?.parent) return;
+    const parent = BODY_BY_KEY.get(selected.parent);
+    const pose = scenicPairPose(posW.get(selected.key), posW.get(parent.key), bodyR(selected),
+      bodyR(parent)*(parent.key === "saturn" ? 2.3 : 1), eFov(), W/H, seconds);
+    cam.distTgt = pose.distance;
+    cam.yawTgt = Math.atan2(pose.direction[2],pose.direction[0]);
+    cam.pitchTgt = Math.asin(pose.direction[1]);
+    cam.panOffTgt = pose.offset;
+    if (immediate) {
+      cam.dist = cam.distTgt; cam.yaw = cam.yawTgt; cam.pitch = cam.pitchTgt;
+      cam.panOff = pose.offset.slice();
+      cam.focus = posW.get(selected.key).slice(); cam.focusTgt = cam.focus.slice();
+    }
+  }
   function moveSaverCamera(dt) {
     const s = saverState;
     if (!s || document.hidden || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -344,6 +393,7 @@
       s.photoMotion = Math.min(34, s.photoMotion + dt);
       paintSaverPhotoMotion(s);
     }
+    else if (s.kind === "moonPair") { s.pairMotion += dt; placeSaverMoonPair(s.pairMotion); }
     else if (s.orbit) cam.yawTgt += dt * Math.PI / 120;
     else if (s.kind === "overview") cam.yawTgt += dt * .006;
     else if (s.kind === "cometSpace") {
