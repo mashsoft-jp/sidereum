@@ -190,7 +190,7 @@
   }
   // 太陽から約40度ずれた方向なら、明るい面と明暗の境目を一緒に見せられる。
   // 同じ照明条件の候補から現在の視点に近いものを選び、無駄な大回りを避ける。
-  function enjoymentDirection(body) {
+  function enjoymentDirection(body, phaseDegrees = null) {
     const current = [Math.cos(cam.pitch) * Math.cos(cam.yaw), Math.sin(cam.pitch),
       Math.cos(cam.pitch) * Math.sin(cam.yaw)];
     if (body === SUN) return current;
@@ -208,7 +208,7 @@
     const up = [side[1] * light[2] - side[2] * light[1],
       side[2] * light[0] - side[0] * light[2], side[0] * light[1] - side[1] * light[0]];
     let best = current, bestScore = -Infinity;
-    const phase = ({ moon:55, mercury:50, mars:45, jupiter:25, venus:30, uranus:35, neptune:35 }[body.key] || 40) * Math.PI / 180;
+    const phase = (phaseDegrees ?? ({ moon:55, mercury:50, mars:45, jupiter:25, venus:30, uranus:35, neptune:35 }[body.key] || 40)) * Math.PI / 180;
     const feature = enjoymentFeature(body);
     const featureLit = feature && dot(feature, light) > .15;
     for (let n = 0; n < 72; n++) {

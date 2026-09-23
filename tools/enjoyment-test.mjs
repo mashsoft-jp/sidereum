@@ -45,3 +45,10 @@ for (const key of ['mars','jupiter']) {
  assert.ok(dot(night,feature)<0,'特徴が夜側なら太陽側の構図を維持');
 }
 console.log('enjoyment: textured landmarks and night-side fallback passed');
+// 任意の明暗境界の角度でも光源との角度を保ち、周回で夜側へ逃げない。
+body.key='moon';posW.set('moon',[-10,0,0]);
+for(const phase of [76,85,100]) {
+ ctx.phase=phase;
+ const d=vm.runInContext('enjoymentDirection(body,phase)',ctx);
+ assert.ok(Math.abs(d[0]-Math.cos(phase*Math.PI/180))<1e-12);
+}

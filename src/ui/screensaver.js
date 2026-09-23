@@ -2,7 +2,7 @@
   let saverState = null;
   const saverBar = document.getElementById("saverBar"), saverFade = document.getElementById("saverFade");
   const saverHint = document.getElementById("saverHint");
-  const SAVER_KINDS = ["body", "cometSpace", "cometGround", "cometMoon", "overview", "earthSky", "moonSky", "voyager", "cassini", "paleDot", "meteorTour", "eclipseTour", "saturnRings", "dsoPhoto", "moonPair"];
+  const SAVER_KINDS = ["body", "cometSpace", "cometGround", "cometMoon", "overview", "earthSky", "moonSky", "voyager", "cassini", "paleDot", "meteorTour", "eclipseTour", "saturnRings", "dsoPhoto", "moonPair", "terminator"];
   // ステップ番号は0始まり。ガイドの日時・照準を共有し、説明UIや進捗は動かさない。
   const SAVER_TOUR_CLIPS = {
     voyager: [
@@ -68,7 +68,7 @@
     return [];
   }
   function saverSceneGroup(kind) {
-    if (["body", "voyager", "cassini", "saturnRings", "moonPair"].includes(kind)) return "close";
+    if (["body", "voyager", "cassini", "saturnRings", "moonPair", "terminator"].includes(kind)) return "close";
     if (["earthSky", "moonSky", "cometGround", "cometMoon", "meteorTour", "eclipseTour"].includes(kind)) return "sky";
     if (kind === "dsoPhoto") return "photo";
     return "wide";
@@ -227,6 +227,10 @@
     else if (kind === "saturnRings") {
       s.sel = "saturn"; s.play = false;
       title = { ja: "土星の環の中 · 氷粒子を巡る", en: "Inside Saturn’s rings · among the ice" };
+    } else if (kind === "terminator") {
+      const b = BODY_BY_KEY.get(pick(["moon", "earth", "mercury", "mars"]));
+      s.sel = b.key; s.spd = b.key === "earth" ? 120 / 86400 : 1 / 86400;
+      title = {ja: b.name + " · 光と影の境目", en: b.en + " · light and shadow"};
     } else if (kind === "moonPair") {
       const key = pick(["io", "europa", "ganymede", "callisto", "titan"]);
       const moon = BODY_BY_KEY.get(key), planet = BODY_BY_KEY.get(moon.parent);
@@ -280,8 +284,8 @@
       frameLayout.mode = "close"; frameLayout.rect = measureFrameRect(); frameLayout.fit = selected;
       fitFrameDistance(selected); cam.dist = cam.distTgt;
     }
-    if (orbit) {
-      const d = enjoymentDirection(selected);
+    if (orbit || kind === "terminator") {
+      const d = enjoymentDirection(selected, kind === "terminator" ? 100 : null);
       cam.yaw = cam.yawTgt = Math.atan2(d[2], d[0]);
       cam.pitch = cam.pitchTgt = Math.asin(d[1]);
       frameLayout.mode = selected === SUN ? "saverSun" : "close";
@@ -303,6 +307,7 @@
       placeSaverMoonPair(0, true);
     }
     state.kind = kind; state.orbit = orbit; state.title = title;
+    state.terminatorMotion = 0;
     state.elapsed = 0; state.duration = kind === "cassini" ? 21 : clip ? 39 : saverSceneDuration(kind);
     // 地点や日付が変わったことを、短い場面名と実際の表示日時で伝える。
     syncSaverDate();
@@ -392,6 +397,12 @@
     if (s.kind === "dsoPhoto" && s.photoReady) {
       s.photoMotion = Math.min(34, s.photoMotion + dt);
       paintSaverPhotoMotion(s);
+    }
+    else if (s.kind === "terminator") {
+      s.terminatorMotion += dt;
+      const phase = 100 - 24 * Math.min(1, s.terminatorMotion / 36);
+      const d = enjoymentDirection(selected, phase);
+      cam.yawTgt = Math.atan2(d[2],d[0]); cam.pitchTgt = Math.asin(d[1]);
     }
     else if (s.kind === "moonPair") { s.pairMotion += dt; placeSaverMoonPair(s.pairMotion); }
     else if (s.orbit) cam.yawTgt += dt * Math.PI / 120;

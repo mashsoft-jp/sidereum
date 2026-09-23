@@ -21,7 +21,7 @@ run(`saverState = { bag: [], kind: 'body', phase: 'show', fade: 0, age: 0, elaps
 let previous = 'body';
 for (let round = 0; round < 100; round++) {
   const seen = new Set();
-  for (let i = 0; i < 15; i++) {
+  for (let i = 0; i < 16; i++) {
     const kind = run('nextSaverKind()');
     assert.notEqual(kind, previous);
     ctx.kind=kind;ctx.previous=previous;
@@ -30,7 +30,7 @@ for (let round = 0; round < 100; round++) {
     seen.add(kind); previous = kind;
     run(`saverState.kind = ${JSON.stringify(kind)}`);
   }
-  assert.equal(seen.size, 15);
+  assert.equal(seen.size, 16);
 }
 run(`saverState.kind = 'body'`);
 // 元ツアーを変更せず、全抜粋が有効な日時と照準を持つ。
@@ -252,7 +252,7 @@ for(let round=0;round<20;round++){
 for(const random of [0,.5,.999999]){
  ctx.fixed=random;
  const bag=run('shuffledSaverKinds(()=>fixed,"cometGround")');
- assert.equal(new Set(bag).size,15);
+ assert.equal(new Set(bag).size,16);
 }
 assert.ok(run('saverSceneDuration("earthSky") > saverSceneDuration("overview")'));
 console.log('screensaver: visual variety, comet spacing, all-body rotation and pacing passed');
