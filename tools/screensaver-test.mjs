@@ -264,3 +264,15 @@ for (const aspect of [.45, 1, 2.2]) {
  assert.ok(Math.abs(Math.hypot(...pose.direction)-1)<1e-12);
  assert.ok(pose.offset.every(Number.isFinite));
 }
+
+for (const [kind,body] of [['saturnRings','saturn'],['earthSky','earth']]) {
+ ctx.related={};ctx.relatedKind=kind;
+ assert.equal(run('relatedSaverScene(related,relatedKind,()=>0)'), 'body');
+ assert.equal(ctx.related.forcedBody,body);
+ assert.equal(ctx.related.followScene,kind);
+ assert.equal(run('relatedSaverScene({},relatedKind,()=>.9)'),kind);
+ run('saverState = related');
+ assert.equal(run('nextSaverScene()'),kind);
+ assert.equal(ctx.related.followScene,null);
+}
+console.log('screensaver: related scene is consumed once without draining the shuffled bag');

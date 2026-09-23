@@ -19160,7 +19160,13 @@
       s.sel = key; s.spd = 1 / 86400;
       title = {ja: moon.name + "と" + planet.name, en: moon.en + " and " + planet.en};
     } else if (kind === "body") {
-      const b = BODY_BY_KEY.get(pickSaverBody(state));
+      const b = BODY_BY_KEY.get(state.forcedBody || pickSaverBody(state));
+      if (state.forcedBody === "earth" && state.followScene === "earthSky") {
+        state.relatedSite = pick(SAVER_PLACES);
+        obsLat = state.relatedSite.lat; obsLon = state.relatedSite.lon;
+        delete s.d; s.dLocal = state.relatedSite.d;
+      }
+      state.forcedBody = null;
       s.sel = b.key; s.lit = true; orbit = true;
       title = { ja: b.name + "を巡る", en: b.en + " · orbit" };
     } else if (kind.startsWith("comet")) {
@@ -19176,7 +19182,7 @@
       s.fit = 2.2; s.a = Math.PI / 2 - .01; s.y = -.6; s.spd = 2;
       title = { ja: "真上から見る内惑星", en: "Inner planets · from above" };
     } else if (kind === "earthSky") {
-      const site = pick(SAVER_PLACES); obsLat = site.lat; obsLon = site.lon;
+      const site = state.relatedSite || pick(SAVER_PLACES); state.relatedSite = null; obsLat = site.lat; obsLon = site.lon;
       s.view = "ground"; delete s.d; s.dLocal = site.d; s.gfov = 90; s.spd = 30 / 86400;
       title = { ja: site.ja + "の星空", en: "Night sky · " + site.en };
     } else {
@@ -19242,6 +19248,23 @@
     }
     return saverState.bag.pop();
   }
+  // 抽選の袋を壊さず、ときどき関連する全景を直前に挟む。
+  // 続きは一度だけ消費し、再び連続シーンの起点にはしない。
+  function relatedSaverScene(state, kind, random = Math.random) {
+    if (random() >= .5) return kind;
+    const body = {saturnRings: "saturn", earthSky: "earth"}[kind];
+    if (!body) return kind;
+    state.followScene = kind; state.forcedBody = body;
+    return "body";
+  }
+  function nextSaverScene() {
+    if (saverState.followScene) {
+      const kind = saverState.followScene;
+      saverState.followScene = null;
+      return kind;
+    }
+    return relatedSaverScene(saverState, nextSaverKind());
+  }
   function syncSaverDate() {
     document.getElementById("saverDate").hidden = saverState.kind === "saturnRings" || saverState.kind === "dsoPhoto";
     const minute = Math.floor(simDays * 1440);
@@ -19259,7 +19282,7 @@
     immersiveView = true; frameApp.classList.add("immersive", "screensaverMode");
     immersiveBar.hidden = true; saverBar.hidden = false; saverFade.hidden = false;
     saverFade.style.opacity = "1";
-    applySaverScene(nextSaverKind());
+    applySaverScene(nextSaverScene());
     saverHint.hidden = false;
     saverBar.style.opacity = saverHint.style.opacity = "1";
     saverBar.focus({ preventScroll: true });
@@ -19347,7 +19370,7 @@
       s.photoWait += dt;
       saverFade.style.opacity = "1";
       if (s.photoFailed || s.photoWait > 8) {
-        applySaverScene(nextSaverKind()); s.phase = "in"; s.fade = 0;
+        applySaverScene(nextSaverScene()); s.phase = "in"; s.fade = 0;
       }
       return;
     }
@@ -19359,7 +19382,7 @@
     saverBar.style.opacity = String(s.phase === "out" ? 0 : 1);
     if (s.phase === "out") {
       s.fade += dt; saverFade.style.opacity = String(Math.min(1, s.fade / .8));
-      if (s.fade >= .8) { applySaverScene(nextSaverKind()); s.phase = "in"; s.fade = 0; }
+      if (s.fade >= .8) { applySaverScene(nextSaverScene()); s.phase = "in"; s.fade = 0; }
       return;
     }
     if (s.phase === "in") {
