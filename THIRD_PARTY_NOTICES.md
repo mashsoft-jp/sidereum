@@ -27,3 +27,11 @@
 [READMEの画像一覧](README.md#画像クレジット)とアプリのクレジットに提供元・既知の加工内容を記載しています。[NASAの画像利用条件](https://www.nasa.gov/nasa-brand-center/images-and-media/)は第三者の権利が残る素材を区別しています。NASA・USGS・共同研究機関という名前だけで、一律に米国政府著作物／パブリックドメインとは扱いません。
 
 2026-09-21に19製品（2解像度、38ファイル）とNASA提供の2モデルについて、導入履歴・製品ページ・利用条件を対応付けました。[個別確認記録](ASSET_RIGHTS.md)を参照してください。ホイヘンスはアプリ独自の概形モデルです。配布元の許諾を根拠とし、共同制作物を一律にパブリックドメインとは扱いません。提供元の承認・推奨は意味しません。
+
+## Surface feature labels
+
+Names and central coordinates are individual facts from the USGS/IAU [Gazetteer of Planetary Nomenclature](https://planetarynames.wr.usgs.gov/), checked 2026-09-23. No descriptive text or map imagery is reproduced. Japanese labels and approximate texture-map placement were added for Sidereum.
+
+Records: [Tycho](https://planetarynames.wr.usgs.gov/Feature/6163), [Mare Tranquillitatis](https://planetarynames.wr.usgs.gov/Feature/3691), [Olympus Mons](https://planetarynames.wr.usgs.gov/Feature/4453), [Valles Marineris](https://planetarynames.wr.usgs.gov/Feature/6288), [Caloris Planitia](https://planetarynames.wr.usgs.gov/Feature/979), [Sputnik Planitia](https://planetarynames.wr.usgs.gov/Feature/15669), [Occator](https://planetarynames.wr.usgs.gov/Feature/15341).
+
+Caloris: 198.02 degrees west converted to 161.98 degrees east. Texture longitude origins: -180 degrees for Moon/Mars; 0 degrees for Mercury/Pluto/Ceres. Existing image terms are recorded above.

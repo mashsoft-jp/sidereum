@@ -651,6 +651,7 @@
       `<a href="https://science.nasa.gov/3d-resources/cassini-huygens-b/" target="_blank" rel="noopener">Cassini-Huygens (B) — NASA/JPL/Solar System Simulator, Michael Oberle</a><br>` +
       `${lang === "ja" ? "形状を簡略化・座標を量子化。ホイヘンスは本アプリで作成した模式モデルです。" : "Meshes simplified and coordinates quantized. Huygens is a schematic model created for this app."}</p>` +
       `<h3>${c.data}</h3><p>${c.dataBody}</p>` +
+      `<p><a href="https://planetarynames.wr.usgs.gov/" target="_blank" rel="noopener">USGS/IAU Gazetteer of Planetary Nomenclature</a> — ${lang === "ja" ? "地形名・中心座標。画像に合わせた概略表示です。" : "Surface names and central coordinates; approximate placement on the texture maps."}</p>` +
       `<p><a href="https://www.astronexus.com/projects/hyg" target="_blank" rel="noopener">HYG 4.2 — David Nash / Astronomy Nexus</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a><br>` +
       `${lang === "ja" ? "6.5等までを抜粋し、位置・等級・色指数を量子化しています。加工後の恒星データもCC BY-SA 4.0で提供します。" : "Selected to magnitude 6.5; positions, magnitudes and colour indices quantized. The adapted stellar data is also available under CC BY-SA 4.0."}</p>` +
       `<p><a href="https://github.com/liberfa/erfa" target="_blank" rel="noopener">ERFA lunar coefficients — © 2013–2023 NumFOCUS Foundation</a> · <a href="licenses/ERFA.txt" target="_blank" rel="noopener">License</a><br>` +

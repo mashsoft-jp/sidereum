@@ -393,10 +393,16 @@
     const length = Math.hypot(...side); side = side.map(n => n/length);
     // 縦画面では横幅に合わせる。ゆっくり横切るが、母惑星と重ならない範囲。
     const half = Math.min(fov/2, Math.atan(Math.tan(fov/2)*aspect));
-    const distance = moonRadius / Math.sin(half*.22);
-    const angle = Math.min(half*.95, Math.asin(Math.min(.8,planetRadius/separation)) + half*(.35+.04*Math.sin(seconds*.045)));
+    let distance = moonRadius / Math.sin(half*.22), angle;
+    for (let i = 0; i < 60; i++) {
+      const near = Math.asin(Math.min(.9,moonRadius/distance));
+      const far = Math.asin(Math.min(.9,planetRadius/(separation+distance)));
+      angle = (near+far)*.62 + half*(.035+.012*Math.sin(seconds*.045));
+      if (angle+Math.max(near,far) < half*.88) break;
+      distance *= 1.18;
+    }
     const direction = axis.map((n,i)=>n*Math.cos(angle)+side[i]*Math.sin(angle));
-    const offset = side.map(n => n * distance * Math.tan(angle) * .45);
+    const offset = side.map(n => n * distance * Math.tan(angle));
     return {direction, distance, offset};
   }
   function placeSaverMoonPair(seconds, immediate = false) {

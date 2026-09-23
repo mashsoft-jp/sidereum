@@ -58,6 +58,7 @@
         lblPut(bName(b), s.x, s.y - Math.max(s.r, 3) - 12, LBL_SEL,
           "rgba(201,213,234,0.88)", LF12);
       }
+      drawSurfaceLabels();
       lblEnd();
       // 土星周回の主役が環や衛星に紛れないよう、機体の位置だけを示す。
       if (screensaverRunning() && tourSpot === "cassini") {
@@ -211,6 +212,7 @@
         lblPut(lang === "ja" ? "黄道" : "Ecliptic", bx, by - 6, LBL_SKY, "rgba(226,178,110,0.75)", LF11, spaceGuide.sky);
       }
     }
+    drawSurfaceLabels();
     lblEnd();
     drawSaturnOverview();
   }

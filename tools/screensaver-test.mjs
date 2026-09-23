@@ -276,3 +276,18 @@ for (const [kind,body] of [['saturnRings','saturn'],['earthSky','earth']]) {
  assert.equal(ctx.related.followScene,null);
 }
 console.log('screensaver: related scene is consumed once without draining the shuffled bag');
+// Project the actual camera pose: both discs (including Saturn's rings) fit portrait.
+for (const aspect of [.4,.46,1,1.78]) for (const [moonR,parentR] of [[.0043,.17],[.0021,.114],[.0014,.038]]) {
+ Object.assign(ctx,{aspect,moonR,parentR});
+ const p=run('scenicPairPose([1,0,0],[0,0,0],moonR,parentR,Math.PI/3,aspect,20)');
+ const eye=p.direction.map((v,i)=>v*p.distance+p.offset[i]+(i===0?1:0));
+ const right=[-p.direction[2],0,p.direction[0]];
+ const half=Math.min(Math.PI/6,Math.atan(Math.tan(Math.PI/6)*aspect));
+ for(const [center,radius] of [[[1,0,0],moonR],[[0,0,0],parentR]]){
+  const v=center.map((n,i)=>n-eye[i]);
+  const depth=-v.reduce((n,x,i)=>n+x*p.direction[i],0);
+  const x=v.reduce((n,x,i)=>n+x*right[i],0);
+  assert.ok(depth>radius);
+  assert.ok(Math.abs(Math.atan2(x,depth))+Math.asin(radius/Math.hypot(...v))<half,'whole disc fits');
+ }
+}

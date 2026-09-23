@@ -49,6 +49,7 @@ const MANIFEST = [
   "core/eclipse.js",     // 食 (日食・月食・衛星の影) の遮蔽体えらび
   "core/events.js",      // 天文イベント (食・満月・衝・最大離角・掩蔽・流星群など) の探索
   "render/body.js",      // リサイズ・描画基盤・drawBody・project
+  "render/surface-labels.js", // Surface feature labels
   "render/milkyway.js",  // 天の川 (全天マップを天球へ貼る。両ビュー共用)
   "data/star-catalog.js", // HYG 4.2 data under CC BY-SA 4.0
   "data/sky.js",         // 恒星カタログ・星座線/名・黄道
