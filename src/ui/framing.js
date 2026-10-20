@@ -238,8 +238,9 @@
     }
     const enabled = !groundView && !tourActive && (selected || lastCenter);
     const r = frameLayout.rect;
-    const x = enabled && r ? (r.x0 + r.x1) / W - 1 : 0;
-    const y = enabled && r ? 1 - (r.y0 + r.y1) / H : 0;
+    const scenic = immersiveView && !screensaverRunning();
+    const x = enabled && r ? (r.x0 + r.x1) / W - 1 + (scenic ? .06 : 0) : 0;
+    const y = enabled && r ? 1 - (r.y0 + r.y1) / H + (scenic ? .025 : 0) : 0;
     frameLayout.x += (x - frameLayout.x) * k;
     frameLayout.y += (y - frameLayout.y) * k;
   }
@@ -247,7 +248,17 @@
   // 鑑賞の周回はシミュレーションの再生速度から独立した実時間。
   // 一周約4分。接近の完了後と手動操作のあとに間を置き、徐々に動き出す。
   let enjoymentWait = 0, enjoymentSpeed = 0, enjoymentPaused = false;
-  let enjoymentMotion = 0;
+  let enjoymentMotion = 0, enjoymentOrbitSign = 1;
+  // 太陽方向を軸に回すと位相角が変わらず、周回中も昼夜境界が見える。
+  function scenicOrbitDirection(direction, light, angle) {
+    const length = Math.hypot(...light);
+    if (length < 1e-12) return direction.slice();
+    const axis = light.map(v => v / length), c = Math.cos(angle), s = Math.sin(angle);
+    const dot = direction.reduce((sum,v,i) => sum + v * axis[i], 0);
+    const cross = [axis[1]*direction[2]-axis[2]*direction[1],
+      axis[2]*direction[0]-axis[0]*direction[2], axis[0]*direction[1]-axis[1]*direction[0]];
+    return direction.map((v,i) => v*c + cross[i]*s + axis[i]*dot*(1-c));
+  }
   function pauseEnjoymentOrbit() {
     if (immersiveView) { enjoymentWait = 3; enjoymentSpeed = 0; enjoymentMotion = 0; }
   }
@@ -264,15 +275,33 @@
     }
     if (enjoymentWait > 0) { enjoymentWait = Math.max(0, enjoymentWait - dt); return; }
     enjoymentSpeed += (Math.PI / 120 - enjoymentSpeed) * (1 - Math.exp(-dt / 2));
-    cam.yawTgt += enjoymentSpeed * dt;
+    const body = selected || lastCenter;
+    const position = body.key && posW.get(body.key);
+    const light = position && position.map(v => -v);
+    if (light && body.key !== "sun" && Math.hypot(...light) > 1e-12) {
+      const direction = [Math.cos(cam.pitchTgt)*Math.cos(cam.yawTgt), Math.sin(cam.pitchTgt),
+        Math.cos(cam.pitchTgt)*Math.sin(cam.yawTgt)];
+      const step = enjoymentSpeed * dt;
+      let next = scenicOrbitDirection(direction, light, step * enjoymentOrbitSign);
+      const opening = d => d.reduce((a,v,i)=>a+v*SATURN_POLE_W[i],0);
+      if (Math.abs(next[1]) > .97 || (body.key === "saturn" &&
+          (Math.abs(opening(next)) < .22 || opening(next)*opening(direction) < 0))) {
+        enjoymentOrbitSign *= -1;
+        next = scenicOrbitDirection(direction, light, step * enjoymentOrbitSign);
+      }
+      const yaw = Math.atan2(next[2], next[0]);
+      const delta = Math.atan2(Math.sin(yaw-cam.yawTgt), Math.cos(yaw-cam.yawTgt));
+      cam.yawTgt += delta;
+      cam.pitchTgt = Math.asin(Math.max(-1, Math.min(1, next[1])));
+    } else cam.yawTgt += enjoymentSpeed * dt;
     // 周回と同じ加速率で構図も動かす。距離は最大6%引く方向なので画面から切れない。
     // 差分を足すことでドラッグ後の位置を尊重し、基準の構図へ引き戻さない。
     const previous = enjoymentMotion;
     enjoymentMotion += dt * enjoymentSpeed / (Math.PI / 120);
-    const body = selected || lastCenter;
     const pitchAmount = (body.key === "saturn" ? 3 : 5) * Math.PI / 180;
     const pitchDelta = pitchAmount * (Math.cos(previous * Math.PI / 60) - Math.cos(enjoymentMotion * Math.PI / 60));
-    cam.pitchTgt = Math.max(-1.35, Math.min(1.35, cam.pitchTgt + pitchDelta));
+    // 実天体の周回では位相を保つ。光源自身など、照明軸が無い場合だけ上下を揺らす。
+    if (!light || body.key === "sun") cam.pitchTgt = Math.max(-1.35, Math.min(1.35, cam.pitchTgt + pitchDelta));
     const breathing = t => 1 + .03 * (1 - Math.cos(t * Math.PI / 45));
     cam.distTgt *= breathing(enjoymentMotion) / breathing(previous);
   }
@@ -285,7 +314,7 @@
     immersiveView = v;
     enjoymentPaused = false;
     syncFramingUI();
-    enjoymentWait = 3; enjoymentSpeed = 0; enjoymentMotion = 0;
+    enjoymentWait = 3; enjoymentSpeed = 0; enjoymentMotion = 0; enjoymentOrbitSign = 1;
     frameApp.classList.toggle("immersive", v);
     immersiveBar.hidden = !v;
     frameLayout.dirty = true;

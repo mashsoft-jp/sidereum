@@ -46,3 +46,8 @@ jobs:
           node tools/surface-labels-test.mjs
       - name: スクリーンセーバーの順序と切替を確かめる
         run: node tools/screensaver-test.mjs
+
+      - name: 月の地形と鑑賞の背景露出を確かめる
+        run: |
+          node tools/moon-relief-test.mjs
+          node tools/scenic-exposure-test.mjs

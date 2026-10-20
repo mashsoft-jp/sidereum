@@ -31,3 +31,25 @@ for(const fps of [15,60,120]) {
 }
 assert.ok(Math.max(...results)-Math.min(...results)<.001,'フレームレートによらない速度');
 console.log('enjoyment orbit: frame rates, pause/resume, flight, snapshot, view exit and reduced motion passed');
+
+// 実天体では日照を保って周回し、土星の環を横切らない。
+for (const key of ['earth','moon','saturn']) {
+ const start=[.8,.3,Math.sqrt(1-.8*.8-.3*.3)];
+ const pole=[0,.9,Math.sqrt(.19)];
+ const ctx=vm.createContext({ringExplore:null,immersiveView:true,screensaverRunning:()=>false,groundView:false,tourActive:false,
+  selected:{key},lastCenter:null,posW:new Map([[key,[-10,0,0]]]),SATURN_POLE_W:pole,
+  cameraFlight:null,pointers:new Map(),snapPending:false,snapDlgEl:{classList:{contains:()=>false}},
+  document:{hidden:false},matchMedia:()=>({matches:false}),window:{addEventListener(){}},
+  cam:{yawTgt:Math.atan2(start[2],start[0]),pitchTgt:Math.asin(start[1]),distTgt:10}});
+ vm.runInContext(code,ctx);
+ for(let i=0;i<3600;i++){
+  vm.runInContext('stepEnjoymentOrbit(1/6)',ctx);
+  const {yawTgt:y,pitchTgt:p}=ctx.cam;
+  const d=[Math.cos(p)*Math.cos(y),Math.sin(p),Math.cos(p)*Math.sin(y)];
+  assert.ok(Math.abs(d[0]-.8)<1e-10,'位相角を保ち、夜側へ回らない');
+  assert.ok(d.every(Number.isFinite));
+  if(key==='saturn')assert.ok(d.reduce((sum,v,j)=>sum+v*pole[j],0)>.21,'環の開きを保つ');
+ }
+ assert.ok(ctx.cam.distTgt>=9.99&&ctx.cam.distTgt<=10.61,'距離を累積しない');
+}
+console.log('scenic orbit: ten minute phase preservation, ring opening and bounded distance passed');
