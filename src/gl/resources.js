@@ -411,3 +411,33 @@
       new Uint16Array(ib.buffer, ib.byteOffset, ib.byteLength / 2), gl.STATIC_DRAW);
     meshByKey.set(key, { vb: vb, ib: ib2, n: m.t * 3 });
   }
+
+  // 月の接近時だけ実測LOLA標高メッシュを取得する。失敗時は通常球を使う。
+  let moonRelief = null, moonReliefRequested = false;
+  function closeBodyGeometry(body, radiusPx) {
+    if (body.key !== "moon" || radiusPx < 100) return null;
+    if (!moonReliefRequested) {
+      moonReliefRequested = true;
+      fetch(TEX_DIR + "moon-relief.bin").then(response => {
+        if (!response.ok) throw new Error("Moon relief download failed");
+        return response.arrayBuffer();
+      }).then(buffer => {
+        if (buffer.byteLength !== 257 * 129 * 2) throw new Error("Invalid Moon relief");
+        const heights = new DataView(buffer), mesh = makeSphere(256, 128);
+        for (let i = 0; i < 257 * 129; i++) {
+          const scale = 1 + (heights.getUint16(i * 2, true) - 20000) * 0.5 / 1737400;
+          for (let j = 0; j < 3; j++) mesh.pos[i * 3 + j] *= scale;
+        }
+        moonRelief = { vertices: mesh.pos, indices: mesh.idx, vb: null, ib: null };
+      }).catch(error => console.warn("Moon relief unavailable; using sphere", error));
+    }
+    if (moonRelief && !moonRelief.vb) {
+      // GPUへの転送は描画内で行い、非同期コールバックでGLの状態を変えない。
+      moonRelief.vb = gl.createBuffer(); moonRelief.ib = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, moonRelief.vb);
+      gl.bufferData(gl.ARRAY_BUFFER, moonRelief.vertices, gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, moonRelief.ib);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, moonRelief.indices, gl.STATIC_DRAW);
+    }
+    return moonRelief;
+  }

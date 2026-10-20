@@ -384,7 +384,18 @@
         gl.uniform3fv(u.uColC, body.colCL);
         gl.uniform3fv(u.uRim, body.rimL);
         gl.uniform4fv(u.uParams, body.params);
-        gl.drawElements(gl.TRIANGLES, sphere.idx.length, gl.UNSIGNED_SHORT, 0);
+        const relief = closeBodyGeometry(body, radiusPx);
+        if (relief) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, relief.vb);
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, relief.ib);
+          gl.vertexAttribPointer(a.aPos, 3, gl.FLOAT, false, 0, 0);
+        }
+        gl.drawElements(gl.TRIANGLES, relief ? relief.indices.length : sphere.idx.length, gl.UNSIGNED_SHORT, 0);
+        if (relief) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, sphereVB);
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sphereIB);
+          gl.vertexAttribPointer(a.aPos, 3, gl.FLOAT, false, 0, 0);
+        }
         if (body.key === "earth" && tx) {
           // 投影の平坦化も含む行列をそのまま拡大し、地上/月面でも同じ層を描く。
           cloudModel.set(model); cloudMvp.set(mvp);

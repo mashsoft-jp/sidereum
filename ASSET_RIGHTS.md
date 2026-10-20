@@ -85,3 +85,13 @@
 - 月: [取得原本](https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_16bit_srgb_8k.tif)。8192×4096、16bit sRGB。8bit化し、アプリ内の照明に合わせRGBを0.80倍。2K/4K/8KをJPEG化。 原本SHA-256: `db7808e878b6a55eb409bb231eab8deb477f84b5c9d7396d76ff73e5d54992d9`。
 - 火星: [取得原本](https://astrogeology.usgs.gov/ckan/dataset/7131d503-cdc9-45a5-8f83-5126c0fd397e/resource/5ea881c6-01b3-41fa-a7af-42d2131b54f1/download/mars_viking_mdim21_clrmosaic_1km.jpg)。21339×10670の1km版を8192×4096に縮小しJPEG化。 原本SHA-256: `fdfcd335559c3dc67052b7e8a9565d850e336ac0d1f3ea7f5eb7826ffb44ecb2`。
 - 水星: [取得原本](https://planetarymaps.usgs.gov/mosaic/Mercury_MESSENGER_MDIS_Basemap_MD3Color_Mosaic_Global_665m.tif)。23040×11520を8192×4096に縮小。従来の見た目を保つためグレースケール化し、既存4Kの平均明度に合わせて約1.050倍、JPEG化。 原本SHA-256: `1f7af8fe53a02e46d9dca74b68b4eead8a451bf2578845a5a303a695bfd1c666`。
+
+## 月の接近時の地形メッシュ（2026-10-20）
+
+`tex/moon-relief.bin` は [NASA SVS CGI Moon Kit](https://svs.gsfc.nasa.gov/4720/) の `ldem_16_uint.tif`（NASA/GSFC、LRO/LOLA）から生成。NASA Scientific Visualization Studio の既存の利用方針に従い、提供元を表示します。
+
+- 参照半径1737.4km、標高0.5m単位、オフセット+20000。起伏の誇張なし。
+- `tools/prepare-moon-relief.py` で257×129点へ双線形補間し、経度を既存の表面画像と合わせ、両極を閉じる。
+- 元TIFF SHA-256: `45a2b32d56e81ed30db07fead8abc842b249b6511219d9ca2c53f81bc2dc5d62`
+- 配信bin SHA-256: `5f6a56988a98afd83abe71a9b13dd27dccbe7b8ff0006a28840fc9e883719938`
+- 約66KB、接近時のみ取得。全球の低分割メッシュによる大きな起伏の表現であり、局所の高精細地形タイルや地形同士の投影影は未実装。
