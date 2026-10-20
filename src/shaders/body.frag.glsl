@@ -65,6 +65,15 @@
       return pow(grazing, 0.7) * smoothstep(-horizon, 0.06, ndl);
     }
 
+    // 暖色は薄明の一部だけに弱く残し、暗い側では無彩色へ戻す。
+    float cloudWarmth(float ndl) {
+      return 0.22 * smoothstep(-0.06, 0.04, ndl) * (1.0 - smoothstep(0.04, 0.24, ndl));
+    }
+    // 大気からの弱い間接光。地表と雲の両方に同じ幅で加える鑑賞用の近似。
+    float earthTwilight(float ndl) {
+      return smoothstep(-0.18, 0.02, ndl) * (1.0 - smoothstep(0.02, 0.18, ndl));
+    }
+
     void main() {
       vec3 p = normalize(vL);
       vec3 N = normalize(vN);
@@ -291,9 +300,10 @@
         // 昼夜境界の雲の光量を連続的に減らし、夕焼け色も滑らかに残す。
         float ndl = dot(N, L);
         float visibility = mu0 > 1e-4 ? clamp(dif / mu0, 0.0, 1.0) : 1.0;
-        vec3 tint = mix(vec3(1.0, 0.56, 0.30), vec3(1.0), smoothstep(0.0, 0.22, ndl));
+        vec3 tint = mix(vec3(1.0), vec3(1.0, 0.56, 0.30), cloudWarmth(ndl));
         vec3 light = tint * cloudDaylight(ndl) * 0.64 * visibility;
         light += vec3(uAmb * 0.68) + eclLight;
+        light += vec3(0.35, 0.45, 0.65) * earthTwilight(ndl) * 0.012 * (1.0 - uAirDay);
         light = light * uExt + skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain;
         gl_FragColor = vec4(tonemap(light) * alpha, alpha);
         return;
@@ -424,6 +434,8 @@
 
       if (isEarth > 0.5) {
         float ndl = dot(N, L);
+        // 夜側を一様に持ち上げず、薄明域の地表だけに微弱な大気の間接光を足す。
+        c += alb * vec3(0.35, 0.45, 0.65) * earthTwilight(ndl) * 0.018 * (1.0 - uAirDay);
         // ---- 大気 ----
         // 縁ほど大気を長く見通すので青みが強い。太陽が向こう側にあるとき
         // (視線と太陽が同じ側 = 前方散乱) は明け方の空のように暖色へ振れる

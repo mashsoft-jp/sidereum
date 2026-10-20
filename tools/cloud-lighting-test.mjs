@@ -20,3 +20,18 @@ assert.ok(largest<.001,'no narrow brightness step across the terminator');
 assert.ok(cloud(-.03)>0&&cloud(-.03)<cloud(0),'elevated clouds retain a fading twilight');
 assert.match(shader,/cloudDaylight\(ndl\) \* 0\.64 \* visibility/,'cloud lighting retains eclipse visibility');
 console.log('Cloud lighting: continuous terminator, monotonic daylight, twilight and eclipse integration passed');
+
+function scalar(name) {
+ const m=shader.match(new RegExp(`float ${name}\\(float ndl\\)\\s*\\{([^}]+)\\}`));
+ assert.ok(m);return vm.runInNewContext('(ndl)=>{'+m[1]+'}',{smoothstep});
+}
+const warmth=scalar('cloudWarmth'),twilight=scalar('earthTwilight');
+for(const x of [-1,-.18,-.1,-.06,-.03,0,.04,.1,.18,.24,1]){
+ assert.ok(warmth(x)>=0&&warmth(x)<=.22,'warm tint stays subtle');
+ assert.ok(twilight(x)>=0&&twilight(x)<=1);
+}
+assert.equal(warmth(-.06),0);assert.equal(warmth(1),0);
+assert.ok(warmth(-.03)<warmth(.04),'colour fades with nightfall');
+assert.equal(twilight(-.18),0);assert.equal(twilight(1),0);
+assert.ok(twilight(-.08)>0&&twilight(0)>twilight(-.08),'indirect light stays near the terminator');
+console.log('Earth twilight: subdued cloud tint, night desaturation and local indirect light passed');
