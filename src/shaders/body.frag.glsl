@@ -62,7 +62,7 @@
       vec3 N = normalize(vN);
       vec3 V = normalize(uCam - vW);
 
-      if (uAtmos > 0.5) {
+      if (uAtmos > 0.5 && uAtmos < 1.5) {
         // ---- 大気シェル ----
         // 本体より一回り大きい球を加算で重ね、円盤の外へはみ出す光の輪を出す。
         // 描くのはシェルの手前側の面だけで、視線が大気の中を通る長さはここで
@@ -275,6 +275,24 @@
         dif *= 1.0 - cov;
       }
 
+      // 雲は半径約10kmの高さの独立した層。地表と同じ食の遮蔽を受ける。
+      if (uAtmos > 1.5) {
+        float coverage = SAMPLE(uCloud, vec2(uv.x + uCloudRot, uv.y)).r;
+        float alpha = 1.0 - exp(-coverage * 2.0 / max(muV, 0.25));
+        if (alpha < 0.005) discard;
+        // 雲頂からは地表より先まで太陽が見える。地球の球で日射の遮蔽を求める。
+        float horizon = sqrt(1.0 - 1.0 / (1.0016 * 1.0016));
+        float ndl = dot(N, L);
+        float lit = smoothstep(-horizon - 0.004, -horizon + 0.004, ndl);
+        float visibility = mu0 > 1e-4 ? clamp(dif / mu0, 0.0, 1.0) : 1.0;
+        vec3 tint = mix(vec3(1.0, 0.56, 0.30), vec3(1.0), smoothstep(0.0, 0.22, ndl));
+        vec3 light = tint * pow(max(ndl, 0.0) + horizon * 0.35, 0.7) * 0.64 * lit * visibility;
+        light += vec3(uAmb * 0.68) + eclLight;
+        light = light * uExt + skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain;
+        gl_FragColor = vec4(tonemap(light) * alpha, alpha);
+        return;
+      }
+
       float lat = p.y;
       // アルベドは以降すべてリニア。uColA/B/C・uRim・uAmb は CPU 側で変換済み、
       // テクスチャと即値だけここで戻す
@@ -283,7 +301,6 @@
       // 地球だけ、地表のあとに雲・夜景・大気を重ねる。そのぶんの持ち回り
       float isEarth = step(3.5, uType) * step(uType, 4.5) * uHasTex;
       float cloud = 0.0;
-      float cloudLight = 0.0;
 
       if (uComet > 0.5) {
         // ---- 彗星核: 自発光しない、煤と有機物に覆われた非常に暗い表面 ----
@@ -337,8 +354,7 @@
           // 地表と同じ色へ混ぜず、雲の光を後で合成する。
           // 雲の照明は地表より緩やかに落とし、薄い雲から地表が透ける。
           // 斜光では白さを少し早く落とし、雲の明暗が昼夜境界まで残るようにする。
-          cloudLight = pow(max(mu0, 0.0), 0.7) * 0.64;
-          alb *= 1.0 - cloud;
+          // 雲自体は独立したシェルで後から重ねる。
         }
       } else if (uType < 1.5) {
         // ---- 岩石 (テクスチャ無し小天体) ----
@@ -402,10 +418,6 @@
 
       if (isEarth > 0.5) {
         float ndl = dot(N, L);
-        // 雲の直射光も食の遮蔽を受ける。夜側は環境光だけを残す。
-        float cloudVisibility = mu0 > 1e-4 ? clamp(dif / mu0, 0.0, 1.0) : 0.0;
-        vec3 cloudTint = mix(vec3(1.0, 0.79, 0.61), vec3(1.0), smoothstep(0.0, 0.18, ndl));
-        c += cloud * (vec3(0.68 * ambient) + cloudTint * cloudLight * cloudVisibility * direct);
         // ---- 大気 ----
         // 縁ほど大気を長く見通すので青みが強い。太陽が向こう側にあるとき
         // (視線と太陽が同じ側 = 前方散乱) は明け方の空のように暖色へ振れる

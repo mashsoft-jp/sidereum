@@ -255,6 +255,7 @@
     let inPass = false;
     // 大気シェルは深度書き込みとカリングを一時的に変えるので、パスの設定を控える
     let passDepthWrite = true, passCull = null;
+    const cloudModel = new Float32Array(16), cloudMvp = new Float32Array(16);
     return {
       // program・バッファ・頂点属性・テクスチャユニット・depth/cull を確定させる。
       // cullFace は gl.FRONT / gl.BACK、不要なら null
@@ -384,6 +385,20 @@
         gl.uniform3fv(u.uRim, body.rimL);
         gl.uniform4fv(u.uParams, body.params);
         gl.drawElements(gl.TRIANGLES, sphere.idx.length, gl.UNSIGNED_SHORT, 0);
+        if (body.key === "earth" && tx) {
+          // 投影の平坦化も含む行列をそのまま拡大し、地上/月面でも同じ層を描く。
+          cloudModel.set(model); cloudMvp.set(mvp);
+          for (let i = 0; i < 12; i++) { cloudModel[i] *= 1.0016; cloudMvp[i] *= 1.0016; }
+          gl.uniformMatrix4fv(u.uModel, false, cloudModel);
+          gl.uniformMatrix4fv(u.uMVP, false, cloudMvp);
+          gl.uniform1f(u.uAtmos, 2);
+          gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+          gl.depthMask(false); gl.enable(gl.CULL_FACE); gl.cullFace(gl.FRONT);
+          gl.drawElements(gl.TRIANGLES, sphere.idx.length, gl.UNSIGNED_SHORT, 0);
+          gl.uniform1f(u.uAtmos, 0);
+          gl.disable(gl.BLEND); gl.depthMask(passDepthWrite);
+          if (passCull !== null) gl.cullFace(passCull); else gl.disable(gl.CULL_FACE);
+        }
       },
       endPass() {
         inPass = false;
