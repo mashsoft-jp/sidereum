@@ -12046,13 +12046,13 @@
     for (const body of [...PLANETS, ...SATELLITES]) {
       const important = spaceRelated(body) || body.key === tourSpot || body.key === tourSight;
       const minor = body.H !== undefined && body.key !== "pluto";
-      const target = important ? 1 : (selected && selected !== SUN ? .42 : minor ? .48 : 1);
+      const target = important ? 1 : (selected && selected !== SUN ? .28 : minor ? .32 : .72);
       const previous = spaceGuide.weights.get(body.key) ?? 1;
       spaceGuide.weights.set(body.key, previous + (target - previous) * blend);
     }
-    spaceGuide.sky = (1 - spaceGuide.close) * skyGuideVisibility(eFov());
-    // 鑑賞で円盤に接近したときだけ露光を控える。星空・俯瞰の場面は元の濃さ。
-    const backdrop = 1 - (immersiveView ? .55 : 0) * spaceGuide.close;
+    spaceGuide.sky = .42 * (1 - spaceGuide.close) * skyGuideVisibility(eFov());
+    // 全景でも天の川を一段控え、接近時はさらに天体の背景へ退ける。
+    const backdrop = .78 * (1 - (immersiveView ? .55 : .25) * spaceGuide.close);
     spaceGuide.backdrop += (backdrop - spaceGuide.backdrop) * blend;
   }
   function spaceRelated(b) {
@@ -12062,8 +12062,14 @@
     return b === focus || b.key === family || b.parent === family;
   }
   function spaceLabelAlpha(b) {
-    return spaceRelated(b) || b.key === tourSpot || b.key === tourSight || b.mesh
-      ? 1 : (1 - spaceGuide.close) * (spaceGuide.weights.get(b.key) ?? 1);
+    if (spaceRelated(b) || b.key === tourSpot || b.key === tourSight || b.mesh) return 1;
+    // 小天体は軌道が画面に広がってから名前を出す。選択名は常に残す。
+    const p = posW.get(b.key), sp = p && project(p);
+    const extent = sp && b.a ? b.a * K_REAL * H / (2 * Math.tan(eFov() / 2) * sp.w) : 0;
+    const minor = b.H !== undefined && b.key !== "pluto";
+    const t = Math.max(0, Math.min(1, (extent / Math.min(W, H) - .12) / .28));
+    const detail = minor ? t * t * (3 - 2 * t) : 1;
+    return detail * (1 - spaceGuide.close) * (spaceGuide.weights.get(b.key) ?? 1);
   }
   // 0 (必ず出す選択名) と 1 (通常の惑星名) の間で家族を優先する。
   // 必ず出す扱いにはしないので、衛星どうしの衝突回避は維持される。
@@ -12093,7 +12099,7 @@
     const focus = spaceGuide.body;
     const keep = spaceRelated(b)
       ? (b === focus ? (b.parent ? 0.9 : 0.28) : (focus && focus.parent ? 0.3 : 0.65)) : 0.025;
-    gl.uniform1f(guideP.u.uFade, 0.85 * (spaceGuide.weights.get(b.key) ?? 1) * (1 - spaceGuide.close * (1 - keep)) * satelliteOrbitReadability(b));
+    gl.uniform1f(guideP.u.uFade, 0.62 * (spaceGuide.weights.get(b.key) ?? 1) * (1 - spaceGuide.close * (1 - keep)) * satelliteOrbitReadability(b));
     const center = b.parent ? posW.get(b.parent) : ZERO3;
     const dx = center[0] - EYE[0], dy = center[1] - EYE[1], dz = center[2] - EYE[2];
     const depth = VP[3] * dx + VP[7] * dy + VP[11] * dz + VP[15];
