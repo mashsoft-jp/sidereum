@@ -51,3 +51,4 @@ jobs:
         run: |
           node tools/moon-relief-test.mjs
           node tools/scenic-exposure-test.mjs
+          node tools/cloud-lighting-test.mjs
