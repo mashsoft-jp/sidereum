@@ -6734,7 +6734,15 @@
           ? (tau / mu) * exp(-tau / mu)
           : mu0 / dm * (exp(-tau / mu0) - exp(-tau / mu));
       }
-      I = max(I, 0.0) * shadow;
+      // 鑑賞用の位相関数。氷の広い後方散乱と薄い環の前方散乱を近似。
+      // 個々の粒子の実測フィットではなく、既存の光学厚さと単散乱を保つ補正。
+      float angle = clamp(dot(L, V), -1.0, 1.0);
+      float back = 0.9375 / pow(1.0625 - 0.5 * angle, 1.5);
+      float forward = 0.6975 / pow(1.3025 + 1.1 * angle, 1.5);
+      float thin = exp(-tau * 2.0);
+      float phase = 0.75 + 0.25 * back + 0.18 * thin * forward;
+      // 木星・天王星の模式的な細環は従来の明るさを維持する。
+      I = max(I, 0.0) * shadow * (uKind < 0.5 ? phase : 1.0);
 
       float alpha = 1.0 - exp(-tau / mu);         // 背景をどれだけ隠すか
       // 影の中でも真っ黒にはならない (土星本体からの照り返し)。
@@ -6959,7 +6967,8 @@
       N=normalize(N-(gradient-N*dot(gradient,N))*1.7*detail);
       float light = max(0.0, dot(N, L));
       float mottling = iceNoise(vLocal*6.0+vSeed*43.0);
-      vec3 ice = mix(vec3(0.57,0.65,0.70),vec3(.86,.88,.86),vSeed);
+      // 遠景の環と同じ、わずかに暖かい氷の色。照明による陰影は別に計算。
+      vec3 ice = mix(vec3(0.62,0.59,0.53),vec3(.86,.84,.79),vSeed);
       ice *= .80+.16*mottling+.04*frost;
       float sheen = pow(max(0.0, dot(N, normalize(L + V))), 26.0) * .08;
       float scatter=pow(max(0.0,dot(-L,V)),3.0)*.045;

@@ -21,7 +21,8 @@
       N=normalize(N-(gradient-N*dot(gradient,N))*1.7*detail);
       float light = max(0.0, dot(N, L));
       float mottling = iceNoise(vLocal*6.0+vSeed*43.0);
-      vec3 ice = mix(vec3(0.57,0.65,0.70),vec3(.86,.88,.86),vSeed);
+      // 遠景の環と同じ、わずかに暖かい氷の色。照明による陰影は別に計算。
+      vec3 ice = mix(vec3(0.62,0.59,0.53),vec3(.86,.84,.79),vSeed);
       ice *= .80+.16*mottling+.04*frost;
       float sheen = pow(max(0.0, dot(N, normalize(L + V))), 26.0) * .08;
       float scatter=pow(max(0.0,dot(-L,V)),3.0)*.045;
