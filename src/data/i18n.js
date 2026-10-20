@@ -95,6 +95,7 @@
       menuTerrain: "空と地形",
       menuMeteor: "流星群",
       menuBloom: "光の滲み",
+      menuAutoExposure: "鑑賞時の自動露出",
       menuHiRes: "高解像度テクスチャ",
       hiResConfirm: "高解像度テクスチャに切り替えました。追加の画像を読み込むぶん通信量が増え、" +
                     "端末によっては表示が重くなったり不安定になることがあります。この設定を保存しますか。" +
@@ -224,6 +225,7 @@
       menuTerrain: "Sky & terrain",
       menuMeteor: "Meteor showers",
       menuBloom: "Glow",
+      menuAutoExposure: "Auto exposure in Enjoy mode",
       menuHiRes: "High-res textures",
       hiResConfirm: "Switched to high-resolution textures. This downloads additional images and " +
                     "can make the view heavy or unstable on some devices. Keep this setting? " +

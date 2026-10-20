@@ -100,6 +100,16 @@
   }
   menuMeteorBtn.addEventListener("click", () => setMeteor(!showMeteor));
 
+  const menuAutoExposureBtn = document.getElementById("menuAutoExposure");
+  function updateAutoExposureLabel() {
+    setMenuCheck(menuAutoExposureBtn, T().menuAutoExposure, autoExposureOn);
+  }
+  menuAutoExposureBtn.addEventListener("click", () => {
+    autoExposureOn = !autoExposureOn;
+    try { localStorage.setItem("ssAutoExposure", autoExposureOn ? "1" : "0"); } catch (e) { /* 保存不可でも切替可 */ }
+    updateAutoExposureLabel();
+  });
+
   // 明るいところの滲み (Bloom)。描画負荷が上がるので切れるようにしておく
   const menuBloomBtn = document.getElementById("menuBloom");
   function updateBloomLabel() {

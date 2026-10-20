@@ -1,3 +1,11 @@
+  let autoExposureOn = (() => {
+    try { return localStorage.getItem("ssAutoExposure") !== "0"; } catch (e) { return true; }
+  })();
+  function scenicSkyExposure(radiusFraction, phase, key) {
+    const reflectance = { sun: 1, earth: .7, venus: .9, moon: .3, mars: .4 }[key] ?? .55;
+    return Math.max(.08, Math.min(1, 1 / (1 + 100 * radiusFraction * radiusFraction * Math.max(0, Math.min(1, phase)) * reflectance)));
+  }
+
 
   // ---------- Bloom (明るいところの滲み) ----------
   // シーンは既定のフレームバッファへ描いたまま、描き終わってから

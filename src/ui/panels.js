@@ -211,6 +211,7 @@
     updateTerrainLabel();
     updateMeteorLabel();
     updateBloomLabel();
+    updateAutoExposureLabel();
     updateHiResLabel();
     updateUnitLabel();
     applyNavVisible();

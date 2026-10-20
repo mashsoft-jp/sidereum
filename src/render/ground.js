@@ -544,9 +544,11 @@
       }
       if (ns) {
         gl.useProgram(pointP.pr);
+      gl.uniform1f(pointP.u.uStellar, 0);
         gl.uniformMatrix4fv(pointP.u.uVP, false, gVP32);
         gl.uniform1f(pointP.u.uScale, DPR);
         gl.uniform1f(pointP.u.uAlpha, (isMoonSurf ? 1 : 0.95) * starVis);
+        gl.uniform1f(pointP.u.uStellar, 1);
         gl.bindBuffer(gl.ARRAY_BUFFER, starGVB);
         gl.bufferData(gl.ARRAY_BUFFER, starGArr, gl.DYNAMIC_DRAW);
         gl.enableVertexAttribArray(pointP.a.aPos);
@@ -622,6 +624,7 @@
     }
     if (n) {
       gl.useProgram(pointP.pr);
+      gl.uniform1f(pointP.u.uStellar, 0);
       gl.uniformMatrix4fv(pointP.u.uVP, false, gVP32);
       gl.uniform1f(pointP.u.uScale, DPR);
       gl.uniform1f(pointP.u.uAlpha, 1.0);

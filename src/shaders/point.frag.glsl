@@ -1,9 +1,19 @@
 
     varying vec3 vCol;
+    varying float vSize;
+    uniform float uStellar;
     uniform float uAlpha;
     void main() {
       float d = length(gl_PointCoord - 0.5);
-      float a = smoothstep(0.5, 0.12, d) * uAlpha;
+      float a = 1.0 - smoothstep(0.12, 0.5, d);
+      if (uStellar > 0.5) {
+        // 暗い星は繊細な点。明るい星だけ光の芯と淡い裾を分ける。
+        float bright = smoothstep(1.5, 4.5, vSize);
+        float core = exp(-d * d / 0.035);
+        float halo = exp(-d * d / 0.12) * (1.0 - smoothstep(0.35, 0.5, d));
+        a = mix(a, core * 1.5 + halo * 0.18, bright);
+      }
+      a *= uAlpha;
       if (a < 0.01) discard;
       // アルファ 0 = 乗算済みアルファでの加算 (blendFunc は ONE, ONE_MINUS_SRC_ALPHA)。
       // 点で描くのは光源なので、背景へ足すのが正しい。アルファを載せると

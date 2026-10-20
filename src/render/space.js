@@ -20,7 +20,7 @@
 
   // 宇宙のガイドは、注視天体が円盤として見えるほど背景へ退く。
   // 距離そのものではなく投影半径を使い、微小衛星・望遠・小画面でも同じ判断にする。
-  const spaceGuide = { body: null, close: 0, sky: 1, backdrop: 1, time: null, weights: new Map() };
+  const spaceGuide = { body: null, close: 0, sky: 1, backdrop: 1, exposure: 1, time: null, weights: new Map() };
   // 星座は広い星空の案内。対象未選択でも、望遠で画角が狭くなれば控えめにする。
   // 30度以上は従来の濃さ、8度以下は8%。境目は連続で、引けば元に戻る。
   function skyGuideVisibility(fov) {
@@ -31,10 +31,15 @@
     const b = selected || lastCenter;
     const p = b && posW.get(b.key);
     const sp = p && project(p);
-    let close = 0;
+    let close = 0, disc = 0, phase = 0;
     if (sp && !b.mesh) {
       const r = bodyR(b) * (b.obl ? b.obl[0] : 1) * H / (2 * Math.tan(eFov() / 2) * sp.w);
       const size = Math.min(W, H);
+      disc = r / size;
+      const light = [-p[0], -p[1], -p[2]];
+      const eye = EYE.map((v,i) => v-p[i]);
+      const length = Math.hypot(...light) * Math.hypot(...eye);
+      phase = b === SUN ? 1 : length > 0 ? .5 + .5 * light.reduce((a,v,i)=>a+v*eye[i],0) / length : 0;
       const t = Math.max(0, Math.min(1, (r / size - 0.012) / 0.058));
       // パンで主役を画面外へ出したら、背景の文脈を再び読めるようにする。
       const edge = Math.min(sp.x + r, W + r - sp.x, sp.y + r, H + r - sp.y);
@@ -46,6 +51,10 @@
     spaceGuide.time = nowSec;
     const blend = 1 - Math.exp(-dt / .45);
     spaceGuide.close += (close - spaceGuide.close) * blend;
+    // 鑑賞用の写真表現。天体の画面占有率と位相で背景の露出を決める。
+    const exposure = immersiveView && autoExposureOn && sp && sp.x >= 0 && sp.x <= W && sp.y >= 0 && sp.y <= H
+      ? scenicSkyExposure(disc, phase, b.key) : 1;
+    spaceGuide.exposure += (exposure - spaceGuide.exposure) * (1 - Math.exp(-dt / .9));
     // 選択直後も線と名前を瞬時に消さず、同じ重みで徐々に整理する。
     for (const body of [...PLANETS, ...SATELLITES]) {
       const important = spaceRelated(body) || body.key === tourSpot || body.key === tourSight;
@@ -158,22 +167,24 @@
     gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    drawMilkyWay(VP, mwEqSpace(), MW_R, MW_SPACE_BRIGHT * spaceGuide.backdrop, 0);
+    drawMilkyWay(VP, mwEqSpace(), MW_R, MW_SPACE_BRIGHT * spaceGuide.backdrop * spaceGuide.exposure, 0);
 
     // --- 星雲・星団 (天の川の上、恒星より先) ---
     // 板は画面を向くので、ビュー行列からカメラの右・上をワールドで取る。
     // 真空なので大気減光は無い
     _dsoR[0] = Vm[0]; _dsoR[1] = Vm[4]; _dsoR[2] = Vm[8];
     _dsoU[0] = Vm[1]; _dsoU[1] = Vm[5]; _dsoU[2] = Vm[9];
-    drawDso(VP, _dsoR, _dsoU, DSO_R, 1, eFov() * 0.5, H * 0.5, spaceDsoAt);
+    drawDso(VP, _dsoR, _dsoU, DSO_R, spaceGuide.exposure, eFov() * 0.5, H * 0.5, spaceDsoAt);
     gl.enable(gl.DEPTH_TEST);
 
     // --- 星空 (カメラ位置中心, 深度書き込みなし) ---
     gl.useProgram(pointP.pr);
+      gl.uniform1f(pointP.u.uStellar, 0);
     // 星空はカメラ中心の球 = カメラ相対座標そのもの
     gl.uniformMatrix4fv(pointP.u.uVP, false, VP);
     gl.uniform1f(pointP.u.uScale, DPR);
-    gl.uniform1f(pointP.u.uAlpha, 1);
+    gl.uniform1f(pointP.u.uAlpha, spaceGuide.exposure);
+    gl.uniform1f(pointP.u.uStellar, 1);
     gl.bindBuffer(gl.ARRAY_BUFFER, starVB);
     gl.enableVertexAttribArray(pointP.a.aPos);
     gl.enableVertexAttribArray(pointP.a.aSize);
@@ -327,6 +338,7 @@
         astArr[o+4] = 0.62; astArr[o+5] = 0.65; astArr[o+6] = 0.72;
       }
       gl.useProgram(pointP.pr);
+      gl.uniform1f(pointP.u.uStellar, 0);
       gl.uniformMatrix4fv(pointP.u.uVP, false, VP);
       gl.uniform1f(pointP.u.uScale, DPR);
       gl.uniform1f(pointP.u.uAlpha, 0.5);
@@ -541,6 +553,7 @@
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.depthMask(false);
       gl.useProgram(pointP.pr);
+      gl.uniform1f(pointP.u.uStellar, 0);
       gl.uniformMatrix4fv(pointP.u.uVP, false, VP);
       gl.uniform1f(pointP.u.uScale, DPR);
       gl.uniform1f(pointP.u.uAlpha, 0.95);

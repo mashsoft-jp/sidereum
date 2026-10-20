@@ -1822,6 +1822,7 @@
     </div>
     <div class="menuGroup" role="group" aria-labelledby="menuGrpQuality">
       <div class="menuHead" id="menuGrpQuality"></div>
+      <button id="menuAutoExposure" role="menuitemcheckbox" aria-checked="false"></button>
       <button id="menuBloom" role="menuitemcheckbox" aria-checked="false"></button>
       <button id="menuHiRes" role="menuitemcheckbox" aria-checked="false"></button>
     </div>
@@ -2933,6 +2934,7 @@
       menuTerrain: "空と地形",
       menuMeteor: "流星群",
       menuBloom: "光の滲み",
+      menuAutoExposure: "鑑賞時の自動露出",
       menuHiRes: "高解像度テクスチャ",
       hiResConfirm: "高解像度テクスチャに切り替えました。追加の画像を読み込むぶん通信量が増え、" +
                     "端末によっては表示が重くなったり不安定になることがあります。この設定を保存しますか。" +
@@ -3062,6 +3064,7 @@
       menuTerrain: "Sky & terrain",
       menuMeteor: "Meteor showers",
       menuBloom: "Glow",
+      menuAutoExposure: "Auto exposure in Enjoy mode",
       menuHiRes: "High-res textures",
       hiResConfirm: "Switched to high-resolution textures. This downloads additional images and " +
                     "can make the view heavy or unstable on some devices. Keep this setting? " +
@@ -6436,17 +6439,29 @@
     uniform mat4 uVP;
     uniform float uScale;
     varying vec3 vCol;
+    varying float vSize;
     void main() {
       vCol = aCol;
+      vSize = aSize;
       gl_Position = uVP * vec4(aPos, 1.0);
       gl_PointSize = aSize * uScale;
     }`;
   const pointFS = PRE + `
     varying vec3 vCol;
+    varying float vSize;
+    uniform float uStellar;
     uniform float uAlpha;
     void main() {
       float d = length(gl_PointCoord - 0.5);
-      float a = smoothstep(0.5, 0.12, d) * uAlpha;
+      float a = 1.0 - smoothstep(0.12, 0.5, d);
+      if (uStellar > 0.5) {
+        // 暗い星は繊細な点。明るい星だけ光の芯と淡い裾を分ける。
+        float bright = smoothstep(1.5, 4.5, vSize);
+        float core = exp(-d * d / 0.035);
+        float halo = exp(-d * d / 0.12) * (1.0 - smoothstep(0.35, 0.5, d));
+        a = mix(a, core * 1.5 + halo * 0.18, bright);
+      }
+      a *= uAlpha;
       if (a < 0.01) discard;
       // アルファ 0 = 乗算済みアルファでの加算 (blendFunc は ONE, ONE_MINUS_SRC_ALPHA)。
       // 点で描くのは光源なので、背景へ足すのが正しい。アルファを載せると
@@ -7635,6 +7650,14 @@
   }
   //#endregion
   //#region src/gl/post.js
+  let autoExposureOn = (() => {
+    try { return localStorage.getItem("ssAutoExposure") !== "0"; } catch (e) { return true; }
+  })();
+  function scenicSkyExposure(radiusFraction, phase, key) {
+    const reflectance = { sun: 1, earth: .7, venus: .9, moon: .3, mars: .4 }[key] ?? .55;
+    return Math.max(.08, Math.min(1, 1 / (1 + 100 * radiusFraction * radiusFraction * Math.max(0, Math.min(1, phase)) * reflectance)));
+  }
+
 
   // ---------- Bloom (明るいところの滲み) ----------
   // シーンは既定のフレームバッファへ描いたまま、描き終わってから
@@ -11223,9 +11246,11 @@
       }
       if (ns) {
         gl.useProgram(pointP.pr);
+      gl.uniform1f(pointP.u.uStellar, 0);
         gl.uniformMatrix4fv(pointP.u.uVP, false, gVP32);
         gl.uniform1f(pointP.u.uScale, DPR);
         gl.uniform1f(pointP.u.uAlpha, (isMoonSurf ? 1 : 0.95) * starVis);
+        gl.uniform1f(pointP.u.uStellar, 1);
         gl.bindBuffer(gl.ARRAY_BUFFER, starGVB);
         gl.bufferData(gl.ARRAY_BUFFER, starGArr, gl.DYNAMIC_DRAW);
         gl.enableVertexAttribArray(pointP.a.aPos);
@@ -11301,6 +11326,7 @@
     }
     if (n) {
       gl.useProgram(pointP.pr);
+      gl.uniform1f(pointP.u.uStellar, 0);
       gl.uniformMatrix4fv(pointP.u.uVP, false, gVP32);
       gl.uniform1f(pointP.u.uScale, DPR);
       gl.uniform1f(pointP.u.uAlpha, 1.0);
@@ -12093,7 +12119,7 @@
 
   // 宇宙のガイドは、注視天体が円盤として見えるほど背景へ退く。
   // 距離そのものではなく投影半径を使い、微小衛星・望遠・小画面でも同じ判断にする。
-  const spaceGuide = { body: null, close: 0, sky: 1, backdrop: 1, time: null, weights: new Map() };
+  const spaceGuide = { body: null, close: 0, sky: 1, backdrop: 1, exposure: 1, time: null, weights: new Map() };
   // 星座は広い星空の案内。対象未選択でも、望遠で画角が狭くなれば控えめにする。
   // 30度以上は従来の濃さ、8度以下は8%。境目は連続で、引けば元に戻る。
   function skyGuideVisibility(fov) {
@@ -12104,10 +12130,15 @@
     const b = selected || lastCenter;
     const p = b && posW.get(b.key);
     const sp = p && project(p);
-    let close = 0;
+    let close = 0, disc = 0, phase = 0;
     if (sp && !b.mesh) {
       const r = bodyR(b) * (b.obl ? b.obl[0] : 1) * H / (2 * Math.tan(eFov() / 2) * sp.w);
       const size = Math.min(W, H);
+      disc = r / size;
+      const light = [-p[0], -p[1], -p[2]];
+      const eye = EYE.map((v,i) => v-p[i]);
+      const length = Math.hypot(...light) * Math.hypot(...eye);
+      phase = b === SUN ? 1 : length > 0 ? .5 + .5 * light.reduce((a,v,i)=>a+v*eye[i],0) / length : 0;
       const t = Math.max(0, Math.min(1, (r / size - 0.012) / 0.058));
       // パンで主役を画面外へ出したら、背景の文脈を再び読めるようにする。
       const edge = Math.min(sp.x + r, W + r - sp.x, sp.y + r, H + r - sp.y);
@@ -12119,6 +12150,10 @@
     spaceGuide.time = nowSec;
     const blend = 1 - Math.exp(-dt / .45);
     spaceGuide.close += (close - spaceGuide.close) * blend;
+    // 鑑賞用の写真表現。天体の画面占有率と位相で背景の露出を決める。
+    const exposure = immersiveView && autoExposureOn && sp && sp.x >= 0 && sp.x <= W && sp.y >= 0 && sp.y <= H
+      ? scenicSkyExposure(disc, phase, b.key) : 1;
+    spaceGuide.exposure += (exposure - spaceGuide.exposure) * (1 - Math.exp(-dt / .9));
     // 選択直後も線と名前を瞬時に消さず、同じ重みで徐々に整理する。
     for (const body of [...PLANETS, ...SATELLITES]) {
       const important = spaceRelated(body) || body.key === tourSpot || body.key === tourSight;
@@ -12231,22 +12266,24 @@
     gl.disable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    drawMilkyWay(VP, mwEqSpace(), MW_R, MW_SPACE_BRIGHT * spaceGuide.backdrop, 0);
+    drawMilkyWay(VP, mwEqSpace(), MW_R, MW_SPACE_BRIGHT * spaceGuide.backdrop * spaceGuide.exposure, 0);
 
     // --- 星雲・星団 (天の川の上、恒星より先) ---
     // 板は画面を向くので、ビュー行列からカメラの右・上をワールドで取る。
     // 真空なので大気減光は無い
     _dsoR[0] = Vm[0]; _dsoR[1] = Vm[4]; _dsoR[2] = Vm[8];
     _dsoU[0] = Vm[1]; _dsoU[1] = Vm[5]; _dsoU[2] = Vm[9];
-    drawDso(VP, _dsoR, _dsoU, DSO_R, 1, eFov() * 0.5, H * 0.5, spaceDsoAt);
+    drawDso(VP, _dsoR, _dsoU, DSO_R, spaceGuide.exposure, eFov() * 0.5, H * 0.5, spaceDsoAt);
     gl.enable(gl.DEPTH_TEST);
 
     // --- 星空 (カメラ位置中心, 深度書き込みなし) ---
     gl.useProgram(pointP.pr);
+      gl.uniform1f(pointP.u.uStellar, 0);
     // 星空はカメラ中心の球 = カメラ相対座標そのもの
     gl.uniformMatrix4fv(pointP.u.uVP, false, VP);
     gl.uniform1f(pointP.u.uScale, DPR);
-    gl.uniform1f(pointP.u.uAlpha, 1);
+    gl.uniform1f(pointP.u.uAlpha, spaceGuide.exposure);
+    gl.uniform1f(pointP.u.uStellar, 1);
     gl.bindBuffer(gl.ARRAY_BUFFER, starVB);
     gl.enableVertexAttribArray(pointP.a.aPos);
     gl.enableVertexAttribArray(pointP.a.aSize);
@@ -12400,6 +12437,7 @@
         astArr[o+4] = 0.62; astArr[o+5] = 0.65; astArr[o+6] = 0.72;
       }
       gl.useProgram(pointP.pr);
+      gl.uniform1f(pointP.u.uStellar, 0);
       gl.uniformMatrix4fv(pointP.u.uVP, false, VP);
       gl.uniform1f(pointP.u.uScale, DPR);
       gl.uniform1f(pointP.u.uAlpha, 0.5);
@@ -12614,6 +12652,7 @@
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.depthMask(false);
       gl.useProgram(pointP.pr);
+      gl.uniform1f(pointP.u.uStellar, 0);
       gl.uniformMatrix4fv(pointP.u.uVP, false, VP);
       gl.uniform1f(pointP.u.uScale, DPR);
       gl.uniform1f(pointP.u.uAlpha, 0.95);
@@ -16158,6 +16197,16 @@
   }
   menuMeteorBtn.addEventListener("click", () => setMeteor(!showMeteor));
 
+  const menuAutoExposureBtn = document.getElementById("menuAutoExposure");
+  function updateAutoExposureLabel() {
+    setMenuCheck(menuAutoExposureBtn, T().menuAutoExposure, autoExposureOn);
+  }
+  menuAutoExposureBtn.addEventListener("click", () => {
+    autoExposureOn = !autoExposureOn;
+    try { localStorage.setItem("ssAutoExposure", autoExposureOn ? "1" : "0"); } catch (e) { /* 保存不可でも切替可 */ }
+    updateAutoExposureLabel();
+  });
+
   // 明るいところの滲み (Bloom)。描画負荷が上がるので切れるようにしておく
   const menuBloomBtn = document.getElementById("menuBloom");
   function updateBloomLabel() {
@@ -16944,6 +16993,7 @@
     updateTerrainLabel();
     updateMeteorLabel();
     updateBloomLabel();
+    updateAutoExposureLabel();
     updateHiResLabel();
     updateUnitLabel();
     applyNavVisible();
