@@ -1740,8 +1740,9 @@
 #dsoPhotoDialog .dsoPhotoClose { position:absolute; right:12px; top:8px; width:32px; height:32px; border:none; background:none; color:var(--text); font-size:24px; }
 @media (max-width:600px) { #dsoPhotoDialog { padding:16px; } #dsoPhotoDialog img { max-height:min(50dvh,calc(100dvh - 220px)); } }
 
-  #frameRing { width:100%; margin:0 0 12px; min-height:32px; font-size:11px; }
-  #frameRing[hidden], #app.tourMode #frameRing { display:none; }
+  #frameRing, #frameRadar { width:100%; margin:0 0 12px; min-height:32px; font-size:11px; }
+  #frameRing[hidden], #app.tourMode #frameRing, #frameRadar[hidden], #app.tourMode #frameRadar { display:none; }
+  #frameRadar[aria-pressed="true"] { color: var(--accent); border-color: var(--accent-dim); background: rgba(242,178,62,.08); }
 
   #ringLookHint { position:absolute; bottom:calc(100% + 10px); left:0; width:100%; text-align:center; font-size:11px; color:rgba(180,193,207,.8); text-shadow:0 1px 4px #000; pointer-events:none; }
   #ringLookHint[hidden] { display:none; }
@@ -1903,6 +1904,7 @@
       <button id="frameEnjoy">鑑賞</button>
     </div>
     <button id="frameRing" class="spaceOnly" hidden>環を探る</button>
+    <button id="frameRadar" class="spaceOnly" aria-pressed="false" hidden>雲の下の地形 (レーダー)</button>
     <div id="infoTabs">
       <button id="tabFacts" class="on"></button>
       <button id="tabObs"></button>
@@ -2056,13 +2058,24 @@
       fact:"大気がほとんどないため昼は約430℃、夜は−180℃。太陽系で最も温度差が激しい惑星です。" },
     { key:"venus", name:"金星", en:"VENUS", a:0.7233, e:0.0068, T:224.701, i:3.395, node:76.680, peri:131.53, L0:181.98,
       tilt:177.4, rot:243.0, rkm:6052, type:3,     // 逆行自転は tilt>90° で表現 (rot は正)
-      colA:[0.87,0.76,0.55], colB:[0.96,0.90,0.74], colC:[0,0,0], rim:[0.9,0.8,0.55], params:[0,0,0,0],
+      // 可視光で見える雲頂の色。colA = 紫外線吸収体の淡い模様、colB = 雲の地色。
+      // 可視光では模様のコントラストが数%しかなく、ほぼ一様なクリーム色に見える
+      // (よく知られた縞模様の写真は紫外線で撮ったもの)。縁の光は大気シェルが出すので rim は持たない
+      colA:[0.90,0.86,0.74], colB:[0.96,0.93,0.84], colC:[0,0,0], rim:[0,0,0], params:[0,0,0,0],
+      // 雲頂の上の硫酸の霞 (雲頂から約20km)。後ろから照らされると細い光の輪になる。
+      // 霞の粒は波長に依らず散らすので、地球のような青ではなく白っぽい黄色
+      air:0.012, airH:0.0035,
+      airRay:[0.100, 0.094, 0.074],   // 横から照らされた霞 (リニア)
+      airFwd:[0.600, 0.520, 0.360],   // 前方散乱 (逆光の光の輪)
       rows:[["直径","12,104 km"],["質量","4.87×10²⁴ kg"],["平均距離","0.72 au"],["公転周期","224.7 日"],["自転周期","243 日 (逆行)"],["平均温度","464 ℃"],["衛星","0"]],
       fact:"分厚い二酸化炭素の大気による温室効果で、太陽に最も近い水星よりも高温。自転は他の惑星と逆向きです。" },
     { key:"earth", name:"地球", en:"EARTH", a:1.0000, e:0.0167, T:365.256, i:0.0, node:0.0, peri:102.94, L0:100.46,
       // rot は恒星日。spin0 は「J2000 元期 12:00 UTC に経度0°がほぼ太陽直下」となる校正位相
       tilt:23.44, rot:0.99727, spin0:-1.3898, rkm:6371, type:4,
       air:0.025,          // 大気シェルの厚み (半径比)。約160km 相当
+      airH:0.0048,        // 大気の濃さが 1/e になる高さ (半径比)
+      airRay:[0.055, 0.145, 0.400],   // レイリー (青。リニア)
+      airFwd:[0.520, 0.220, 0.080],   // 前方散乱 (朝焼け色)
       colA:[0,0,0], colB:[0,0,0], colC:[0,0,0], rim:[0.35,0.55,1.0], params:[0,0,0,0],
       rows:[["直径","12,742 km"],["質量","5.97×10²⁴ kg"],["平均距離","1.00 au"],["公転周期","365.25 日"],["自転周期","23.9 時間"],["平均温度","15 ℃"],["衛星","1 (月)"]],
       fact:"表面の約7割が液体の水に覆われた、生命の存在が確認されている唯一の天体。接近すると月も見えます。" },
@@ -2088,7 +2101,10 @@
       fact:"自転軸が約98°傾き、ほぼ横倒しのまま公転しています。メタンの大気が赤い光を吸収し淡い青緑色に見えます。" },
     { key:"neptune", name:"海王星", en:"NEPTUNE", a:30.1104, e:0.0086, T:60182, i:1.770, node:131.784, peri:44.97, L0:304.88,
       tilt:28.32, rot:0.671, rkm:24622, rEq:24764, rPol:24341, type:6,
-      colA:[0.22,0.36,0.78], colB:[0.14,0.24,0.58], colC:[0.75,0.83,1.0], rim:[0.4,0.55,1.0], params:[6.0,0.35,0,0],
+      // 天王星より少しだけ青い、淡い緑がかった青。よく知られた濃い青は Voyager 2 の
+      // 画像を雲が見えるよう強調したもので、実際の色ではない。HST/STIS と VLT/MUSE の
+      // 分光で較正し直した Irwin ら (2024, MNRAS) の色に合わせた
+      colA:[0.50,0.72,0.88], colB:[0.42,0.63,0.80], colC:[0.78,0.90,0.97], rim:[0.55,0.75,0.95], params:[6.0,0.35,0,0],
       rows:[["直径","49,244 km"],["質量","1.02×10²⁶ kg"],["平均距離","30.1 au"],["公転周期","164.8 年"],["自転周期","16.1 時間"],["平均温度","−201 ℃"],["衛星","16"]],
       fact:"太陽系で最も外側の惑星。観測ではなく計算によって位置が予言され発見されました。風速は秒速500 mを超えます。" },
     { key:"pluto", name:"冥王星", en:"PLUTO", a:39.4817, e:0.2488, T:90560, i:17.142, node:110.303, peri:224.067, L0:238.929,
@@ -2871,6 +2887,8 @@
       glReload: "読み込み直す",
       imgPrefix: "画像: ", procTex: "テクスチャ: シェーダによる生成 (実写ではありません)",
       monoTex: " — 輝度のみの画像のため、色は再現です",
+      venusCloudTex: "雲頂: シェーダによる生成 (可視光での見え方。模様は実際も数%の濃淡しかありません)",
+      venusRadarTex: " — 雲の下の地形をレーダーで写したもの。色は表示用です",
       u: { yr: " 年", d: " 日", h: " 時間", min: " 分", s: " 秒" },
       menuLang: "English",
       menuGrpGuide: "案内", menuGrpShow: "表示", menuGrpQuality: "画質", menuGrpSet: "設定・情報",
@@ -3001,6 +3019,8 @@
       glReload: "Reload",
       imgPrefix: "Imagery: ", procTex: "Texture: procedurally generated (not actual imagery)",
       monoTex: " — monochrome imagery; colour is approximated",
+      venusCloudTex: "Cloud tops: procedurally generated (as seen in visible light, where the markings show only a few percent contrast)",
+      venusRadarTex: " — radar map of the surface below the clouds; colours are for display",
       u: { yr: " yr", d: " days", h: " hr", min: " min", s: " sec" },
       menuLang: "日本語",
       menuGrpGuide: "Guide", menuGrpShow: "Show", menuGrpQuality: "Quality", menuGrpSet: "Settings & info",
@@ -5755,6 +5775,14 @@
     uniform float uNrmAmt;      // その強さ。0 = 法線マップを持たない天体
     uniform float uAtmos;       // 1 = 大気シェルとして描く (本体ではなく)
     uniform float uAtmosT;      // シェルの厚み (天体半径を 1 とした比)
+    uniform float uAtmosH;      // 大気の濃さが 1/e になる高さ (同じ比)
+    uniform vec3 uAtmosRay;     // 横から照らされた大気の色 (リニア)
+    uniform vec3 uAtmosFwd;     // 逆光の前方散乱の色 (リニア)
+    // 金星。uVenus = 1 のとき雲頂として描き、uRadar (0〜1) の割合で
+    // レーダー地形図 (Magellan) へ切り替える。uVenusRot = 雲頂が地表に対して
+    // 回った角の (cos, sin)。雲頂は約4日で一周する (スーパーローテーション)
+    uniform float uVenus, uRadar;
+    uniform vec2 uVenusRot;
     uniform vec3 uEclC;         // 食: 遮蔽体の中心 (uSun と同じ座標系)
     uniform vec2 uEclR;         // x = 遮蔽体の半径 (同じ単位。0 = 食なし), y = 太陽の視半径 [rad]
     uniform vec3 uEclCol;       // 皆既のとき遮蔽体の大気を回り込んで届く光 (リニア)
@@ -5825,16 +5853,15 @@
         // 円盤に重なる視線は地表で止まる。外れる視線は大気を貫いて反対側へ抜ける
         float path = b < 1.0 ? outer - inner : 2.0 * outer;
         // 実際の大気は上へ行くほど薄い。指数で落として縁に張り付く輪にする
-        float tau = path * 4.8 * exp(-max(b - 1.0, 0.0) / 0.0048);
+        float tau = path * 4.8 * exp(-max(b - 1.0, 0.0) / uAtmosH);
         // 円盤の内側は本体側でもエアライトを足しているので、二重に乗らないよう薄く
         tau *= mix(0.30, 1.0, smoothstep(0.97, 1.02, b));
 
         vec3 Ld = normalize(uSun - vW);
         float sun = smoothstep(-0.30, 0.25, dot(normalize(C + vec3(1e-6)), Ld));
         float fwd = pow(max(dot(-V, Ld), 0.0), 8.0);  // 太陽が向こう側にあるほど強い
-        vec3 col = mix(vec3(0.055, 0.145, 0.400),     // レイリー (青)
-                       vec3(0.520, 0.220, 0.080),     // 前方散乱 (朝焼け色)
-                       fwd * 0.7)
+        // 色は天体ごと (地球はレイリーの青と朝焼け色、金星は霞の白っぽい黄色)
+        vec3 col = mix(uAtmosRay, uAtmosFwd, fwd * 0.7)
                  * (1.0 - exp(-tau)) * sun * 0.44;
         gl_FragColor = vec4(tonemap(col * uExt), 0.0);   // 乗算済みアルファでの加算
         return;
@@ -5965,6 +5992,18 @@
       //
       // 正規化は「正面から見た直下点で 1」= Lambert のピークに合わせてある
       float dif = uType < 1.5 ? 2.0 * mu0 / (mu0 + muV + 1e-4) : mu0;
+
+      // ---- 金星の雲頂 ----
+      // 厚い雲と霞が光を何度も散らすので、縁が Lambert ほど暗く落ちない
+      // (Lommel-Seeliger との中間で近似)。雲頂の上の霞が地平の先の太陽を
+      // 拾うので、明暗境界の外側にもうっすら光が残り、境目がやわらかくなる。
+      // レーダー図へ切り替えたぶんは地表の Lambert へ戻す
+      if (uVenus > 0.5) {
+        float ndl = dot(N, L);
+        float cloudDif = mix(mu0, 2.0 * mu0 / (mu0 + muV + 1e-4), 0.4)
+                       + 0.035 * smoothstep(-0.10, 0.0, ndl) * (1.0 - smoothstep(0.0, 0.10, ndl));
+        dif = mix(cloudDif, dif, uRadar);
+      }
 
       // ---- 環が本体へ落とす影 (土星のみ) ----
       // 地表の点から太陽へ線を伸ばし、環面 (赤道面) との交点の半径を求めて、
@@ -6130,6 +6169,25 @@
           alb = mix(vec3(0.46236, 0.07324, 0.02721),      // sRGB (0.71,0.30,0.18)
                     alb, smoothstep(0.07, 0.17, sd));
         }
+      }
+
+      if (uVenus > 0.5) {
+        // ---- 金星の雲頂の模様 ----
+        // 雲頂は地表に対して約4日で一周するので、地表の座標から回し戻して引く。
+        // 東西に流れる筋を、高緯度ほど流れの後ろへ寝かせる (赤道で速く、極へ
+        // 向かうほど遅れる) と、横倒しの Y・C 字の模様になる。可視光では模様の
+        // コントラストは数%しかないので、colA と colB の差は小さく取ってある
+        vec3 q = vec3(uVenusRot.x * p.x - uVenusRot.y * p.z, p.y,
+                      uVenusRot.y * p.x + uVenusRot.x * p.z);
+        float sk = 1.3 * abs(q.y), cs = cos(sk), sn = sin(sk);
+        vec3 qs = vec3(cs * q.x + sn * q.z, q.y, -sn * q.x + cs * q.z);
+        float streak = fbm(vec3(qs.x * 2.0, qs.y * 7.0, qs.z * 2.0) + 3.1);
+        float broad = fbm(qs * 1.6 + 7.0);
+        // 暗い模様は低・中緯度に出て、極のまわりは明るいフード状の霞に覆われる
+        float dark = smoothstep(0.38, 0.72, streak * 0.6 + broad * 0.4)
+                   * (1.0 - smoothstep(0.55, 0.85, abs(q.y)));
+        vec3 cloudAlb = mix(uColB, uColA, dark * 0.75);
+        alb = mix(cloudAlb, alb, uRadar);
       }
 
       // 昼の空では、光が当たっていない側はエアライトに埋もれて見えない。
@@ -6774,9 +6832,26 @@
       float forward = 0.6975 / pow(1.3025 + 1.1 * angle, 1.5);
       float thin = exp(-tau * 2.0);
       float phase = 0.75 + 0.25 * back + 0.18 * thin * forward;
-      // 木星・天王星の模式的な細環は従来の明るさを維持する。
-      I = max(I, 0.0) * shadow * (uKind < 0.5 ? phase : 1.0);
+      // 木星の主環は細かな塵でできていて、光をほとんど前へしか散らさない。
+      // 順光ではほぼ見えず、太陽の向こう側へ回り込んで逆光で見たときだけ
+      // 浮かび上がる (Voyager・Galileo・New Horizons の環の写真はどれも逆光)。
+      // 塵の典型的な非対称 g = 0.7 の Henyey-Greenstein を、真後ろからの逆光で
+      // 1 になるよう割ったもの。順光では 1/180 まで落ちる。
+      // 天王星の細環は暗い大きな粒なので、模式的な明るさのまま
+      float dust = 0.0272 / pow(1.49 + 1.4 * angle, 1.5);
+      float kindPhase = uKind < 0.5 ? phase : uKind > 1.5 ? 1.3 * dust : 1.0;
+      I = max(I, 0.0) * shadow * kindPhase;
 
+      // 薄い環を真横から見るときは、サブピクセルの破線が目立たないよう消す
+      float edgeFade = uKind > 0.5 ? smoothstep(0.008, 0.045, abs(cv)) : 1.0;
+      if (uKind > 1.5) {
+        // 木星の環の実際の光学的厚さは 1e-6 ほどで、背景を隠さない。
+        // 見やすさのため厚さを大きく取っているので、隠す (アルファ) 側には使わず
+        // 光を足すだけにする。順光で背景の星を暗くする帯が出ないように
+        vec3 cj = srgbToLinear(prof.rgb) * I * 1.3;
+        gl_FragColor = vec4(tonemap(cj * uExt), 0.0) * edgeFade;
+        return;
+      }
       float alpha = 1.0 - exp(-tau / mu);         // 背景をどれだけ隠すか
       // 影の中でも真っ黒にはならない (土星本体からの照り返し)。
       // プロファイルの色だけ sRGB なのでリニアへ戻す (a の透過率はリニア値)
@@ -6787,8 +6862,6 @@
       c = c * uExt + skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain * alpha;
       // c は透過率込みの光。非線形のトーンマップ後に乗算済みアルファへ戻す。
       // 先に alpha を掛けたまま変換すると、薄い C 環まで白く浮いてしまう。
-      // 薄い環を真横から見るときは、サブピクセルの破線が目立たないよう消す。
-      float edgeFade = uKind > 0.5 ? smoothstep(0.008, 0.045, abs(cv)) : 1.0;
       gl_FragColor = vec4(tonemap(c / max(alpha, 1e-4)) * alpha, alpha) * edgeFade;
     }
 `;
@@ -8955,8 +9028,8 @@
     rx: new Float32Array(16), ry: new Float32Array(16), rot: new Float32Array(16),
     model: new Float32Array(16), mvp: new Float32Array(16),
     // 大気シェル用 (本体を全部描いたあとに使うので、本体側と別に持つ)
+    // (地上ビューで控える行列は天体ごとに要るので ground.js の _airQ が持つ)
     airModel: new Float32Array(16), airMvp: new Float32Array(16),
-    air64: new Float64Array(16), airSun: [0, 0, 0],
     t: [0, 0, 0], tgt: [0, 0, 0],
     v: [0, 0, 0], v2: [0, 0, 0],
     sun: [0, 0, 0],             // bodyRenderer.draw へ渡す光源位置
@@ -9040,6 +9113,33 @@
     return _shine;
   }
 
+  // ---- 金星: 雲頂 / レーダー地形図 ----
+  // 金星は可視光では雲に覆われていて、地表は見えない。既定は雲頂を描き、
+  // 情報パネルの切替 (ui/framing.js) で Magellan のレーダー地形図を見せる。
+  // 地上ビュー (望遠鏡で見る金星)・ツアー・スクリーンセーバーでは常に雲頂 —
+  // 実際に見える姿を見せる場面なので、切替の状態を持ち込まない
+  let venusRadar = false;
+  let venusRadarMix = 0, venusRadarAt = 0;
+  // いまレーダー図を見せる場面か。画像の出典の行 (ui/observe.js) も同じ判定を使う
+  const venusRadarShown = () => venusRadar && !groundView && !tourActive && !screensaverRunning();
+  function venusRadarAmount() {
+    const want = venusRadarShown() ? 1 : 0;
+    const now = performance.now();
+    const dt = Math.min(0.1, Math.max(0, (now - venusRadarAt) / 1000));
+    venusRadarAt = now;
+    // 雲が晴れていくように 0.6秒ほどで移る
+    venusRadarMix += (want - venusRadarMix) * (1 - Math.exp(-dt / 0.2));
+    if (Math.abs(want - venusRadarMix) < 0.002) venusRadarMix = want;
+    return venusRadarMix;
+  }
+  // 雲頂が地表に対して回った角。約4日で一周 (地表と同じ逆行の向きに、ずっと速く)。
+  // 暦の時刻で決めるので、停止中は雲も止まる
+  const VENUS_CLOUD_DAYS = 4.0;
+  function venusCloudTurn() {
+    const f = simDays / VENUS_CLOUD_DAYS;
+    return 2 * Math.PI * (f - Math.floor(f));
+  }
+
   // WebGL のプログラムと uniform はグローバルな状態なので、設定漏れがあると
   // 直前の描画の値がそのまま残る (実際に uComet の設定漏れで、地上ビューの
   // 全天体が彗星核として描かれうる状態になっていた)。
@@ -9109,7 +9209,8 @@
       // 大気シェル。本体より一回り大きい球を加算で重ね、円盤の外へはみ出す光の
       // 輪を出す。本体をすべて描き終えてから呼ぶ (深度は書かない)。
       // model は本体の (1 + body.air) 倍にスケールしたもの
-      drawAtmos({ body, model, mvp, sunPosition }) {
+      // ext = 大気減光の透過率 (地上ビューで本体と同じ値)。大気の無い経路は省略 = 1
+      drawAtmos({ body, model, mvp, sunPosition, ext = null }) {
         if (!inPass) throw new Error("bodyRenderer: beginPass より前に drawAtmos が呼ばれました");
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -9120,6 +9221,13 @@
         gl.cullFace(gl.FRONT);
         gl.uniform1f(u.uAtmos, 1);
         gl.uniform1f(u.uAtmosT, body.air);
+        gl.uniform1f(u.uAtmosH, body.airH);
+        // 金星はレーダー図へ切り替えたぶん霞も消す (雲の下を見せる表示なので)
+        const k = body.key === "venus" ? 1 - venusRadarMix : 1;
+        gl.uniform3f(u.uAtmosRay, body.airRay[0] * k, body.airRay[1] * k, body.airRay[2] * k);
+        gl.uniform3f(u.uAtmosFwd, body.airFwd[0] * k, body.airFwd[1] * k, body.airFwd[2] * k);
+        // 直前に描いた天体の減光を引き継がせない (地上ビューでは天体ごとに違う)
+        gl.uniform3f(u.uExt, ext ? ext[0] : 1, ext ? ext[1] : 1, ext ? ext[2] : 1);
         gl.uniformMatrix4fv(u.uMVP, false, mvp);
         gl.uniformMatrix4fv(u.uModel, false, model);
         gl.uniform3f(u.uSun, sunPosition[0], sunPosition[1], sunPosition[2]);
@@ -9170,6 +9278,13 @@
         // 扁平は天体ごと。真球は 1,1,1 (条件分岐で省くと前の天体の値が残る)
         gl.uniform3fv(u.uOblate, body.obl || NO_OBL);
         gl.uniform1f(u.uRingOn, body.ring ? 1 : 0);
+        // 金星の雲頂。他の天体でも「金星ではない」ことを毎回伝える。
+        // レーダー図は読み込めているときだけ (無ければ雲頂のまま)
+        const isVenus = body.key === "venus";
+        const turn = isVenus ? venusCloudTurn() : 0;
+        gl.uniform1f(u.uVenus, isVenus ? 1 : 0);
+        gl.uniform1f(u.uRadar, isVenus && tx ? venusRadarAmount() : 0);
+        gl.uniform2f(u.uVenusRot, Math.cos(turn), Math.sin(turn));
         // 食。遮蔽体が無いフレームでも「無い」ことを毎回伝える (前の天体の
         // 影を引きずると、関係のない天体が暗くなる)
         const ec = eclipse || null;
@@ -10742,6 +10857,7 @@
   const _fwd = [0, 0, 0], _gp = [0, 0, 0], _sunG = [0, 0, 0];
   const _zodi = { sun: _sunG, pole: [0, 1, 0], gain: 1 };   // 黄道光 (drawMilkyWay へ渡す)
   const _shineG = { dir: [0, 0, 0], col: [0, 0, 0] };   // 地球照 (地平フレーム)
+  const _airQ = [];   // 大気シェルを重ねる天体の控え {m, sun, k, px, py, pz, b} (使い回す)
   const _eclW = [0, 0, 0], _eclG = [0, 0, 0];   // 食: 天体 → 遮蔽体 (ワールド / 地平フレーム)
   const _pf = [0, 0, 0];                       // 歳差を戻した観測地の基底 (赤道 J2000)
   // 極小画角 (超高倍率) では f32 行列の量子化で照準・描画が破綻するため、
@@ -11385,8 +11501,7 @@
         cullFace: gl.FRONT, depthTest: true, depthWrite: true,
         airSun: _sunG, airDay: skyF, airFlux: sunFlux, airGain: skyGain,
       });
-      let airBody = null;                    // 大気シェルを重ねる天体 (地球のみ)
-      let airK = 1, airPx = 0, airPy = 1, airPz = 0;   // その天体の扁平 (月面ビューの地球)
+      let nAir = 0;                          // 大気シェルを重ねる天体の数 (地球・金星)
       for (const bb of bigBodies) {
         const b = bb.b, R = bb.wr;
         // 天体の実際の自転姿勢 (宇宙ビューと同じ回転) をローカル観測者フレームへ
@@ -11452,24 +11567,30 @@
             shine = _shineG;
           }
         }
+        const ext = (isMoonSurf || !showTerrain) ? null : extinct(bb.sa);
         bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun, radiusPx: bb.rpx,
-                            eclipse, ext: (isMoonSurf || !showTerrain) ? null : extinct(bb.sa), shine });
+                            eclipse, ext, shine });
         if (b.air) {
           // 行列とやりたいことは本体と同じで、大きさだけ (1 + air) 倍にする。
           // gM64 は次の天体で上書きされるので、ここで取っておく
-          const s = 1 + b.air;
-          for (let i = 0; i < 12; i++) SCR.air64[i] = m[i] * s;
-          SCR.air64[12] = m[12]; SCR.air64[13] = m[13]; SCR.air64[14] = m[14]; SCR.air64[15] = 1;
-          SCR.airSun[0] = SCR.sun[0]; SCR.airSun[1] = SCR.sun[1]; SCR.airSun[2] = SCR.sun[2];
-          airK = kF; airPx = bb.px; airPy = bb.py; airPz = bb.pz;
-          airBody = b;
+          // (月面からは地球と金星が同時に球で描かれうるので、天体ごとに控える)
+          if (nAir === _airQ.length) _airQ.push({ m: new Float64Array(16), sun: [0, 0, 0], ext: [1, 1, 1] });
+          const q = _airQ[nAir++], s = 1 + b.air;
+          for (let i = 0; i < 12; i++) q.m[i] = m[i] * s;
+          q.m[12] = m[12]; q.m[13] = m[13]; q.m[14] = m[14]; q.m[15] = 1;
+          q.sun[0] = SCR.sun[0]; q.sun[1] = SCR.sun[1]; q.sun[2] = SCR.sun[2];
+          // 減光も本体と同じ値を。extinct() の返り値は使い回しなので写しておく
+          q.ext[0] = ext ? ext[0] : 1; q.ext[1] = ext ? ext[1] : 1; q.ext[2] = ext ? ext[2] : 1;
+          q.k = kF; q.px = bb.px; q.py = bb.py; q.pz = bb.pz;
+          q.b = b;
         }
       }
       // 大気は加算で重ねるので、本体をすべて描き終えてから最後に足す
-      if (airBody) {
-        const airMvp = mMul(gVP, flattenMat(SCR.air64, airPx, airPy, airPz, airK, gM64F), SCR.airMvp);
-        SCR.airModel.set(SCR.air64);
-        bodyRenderer.drawAtmos({ body: airBody, model: SCR.airModel, mvp: airMvp, sunPosition: SCR.airSun });
+      for (let i = 0; i < nAir; i++) {
+        const q = _airQ[i];
+        const airMvp = mMul(gVP, flattenMat(q.m, q.px, q.py, q.pz, q.k, gM64F), SCR.airMvp);
+        SCR.airModel.set(q.m);
+        bodyRenderer.drawAtmos({ body: q.b, model: SCR.airModel, mvp: airMvp, sunPosition: q.sun, ext: q.ext });
       }
       bodyRenderer.endPass();
       // 惑星の環 (球として描かれる倍率のときのみ。軸を地上フレームへ変換)
@@ -14968,8 +15089,10 @@
         (d ? d.rows : body.rows).map(([kk, v]) => `<tr><td>${kk}</td><td>${v}</td></tr>`).join("");
       document.getElementById("infoFact").textContent = d ? d.fact : body.fact;
       const cr = IMG_CREDIT[body.key];
-      credEl.textContent = cr
-        ? t.imgPrefix + cr + (MONO_TEX.has(body.key) ? t.monoTex : "")
+      // 金星の雲頂はシェーダで描いている。画像はレーダー図に切り替えたときだけ
+      credEl.textContent = body.key === "venus" && !venusRadarShown() ? t.venusCloudTex
+        : cr ? t.imgPrefix + cr + (MONO_TEX.has(body.key) ? t.monoTex : "")
+             + (body.key === "venus" ? t.venusRadarTex : "")
         : t.procTex;
     }
     syncInfoMore();   // 要約と詳細の表示状態を更新
@@ -18729,6 +18852,13 @@
     const ringButton = document.getElementById("frameRing");
     ringButton.hidden = selected?.key !== "saturn" || groundView || tourActive;
     ringButton.textContent = ja ? "環を探る" : "Explore the rings";
+    // 金星だけ。ラベルは状態で変えず、ON/OFF は aria-pressed で伝える
+    const radarButton = document.getElementById("frameRadar");
+    radarButton.hidden = selected?.key !== "venus" || groundView || tourActive;
+    radarButton.textContent = ja ? "雲の下の地形 (レーダー)" : "Surface below the clouds (radar)";
+    radarButton.title = ja ? "雲を取り払い、探査機マゼランがレーダーで描いた地形図を表示 (色は表示用)"
+                           : "Strip away the clouds to show the Magellan radar map (false colour)";
+    radarButton.setAttribute("aria-pressed", String(venusRadar));
     immersivePauseBtn.setAttribute("aria-pressed", String(enjoymentPaused));
     immersiveSaveBtn.textContent = ja ? "画像を保存" : "Save image";
     document.getElementById("frameActions").setAttribute("aria-label", ja ? "天体の見せ方" : "Frame the body");
@@ -19051,6 +19181,11 @@
     syncFramingUI();
   });
   immersiveSaveBtn.addEventListener("click", () => { snapPending = true; });
+  document.getElementById("frameRadar").addEventListener("click", () => {
+    venusRadar = !venusRadar;
+    syncFramingUI();
+    renderInfoBody();   // 画像の出典の行を、いま見えている方に合わせる
+  });
   window.addEventListener("keydown", e => {
     if (immersiveView && e.key === "/") { e.preventDefault(); e.stopImmediatePropagation(); return; }
     if (e.key === "Escape" && immersiveView && !screensaverRunning() && !snapDlgEl.classList.contains("open")) {

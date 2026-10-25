@@ -25,6 +25,13 @@
     const ringButton = document.getElementById("frameRing");
     ringButton.hidden = selected?.key !== "saturn" || groundView || tourActive;
     ringButton.textContent = ja ? "環を探る" : "Explore the rings";
+    // 金星だけ。ラベルは状態で変えず、ON/OFF は aria-pressed で伝える
+    const radarButton = document.getElementById("frameRadar");
+    radarButton.hidden = selected?.key !== "venus" || groundView || tourActive;
+    radarButton.textContent = ja ? "雲の下の地形 (レーダー)" : "Surface below the clouds (radar)";
+    radarButton.title = ja ? "雲を取り払い、探査機マゼランがレーダーで描いた地形図を表示 (色は表示用)"
+                           : "Strip away the clouds to show the Magellan radar map (false colour)";
+    radarButton.setAttribute("aria-pressed", String(venusRadar));
     immersivePauseBtn.setAttribute("aria-pressed", String(enjoymentPaused));
     immersiveSaveBtn.textContent = ja ? "画像を保存" : "Save image";
     document.getElementById("frameActions").setAttribute("aria-label", ja ? "天体の見せ方" : "Frame the body");
@@ -347,6 +354,11 @@
     syncFramingUI();
   });
   immersiveSaveBtn.addEventListener("click", () => { snapPending = true; });
+  document.getElementById("frameRadar").addEventListener("click", () => {
+    venusRadar = !venusRadar;
+    syncFramingUI();
+    renderInfoBody();   // 画像の出典の行を、いま見えている方に合わせる
+  });
   window.addEventListener("keydown", e => {
     if (immersiveView && e.key === "/") { e.preventDefault(); e.stopImmediatePropagation(); return; }
     if (e.key === "Escape" && immersiveView && !screensaverRunning() && !snapDlgEl.classList.contains("open")) {

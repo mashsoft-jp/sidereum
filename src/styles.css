@@ -1706,8 +1706,9 @@
 #dsoPhotoDialog .dsoPhotoClose { position:absolute; right:12px; top:8px; width:32px; height:32px; border:none; background:none; color:var(--text); font-size:24px; }
 @media (max-width:600px) { #dsoPhotoDialog { padding:16px; } #dsoPhotoDialog img { max-height:min(50dvh,calc(100dvh - 220px)); } }
 
-  #frameRing { width:100%; margin:0 0 12px; min-height:32px; font-size:11px; }
-  #frameRing[hidden], #app.tourMode #frameRing { display:none; }
+  #frameRing, #frameRadar { width:100%; margin:0 0 12px; min-height:32px; font-size:11px; }
+  #frameRing[hidden], #app.tourMode #frameRing, #frameRadar[hidden], #app.tourMode #frameRadar { display:none; }
+  #frameRadar[aria-pressed="true"] { color: var(--accent); border-color: var(--accent-dim); background: rgba(242,178,62,.08); }
 
   #ringLookHint { position:absolute; bottom:calc(100% + 10px); left:0; width:100%; text-align:center; font-size:11px; color:rgba(180,193,207,.8); text-shadow:0 1px 4px #000; pointer-events:none; }
   #ringLookHint[hidden] { display:none; }

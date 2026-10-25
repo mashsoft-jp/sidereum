@@ -22,6 +22,7 @@
   const _fwd = [0, 0, 0], _gp = [0, 0, 0], _sunG = [0, 0, 0];
   const _zodi = { sun: _sunG, pole: [0, 1, 0], gain: 1 };   // 黄道光 (drawMilkyWay へ渡す)
   const _shineG = { dir: [0, 0, 0], col: [0, 0, 0] };   // 地球照 (地平フレーム)
+  const _airQ = [];   // 大気シェルを重ねる天体の控え {m, sun, k, px, py, pz, b} (使い回す)
   const _eclW = [0, 0, 0], _eclG = [0, 0, 0];   // 食: 天体 → 遮蔽体 (ワールド / 地平フレーム)
   const _pf = [0, 0, 0];                       // 歳差を戻した観測地の基底 (赤道 J2000)
   // 極小画角 (超高倍率) では f32 行列の量子化で照準・描画が破綻するため、
@@ -665,8 +666,7 @@
         cullFace: gl.FRONT, depthTest: true, depthWrite: true,
         airSun: _sunG, airDay: skyF, airFlux: sunFlux, airGain: skyGain,
       });
-      let airBody = null;                    // 大気シェルを重ねる天体 (地球のみ)
-      let airK = 1, airPx = 0, airPy = 1, airPz = 0;   // その天体の扁平 (月面ビューの地球)
+      let nAir = 0;                          // 大気シェルを重ねる天体の数 (地球・金星)
       for (const bb of bigBodies) {
         const b = bb.b, R = bb.wr;
         // 天体の実際の自転姿勢 (宇宙ビューと同じ回転) をローカル観測者フレームへ
@@ -732,24 +732,30 @@
             shine = _shineG;
           }
         }
+        const ext = (isMoonSurf || !showTerrain) ? null : extinct(bb.sa);
         bodyRenderer.draw({ body: b, model: SCR.model, mvp, sunPosition: SCR.sun, radiusPx: bb.rpx,
-                            eclipse, ext: (isMoonSurf || !showTerrain) ? null : extinct(bb.sa), shine });
+                            eclipse, ext, shine });
         if (b.air) {
           // 行列とやりたいことは本体と同じで、大きさだけ (1 + air) 倍にする。
           // gM64 は次の天体で上書きされるので、ここで取っておく
-          const s = 1 + b.air;
-          for (let i = 0; i < 12; i++) SCR.air64[i] = m[i] * s;
-          SCR.air64[12] = m[12]; SCR.air64[13] = m[13]; SCR.air64[14] = m[14]; SCR.air64[15] = 1;
-          SCR.airSun[0] = SCR.sun[0]; SCR.airSun[1] = SCR.sun[1]; SCR.airSun[2] = SCR.sun[2];
-          airK = kF; airPx = bb.px; airPy = bb.py; airPz = bb.pz;
-          airBody = b;
+          // (月面からは地球と金星が同時に球で描かれうるので、天体ごとに控える)
+          if (nAir === _airQ.length) _airQ.push({ m: new Float64Array(16), sun: [0, 0, 0], ext: [1, 1, 1] });
+          const q = _airQ[nAir++], s = 1 + b.air;
+          for (let i = 0; i < 12; i++) q.m[i] = m[i] * s;
+          q.m[12] = m[12]; q.m[13] = m[13]; q.m[14] = m[14]; q.m[15] = 1;
+          q.sun[0] = SCR.sun[0]; q.sun[1] = SCR.sun[1]; q.sun[2] = SCR.sun[2];
+          // 減光も本体と同じ値を。extinct() の返り値は使い回しなので写しておく
+          q.ext[0] = ext ? ext[0] : 1; q.ext[1] = ext ? ext[1] : 1; q.ext[2] = ext ? ext[2] : 1;
+          q.k = kF; q.px = bb.px; q.py = bb.py; q.pz = bb.pz;
+          q.b = b;
         }
       }
       // 大気は加算で重ねるので、本体をすべて描き終えてから最後に足す
-      if (airBody) {
-        const airMvp = mMul(gVP, flattenMat(SCR.air64, airPx, airPy, airPz, airK, gM64F), SCR.airMvp);
-        SCR.airModel.set(SCR.air64);
-        bodyRenderer.drawAtmos({ body: airBody, model: SCR.airModel, mvp: airMvp, sunPosition: SCR.airSun });
+      for (let i = 0; i < nAir; i++) {
+        const q = _airQ[i];
+        const airMvp = mMul(gVP, flattenMat(q.m, q.px, q.py, q.pz, q.k, gM64F), SCR.airMvp);
+        SCR.airModel.set(q.m);
+        bodyRenderer.drawAtmos({ body: q.b, model: SCR.airModel, mvp: airMvp, sunPosition: q.sun, ext: q.ext });
       }
       bodyRenderer.endPass();
       // 惑星の環 (球として描かれる倍率のときのみ。軸を地上フレームへ変換)

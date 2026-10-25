@@ -25,6 +25,14 @@
     uniform float uNrmAmt;      // その強さ。0 = 法線マップを持たない天体
     uniform float uAtmos;       // 1 = 大気シェルとして描く (本体ではなく)
     uniform float uAtmosT;      // シェルの厚み (天体半径を 1 とした比)
+    uniform float uAtmosH;      // 大気の濃さが 1/e になる高さ (同じ比)
+    uniform vec3 uAtmosRay;     // 横から照らされた大気の色 (リニア)
+    uniform vec3 uAtmosFwd;     // 逆光の前方散乱の色 (リニア)
+    // 金星。uVenus = 1 のとき雲頂として描き、uRadar (0〜1) の割合で
+    // レーダー地形図 (Magellan) へ切り替える。uVenusRot = 雲頂が地表に対して
+    // 回った角の (cos, sin)。雲頂は約4日で一周する (スーパーローテーション)
+    uniform float uVenus, uRadar;
+    uniform vec2 uVenusRot;
     uniform vec3 uEclC;         // 食: 遮蔽体の中心 (uSun と同じ座標系)
     uniform vec2 uEclR;         // x = 遮蔽体の半径 (同じ単位。0 = 食なし), y = 太陽の視半径 [rad]
     uniform vec3 uEclCol;       // 皆既のとき遮蔽体の大気を回り込んで届く光 (リニア)
@@ -95,16 +103,15 @@
         // 円盤に重なる視線は地表で止まる。外れる視線は大気を貫いて反対側へ抜ける
         float path = b < 1.0 ? outer - inner : 2.0 * outer;
         // 実際の大気は上へ行くほど薄い。指数で落として縁に張り付く輪にする
-        float tau = path * 4.8 * exp(-max(b - 1.0, 0.0) / 0.0048);
+        float tau = path * 4.8 * exp(-max(b - 1.0, 0.0) / uAtmosH);
         // 円盤の内側は本体側でもエアライトを足しているので、二重に乗らないよう薄く
         tau *= mix(0.30, 1.0, smoothstep(0.97, 1.02, b));
 
         vec3 Ld = normalize(uSun - vW);
         float sun = smoothstep(-0.30, 0.25, dot(normalize(C + vec3(1e-6)), Ld));
         float fwd = pow(max(dot(-V, Ld), 0.0), 8.0);  // 太陽が向こう側にあるほど強い
-        vec3 col = mix(vec3(0.055, 0.145, 0.400),     // レイリー (青)
-                       vec3(0.520, 0.220, 0.080),     // 前方散乱 (朝焼け色)
-                       fwd * 0.7)
+        // 色は天体ごと (地球はレイリーの青と朝焼け色、金星は霞の白っぽい黄色)
+        vec3 col = mix(uAtmosRay, uAtmosFwd, fwd * 0.7)
                  * (1.0 - exp(-tau)) * sun * 0.44;
         gl_FragColor = vec4(tonemap(col * uExt), 0.0);   // 乗算済みアルファでの加算
         return;
@@ -235,6 +242,18 @@
       //
       // 正規化は「正面から見た直下点で 1」= Lambert のピークに合わせてある
       float dif = uType < 1.5 ? 2.0 * mu0 / (mu0 + muV + 1e-4) : mu0;
+
+      // ---- 金星の雲頂 ----
+      // 厚い雲と霞が光を何度も散らすので、縁が Lambert ほど暗く落ちない
+      // (Lommel-Seeliger との中間で近似)。雲頂の上の霞が地平の先の太陽を
+      // 拾うので、明暗境界の外側にもうっすら光が残り、境目がやわらかくなる。
+      // レーダー図へ切り替えたぶんは地表の Lambert へ戻す
+      if (uVenus > 0.5) {
+        float ndl = dot(N, L);
+        float cloudDif = mix(mu0, 2.0 * mu0 / (mu0 + muV + 1e-4), 0.4)
+                       + 0.035 * smoothstep(-0.10, 0.0, ndl) * (1.0 - smoothstep(0.0, 0.10, ndl));
+        dif = mix(cloudDif, dif, uRadar);
+      }
 
       // ---- 環が本体へ落とす影 (土星のみ) ----
       // 地表の点から太陽へ線を伸ばし、環面 (赤道面) との交点の半径を求めて、
@@ -400,6 +419,25 @@
           alb = mix(vec3(0.46236, 0.07324, 0.02721),      // sRGB (0.71,0.30,0.18)
                     alb, smoothstep(0.07, 0.17, sd));
         }
+      }
+
+      if (uVenus > 0.5) {
+        // ---- 金星の雲頂の模様 ----
+        // 雲頂は地表に対して約4日で一周するので、地表の座標から回し戻して引く。
+        // 東西に流れる筋を、高緯度ほど流れの後ろへ寝かせる (赤道で速く、極へ
+        // 向かうほど遅れる) と、横倒しの Y・C 字の模様になる。可視光では模様の
+        // コントラストは数%しかないので、colA と colB の差は小さく取ってある
+        vec3 q = vec3(uVenusRot.x * p.x - uVenusRot.y * p.z, p.y,
+                      uVenusRot.y * p.x + uVenusRot.x * p.z);
+        float sk = 1.3 * abs(q.y), cs = cos(sk), sn = sin(sk);
+        vec3 qs = vec3(cs * q.x + sn * q.z, q.y, -sn * q.x + cs * q.z);
+        float streak = fbm(vec3(qs.x * 2.0, qs.y * 7.0, qs.z * 2.0) + 3.1);
+        float broad = fbm(qs * 1.6 + 7.0);
+        // 暗い模様は低・中緯度に出て、極のまわりは明るいフード状の霞に覆われる
+        float dark = smoothstep(0.38, 0.72, streak * 0.6 + broad * 0.4)
+                   * (1.0 - smoothstep(0.55, 0.85, abs(q.y)));
+        vec3 cloudAlb = mix(uColB, uColA, dark * 0.75);
+        alb = mix(cloudAlb, alb, uRadar);
       }
 
       // 昼の空では、光が当たっていない側はエアライトに埋もれて見えない。

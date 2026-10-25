@@ -351,8 +351,10 @@
         (d ? d.rows : body.rows).map(([kk, v]) => `<tr><td>${kk}</td><td>${v}</td></tr>`).join("");
       document.getElementById("infoFact").textContent = d ? d.fact : body.fact;
       const cr = IMG_CREDIT[body.key];
-      credEl.textContent = cr
-        ? t.imgPrefix + cr + (MONO_TEX.has(body.key) ? t.monoTex : "")
+      // 金星の雲頂はシェーダで描いている。画像はレーダー図に切り替えたときだけ
+      credEl.textContent = body.key === "venus" && !venusRadarShown() ? t.venusCloudTex
+        : cr ? t.imgPrefix + cr + (MONO_TEX.has(body.key) ? t.monoTex : "")
+             + (body.key === "venus" ? t.venusRadarTex : "")
         : t.procTex;
     }
     syncInfoMore();   // 要約と詳細の表示状態を更新

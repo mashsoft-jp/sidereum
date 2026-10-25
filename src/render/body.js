@@ -154,8 +154,8 @@
     rx: new Float32Array(16), ry: new Float32Array(16), rot: new Float32Array(16),
     model: new Float32Array(16), mvp: new Float32Array(16),
     // 大気シェル用 (本体を全部描いたあとに使うので、本体側と別に持つ)
+    // (地上ビューで控える行列は天体ごとに要るので ground.js の _airQ が持つ)
     airModel: new Float32Array(16), airMvp: new Float32Array(16),
-    air64: new Float64Array(16), airSun: [0, 0, 0],
     t: [0, 0, 0], tgt: [0, 0, 0],
     v: [0, 0, 0], v2: [0, 0, 0],
     sun: [0, 0, 0],             // bodyRenderer.draw へ渡す光源位置
@@ -239,6 +239,33 @@
     return _shine;
   }
 
+  // ---- 金星: 雲頂 / レーダー地形図 ----
+  // 金星は可視光では雲に覆われていて、地表は見えない。既定は雲頂を描き、
+  // 情報パネルの切替 (ui/framing.js) で Magellan のレーダー地形図を見せる。
+  // 地上ビュー (望遠鏡で見る金星)・ツアー・スクリーンセーバーでは常に雲頂 —
+  // 実際に見える姿を見せる場面なので、切替の状態を持ち込まない
+  let venusRadar = false;
+  let venusRadarMix = 0, venusRadarAt = 0;
+  // いまレーダー図を見せる場面か。画像の出典の行 (ui/observe.js) も同じ判定を使う
+  const venusRadarShown = () => venusRadar && !groundView && !tourActive && !screensaverRunning();
+  function venusRadarAmount() {
+    const want = venusRadarShown() ? 1 : 0;
+    const now = performance.now();
+    const dt = Math.min(0.1, Math.max(0, (now - venusRadarAt) / 1000));
+    venusRadarAt = now;
+    // 雲が晴れていくように 0.6秒ほどで移る
+    venusRadarMix += (want - venusRadarMix) * (1 - Math.exp(-dt / 0.2));
+    if (Math.abs(want - venusRadarMix) < 0.002) venusRadarMix = want;
+    return venusRadarMix;
+  }
+  // 雲頂が地表に対して回った角。約4日で一周 (地表と同じ逆行の向きに、ずっと速く)。
+  // 暦の時刻で決めるので、停止中は雲も止まる
+  const VENUS_CLOUD_DAYS = 4.0;
+  function venusCloudTurn() {
+    const f = simDays / VENUS_CLOUD_DAYS;
+    return 2 * Math.PI * (f - Math.floor(f));
+  }
+
   // WebGL のプログラムと uniform はグローバルな状態なので、設定漏れがあると
   // 直前の描画の値がそのまま残る (実際に uComet の設定漏れで、地上ビューの
   // 全天体が彗星核として描かれうる状態になっていた)。
@@ -308,7 +335,8 @@
       // 大気シェル。本体より一回り大きい球を加算で重ね、円盤の外へはみ出す光の
       // 輪を出す。本体をすべて描き終えてから呼ぶ (深度は書かない)。
       // model は本体の (1 + body.air) 倍にスケールしたもの
-      drawAtmos({ body, model, mvp, sunPosition }) {
+      // ext = 大気減光の透過率 (地上ビューで本体と同じ値)。大気の無い経路は省略 = 1
+      drawAtmos({ body, model, mvp, sunPosition, ext = null }) {
         if (!inPass) throw new Error("bodyRenderer: beginPass より前に drawAtmos が呼ばれました");
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -319,6 +347,13 @@
         gl.cullFace(gl.FRONT);
         gl.uniform1f(u.uAtmos, 1);
         gl.uniform1f(u.uAtmosT, body.air);
+        gl.uniform1f(u.uAtmosH, body.airH);
+        // 金星はレーダー図へ切り替えたぶん霞も消す (雲の下を見せる表示なので)
+        const k = body.key === "venus" ? 1 - venusRadarMix : 1;
+        gl.uniform3f(u.uAtmosRay, body.airRay[0] * k, body.airRay[1] * k, body.airRay[2] * k);
+        gl.uniform3f(u.uAtmosFwd, body.airFwd[0] * k, body.airFwd[1] * k, body.airFwd[2] * k);
+        // 直前に描いた天体の減光を引き継がせない (地上ビューでは天体ごとに違う)
+        gl.uniform3f(u.uExt, ext ? ext[0] : 1, ext ? ext[1] : 1, ext ? ext[2] : 1);
         gl.uniformMatrix4fv(u.uMVP, false, mvp);
         gl.uniformMatrix4fv(u.uModel, false, model);
         gl.uniform3f(u.uSun, sunPosition[0], sunPosition[1], sunPosition[2]);
@@ -369,6 +404,13 @@
         // 扁平は天体ごと。真球は 1,1,1 (条件分岐で省くと前の天体の値が残る)
         gl.uniform3fv(u.uOblate, body.obl || NO_OBL);
         gl.uniform1f(u.uRingOn, body.ring ? 1 : 0);
+        // 金星の雲頂。他の天体でも「金星ではない」ことを毎回伝える。
+        // レーダー図は読み込めているときだけ (無ければ雲頂のまま)
+        const isVenus = body.key === "venus";
+        const turn = isVenus ? venusCloudTurn() : 0;
+        gl.uniform1f(u.uVenus, isVenus ? 1 : 0);
+        gl.uniform1f(u.uRadar, isVenus && tx ? venusRadarAmount() : 0);
+        gl.uniform2f(u.uVenusRot, Math.cos(turn), Math.sin(turn));
         // 食。遮蔽体が無いフレームでも「無い」ことを毎回伝える (前の天体の
         // 影を引きずると、関係のない天体が暗くなる)
         const ec = eclipse || null;

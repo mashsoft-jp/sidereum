@@ -89,9 +89,26 @@
       float forward = 0.6975 / pow(1.3025 + 1.1 * angle, 1.5);
       float thin = exp(-tau * 2.0);
       float phase = 0.75 + 0.25 * back + 0.18 * thin * forward;
-      // 木星・天王星の模式的な細環は従来の明るさを維持する。
-      I = max(I, 0.0) * shadow * (uKind < 0.5 ? phase : 1.0);
+      // 木星の主環は細かな塵でできていて、光をほとんど前へしか散らさない。
+      // 順光ではほぼ見えず、太陽の向こう側へ回り込んで逆光で見たときだけ
+      // 浮かび上がる (Voyager・Galileo・New Horizons の環の写真はどれも逆光)。
+      // 塵の典型的な非対称 g = 0.7 の Henyey-Greenstein を、真後ろからの逆光で
+      // 1 になるよう割ったもの。順光では 1/180 まで落ちる。
+      // 天王星の細環は暗い大きな粒なので、模式的な明るさのまま
+      float dust = 0.0272 / pow(1.49 + 1.4 * angle, 1.5);
+      float kindPhase = uKind < 0.5 ? phase : uKind > 1.5 ? 1.3 * dust : 1.0;
+      I = max(I, 0.0) * shadow * kindPhase;
 
+      // 薄い環を真横から見るときは、サブピクセルの破線が目立たないよう消す
+      float edgeFade = uKind > 0.5 ? smoothstep(0.008, 0.045, abs(cv)) : 1.0;
+      if (uKind > 1.5) {
+        // 木星の環の実際の光学的厚さは 1e-6 ほどで、背景を隠さない。
+        // 見やすさのため厚さを大きく取っているので、隠す (アルファ) 側には使わず
+        // 光を足すだけにする。順光で背景の星を暗くする帯が出ないように
+        vec3 cj = srgbToLinear(prof.rgb) * I * 1.3;
+        gl_FragColor = vec4(tonemap(cj * uExt), 0.0) * edgeFade;
+        return;
+      }
       float alpha = 1.0 - exp(-tau / mu);         // 背景をどれだけ隠すか
       // 影の中でも真っ黒にはならない (土星本体からの照り返し)。
       // プロファイルの色だけ sRGB なのでリニアへ戻す (a の透過率はリニア値)
@@ -102,7 +119,5 @@
       c = c * uExt + skyDayColor(normalize(vW), uAirSun, uAirFlux) * uAirGain * alpha;
       // c は透過率込みの光。非線形のトーンマップ後に乗算済みアルファへ戻す。
       // 先に alpha を掛けたまま変換すると、薄い C 環まで白く浮いてしまう。
-      // 薄い環を真横から見るときは、サブピクセルの破線が目立たないよう消す。
-      float edgeFade = uKind > 0.5 ? smoothstep(0.008, 0.045, abs(cv)) : 1.0;
       gl_FragColor = vec4(tonemap(c / max(alpha, 1e-4)) * alpha, alpha) * edgeFade;
     }

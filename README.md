@@ -130,7 +130,7 @@ http://localhost:8934/index.html?perf=1
 | 天体 | 元データ | クレジット |
 |---|---|---|
 | 水星 | MESSENGER MDIS Basemap MD3Color 全球モザイク (32 ppd) | Applied Coherent Technology Corporation; NASA/JHUAPL/ASU/Carnegie |
-| 金星 | Magellan レーダー全球図 (地表) | USGS / NASA/JPL |
+| 金星 | Magellan レーダー全球図 (地表。情報パネルの「雲の下の地形 (レーダー)」で表示。既定は雲頂) | USGS / NASA/JPL |
 | 地球 | Blue Marble: Land Surface, Shallow Water, and Shaded Topography ([57752](https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57752/land_shallow_topo_8192.tif), 8192×4096) | NASA Earth Observatory (Reto Stöckli, NASA/GSFC / Robert Simmon) |
 | 地球 (雲) | Blue Marble: Clouds ([57747](https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57747/cloud_combined_8192.tif), 8192×4096) | NASA Earth Observatory |
 | 地球 (夜景) | Black Marble 2016 (VIIRS DNB) ([144898](https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144898/BlackMarble_2016_3km_geo.tif), 13500×6750) | NASA Earth Observatory |
@@ -171,7 +171,7 @@ ON にしたときは、**先に適用してから「保存してよいか」を
 
 地表はアルベド (シェーダが `srgbToLinear` で扱う) なのでリニア光で縮小し、雲 (被覆率) と夜景 (光量) はマスクなのでそのまま縮小しています。夜景は陸地の下地を落として街灯りだけ残すため、グレースケール化後に黒レベル 20% を切り上げています。
 
-太陽・土星・天王星・海王星・パラス・ジュノーは、実測の全球マップが存在しない(または動的表現の方が適する)ため、シェーダによるプロシージャル生成です。実写ではありません。土星の環も同様です。
+太陽・土星・天王星・海王星・パラス・ジュノーは、実測の全球マップが存在しない(または動的表現の方が適する)ため、シェーダによるプロシージャル生成です。実写ではありません。土星の環と金星の雲頂も同様です。
 
 本プロジェクトは NASA・USGS とは無関係であり、両機関による承認・推奨を意味するものではありません。
 
