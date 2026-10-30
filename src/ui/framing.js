@@ -28,7 +28,7 @@
     // 金星だけ。ラベルは状態で変えず、ON/OFF は aria-pressed で伝える
     const radarButton = document.getElementById("frameRadar");
     radarButton.hidden = selected?.key !== "venus" || groundView || tourActive;
-    radarButton.textContent = ja ? "雲の下の地形 (レーダー)" : "Surface below the clouds (radar)";
+    radarButton.textContent = ja ? "レーダーによる地形を表示" : "Show radar map of the surface";
     radarButton.title = ja ? "雲を取り払い、探査機マゼランがレーダーで描いた地形図を表示 (色は表示用)"
                            : "Strip away the clouds to show the Magellan radar map (false colour)";
     radarButton.setAttribute("aria-pressed", String(venusRadar));
